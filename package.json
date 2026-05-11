@@ -1,0 +1,44 @@
+{
+  "name": "formulon-homepage",
+  "version": "1.0.0",
+  "description": "Documentation site for Formulon",
+  "type": "module",
+  "homepage": "https://formulon.libraz.net",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/libraz/formulon-homepage.git"
+  },
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview",
+    "lint": "biome check src .vitepress",
+    "format": "biome format --write src .vitepress"
+  },
+  "keywords": [
+    "excel",
+    "spreadsheet",
+    "calculation-engine",
+    "wasm",
+    "python",
+    "cpp"
+  ],
+  "author": "libraz <libraz@libraz.net>",
+  "license": "Apache-2.0",
+  "volta": {
+    "node": "22.21.1",
+    "yarn": "4.12.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "vitepress": "^1.6.4"
+  },
+  "dependencies": {
+    "@libraz/formulon": "0.9.0",
+    "@libraz/formulon-cell": "^0.2.0",
+    "@libraz/formulon-cell-vue": "^0.2.0",
+    "mermaid": "^11.14.0",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "zustand": "^5.0.13"
+  }
+}

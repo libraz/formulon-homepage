@@ -1,0 +1,34 @@
+# 利用例
+
+Formulon を具体的な処理の流れに組み込む例です。シナリオごとに別の runtime を選んでいます。デプロイ先に近いものを選び、設定詳細は対応する [Runtime](/ja/runtimes/) ページを参照してください。
+
+::: info 実ワークブックで早めに試す
+1 つの数式が動くことを確認したら、代表的なワークブックを早めに通してみてください。スプレッドシート engine の成否は孤立した数式ではなく、ワークブック全体の構造で決まります。
+:::
+
+```mermaid
+flowchart TD
+  Q{どんな処理}
+  Q -->|ブラウザで xlsx アップロード| BU[ブラウザでワークブックを開く<br/>WASM]
+  Q -->|スケジュールジョブ / ノートブック| PB[Python で一括再計算<br/>Python]
+  Q -->|PR でドリフトを検出| CI[CI でワークブックの回帰検出<br/>CLI]
+  Q -->|AI エージェントが編集| MCP[エージェントから編集<br/>MCP]
+```
+
+| 利用例 | 実行環境 | 目的 |
+| --- | --- | --- |
+| [ブラウザでワークブックを開く](/ja/scenarios/browser-upload) | WASM | `.xlsx` をサーバーに送らずブラウザ内で再計算 |
+| [Python で一括再計算](/ja/scenarios/python-batch) | Python | ジョブやノートブックで帳票やモデルを再計算 |
+| [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) | CLI | 自動チェックで数式や計算値のずれを検出 |
+| [AI エージェントから workbook を編集](/ja/mcp/) | MCP | `formulon-mcp` 経由でエージェントが `.xlsx` を開いて編集・再計算・保存 |
+
+## シナリオ共通の構造
+
+どのシナリオも [ワークブックの流れ](/ja/workbook/lifecycle) で説明している `load → mutate → recalc → save` を踏みます。違うのは:
+
+- bytes の出所（`File`、ファイルシステム、IO ストリーム、MCP ツール入力）
+- bytes の行き先（`save()` の戻り値、ファイル書き込み、返却 `bytes` フィールド）
+- メモリと IO の所有者
+- エラーがホスト境界をどう渡るか
+
+runtime ごとの設定は [Runtimes](/ja/runtimes/)、engine 側のフローは [ワークブックの流れ](/ja/workbook/lifecycle) を参照してください。

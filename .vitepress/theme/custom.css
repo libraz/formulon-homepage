@@ -1,0 +1,2942 @@
+/* Site-wide font */
+:root {
+  --vp-font-family-base: "IBM Plex Sans", system-ui, sans-serif;
+  --vp-font-family-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
+}
+
+/* ============================================================
+ * Homepage design system: "Standards Track Datasheet"
+ *
+ * The landing page is a single composition: a wordmark, a
+ * one-line claim, a precise CTA row, a trust line, and a code
+ * panel that proves it's a real library — followed by a flat
+ * datasheet of capabilities. No decorative ornament; every
+ * element is load-bearing.
+ *
+ * Scoped under .VPHome / .op-* so doc pages stay on the
+ * default theme.
+ * ============================================================ */
+
+.VPHome {
+  --op-accent: #1e3a8a;
+  --op-accent-soft: #2563eb;
+  --op-accent-tint: rgba(30, 58, 138, 0.1);
+  --op-rule: rgba(15, 23, 42, 0.1);
+  --op-rule-strong: rgba(15, 23, 42, 0.18);
+
+  --vp-c-brand-1: #1e3a8a;
+  --vp-c-brand-2: #1e40af;
+  --vp-c-brand-3: #2563eb;
+  --vp-c-brand-soft: rgba(37, 99, 235, 0.14);
+}
+
+.dark .VPHome {
+  --op-accent: #93c5fd;
+  --op-accent-soft: #bfdbfe;
+  --op-accent-tint: rgba(147, 197, 253, 0.1);
+  --op-rule: rgba(255, 255, 255, 0.08);
+  --op-rule-strong: rgba(255, 255, 255, 0.16);
+
+  --vp-c-brand-1: #93c5fd;
+  --vp-c-brand-2: #60a5fa;
+  --vp-c-brand-3: #bfdbfe;
+  --vp-c-brand-soft: rgba(147, 197, 253, 0.18);
+}
+
+/* ---- Hero ---- */
+
+.op-hero {
+  position: relative;
+  padding: 64px 24px 40px;
+  border-bottom: 1px solid var(--op-rule);
+}
+
+.op-hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 64px;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .op-hero {
+    padding: 44px 20px 28px;
+  }
+  .op-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+.op-hero-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.op-hero-wordmark {
+  font-family: var(--vp-font-family-mono);
+  font-size: 3.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--vp-c-text-1);
+  margin: 0;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
+}
+
+@media (max-width: 768px) {
+  .op-hero-wordmark {
+    font-size: 2.4rem;
+  }
+}
+
+.op-hero-claim {
+  font-family: var(--vp-font-family-base);
+  font-size: 1.7rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.014em;
+  color: var(--vp-c-text-1);
+  margin: 24px 0 0;
+  max-width: 38ch;
+}
+
+.op-hero-claim code {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.88em;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  padding: 0 1px;
+  color: var(--op-accent);
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 768px) {
+  .op-hero-claim {
+    font-size: 1.4rem;
+    max-width: none;
+  }
+}
+
+.op-hero-sub {
+  font-family: var(--vp-font-family-base);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  margin: 18px 0 0;
+  max-width: 56ch;
+}
+
+.op-hero-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin-top: 30px;
+}
+
+.op-cta {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--vp-font-family-base);
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.op-cta-primary {
+  height: 42px;
+  padding: 0 22px;
+  background: var(--op-accent);
+  color: #fff;
+  border: 1px solid var(--op-accent);
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+.op-cta-primary:hover {
+  background: var(--vp-c-brand-2);
+  border-color: var(--vp-c-brand-2);
+  color: #fff;
+}
+
+.dark .op-cta-primary {
+  color: #0b1220;
+}
+
+.dark .op-cta-primary:hover {
+  color: #0b1220;
+}
+
+.op-cta-link {
+  color: var(--vp-c-text-1);
+  border-bottom: 1px solid var(--op-rule-strong);
+  padding: 4px 0 5px;
+}
+
+.op-cta-link:hover {
+  color: var(--op-accent);
+  border-bottom-color: var(--op-accent);
+}
+
+.op-hero-trust {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--vp-c-text-3);
+  margin: 32px 0 0;
+  white-space: normal;
+}
+
+/* ---- Hero code panel ---- */
+
+.op-hero-code {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--op-rule);
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+  overflow: hidden;
+  font-family: var(--vp-font-family-mono);
+  align-self: stretch;
+  min-height: 100%;
+}
+
+.op-hero-code::before,
+.op-hero-code::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.op-hero-code::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid var(--op-accent);
+  border-left: 1px solid var(--op-accent);
+}
+
+.op-hero-code::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid var(--op-accent);
+  border-right: 1px solid var(--op-accent);
+}
+
+.op-hero-code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--op-rule);
+  background: var(--vp-c-bg);
+}
+
+.op-hero-code-label {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--vp-c-text-2);
+}
+
+.op-hero-code-lang {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--op-accent);
+  opacity: 0.8;
+}
+
+.op-hero-code-body {
+  margin: 0;
+  padding: 22px 22px 24px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--vp-c-text-1);
+  overflow-x: auto;
+  background: transparent;
+  flex: 1;
+}
+
+.op-hero-code-body code {
+  font-family: inherit;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.op-hero-code-body .tk-c {
+  color: var(--vp-c-text-3);
+  font-style: normal;
+}
+
+.op-hero-code-body .tk-fn {
+  color: var(--op-accent);
+  font-weight: 600;
+}
+
+.op-hero-code-body .tk-s {
+  color: var(--vp-c-text-2);
+}
+
+@media (max-width: 960px) {
+  .op-hero-code-body {
+    font-size: 0.8rem;
+    padding: 18px 16px 20px;
+  }
+}
+
+/* ---- Spec rows (replaces the features grid) ---- */
+
+.op-spec {
+  padding: 56px 24px 24px;
+}
+
+.op-spec-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Section header pairs an RFC-style kicker with a refined sans-serif
+ * title.  Two-line composition reads as a documentation section break,
+ * not a marketing feature heading. */
+.op-spec-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 28px;
+}
+
+.op-spec-kicker {
+  display: inline-block;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--op-accent);
+  text-transform: uppercase;
+}
+
+.op-spec-heading {
+  font-family: var(--vp-font-family-base);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  color: var(--vp-c-text-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Spec list — anchor-as-row, datasheet typography, no glyphs.
+ * The hover affordance is a left-edge accent bar that fills in
+ * combined with a small padding shift; no background tint, so the
+ * row stays calm and the hover reads as "this row is active". */
+.op-spec-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--op-rule-strong);
+  border-bottom: 1px solid var(--op-rule-strong);
+}
+
+.op-spec-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 32px;
+  padding: 18px 4px 18px 16px;
+  border-top: 1px solid var(--op-rule);
+  text-decoration: none;
+  color: var(--vp-c-text-2);
+  transition:
+    color 0.15s ease,
+    padding-left 0.18s ease;
+}
+
+.op-spec-row:first-child {
+  border-top: 0;
+}
+
+.op-spec-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--op-accent);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.op-spec-row:hover {
+  color: var(--vp-c-text-1);
+  padding-left: 22px;
+}
+
+.op-spec-row:hover::before {
+  transform: scaleY(1);
+}
+
+.op-spec-key {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--op-accent);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.op-spec-desc {
+  font-family: var(--vp-font-family-base);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
+  color: inherit;
+}
+
+.op-spec-desc code {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.86em;
+  font-weight: 500;
+  background: transparent;
+  padding: 0 1px;
+  border: 0;
+  color: var(--vp-c-text-1);
+  white-space: nowrap;
+}
+
+.op-spec-row:hover .op-spec-desc code {
+  color: var(--op-accent);
+}
+
+@media (max-width: 720px) {
+  .op-spec-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 16px 4px 16px 14px;
+  }
+  .op-spec-row:hover {
+    padding-left: 20px;
+  }
+  .op-spec-key {
+    font-size: 0.7rem;
+  }
+  .op-spec-desc {
+    font-size: 0.94rem;
+  }
+  .op-spec-desc code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ============================================================
+ * Formulon homepage — "Modern Enterprise"
+ *
+ * Quiet, crisp, contemporary. Off-white paper with near-black ink
+ * and a single decisive accent. Clean geometric sans for display,
+ * IBM Plex Sans for body, JetBrains Mono for figures and labels.
+ * No grain, no skeuomorphic stamps, no decorative serifs — every
+ * element is load-bearing.
+ *
+ * Scoped under .VPHome so doc pages stay on the default theme.
+ * ============================================================ */
+
+.VPHome {
+  --biz-bg: #f5f3ee;
+  --biz-bg-soft: #ecebe4;
+  --biz-panel: #ffffff;
+  --biz-ink: #0d0e11;
+  --biz-ink-soft: #2a2c33;
+  --biz-muted: #6f7280;
+  --biz-line: rgba(13, 14, 17, 0.1);
+  --biz-line-strong: rgba(13, 14, 17, 0.2);
+  --biz-rule: rgba(13, 14, 17, 0.86);
+  --biz-accent: #e44e1d;
+  --biz-accent-deep: #b73a14;
+  --biz-accent-soft: rgba(228, 78, 29, 0.1);
+
+  --vp-c-brand-1: #b73a14;
+  --vp-c-brand-2: #e44e1d;
+  --vp-c-brand-3: #f47147;
+  --vp-c-brand-soft: rgba(228, 78, 29, 0.14);
+}
+
+.dark .VPHome {
+  --biz-bg: #0a0b0e;
+  --biz-bg-soft: #11141a;
+  --biz-panel: #14171d;
+  --biz-ink: #f3f1ec;
+  --biz-ink-soft: #d6d3cb;
+  --biz-muted: #9498a3;
+  --biz-line: rgba(243, 241, 236, 0.1);
+  --biz-line-strong: rgba(243, 241, 236, 0.22);
+  --biz-rule: rgba(243, 241, 236, 0.7);
+  --biz-accent: #f97349;
+  --biz-accent-deep: #fb8a64;
+  --biz-accent-soft: rgba(249, 115, 73, 0.14);
+
+  --vp-c-brand-1: #f97349;
+  --vp-c-brand-2: #fb8a64;
+  --vp-c-brand-3: #fda88a;
+  --vp-c-brand-soft: rgba(249, 115, 73, 0.18);
+}
+
+/* ---------- Masthead band ---------- */
+
+.VPHome {
+  --biz-display: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+}
+
+.fln-masthead {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  align-items: center;
+  gap: 18px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 32px 0;
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--biz-muted);
+}
+
+.fln-masthead-vol {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--biz-ink);
+  font-weight: 600;
+}
+
+.fln-masthead-vol em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-family: var(--biz-display);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0;
+  background: var(--biz-ink);
+  color: var(--biz-bg);
+  border-radius: 999px;
+}
+
+.dark .fln-masthead-vol em {
+  background: var(--biz-ink);
+  color: var(--biz-bg);
+}
+
+.fln-masthead-rule {
+  height: 1px;
+  background: var(--biz-line-strong);
+}
+
+.fln-masthead-issue {
+  color: var(--biz-muted);
+  font-weight: 500;
+}
+
+/* ---------- Hero ---------- */
+
+.fln-hero {
+  position: relative;
+  background: var(--biz-bg);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      80% 60% at 92% -10%,
+      color-mix(in srgb, var(--biz-accent) 10%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      60% 50% at -10% 110%,
+      color-mix(in srgb, var(--biz-ink) 4%, transparent),
+      transparent 60%
+    );
+}
+
+.dark .fln-hero::before {
+  background:
+    radial-gradient(
+      80% 60% at 92% -10%,
+      color-mix(in srgb, var(--biz-accent) 14%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      60% 50% at -10% 110%,
+      color-mix(in srgb, var(--biz-ink) 6%, transparent),
+      transparent 60%
+    );
+}
+
+.fln-hero-inner {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 56px 32px 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 0.95fr);
+  gap: 80px;
+  align-items: stretch;
+}
+
+.fln-hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fln-eyebrow {
+  margin: 0 0 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 999px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-ink);
+  background: color-mix(in srgb, var(--biz-panel) 72%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.fln-eyebrow::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--biz-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--biz-accent) 18%, transparent);
+}
+
+.fln-wordmark {
+  margin: 0;
+  font-family: var(--biz-display);
+  font-size: clamp(3.6rem, 9.5vw, 8rem);
+  line-height: 0.92;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  color: var(--biz-ink);
+  text-rendering: geometricPrecision;
+}
+
+.fln-wordmark em {
+  font-style: normal;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.fln-claim {
+  margin: 28px 0 0;
+  max-width: 26ch;
+  font-family: var(--biz-display);
+  font-size: clamp(1.4rem, 2.4vw, 2rem);
+  line-height: 1.22;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--biz-ink-soft);
+}
+
+.dark .fln-claim {
+  color: var(--biz-ink);
+}
+
+.fln-claim em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--biz-ink);
+  background-image: linear-gradient(
+    transparent 65%,
+    color-mix(in srgb, var(--biz-accent) 30%, transparent) 65%
+  );
+  background-repeat: no-repeat;
+  padding: 0 2px;
+}
+
+.fln-claim code {
+  font-family: inherit;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1em;
+  background: transparent;
+  border: 0;
+  padding: 0 2px;
+  color: var(--biz-ink);
+  background-image: linear-gradient(
+    transparent 65%,
+    color-mix(in srgb, var(--biz-accent) 30%, transparent) 65%
+  );
+  background-repeat: no-repeat;
+  white-space: nowrap;
+}
+
+.fln-sub {
+  margin: 24px 0 0;
+  max-width: 56ch;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.72;
+}
+
+.fln-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 36px;
+}
+
+.fln-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 22px;
+  font-family: var(--biz-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  border-radius: 999px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.fln-cta-primary {
+  background: var(--biz-ink);
+  border: 1px solid var(--biz-ink);
+  color: var(--biz-bg);
+}
+
+.fln-cta-primary span[aria-hidden] {
+  display: inline-flex;
+  font-family: var(--biz-display);
+  font-style: normal;
+  transition: transform 0.18s ease;
+}
+
+.fln-cta-primary:hover {
+  background: color-mix(in srgb, var(--biz-ink) 86%, var(--biz-accent));
+  border-color: color-mix(in srgb, var(--biz-ink) 86%, var(--biz-accent));
+  color: var(--biz-bg);
+}
+
+.fln-cta-primary:hover span[aria-hidden] {
+  transform: translateX(3px);
+}
+
+.dark .fln-cta-primary {
+  color: var(--biz-bg);
+}
+
+.fln-cta-secondary {
+  background: transparent;
+  border: 1px solid var(--biz-line-strong);
+  color: var(--biz-ink);
+}
+
+.fln-cta-secondary:hover {
+  border-color: var(--biz-ink);
+  color: var(--biz-ink);
+}
+
+.fln-cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--biz-display);
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  color: var(--biz-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding: 4px 2px 5px;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.fln-cta-link:hover {
+  color: var(--biz-ink);
+  border-bottom-color: var(--biz-line-strong);
+}
+
+.dark .fln-cta-link:hover {
+  color: var(--biz-ink);
+}
+
+/* ---------- Workbench (right column) ---------- */
+
+.fln-workbench {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--biz-line);
+  border-radius: 14px;
+  background: var(--biz-panel);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 24px 60px -28px rgba(13, 14, 17, 0.22),
+    0 6px 18px -10px rgba(13, 14, 17, 0.14);
+  overflow: hidden;
+}
+
+.dark .fln-workbench {
+  border-color: var(--biz-line-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 30px 70px -32px rgba(0, 0, 0, 0.7),
+    0 8px 24px -14px rgba(0, 0, 0, 0.5);
+}
+
+.fln-workbench-bar {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--biz-line);
+  background: color-mix(in srgb, var(--biz-panel) 88%, var(--biz-bg));
+}
+
+.fln-marks {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.fln-marks span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--biz-line-strong);
+}
+
+.fln-marks span:nth-child(1) {
+  background: color-mix(in srgb, var(--biz-ink) 60%, transparent);
+}
+.fln-marks span:nth-child(2) {
+  background: color-mix(in srgb, var(--biz-ink) 40%, transparent);
+}
+.fln-marks span:nth-child(3) {
+  background: color-mix(in srgb, var(--biz-ink) 20%, transparent);
+}
+
+.fln-workbench-bar strong {
+  color: var(--biz-ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fln-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--biz-accent-soft);
+  color: var(--biz-accent-deep);
+  font-family: var(--biz-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.fln-stamp::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--biz-accent);
+}
+
+.dark .fln-stamp {
+  color: var(--biz-accent-deep);
+}
+
+/* Pipeline strip */
+.fln-pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: var(--biz-line);
+  gap: 1px;
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-pipeline span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  background: var(--biz-panel);
+  color: var(--biz-muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.fln-pipeline span b {
+  font-family: "JetBrains Mono", monospace;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 0.72rem;
+  color: var(--biz-ink);
+  opacity: 0.55;
+}
+
+/* Sheet */
+.fln-sheet {
+  padding: 8px 4px 12px;
+  background: var(--biz-panel);
+  overflow-x: auto;
+}
+
+.fln-sheet-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.85fr 0.85fr 1fr;
+  align-items: stretch;
+  min-width: 420px;
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-sheet-row:last-child {
+  border-bottom: 0;
+}
+
+.fln-sheet-row span {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 16px;
+  color: var(--biz-ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.84rem;
+  font-feature-settings:
+    "tnum" on,
+    "lnum" on;
+  line-height: 1.3;
+  background: transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fln-sheet-row:first-child {
+  border-bottom: 1px solid var(--biz-line-strong);
+}
+
+.fln-sheet-row:first-child span {
+  min-height: 32px;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-feature-settings: normal;
+}
+
+.fln-sheet-row span.formula {
+  color: var(--biz-accent-deep);
+  background: var(--biz-accent-soft);
+}
+
+.dark .fln-sheet-row span.formula {
+  color: var(--biz-accent);
+}
+
+/* Result footer */
+.fln-result {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--biz-line);
+  background: color-mix(in srgb, var(--biz-panel) 88%, var(--biz-bg));
+}
+
+.fln-result-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--biz-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--biz-accent) 18%, transparent);
+}
+
+.fln-result-text {
+  color: var(--biz-ink);
+  font-family: var(--biz-display);
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: -0.005em;
+}
+
+.fln-result-meta {
+  color: var(--biz-muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- Ledger (under hero) ---------- */
+
+.fln-ledger {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px 64px;
+}
+
+.fln-ledger-row {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 32px;
+  border-left: 1px solid var(--biz-line);
+}
+
+.fln-ledger-row:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.fln-ledger-val {
+  margin: 0;
+  font-family: var(--biz-display);
+  font-size: clamp(1.7rem, 2.8vw, 2.4rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  font-feature-settings:
+    "tnum" on,
+    "lnum" on;
+  color: var(--biz-ink);
+}
+
+.fln-ledger-key {
+  margin: 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* ---------- Section II — Agent tools ---------- */
+
+.fln-mcp {
+  padding: 80px 32px;
+  background: var(--biz-bg);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-mcp-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  gap: 64px;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.fln-mcp-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fln-mcp-copy h2 {
+  margin: 22px 0 0;
+  max-width: 13ch;
+  font-family: var(--biz-display);
+  font-size: clamp(2rem, 4vw, 3.55rem);
+  line-height: 0.98;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--biz-ink);
+}
+
+.fln-mcp-copy p {
+  margin: 22px 0 0;
+  max-width: 55ch;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.72;
+}
+
+.fln-mcp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 24px;
+  margin-top: 30px;
+}
+
+.fln-mcp-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.fln-mcp-terminal {
+  overflow: hidden;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 14px;
+  background: #11141a;
+  box-shadow: 0 22px 48px -34px rgba(13, 14, 17, 0.6);
+}
+
+.dark .fln-mcp-terminal {
+  background: #080a0e;
+  box-shadow: 0 22px 48px -30px rgba(0, 0, 0, 0.9);
+}
+
+.fln-mcp-terminal-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.68);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.fln-mcp-terminal-bar code {
+  color: #ffb199;
+  background: transparent;
+  padding: 0;
+}
+
+.fln-mcp-terminal pre {
+  margin: 0;
+  padding: 22px;
+  overflow-x: auto;
+  background: transparent;
+}
+
+.fln-mcp-terminal pre code {
+  display: block;
+  color: #f5f3ee;
+  background: transparent;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.78;
+  white-space: pre;
+}
+
+.fln-mcp-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--biz-line);
+  border-radius: 14px;
+  background: var(--biz-line);
+}
+
+.fln-mcp-tools div {
+  min-width: 0;
+  padding: 20px;
+  background: var(--biz-panel);
+}
+
+.fln-mcp-tools span {
+  display: block;
+  color: var(--biz-muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fln-mcp-tools strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--biz-ink);
+  font-family: var(--biz-display);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Section II.5 — Ecosystem stack ---------- */
+
+.fln-stack {
+  padding: 80px 32px;
+  background: var(--biz-bg);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-stack-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.fln-stack-header {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 64ch;
+  margin-bottom: 40px;
+}
+
+.fln-stack-header h2 {
+  margin: 4px 0 0;
+  font-family: var(--biz-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--biz-ink);
+}
+
+.fln-stack-header p {
+  margin: 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.72;
+}
+
+.fln-stack-grid {
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--biz-panel);
+}
+
+.fln-stack-row {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.fln-stack-row + .fln-stack-row {
+  border-top: 1px solid var(--biz-line);
+}
+
+.fln-stack-caption {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 24px 24px 28px;
+  background: var(--biz-bg-soft);
+  border-right: 1px solid var(--biz-line);
+}
+
+.fln-stack-body {
+  min-width: 0;
+  display: grid;
+}
+
+.fln-stack-body[data-kind="pair"] {
+  grid-template-columns: 1fr 1fr;
+}
+
+.fln-stack-body[data-kind="single"] {
+  grid-template-columns: 1fr;
+}
+
+.fln-stack-body[data-kind="triple"],
+.fln-stack-body[data-kind="tags"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 18px 22px;
+  background: var(--biz-panel);
+}
+
+.fln-stack-mark {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-muted);
+}
+
+.fln-stack-caption strong {
+  font-family: var(--biz-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--biz-ink);
+}
+
+.fln-stack-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 22px 24px;
+  background: var(--biz-panel);
+  color: inherit;
+  text-decoration: none;
+  transition: background 120ms ease;
+  min-width: 0;
+}
+
+.fln-stack-cell + .fln-stack-cell {
+  border-left: 1px solid var(--biz-line);
+}
+
+a.fln-stack-cell {
+  position: relative;
+}
+
+a.fln-stack-cell:hover {
+  background: var(--biz-bg-soft);
+}
+
+a.fln-stack-cell::after {
+  content: "→";
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+  color: var(--biz-muted);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+a.fln-stack-cell:hover::after {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.fln-stack-cell strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.96rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--biz-ink);
+}
+
+.fln-stack-cell > span {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--biz-muted);
+}
+
+.fln-stack-cell ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fln-stack-cell ul li {
+  position: relative;
+  padding-left: 18px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--biz-ink-soft);
+}
+
+.fln-stack-cell ul li::before {
+  content: "├";
+  position: absolute;
+  left: 0;
+  color: var(--biz-muted);
+}
+
+.fln-stack-cell ul li:last-child::before {
+  content: "└";
+}
+
+.fln-stack-cell-wide {
+  align-items: center;
+  text-align: center;
+  padding: 28px 24px;
+}
+
+.fln-stack-chip {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 12px;
+  background: var(--biz-bg-soft);
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+}
+
+a.fln-stack-chip:hover {
+  background: var(--biz-bg);
+  transform: translateY(-1px);
+}
+
+.fln-stack-chip strong {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--biz-ink);
+}
+
+.fln-stack-chip span {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--biz-muted);
+}
+
+.fln-stack-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 999px;
+  background: var(--biz-bg-soft);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--biz-ink);
+}
+
+/* ---------- Section III — Operations ---------- */
+
+.fln-start {
+  padding: 96px 32px 56px;
+  background: var(--biz-bg-soft);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.dark .fln-start {
+  background: var(--biz-bg-soft);
+}
+
+.fln-start-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.fln-start-header {
+  display: grid;
+  grid-template-columns: minmax(0, 0.5fr) minmax(0, 0.5fr);
+  gap: 32px 64px;
+  align-items: end;
+  margin-bottom: 48px;
+}
+
+.fln-section-mark {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-muted);
+}
+
+.fln-section-mark::before {
+  content: attr(data-volume);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--biz-ink);
+  color: var(--biz-bg);
+  font-family: var(--biz-display);
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.fln-start-header h2 {
+  margin: 0;
+  font-family: var(--biz-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--biz-ink);
+  max-width: 18ch;
+}
+
+.fln-start-header p {
+  margin: 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.72;
+}
+
+.fln-path-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fln-path {
+  position: relative;
+  display: grid;
+  grid-template-rows: max-content max-content 1fr max-content;
+  gap: 16px;
+  padding: 28px;
+  border: 1px solid var(--biz-line);
+  border-radius: 14px;
+  background: var(--biz-panel);
+  color: var(--biz-ink);
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.fln-path-key {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 999px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--biz-ink);
+  background: color-mix(in srgb, var(--biz-bg-soft) 50%, transparent);
+  width: max-content;
+}
+
+.dark .fln-path-key {
+  color: var(--biz-ink);
+}
+
+.fln-path strong {
+  display: block;
+  margin: 0;
+  font-family: var(--biz-display);
+  font-size: clamp(1.3rem, 1.6vw, 1.55rem);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  color: var(--biz-ink);
+  max-width: 16ch;
+}
+
+.fln-path-desc {
+  display: block;
+  margin: 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.62;
+}
+
+.fln-path::after {
+  content: "→";
+  width: max-content;
+  font-family: var(--biz-display);
+  font-style: normal;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--biz-muted);
+  letter-spacing: 0;
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease;
+}
+
+.fln-path:hover {
+  border-color: var(--biz-ink);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -28px rgba(13, 14, 17, 0.3);
+}
+
+.dark .fln-path:hover {
+  border-color: var(--biz-line-strong);
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.7);
+}
+
+.fln-path:hover::after {
+  transform: translateX(6px);
+  color: var(--biz-ink);
+}
+
+/* Capabilities index strip */
+.fln-capabilities {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 36px;
+  border: 1px solid var(--biz-line);
+  border-radius: 14px;
+  background: var(--biz-panel);
+  overflow: hidden;
+}
+
+.fln-capabilities a {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 24px;
+  background: transparent;
+  color: var(--biz-ink);
+  text-decoration: none;
+  border-left: 1px solid var(--biz-line);
+  transition: background 0.18s ease;
+}
+
+.fln-capabilities a:first-child {
+  border-left: 0;
+}
+
+.fln-capabilities a:hover {
+  background: color-mix(in srgb, var(--biz-bg) 60%, transparent);
+}
+
+.dark .fln-capabilities a:hover {
+  background: color-mix(in srgb, var(--biz-bg) 40%, transparent);
+}
+
+.fln-capabilities span {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-muted);
+}
+
+.fln-capabilities strong {
+  font-family: var(--biz-display);
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--biz-ink);
+  transition: color 0.18s ease;
+}
+
+/* ---------- Section III — Live Figures (demo) ---------- */
+
+.fln-demo {
+  padding: 96px 32px 112px;
+  background: var(--biz-bg);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-demo-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(280px, 0.4fr) minmax(0, 0.6fr);
+  gap: 64px;
+  align-items: start;
+}
+
+.fln-demo-copy {
+  position: sticky;
+  top: 96px;
+  padding: 4px 0;
+}
+
+.fln-demo-copy h2 {
+  margin: 24px 0 0;
+  font-family: var(--biz-display);
+  font-size: clamp(1.85rem, 3.2vw, 2.7rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--biz-ink);
+}
+
+.fln-demo-copy p {
+  margin: 22px 0 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 1rem;
+  line-height: 1.72;
+  max-width: 42ch;
+}
+
+.fln-demo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  margin-top: 28px;
+}
+
+.fln-demo-copy a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--biz-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-transform: none;
+  color: var(--biz-ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--biz-line-strong);
+  padding: 4px 0;
+  transition:
+    gap 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.fln-demo-copy a::after {
+  content: "→";
+  font-family: inherit;
+  font-style: normal;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.fln-demo-copy a:hover {
+  gap: 14px;
+  border-bottom-color: var(--biz-ink);
+}
+
+/* Demo board */
+.fln-demo-board {
+  position: relative;
+  border: 1px solid var(--biz-line);
+  border-radius: 8px;
+  background: var(--biz-panel);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 24px 60px -28px rgba(13, 14, 17, 0.22),
+    0 6px 18px -10px rgba(13, 14, 17, 0.14);
+  overflow: hidden;
+}
+
+.dark .fln-demo-board {
+  border-color: var(--biz-line-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 30px 70px -32px rgba(0, 0, 0, 0.7),
+    0 8px 24px -14px rgba(0, 0, 0, 0.5);
+}
+
+.fln-demo-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--biz-line);
+  background: color-mix(in srgb, var(--biz-panel) 88%, var(--biz-bg));
+}
+
+.fln-demo-toolbar-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fln-demo-toolbar strong {
+  color: var(--biz-ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fln-demo-toolbar-pills {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fln-demo-toolbar span {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--biz-accent-soft);
+  color: var(--biz-accent-deep);
+  font-family: var(--biz-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 0;
+}
+
+.fln-demo-toolbar span::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--biz-accent);
+}
+
+.fln-demo-toolbar .fln-demo-readonly {
+  background: color-mix(in srgb, var(--biz-bg-soft) 70%, var(--biz-panel));
+  color: var(--biz-muted);
+  border: 1px solid var(--biz-line);
+}
+
+.fln-demo-toolbar .fln-demo-readonly::before {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: inset 0 2px 0 currentColor;
+  opacity: 0.85;
+}
+
+.dark .fln-demo-toolbar span {
+  color: var(--biz-accent-deep);
+}
+
+.fln-demo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.42fr) minmax(0, 0.58fr);
+  gap: 1px;
+  background: var(--biz-line);
+}
+
+.fln-demo-card {
+  padding: 24px;
+  background: var(--biz-panel);
+}
+
+.fln-demo-card h3 {
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-muted);
+}
+
+.fln-demo-card h3::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--biz-accent);
+}
+
+.fln-demo-card label {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.fln-demo-card label span {
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.fln-demo-card input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--biz-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--biz-bg-soft) 40%, var(--biz-panel));
+  color: var(--biz-ink);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.fln-demo-card input:hover {
+  border-color: var(--biz-line-strong);
+}
+
+.fln-demo-card input:focus {
+  outline: none;
+  border-color: var(--biz-ink);
+  background: var(--biz-panel);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--biz-ink) 8%, transparent);
+}
+
+.fln-demo-card.is-results dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  gap: 8px;
+  background: transparent;
+  border: 0;
+}
+
+.fln-demo-card.is-results dl > div {
+  display: grid;
+  align-content: space-between;
+  min-height: 132px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--biz-bg-soft) 40%, var(--biz-panel));
+  border: 1px solid var(--biz-line);
+  border-radius: 10px;
+}
+
+.fln-demo-card.is-results dt {
+  margin: 0;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--biz-muted);
+}
+
+.fln-demo-card.is-results dd {
+  margin: 8px 0 0;
+  font-family: var(--biz-display);
+  font-feature-settings:
+    "tnum" on,
+    "lnum" on;
+  font-size: clamp(1.45rem, 2vw, 1.85rem);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--biz-ink);
+}
+
+.fln-demo-card.is-results code {
+  display: block;
+  margin-top: 14px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--biz-muted);
+  overflow-wrap: anywhere;
+}
+
+.fln-function-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(72px, 1fr));
+  gap: 1px;
+  background: var(--biz-line);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-function-strip button {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  justify-items: start;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--biz-panel);
+  color: var(--biz-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.fln-function-strip button:hover,
+.fln-function-strip button.active {
+  background: color-mix(in srgb, var(--biz-accent-soft) 70%, var(--biz-panel));
+}
+
+.fln-function-strip button.active {
+  color: var(--biz-accent-deep);
+}
+
+.fln-demo .fln-function-strip button b {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.fln-function-strip small {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--biz-muted);
+}
+
+.fln-demo-sheet-wrap {
+  position: relative;
+  background: var(--fc-bg, var(--biz-panel));
+}
+
+.fln-demo-sheet {
+  height: 420px;
+  min-height: 420px;
+  background: var(--fc-bg, var(--biz-panel));
+  pointer-events: none;
+}
+
+.fln-demo-sheet .fc-root,
+.fln-demo-sheet .fc-host {
+  min-height: 420px;
+}
+
+.fln-demo-toolbar-meta .fln-demo-readonly-note {
+  display: block;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.74rem;
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fln-demo-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.35fr);
+  gap: 1px;
+  background: var(--biz-line);
+  border-top: 1px solid var(--biz-line);
+}
+
+.fln-demo-board .fln-demo-result .fln-demo-result-cell {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--biz-panel);
+}
+
+.fln-demo-result span {
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--biz-muted);
+}
+
+.fln-demo-result code,
+.fln-demo-result strong {
+  min-width: 0;
+  margin: 0;
+  color: var(--biz-ink);
+  overflow-wrap: anywhere;
+}
+
+.fln-demo-result code {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.fln-demo-result strong {
+  font-family: var(--biz-display);
+  font-size: 1.3rem;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.cell-full-demo {
+  --demo-shell-bg: #faf9f8;
+  --demo-shell-bg-2: #f3f2f1;
+  --demo-shell-bg-3: #edebe9;
+  --demo-surface: #ffffff;
+  --demo-rule: #e1dfdd;
+  --demo-rule-2: #d2d0ce;
+  --demo-fg: #201f1e;
+  --demo-muted: #605e5c;
+  --demo-accent: #107c41;
+  --demo-accent-strong: #0e6b39;
+  --demo-accent-soft: #e6f4ec;
+  --demo-font:
+    "Aptos", "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui,
+    "IBM Plex Sans", sans-serif;
+  margin: 32px 0 48px;
+  border: 1px solid var(--demo-rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--demo-shell-bg);
+  color: var(--demo-fg);
+  font-family: var(--demo-font);
+}
+
+.dark .cell-full-demo {
+  --demo-shell-bg: #1b1a19;
+  --demo-shell-bg-2: #252423;
+  --demo-shell-bg-3: #2d2c2b;
+  --demo-surface: #1f1e1d;
+  --demo-rule: #3b3a39;
+  --demo-rule-2: #484644;
+  --demo-fg: #f3f2f1;
+  --demo-muted: #c8c6c4;
+  --demo-accent: #4cc26b;
+  --demo-accent-strong: #6dd587;
+  --demo-accent-soft: rgba(76, 194, 107, 0.16);
+}
+
+.cell-demo-overlay-open {
+  overflow: hidden;
+}
+
+.cell-full-demo__intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 24px;
+  align-items: center;
+  padding: 22px;
+  background: var(--demo-surface);
+}
+
+.cell-full-demo__tag {
+  display: inline-flex;
+  margin-bottom: 8px;
+  color: var(--demo-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cell-full-demo__intro h2 {
+  margin: 0;
+  color: var(--demo-fg);
+  font-family: var(--demo-font);
+  font-size: 1.35rem;
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.cell-full-demo__intro p {
+  margin: 10px 0 0;
+  max-width: 76ch;
+  color: var(--demo-muted);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.cell-full-demo__intro button,
+.cell-full-demo__bar button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--demo-rule);
+  border-radius: 4px;
+  background: var(--demo-surface);
+  color: var(--demo-fg);
+  font-family: var(--demo-font);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cell-full-demo__intro button:hover,
+.cell-full-demo__bar button:hover {
+  background: var(--demo-shell-bg-2);
+  border-color: var(--demo-rule-2);
+}
+
+.cell-full-demo__close {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border-color: var(--demo-rule-2);
+  background: color-mix(in srgb, var(--demo-shell-bg-2) 72%, var(--demo-surface));
+  color: var(--demo-fg);
+}
+
+.cell-full-demo__close span {
+  display: block;
+  transform: translateY(-1px);
+  font-size: 1.45rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.cell-full-demo__close:hover {
+  background: #c42b1c;
+  border-color: #c42b1c;
+  color: #fff;
+}
+
+.cell-full-demo__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(8, 10, 12, 0.62);
+}
+
+.cell-full-demo__window {
+  width: min(1680px, 100%);
+  height: min(980px, 100%);
+  display: grid;
+  grid-template-rows: 44px auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--demo-rule-2);
+  border-radius: 4px;
+  background: var(--demo-surface);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
+}
+
+.cell-full-demo__toolbar {
+  border-bottom: 1px solid var(--demo-rule);
+}
+
+.cell-full-demo__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--demo-rule);
+  background: var(--demo-surface);
+}
+
+.cell-full-demo__bar strong {
+  color: var(--demo-fg);
+  font-family: var(--demo-font);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.cell-full-demo__sheet {
+  width: 100%;
+  height: 100%;
+  background: var(--demo-surface);
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1024px) {
+  .fln-hero-inner {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .fln-mcp-inner {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .fln-demo-inner {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .fln-demo-copy {
+    position: static;
+  }
+  .fln-path-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fln-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .fln-masthead {
+    padding: 24px 20px 0;
+    grid-template-columns: max-content 1fr;
+    gap: 12px;
+  }
+  .fln-masthead-issue {
+    display: none;
+  }
+  .fln-hero-inner {
+    padding: 36px 20px 56px;
+    gap: 36px;
+  }
+  .fln-claim {
+    max-width: 100%;
+  }
+  .fln-actions {
+    width: 100%;
+  }
+  .fln-actions .fln-cta {
+    flex: 1 1 100%;
+  }
+  .fln-ledger {
+    grid-template-columns: 1fr;
+    padding: 0 20px 40px;
+  }
+  .fln-ledger-row,
+  .fln-ledger-row:first-child {
+    padding: 20px 0;
+    border-left: 0;
+    border-top: 1px solid var(--biz-line);
+  }
+  .fln-ledger-row:first-child {
+    border-top: 0;
+  }
+  .fln-mcp {
+    padding: 56px 20px;
+  }
+  .fln-mcp-copy h2 {
+    max-width: 100%;
+  }
+  .fln-mcp-tools {
+    grid-template-columns: 1fr;
+  }
+  .fln-mcp-terminal-bar {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .fln-stack {
+    padding: 56px 20px;
+  }
+  .fln-stack-row {
+    grid-template-columns: 1fr;
+  }
+  .fln-stack-caption {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 14px;
+    padding: 16px 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--biz-line);
+  }
+  .fln-stack-body[data-kind="pair"] {
+    grid-template-columns: 1fr;
+  }
+  .fln-stack-cell + .fln-stack-cell {
+    border-left: 0;
+    border-top: 1px solid var(--biz-line);
+  }
+  .fln-stack-cell-wide {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .fln-stack-body[data-kind="triple"] {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .fln-start {
+    padding: 56px 20px 40px;
+  }
+  .fln-start-header {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .fln-path-grid {
+    grid-template-columns: 1fr;
+  }
+  .fln-capabilities {
+    grid-template-columns: 1fr;
+  }
+  .fln-capabilities a,
+  .fln-capabilities a:first-child {
+    border-left: 0;
+    border-top: 1px solid var(--biz-line);
+  }
+  .fln-capabilities a:first-child {
+    border-top: 0;
+  }
+  .fln-demo {
+    padding: 56px 20px 80px;
+  }
+  .fln-demo-grid {
+    grid-template-columns: 1fr;
+  }
+  .fln-function-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fln-demo-sheet {
+    height: 360px;
+    min-height: 360px;
+  }
+  .fln-demo-sheet .fc-root,
+  .fln-demo-sheet .fc-host {
+    min-height: 360px;
+  }
+  .fln-demo-result {
+    grid-template-columns: 1fr;
+  }
+  .fln-demo-card.is-results dl {
+    grid-template-columns: 1fr;
+  }
+  .fln-demo-toolbar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    justify-items: start;
+  }
+  .fln-demo-toolbar-meta .fln-demo-readonly-note {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 480px) {
+  .fln-pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fln-result {
+    grid-template-columns: max-content 1fr;
+  }
+  .fln-result-meta {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}
+
+/* Replace VitePress's default "Aあ" language icon with a globe so the
+ * locale switcher reads as i18n at a glance instead of a typography hint. */
+.vpi-languages {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='currentColor' d='M17.9 17.39c-.26-.8-1.01-1.39-1.9-1.39h-1v-3a1 1 0 0 0-1-1H8v-2h2a1 1 0 0 0 1-1V7h2a2 2 0 0 0 2-2v-.41a7.984 7.984 0 0 1 2.9 12.8M11 19.93c-3.95-.49-7-3.85-7-7.93c0-.62.08-1.22.21-1.79L9 15v1a2 2 0 0 0 2 2m1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2'/%3E%3C/svg%3E");
+}
+
+/* Refined list bullets */
+.vp-doc ul {
+  list-style: none;
+  padding-left: 1.25em;
+}
+
+.vp-doc ul > li {
+  position: relative;
+}
+
+.vp-doc ul > li::before {
+  content: "";
+  position: absolute;
+  left: -1.1em;
+  top: 0.65em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--vp-c-text-3);
+}
+
+.vp-doc ul ul > li::before {
+  width: 6px;
+  height: 1.5px;
+  border-radius: 1px;
+  top: 0.75em;
+}
+
+.vp-doc ol {
+  padding-left: 1.5em;
+}
+
+.vp-doc li + li {
+  margin-top: 4px;
+}
+
+/* Body prose: a slightly tighter line-height than VitePress default
+ * for engineering content. 1.7 keeps long-form readability without
+ * the airy magazine feel of 1.75+. */
+.vp-doc p {
+  line-height: 1.7;
+}
+
+/* Code font unification */
+div[class*="language-"] code {
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace !important;
+  font-size: 0.875em;
+}
+
+/* Code blocks: hairline border so they sit as discrete spec panels
+ * rather than washing into the surrounding prose. */
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+}
+
+/* Status pills used in compliance tables.
+ * Fixed height + min-width keeps every variant the same shape inside a
+ * cell so the column reads as a uniform stripe instead of a ragged list.
+ */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 18px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.status-pill.full {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #15803d;
+}
+
+.status-pill.partial {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #a16207;
+}
+
+.status-pill.planned {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #1d4ed8;
+}
+
+.status-pill.out {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #475569;
+}
+
+.status-pill.refused {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #b91c1c;
+}
+
+.dark .status-pill.full {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.dark .status-pill.partial {
+  background: rgba(234, 179, 8, 0.18);
+  color: #fde047;
+}
+.dark .status-pill.planned {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+}
+.dark .status-pill.out {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+.dark .status-pill.refused {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+/* RFC compliance matrix tables.  The Status column carries pill + an
+ * optional parenthetical, which under default auto-layout grabs ~60%
+ * of the row width and squeezes the Standard / Where columns into
+ * unreadable strips.  Force a fixed layout with explicit proportions
+ * so each column gets a predictable share regardless of how long the
+ * inline note is — long notes wrap inside the cell instead.
+ */
+.rfc-matrix-page .vp-doc table {
+  table-layout: fixed;
+}
+
+.rfc-matrix-page .vp-doc table:has(.status-pill) th:nth-child(1),
+.rfc-matrix-page .vp-doc table:has(.status-pill) td:nth-child(1) {
+  width: 26%;
+}
+
+.rfc-matrix-page .vp-doc table:has(.status-pill) th:nth-child(2),
+.rfc-matrix-page .vp-doc table:has(.status-pill) td:nth-child(2) {
+  width: 36%;
+}
+
+.rfc-matrix-page .vp-doc table:has(.status-pill) th:nth-child(3),
+.rfc-matrix-page .vp-doc table:has(.status-pill) td:nth-child(3) {
+  width: 38%;
+}
+
+/* "Other RFCs" 2-column appendix table — narrower name column. */
+.rfc-matrix-page .vp-doc table:not(:has(.status-pill)) th:nth-child(1),
+.rfc-matrix-page .vp-doc table:not(:has(.status-pill)) td:nth-child(1) {
+  width: 22%;
+}
+
+/* Top-align cells so the pill stays next to the name when the
+ * Status cell wraps onto multiple lines from a long parenthetical. */
+.rfc-matrix-page .vp-doc table td {
+  vertical-align: top;
+}
+
+/* Tables for spec lists */
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.vp-doc table th {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 600;
+  text-align: left;
+}
+
+.vp-doc table td code {
+  font-size: 0.85em;
+}
+
+/* Allow long path/test names in tables to break instead of forcing
+ * horizontal overflow.  CVE matrix and RFC matrix carry symbol names
+ * like `internal/jose.TestParseSigned_HeaderInjection_NeverFetches`
+ * that VitePress's default `<code>` styling refuses to break, which
+ * pushes the entire table beyond the content column.
+ */
+.vp-doc table td {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.vp-doc table td code,
+.vp-doc table th code {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Wide tables (`<table class="wide">` or any table inside `.wide-table`)
+ * get a horizontal scroll wrapper so the rest of the page stays
+ * readable on narrow viewports.
+ */
+.vp-doc .wide-table {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.vp-doc .wide-table > table {
+  display: table;
+  min-width: 720px;
+}
+
+/* Widen the content column.  The default VitePress layout
+ * (--vp-layout-max-width: 1440px and content max-width 688px) leaves
+ * a lot of horizontal slack on a 14"+ screen and forces dense
+ * reference tables to overflow.
+ */
+:root {
+  --vp-layout-max-width: 1600px;
+}
+
+.VPDoc:not(.has-aside) .content-container {
+  max-width: 960px !important;
+}
+
+.VPDoc.has-aside .content-container {
+  max-width: 100% !important;
+}
+
+@media (min-width: 1440px) {
+  .VPDoc.has-aside .content-container {
+    max-width: 1100px !important;
+  }
+}
+
+/* VitePress also caps `.container` / `.content` for sidebar-less pages
+ * (top-level entries like /why) at 992/752px and 1104/784px, which
+ * clamps our widened `.content-container` from above.  Lift those caps
+ * to match — but keep `.container` bounded so the right-hand TOC
+ * (`.aside`) stays next to the prose instead of being pushed to the
+ * layout edge. */
+@media (min-width: 960px) {
+  .VPDoc:not(.has-sidebar) .container {
+    max-width: 1280px !important;
+  }
+  .VPDoc:not(.has-sidebar) .content {
+    max-width: 960px !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  .VPDoc:not(.has-sidebar) .container {
+    max-width: 1440px !important;
+  }
+  .VPDoc:not(.has-sidebar) .content {
+    max-width: 1136px !important;
+  }
+}
+
+/* Spec-quotation blockquote styling.  The default VitePress blockquote
+ * is a tiny left rule that disappears against the page; bumping the
+ * rule weight, adding a subtle tint, and shifting the typographic
+ * register makes the eye recognise it as a citation rather than prose.
+ */
+.vp-doc blockquote {
+  border-left: 3px solid var(--vp-c-brand-2);
+  background: var(--vp-c-bg-soft);
+  padding: 0.6em 1em;
+  margin: 1em 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--vp-c-text-2);
+  font-style: normal;
+}
+
+.vp-doc blockquote p {
+  margin: 0;
+}
+
+.vp-doc blockquote p + p {
+  margin-top: 0.5em;
+}
+
+/* Small "spec quote" marker injected before the first paragraph of a
+ * blockquote — opt-in via `<blockquote class="spec">` in HTML, or by
+ * the `> **...** ...` markdown convention where the bold prefix carries
+ * the spec id (e.g. `> **RFC 9700 §2.2.2** — ...`).  Keeps the source
+ * markdown legible while making the visual block unmistakable. */
+.vp-doc blockquote strong:first-child {
+  display: inline-block;
+  margin-right: 0.5em;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
+  font-size: 0.82em;
+  letter-spacing: 0.02em;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+  text-transform: none;
+}
+
+/* Mermaid diagrams should not be cramped */
+.mermaid {
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* Tighten line-height inside mermaid node labels.  Mermaid auto-sizes
+ * each node's bounding box to the rendered HTML label height; the
+ * default browser line-height (~1.5) leaves the second/third lines
+ * of a wrapped label sitting outside the SVG shape.  Pulling
+ * line-height down to ~1.2 lets the auto-size logic enclose every
+ * line.
+ */
+.mermaid .nodeLabel,
+.mermaid .nodeLabel p,
+.mermaid foreignObject div,
+.mermaid .edgeLabel,
+.mermaid .edgeLabel p {
+  line-height: 1.2 !important;
+  margin: 0 !important;
+}
+
+/* "Why this library exists" callout — green tint to set apart the
+ * one-paragraph pitch from the technical info blocks that follow. */
+.vp-doc .why-callout .custom-block.info {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.vp-doc .why-callout .custom-block.info .custom-block-title {
+  color: #15803d;
+}
+
+.dark .vp-doc .why-callout .custom-block.info {
+  background-color: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.dark .vp-doc .why-callout .custom-block.info .custom-block-title {
+  color: #4ade80;
+}
+
+/* FAQ category index — replace the wall-of-links default toc */
+.vp-doc .faq-index {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 1.5rem 0 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.vp-doc .faq-index > li {
+  margin: 0;
+  padding: 0;
+}
+
+.vp-doc .faq-index > li::before {
+  content: none;
+}
+
+.vp-doc .faq-index a {
+  display: block;
+  height: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.vp-doc .faq-index a:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+
+.vp-doc .faq-index .faq-index-title {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .faq-index .faq-index-desc {
+  font-size: 0.8rem;
+  color: var(--vp-c-text-2);
+  line-height: 1.45;
+}
+
+/* Invisible ASCII anchor placed just above each FAQ H2 — the H2 IDs that
+ * VitePress autogenerates from Japanese headings end up in NFD form, so
+ * `getElementById` lookups against NFC-encoded hashes miss. Linking to
+ * an explicit ASCII anchor sidesteps the Unicode normalization mismatch.
+ */
+.vp-doc .faq-anchor {
+  display: block;
+  height: 0;
+  scroll-margin-top: calc(var(--vp-nav-height, 64px) + 24px);
+}
+
+/* Inline doc-reference pill — used inside prose to mark in-site
+ * navigation pointers ("see X for details"). Lighter weight than a
+ * full callout, heavier than a bare link, so the eye lands on it.
+ */
+.vp-doc a.doc-ref {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0 2px;
+  padding: 1px 8px 2px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  font-size: 0.875em;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.vp-doc a.doc-ref::before {
+  content: "↗";
+  display: inline-block;
+  font-size: 0.95em;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.vp-doc a.doc-ref:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  background: var(--vp-c-bg-elv);
+  text-decoration: none;
+}
+
+.vp-doc a.doc-ref:hover::before {
+  opacity: 1;
+}
