@@ -1,23 +1,23 @@
 # ワークブックの流れ
 
-ほとんどの組み込みは同じ流れです。bytes を開き、編集し、再計算し、値を読むか保存して閉じる ─ どこで何が起きるかを把握しておくと、計算・IO・UI・永続化の責務を分けやすくなります。
+ほとんどの組み込みは同じ流れです。バイト列を開き、編集し、再計算し、値を読むか保存して閉じる。どこで何が起きるかを把握しておくと、計算・入出力・UI・永続化の責務を分けやすくなります。
 
 ```mermaid
 flowchart LR
-  A[ワークブックの bytes を開く] --> B[ワークブック model にパース]
+  A[ワークブックのバイト列を開く] --> B[ワークブックモデルにパース]
   B --> C[編集を適用]
   C --> D[依存関係グラフを構築 / 更新]
   D --> E[再計算]
-  E --> F[値を読む / bytes を保存]
+  E --> F[値を読む / バイト列を保存]
 ```
 
-::: info 用語: ワークブック model
-パース後のワークブックを表す in-memory 表現。シート・セル・スタイル・defined name・table と、再計算を駆動する engine 状態をまとめたもの。ホスト API は生バイト列ではなくこの model に対して操作します。
+::: info 用語: ワークブックモデル
+パース後のワークブックを表すメモリ上の表現です。シート、セル、スタイル、定義名、テーブルと、再計算を駆動するエンジン状態をまとめます。ホスト API は生バイト列ではなくこのモデルに対して操作します。
 :::
 
 ## 開く
 
-ファイル形式層が workbook parts、relationships、shared strings、styles、worksheets、defined names、tables、comments、hyperlinks、merges、validations、conditional formatting、pivot cache、その他拡張パートを読み込みます。意味解釈しないパートは passthrough として保持され、保存時に欠落しません。
+ファイル形式層が workbook parts、relationships、shared strings、styles、worksheets、defined names、tables、comments、hyperlinks、merges、validations、conditional formatting、pivot cache、その他拡張パートを読み込みます。意味解釈しないパートは保持対象として扱い、保存時に欠落しないようにします。
 
 ロード後は必ず妥当性を確認します。
 
@@ -33,17 +33,17 @@ with Workbook.load(blob) as wb:
     ...
 ```
 
-::: warning WASM の Workbook handle はネイティブメモリを保持する
-WASM の `Workbook` インスタンスは通常の JS オブジェクトではなく、WASM heap 内の C++ メモリを所有します。使い終わったら必ず `wb.delete()` を呼んで解放してください。Python の context manager と CLI プロセスは自動で処理します。
+::: warning WASM の Workbook ハンドルはネイティブメモリを保持する
+WASM の `Workbook` インスタンスは通常の JS オブジェクトではなく、WASM ヒープ内の C++ メモリを所有します。使い終わったら必ず `wb.delete()` を呼んで解放してください。Python の context manager と CLI プロセスは自動で処理します。
 :::
 
 ## 編集する
 
-セル・数式・シート構造・defined name・table・style など、widget の surface が公開しているプロパティは更新できます。WASM が最も広い surface、Python は安定 subset、CLI はセル直接編集ではなく recalc 中心の操作です。
+セル・数式・シート構造・定義名・テーブル・スタイルなど、各実行環境が公開しているプロパティは更新できます。WASM が最も広い API を持ち、Python は安定した部分集合、CLI はセル直接編集ではなく再計算中心の操作です。
 
 ## 再計算
 
-編集を適用したら `recalc()`（または増分用の `partialRecalc()`）を呼び、cached value を数式の最新結果に揃えます。dirty 集合・volatile 関数・iterative calculation の挙動は [再計算](/ja/workbook/recalculation) を参照してください。
+編集を適用したら `recalc()`（または増分用の `partialRecalc()`）を呼び、キャッシュ値を数式の最新結果に揃えます。dirty 集合・揮発性関数・反復計算の挙動は [再計算](/ja/workbook/recalculation) を参照してください。
 
 ## 読む / 保存する
 
@@ -53,7 +53,7 @@ WASM の `Workbook` インスタンスは通常の JS オブジェクトでは�
 const value = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
 ```
 
-ワークブック全体を bytes として書き出せます。
+ワークブック全体をバイト列として書き出せます。
 
 ```ts
 const saved = wb.save()
@@ -62,11 +62,11 @@ if (!saved.status.ok || saved.bytes === null) {
 }
 ```
 
-保存される bytes は数式と cached value が整合しているため、計算 engine を持たない下流ツールでも正しい値を読み取れます。
+保存されるバイト列は数式とキャッシュ値が整合しているため、計算エンジンを持たない下流ツールでも正しい値を読み取れます。
 
 ## スレッドと再利用
 
-WASM ビルドの再計算 engine は内部で pthread worker を使います。`Workbook` handle 自体は **複数のスレッド / Worker で共有できません**。並行で再計算したい場合は、Worker ごとに独立した `Workbook` インスタンスを用意してください。
+WASM ビルドの再計算エンジンは内部で pthread worker を使います。`Workbook` ハンドル自体は **複数のスレッド / Worker で共有できません**。並行で再計算したい場合は、Worker ごとに独立した `Workbook` インスタンスを用意してください。
 
 ## 次に読むもの
 

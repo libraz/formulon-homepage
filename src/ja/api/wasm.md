@@ -6,8 +6,8 @@
 ページとインストール済みパッケージで内容が食い違う場合、対応バージョンの `dist/formulon.d.ts` を正としてください。
 :::
 
-::: info 用語: status envelope
-WASM の失敗しうる呼び出しが返す `Status` オブジェクト。`ok`、数値 `status`、人間向け `message`、診断用 `context` を持ちます。Excel のセルエラーは status failure ではなく `kind = Error` の `Value` として返ります。
+::: info 用語: ステータスの包み
+WASM の失敗しうる呼び出しが返す `Status` オブジェクトです。`ok`、数値 `status`、人間向け `message`、診断用 `context` を持ちます。Excel のセルエラーはステータス失敗ではなく `kind = Error` の `Value` として返ります。
 :::
 
 ## モジュール
@@ -24,12 +24,12 @@ const Module = await createFormulon()
 | `Module.Workbook.createDefault()` | `Sheet1` 付きワークブック |
 | `Module.Workbook.createEmpty()` | sheet 0 個のワークブック |
 | `Module.Workbook.loadBytes(bytes)` | メモリ上の `.xlsx` を読み込む |
-| `Module.versionString()` | engine バージョン |
+| `Module.versionString()` | エンジンバージョン |
 | `Module.statusString(status)` | status の名前 |
 | `Module.lastErrorMessage()` | 直近の診断メッセージ |
 | `Module.lastErrorContext()` | 直近の診断 context |
 
-## 結果 envelope
+## 結果の包み
 
 失敗しうる呼び出しは `Status`、または `status` を含む構造体を返します。
 
@@ -44,7 +44,7 @@ interface Status {
 
 Excel セルエラーは `ValueKind.Error`。Status の失敗とは区別されます。
 
-## value kind
+## 値の種類
 
 ```ts
 enum ValueKind {
@@ -92,6 +92,6 @@ try {
 
 ## 次に読むもの
 
-- [ワークブックの流れ](/ja/workbook/lifecycle) ─ engine 側のフロー
+- [ワークブックの流れ](/ja/workbook/lifecycle) ─ エンジン側のフロー
 - [ワークブック操作](/ja/workbook/operations) ─ シート / セル / 構造
 - [エラーモデル](/ja/compatibility/errors) ─ 各エラーコードの意味

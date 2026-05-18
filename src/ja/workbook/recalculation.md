@@ -1,6 +1,6 @@
 # 再計算
 
-再計算はワークブックの編集を更新済みの計算値へ反映する工程です。WASM・Python・Native Node・CLI・MCP のいずれの surface も同じ再計算 core を経由するため、実行環境による挙動のずれは起きない設計になっています。
+再計算はワークブックの編集を更新済みの計算値へ反映する工程です。WASM・Python・Native Node・CLI・MCP のいずれも同じ再計算コアを経由するため、実行環境による挙動のずれは起きない設計になっています。
 
 ::: info 用語: dependency graph（依存関係グラフ）
 数式から構築される有向グラフ。各数式セルは参照しているセル・defined name・external link を指しており、これによって engine は計算順序を決定し、変更があった範囲だけを再計算できます。
@@ -19,7 +19,7 @@
 | volatile functions | `NOW` / `TODAY` / `RAND` / `INDIRECT` / `OFFSET` / `INFO` など、常に dirty 扱いの関数 |
 | iterative 設定 | 循環参照を許容するための iteration 有効化・最大回数・収束しきい値 |
 | dynamic-array spill shape | アンカーごとの結果 shape。依存セルの再 shape / 無効化に使う |
-| calc mode | manual / automatic 切替（公開している surface のみ） |
+| 計算モード | manual / automatic 切替（公開している実行環境のみ） |
 
 ```mermaid
 flowchart LR
@@ -64,10 +64,10 @@ iteration が無効な状態で循環が存在する場合、該当セルは `#R
 
 ## 速さより正しさ
 
-Formulon はテスト時に tree-walker と bytecode VM を並行実行し、最適化 path と素朴 path の出力一致を検査しています。互換性の判定には Excel から取得した oracle fixture を使い、oracle と一致しない速度最適化は受け付けません。
+Formulon はテスト時に tree-walker と bytecode VM を並行実行し、最適化された経路と素朴な経路の出力一致を検査しています。互換性の判定には Excel から取得した Oracle 検証データを使い、Oracle と一致しない速度最適化は受け付けません。
 
 ## 次に読むもの
 
 - [数式エンジン](/ja/workbook/formula-engine) ─ 値の種類・座標・error 伝播
 - [動的配列](/ja/workbook/dynamic-arrays) ─ spill shape と再計算の関係
-- [Oracle testing](/ja/compatibility/oracle-testing) ─ 参照値の取得方法
+- [Oracle テスト](/ja/compatibility/oracle-testing) ─ 参照値の取得方法

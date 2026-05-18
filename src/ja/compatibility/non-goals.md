@@ -1,24 +1,24 @@
 # 非目標
 
-意図的な境界です。engine を小さく検証しやすく保ち、対象外のワークブックに対しては曖昧さなく「対象外」と返せるようにします。
+意図的な境界です。エンジンを小さく検証しやすく保ち、対象外のワークブックに対しては曖昧さなく「対象外」と返せるようにします。
 
 | 領域 | 理由 |
 | --- | --- |
 | VBA 実行 | セキュリティ。macro bytes は保存時に保持するが実行しない。 |
 | 旧 `.xls`（BIFF） | 対象は modern Excel 365。`.xls` は OOXML 以前の世代に属する。 |
-| chart / drawing の描画 | UI または document layer の責務であり、headless engine の責務ではない。 |
+| chart / drawing の描画 | UI または文書描画層の責務であり、ヘッドレスエンジンの責務ではない。 |
 | PowerQuery / DAX | スプレッドシート数式とは別言語・別実行モデル。 |
 | pivot cache の再計算 | 構造保持は対象、再計算は別の実行モデルが必要。 |
-| ライブ external connections（OLE DB / Web / OData） | 本番実行を決定論的・オフラインに保つため。 |
-| Spreadsheet UI | Formulon は headless。UI は上に乗せる（一例は [`formulon-cell`](/ja/cell/)）。 |
+| ライブ外部接続（OLE DB / Web / OData） | 本番実行を決定論的・オフラインに保つため。 |
+| スプレッドシート UI | Formulon はヘッドレス。UI は上に乗せる（一例は [`formulon-cell`](/ja/cell/)）。 |
 
 ::: info 用語: headless engine
-描画 surface もエンドユーザー UI も持たない計算 engine。ホストが呼び、人間は直接触らない。headless なら、サーバージョブ・ブラウザタブ・CLI・UI ライブラリのいずれでも同じ意味論で動かせます。
+描画機能もエンドユーザー UI も持たない計算エンジンです。ホストが呼び、人間は直接触りません。ヘッドレスであれば、サーバージョブ・ブラウザタブ・CLI・UI ライブラリのいずれでも同じ意味論で動かせます。
 :::
 
 ## なぜ明示するのか
 
-非目標を曖昧にしておくと、scope が滲み、互換性の説明も曖昧になります。「やらないこと」を明示すれば:
+非目標を曖昧にしておくと、範囲が滲み、互換性の説明も曖昧になります。「やらないこと」を明示すれば:
 
 - Issue triage が yes/no で答えられる
 - 互換性の範囲を検証可能な形で保てる
@@ -29,7 +29,7 @@
 - VBA / マクロ → Excel そのもの、またはホスト独自の自動化
 - chart / drawing → Formulon で保持し、描画は別ライブラリ
 - PowerQuery → 上流で実行し、`.xlsx` を Formulon に渡す
-- UI → [`formulon-cell`](/ja/cell/)（beta、ブラウザ surface）
+- UI → [`formulon-cell`](/ja/cell/)（ベータ版、ブラウザ UI）
 
 ## 次に読むもの
 

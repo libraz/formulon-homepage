@@ -3,7 +3,7 @@
 ユーザーが `.xlsx` をアップロードし、アプリがブラウザ内で再計算し、値または変更済みワークブックを返すパターンです。ファイルをサーバーに送らずに完結します。
 
 ::: warning ブラウザホスティングの要件
-WASM ビルドは Web Worker と pthread を使います。pthread worker が有効な状態で動かすには、本番ホストでも cross-origin isolation ヘッダを返す必要があります ─ [バンドラ設定](/ja/cell/bundler) と [トラブルシュート](/ja/start/troubleshooting) を参照。
+WASM ビルドは Web Worker と pthread を使います。pthread worker が有効な状態で動かすには、本番ホストでも cross-origin isolation ヘッダを返す必要があります。[バンドラ設定](/ja/cell/bundler) と [トラブルシュート](/ja/start/troubleshooting) を参照。
 :::
 
 ::: info 用語: ArrayBuffer / Uint8Array
@@ -18,7 +18,7 @@ flowchart LR
   B --> C[Module.Workbook.loadBytes]
   C --> D[Mutate inputs]
   D --> E[recalc]
-  E --> F[Read values or save bytes]
+  E --> F[値を読む / バイト列を保存]
 ```
 
 ## 最小実装
@@ -52,11 +52,11 @@ export async function recalcUpload(file: File) {
 }
 ```
 
-`try / finally` の形が重要です。recalc 中に throw しても `wb.delete()` が WASM heap を解放します。
+`try / finally` の形が重要です。再計算中に例外が出ても `wb.delete()` が WASM ヒープを解放します。
 
-## メインスレッドの外で engine を動かす
+## メインスレッドの外でエンジンを動かす
 
-大規模ワークブックは recalc 中に UI を止めがちです。専用 Worker に engine を切り出します。
+大規模ワークブックは再計算中に UI を止めがちです。専用 Worker にエンジンを切り出します。
 
 ```ts
 // worker.ts
@@ -94,10 +94,10 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 | --- | --- | --- |
 | `.xlsx` として不正 | `wb.isValid() === false`、`lastErrorMessage()` | 「対応していない Excel ファイルです」と表示 |
 | セルの Excel エラー | `value.kind === ValueKind.Error` | 行内にエラー値を描画。アップロード自体は成功扱い |
-| 保存失敗 | `saved.status.ok === false` | メッセージを出し、元の bytes を保持 |
-| stub engine フォールバック | （cell パッケージで）`isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
+| 保存失敗 | `saved.status.ok === false` | メッセージを出し、元のバイト列を保持 |
+| 簡易エンジンへのフォールバック | （cell パッケージで）`isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
 
-::: tip 保存に成功するまで元の bytes を捨てない
+::: tip 保存に成功するまで元のバイト列を捨てない
 アプリが再計算後の出力を永続化できるまでは、入力の `File` / `ArrayBuffer` を信頼すべき情報源として保持します。保存失敗時にユーザーのアップロードを失わずに済みます。
 :::
 
@@ -105,9 +105,9 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 
 - 読み込み前にファイルタイプ / サイズをクライアント側で検証
 - 未対応関数の失敗はアップロード失敗ではなく互換性問題として見せる
-- 保存成功までは元 bytes を保持
+- 保存成功までは元のバイト列を保持
 - UI 応答性が必要なら worker で計算
-- cross-origin isolation の欠落を明示する（stub engine への黙ったフォールバックはユーザーを混乱させます）
+- cross-origin isolation の欠落を明示する（簡易エンジンへの黙ったフォールバックはユーザーを混乱させます）
 
 ## 適合性の確認
 
@@ -115,6 +115,6 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 
 ## 次に読むもの
 
-- [WASM 連携](/ja/runtimes/wasm) ─ ホスティングと bundler 要件
-- [ワークブックの流れ](/ja/workbook/lifecycle) ─ シナリオを裏で支える engine フロー
-- [formulon-cell](/ja/cell/) ─ 同じ engine をスプレッドシート UI 付きで使いたい場合
+- [WASM 連携](/ja/runtimes/wasm) ─ ホスティングとバンドラ要件
+- [ワークブックの流れ](/ja/workbook/lifecycle) ─ シナリオを裏で支えるエンジンフロー
+- [formulon-cell](/ja/cell/) ─ 同じエンジンをスプレッドシート UI 付きで使いたい場合

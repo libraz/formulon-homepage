@@ -3,7 +3,7 @@
 ワークブック UI を持たずに Excel 互換の数式セマンティクスが必要な場合、最小のワークブックを作って評価できます。
 
 ::: info Excel error は値
-`#DIV/0!`、`#VALUE!`、`#NAME?` は spreadsheet value として返ります。Host API failure は runtime ごとの status envelope、exception、non-zero exit で扱います。
+`#DIV/0!`、`#VALUE!`、`#NAME?` はスプレッドシートの値として返ります。ホスト API の失敗は実行環境ごとのステータス、例外、非ゼロ終了で扱います。
 :::
 
 ## JavaScript / WASM
@@ -39,4 +39,4 @@ formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
 ```
 
-Excel のセルエラーは値です。`=1/0` は `#DIV/0!` のような error value として返り、process / Python / JS の例外とは別に扱います。
+Excel のセルエラーは値です。`=1/0` は `#DIV/0!` のようなエラー値として返り、プロセス / Python / JS の例外とは別に扱います。

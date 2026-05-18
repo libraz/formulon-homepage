@@ -2,7 +2,7 @@
 
 実行場所に合う利用面を選びます。Formulon 0.9 系のパッケージはアルファ版です。アプリケーションでは正確なバージョンを固定し、安定版まで API が増える可能性を前提にしてください。
 
-::: warning Version を pin する
+::: warning バージョンを固定する
 実験や社内ツールでは、正確なパッケージバージョンを指定してください。API とパッケージ構成が安定するまでは、`latest` に追従しないほうが安全です。
 :::
 
@@ -12,7 +12,7 @@
 yarn add @libraz/formulon@0.9.2
 ```
 
-ブラウザ、worker、Node サービスで WASM build を使う場合の入口です。Node で使う場合は Node 18+ が必要です。
+ブラウザ、worker、Node サービスで WASM ビルドを使う場合の入口です。Node で使う場合は Node 18+ が必要です。
 
 ブラウザで配信する場合は、pthread ワーカーのために cross-origin isolation を設定します。
 

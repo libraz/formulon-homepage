@@ -1,14 +1,14 @@
 ---
 title: formulon-cell の埋め込み
-description: preset / extension / command helper を組み合わせて formulon-cell をアプリに埋め込む方法。
+description: プリセット、拡張、コマンドヘルパーを組み合わせて formulon-cell をアプリに埋め込む方法。
 ---
 
 # 埋め込みガイド
 
-`formulon-cell` は埋め込まれることを前提に設計されています。同梱の playground は `presets.full()` を選んでいますが、ほとんどのアプリは小さい preset に必要な機能だけを足す形で十分です。
+`formulon-cell` は埋め込まれることを前提に設計されています。同梱のプレイグラウンドは `presets.full()` を選んでいますが、ほとんどのアプリは小さいプリセットに必要な機能だけを足す形で十分です。
 
-::: info 用語: preset と extension
-*preset* は機能のまとまり、*extension* は 1 個の合成可能な feature factory。`presets.full()` は実体としては長い extension 配列を返しているだけで、同じ配列を自分で組み立てることもできます。
+::: info 用語: プリセットと拡張
+*プリセット* は機能のまとまり、*拡張* は 1 個の合成可能な機能ファクトリです。`presets.full()` は実体としては長い拡張配列を返しているだけなので、同じ配列を自分で組み立てることもできます。
 :::
 
 ## 3 つのホスト形
@@ -17,19 +17,19 @@ description: preset / extension / command helper を組み合わせて formulon-
 flowchart LR
   HOST[ホストアプリ] --> MOUNT[Spreadsheet.mount]
   MOUNT --> WB[WorkbookHandle]
-  WB --> ENGINE[WASM engine<br/>または stub]
+  WB --> ENGINE[WASM エンジン<br/>または簡易エンジン]
   MOUNT --> FEAT[features 配列]
   FEAT --> P[presets.full /<br/>presets.standard /<br/>presets.minimal]
-  FEAT --> EXT[extension:<br/>findReplace / format /<br/>conditional / …]
+  FEAT --> EXT[拡張:<br/>findReplace / format /<br/>conditional / ...]
   MOUNT --> STORE[zustand store]
   STORE -->|選択 / サマリ /<br/>undo を読む| HOST
-  HOST --> CMD[command helper:<br/>clipboard / formatting /<br/>namedRanges / …]
+  HOST --> CMD[コマンドヘルパー:<br/>clipboard / formatting /<br/>namedRanges / ...]
   CMD --> STORE
 ```
 
-1. **ドロップイン**。preset をそのまま使い、i18n とテーマでカスタマイズ。
-2. **混在 chrome**。`presets.minimal()` をベースに、必要なダイアログ / ツールバーだけ extension で追加。
-3. **ヘッドレス surface**。chrome なしで canvas だけマウントし、アプリ側のツールバーから [command helper](#command-helpers) で駆動。
+1. **ドロップイン**。プリセットをそのまま使い、i18n とテーマでカスタマイズ。
+2. **混在 UI**。`presets.minimal()` をベースに、必要なダイアログ / ツールバーだけ拡張で追加。
+3. **ヘッドレス UI**。組み込み UI なしで canvas だけマウントし、アプリ側のツールバーから [コマンドヘルパー](#command-helpers) で駆動。
 
 ## ドロップインマウント
 
@@ -49,9 +49,9 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-## 選択的 extension
+## 選択的な拡張
 
-置換可能な factory は同じ export にあります。
+置換可能なファクトリは同じ export にあります。
 
 ```ts
 import {
@@ -87,7 +87,7 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-配列順がアクティベーション順です。多くの extension は独立していますが、`pasteSpecialExtension` のように clipboard command helper と協調するものがあります。迷ったら `presets.full()` の順を真似してください。
+配列順が有効化順です。多くの拡張は独立していますが、`pasteSpecialExtension` のようにクリップボード用コマンドヘルパーと協調するものがあります。迷ったら `presets.full()` の順を真似してください。
 
 ## ヘッドレスマウント
 
@@ -101,11 +101,11 @@ const headless = await Spreadsheet.mount(host, {
 const sheets = headless.store.getState().workbookSummary.sheets
 ```
 
-そこからは command helper でアプリ側のツールバーから駆動します。
+そこからはコマンドヘルパーでアプリ側のツールバーから駆動します。
 
-## Command helpers
+## コマンドヘルパー
 
-ビルトイン chrome と extension が内部で使う engine 連携 command を、ホスト側からも同じ形で呼べます。
+組み込み UI と拡張が内部で使うエンジン連携コマンドを、ホスト側からも同じ形で呼べます。
 
 ```ts
 import {
@@ -123,8 +123,8 @@ const stats = selectionAggregates.summary(instance.store)
 console.log(stats.sum, stats.count)
 ```
 
-::: tip 同じコードパスがビルトイン chrome でも走る
-ビルトインのツールバーがやることと、command helper がやることは同じ実装です。undo エントリも、recalc 挙動も、イベント発火タイミングも変わりません。
+::: tip 同じコードパスが組み込み UI でも走る
+組み込みのツールバーがやることと、コマンドヘルパーがやることは同じ実装です。undo エントリも、再計算の挙動も、イベント発火タイミングも変わりません。
 :::
 
 ## ライフサイクル
@@ -139,20 +139,20 @@ useEffect(() => {
 }, [])
 ```
 
-`dispose()` はリスナを外し、DOM をアンマウントし、chrome が保持していた engine 参照を解放します。`WorkbookHandle` の所有権は呼び出し側にあり、アプリ終了時に `wb.delete()` で解放してください。
+`dispose()` はリスナを外し、DOM をアンマウントし、組み込み UI が保持していたエンジン参照を解放します。`WorkbookHandle` の所有権は呼び出し側にあり、アプリ終了時に `wb.delete()` で解放してください。
 
-## stub engine 検出
+## 簡易エンジンの検出
 
 ```ts
 import { WorkbookHandle, isUsingStub } from '@libraz/formulon-cell'
 
 const wb = await WorkbookHandle.createDefault()
 if (isUsingStub()) {
-  showBanner('計算機能は無効です ─ stub engine で動作しています。')
+  showBanner('計算機能は無効です - 簡易エンジンで動作しています。')
 }
 ```
 
-`isUsingStub()` は WASM engine の初期化が成功したかを反映します。workbook 生成後に途中で変わることはありません。stub フォールバックを避ける COOP/COEP 設定は [バンドラ設定](/ja/cell/bundler)。
+`isUsingStub()` は WASM エンジンの初期化が成功したかを反映します。ワークブック生成後に途中で変わることはありません。簡易エンジンへのフォールバックを避ける COOP/COEP 設定は [バンドラ設定](/ja/cell/bundler)。
 
 ## React adapter
 
@@ -171,7 +171,7 @@ export function Sheet() {
 }
 ```
 
-adapter がマウント / dispose を担当し、イベントを prop で転送します。より細かい制御が必要なら vanilla パッケージに降りてください。
+アダプタがマウント / dispose を担当し、イベントを prop で転送します。より細かい制御が必要なら vanilla パッケージを直接使ってください。
 
 ## Vue adapter
 

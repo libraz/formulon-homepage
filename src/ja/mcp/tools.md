@@ -1,6 +1,6 @@
-# Tools
+# ツール一覧
 
-`formulon-mcp` が公開する全ツールを、目的別にまとめます。モデルが MCP の tool discovery で受け取る説明と内容が一致するため、人間が surface を一望したいときに使えます。
+`formulon-mcp` が公開する全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間が入口全体を一望したいときに使えます。
 
 ::: info A1 と 0-based の併用
 A1 表記を使う場合を除き、sheet / row / column インデックスは Formulon API と同じ 0-based です。アドレスを取るツールは両方の形式を受け付けます。
@@ -9,7 +9,7 @@ A1 表記を使う場合を除き、sheet / row / column インデックスは F
 ```mermaid
 flowchart TB
   ROOT[formulon-mcp ツール群]
-  ROOT --> ENG[Engine<br/>version / eval / lookup / trace]
+  ROOT --> ENG[エンジン<br/>version / eval / lookup / trace]
   ROOT --> SES[Sessions<br/>open / list / close / recalc /<br/>save / metadata]
   ROOT --> INS[検査<br/>session / layout / regions /<br/>analyze]
   ROOT --> CR[セルと範囲<br/>set / get / range /<br/>find / replace]
@@ -18,11 +18,11 @@ flowchart TB
   ROOT --> ADV[詳細アクセス<br/>workbook_call /<br/>ワンショット inspect &amp; update]
 ```
 
-## Engine
+## エンジン
 
 | Tool | 役割 |
 | --- | --- |
-| `formulon_version` | ロード済み Formulon engine のバージョンを返す。 |
+| `formulon_version` | ロード済み Formulon エンジンのバージョンを返す。 |
 | `formulon_eval_formula` | 使い捨てワークブックで Excel 数式を 1 つ評価。 |
 | `formulon_function_lookup` | 登録済み関数を列挙、メタデータ / ローカライズ名を解決。 |
 | `formulon_trace` | あるセルの precedents、dependents、または spill 情報を返す。 |
@@ -62,7 +62,7 @@ flowchart TB
 | Tool | 役割 |
 | --- | --- |
 | `formulon_sheet_operation` | シートの追加 / 削除 / 改名 / 移動。 |
-| `formulon_set_defined_name` | workbook scope の defined name を追加 / 置換 / 削除。 |
+| `formulon_set_defined_name` | ワークブック全体で有効な定義名を追加 / 置換 / 削除。 |
 | `formulon_edit_structure` | 行・列の挿入 / 削除。 |
 | `formulon_set_sheet_view` | zoom、freeze pane、タブの hidden 状態を設定。 |
 
@@ -84,11 +84,11 @@ flowchart TB
 | `formulon_inspect_workbook` | パスからのワンショット要約。 |
 | `formulon_update_workbook` | ワンショットの load / create → mutate → recalc → save。 |
 
-::: warning `workbook_call` は allowlist で、任意ではない
-`formulon_workbook_call` は server 側の allowlist に載っているメソッドだけを dispatch します（詳しくは [セキュリティモデル](/ja/mcp/security)）。allowlist 外は入力形によらず拒否されます。PivotTable / PivotCache・style・依存関係グラフ照会・関数メタデータ・spill 情報など、上位ツールがまだカバーしていない範囲のためにあります。
+::: warning `workbook_call` は許可リスト経由で、任意呼び出しではない
+`formulon_workbook_call` はサーバー側の許可リストに載っているメソッドだけを呼び出します（詳しくは [セキュリティモデル](/ja/mcp/security)）。許可リスト外は入力形によらず拒否されます。PivotTable / PivotCache・style・依存関係グラフ照会・関数メタデータ・spill 情報など、上位ツールがまだカバーしていない範囲のためにあります。
 :::
 
 ## 次に読むもの
 
 - [ワークフロー](/ja/mcp/workflow) ─ 基本ループ
-- [セキュリティモデル](/ja/mcp/security) ─ server が拒否すること
+- [セキュリティモデル](/ja/mcp/security) ─ サーバーが拒否すること

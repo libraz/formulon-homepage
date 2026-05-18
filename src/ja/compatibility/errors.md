@@ -1,16 +1,16 @@
 # エラーモデル
 
-Spreadsheet error は **first-class value** です。`#DIV/0!` を返した数式はクラッシュしておらず、error 値を生成しただけです。それを取得したホスト API 呼び出しは成功しています。この区別はすべての binding で保たれます。
+スプレッドシートのエラーは **値** です。`#DIV/0!` を返した数式はクラッシュしておらず、エラー値を生成しただけです。それを取得したホスト API 呼び出しは成功しています。この区別はすべてのバインディングで保たれます。
 
 ::: info 用語: セルエラーとホスト失敗
-*セルエラー* は `kind = Error` の値であり、binding を通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（bytes 不正・ハンドル失効・IO エラー・engine 内部失敗）であり、別チャネル ─ `Status` envelope / 例外 / 非ゼロ終了 / `fm_status_t` ─ で報告されます。
+*セルエラー* は `kind = Error` の値であり、バインディングを通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（バイト列の不正・ハンドル失効・入出力エラー・エンジン内部失敗）であり、別チャネル（`Status` envelope / 例外 / 非ゼロ終了 / `fm_status_t`）で報告されます。
 :::
 
 ```mermaid
 flowchart TD
   CALL[ホスト呼び出し:<br/>getValue / recalc / save] --> OK{呼び出し自体は<br/>成功か}
   OK -->|失敗| HOST[ホスト失敗経路<br/>status envelope / 例外 /<br/>非ゼロ終了 / fm_status_t]
-  HOST --> FIX[bytes 不正 / handle 失効 /<br/>IO 失敗 → 統合を直す]
+  HOST --> FIX[バイト列不正 / handle 失効 /<br/>IO 失敗 → 統合を直す]
   OK -->|成功| KIND{value.kind}
   KIND -->|Error| CELL[セルエラー値<br/>#DIV/0! / #VALUE! / #REF! / …]
   CELL --> SHOW[UI に表示し、<br/>throw しない]
@@ -30,11 +30,11 @@ flowchart TD
 | `#CALC!` | engine が結果を返せない |
 | `#GETTING_DATA` | 外部参照の取得中 |
 
-binding はこれらを host exception に変換せず、値として保持してください（API 誤用・IO 失敗を報告する場合を除く）。
+バインディングはこれらをホスト言語の例外に変換せず、値として保持してください（API 誤用・入出力失敗を報告する場合を除く）。
 
 ## ホスト側の失敗経路
 
-| Surface | ホスト側の失敗経路 |
+| 入口 | ホスト側の失敗経路 |
 | --- | --- |
 | WASM | `status.ok === false` または invalid workbook handle + `lastErrorMessage()` |
 | Python | `FormulonError` |

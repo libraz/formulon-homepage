@@ -10,7 +10,7 @@
 | --- | --- |
 | `.xlsx` 読み込み | workbook、sheets、cells、styles、shared strings、relationships、tables、names、comments、hyperlinks、merges、validations、conditional formatting、pivot structures |
 | `.xlsx` 書き出し | 再計算済みワークブック出力と対応構造 |
-| `.xlsb` 読み込み / 書き出し | modern binary workbook workflow 用に実装済み |
+| `.xlsb` 読み込み / 書き出し | 現代的なバイナリワークブック処理向けに実装済み |
 | `.xlsm` のマクロバイト | 保持するが実行しない |
 | 旧形式の `.xls` | 対象外 |
 | chart / drawing の描画 | 対象外 |

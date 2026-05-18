@@ -1,9 +1,9 @@
 # ワークブック操作
 
-Workbook API はセルの mutation と recalc に加えて、構造編集も扱います。WASM binding が最も広い surface を公開し、Python は安定 subset、CLI は recalc と inspection に絞っています。
+Workbook API はセルの変更と再計算に加えて、構造編集も扱います。WASM バインディングが最も広い API を公開し、Python は安定した部分集合、CLI は再計算と調査に絞っています。
 
 ::: info 用語: 0-based 座標
-binding は `(sheet, row, col)` をすべて 0 から始まる整数で扱います。`Sheet1!A1` は `(0, 0, 0)`。ロケール依存のアドレス解析を避け、C ABI と一致させるためです。A1 テキストは CLI 引数・数式文字列のように明示的に要求している箇所だけで使います。
+バインディングは `(sheet, row, col)` をすべて 0 から始まる整数で扱います。`Sheet1!A1` は `(0, 0, 0)` です。ロケール依存のアドレス解析を避け、C ABI と一致させるためです。A1 テキストは CLI 引数・数式文字列のように明示的に要求している箇所だけで使います。
 :::
 
 ## シート
@@ -20,7 +20,7 @@ try {
 }
 ```
 
-Python は安定 subset を公開します。
+Python は安定した部分集合を公開します。
 
 ```python
 with Workbook.create_default() as wb:
@@ -66,7 +66,7 @@ wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 
 ## レイアウト・style・metadata
 
-WASM binding が現状もっとも広い workbook surface を公開します。
+WASM バインディングが現時点で最も広いワークブック API を公開します。
 
 - row / column の挿入・削除と formula 書き換え
 - defined names
@@ -83,7 +83,7 @@ WASM binding が現状もっとも広い workbook surface を公開します。
 - function metadata、function-name ヘルパ
 - 動的配列の spill information
 
-Python binding は workbook の construction / loading、cell mutation、recalc / save、iteration helpers に意図的に絞った安定 subset です。より広い workbook 管理 API が現時点で必要であれば、WASM・Native Node・あるいは C ABI を直接使ってください。
+Python バインディングはワークブックの作成 / 読み込み、セル変更、再計算 / 保存、反復計算ヘルパーに意図的に絞った安定 API です。より広いワークブック管理 API が現時点で必要であれば、WASM・Native Node・あるいは C ABI を直接使ってください。
 
 ::: tip 実装済み関数を実行時に確認する
 WASM `Module.functionNames()` や MCP の `formulon function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。
@@ -92,5 +92,5 @@ WASM `Module.functionNames()` や MCP の `formulon function_lookup` は、実�
 ## 次に読むもの
 
 - [再計算](/ja/workbook/recalculation) ─ 編集がいつ値に反映されるか
-- [Surface matrix](/ja/api/surfaces) ─ 各 binding が公開する surface 比較
+- [API 一覧](/ja/api/surfaces) ─ 各バインディングが公開する範囲の比較
 - [互換性 / エラー](/ja/compatibility/errors) ─ 不正入力時の挙動

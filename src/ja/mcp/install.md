@@ -3,7 +3,7 @@
 `formulon-mcp` は npm に公開されており、`npx` 経由で改変なしに動きます。大半の MCP クライアントは 1 行の登録で済みます。
 
 ::: tip Node.js 22+ が必須
-server は Node 22 の機能を使います。それ以前のバージョンは起動に失敗します。`node --version` で確認してください。
+サーバーは Node 22 の機能を使います。それ以前のバージョンは起動に失敗します。`node --version` で確認してください。
 :::
 
 ## Claude Code
@@ -30,7 +30,7 @@ command = "npx"
 args = ["-y", "@libraz/formulon-mcp"]
 ```
 
-`codex` を再起動するとツール discovery に出てきます。
+`codex` を再起動するとツール検出に出てきます。
 
 ## Claude Desktop
 
@@ -53,7 +53,7 @@ args = ["-y", "@libraz/formulon-mcp"]
 }
 ```
 
-Claude Desktop を再起動すると次の session からツールが使えるようになります。
+Claude Desktop を再起動すると次のセッションからツールが使えるようになります。
 
 ## その他の stdio MCP クライアント
 
@@ -71,12 +71,12 @@ formulon-mcp
 ```
 
 ::: info 用語: stdio MCP server
-client が子プロセスとして起動し、stdin / stdout で JSON-RPC を話す長期実行プロセス。プロセスのライフタイムは client が所有し、親を kill すれば server も止まります。ポートは開きません。
+クライアントが子プロセスとして起動し、stdin / stdout で JSON-RPC を話す長期実行プロセスです。プロセスのライフタイムはクライアントが所有し、親を終了すればサーバーも止まります。ポートは開きません。
 :::
 
 ## ソースから
 
-開発中の fork や特定 revision を pin する場合:
+開発中の fork や特定 revision を固定する場合:
 
 ```sh
 git clone https://github.com/libraz/formulon-mcp.git
@@ -101,13 +101,13 @@ npx -y github:libraz/formulon-mcp
 
 接続済みクライアントから次の 2 ツールが使えれば疎通 OK です。
 
-- `formulon_version` ─ ロード済み Formulon engine のバージョン
+- `formulon_version` ─ ロード済み Formulon エンジンのバージョン
 - `formulon_eval_formula` ─ 使い捨てワークブックで 1 つの数式を評価
 
-低コストな smoke test として推奨です。
+低コストなスモークテストとして推奨です。
 
 ## 次に読むもの
 
 - [ワークフロー](/ja/mcp/workflow) ─ open / mutate / recalc / save の流れ
-- [Tools](/ja/mcp/tools) ─ カテゴリ別のツール一覧
-- [セキュリティモデル](/ja/mcp/security) ─ server が許可すること / しないこと
+- [ツール一覧](/ja/mcp/tools) ─ カテゴリ別のツール一覧
+- [セキュリティモデル](/ja/mcp/security) ─ サーバーが許可すること / しないこと

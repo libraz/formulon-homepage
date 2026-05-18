@@ -1,9 +1,9 @@
 # ソースからビルド
 
-ほとんどの contributor が必要とするのは `make build` と `make test` だけです。それ以外の target は surface 固有の作業（WASM / Python / Native Node）とリリース時の staging 用です。
+ほとんどのコントリビュータが必要とするのは `make build` と `make test` だけです。それ以外の target は実行入口固有の作業（WASM / Python / Native Node）とリリース時のステージング用です。
 
 ::: info 用語: staging
-ビルド成果物を各 surface のパッケージレイアウトへコピーすること ─ `packages/npm/dist/`、`packages/python/formulon/_wasm/`、Native Node アドオン用ディレクトリなど。`npm test` / `pytest` / `node -e '…'` が build したばかりの core に届くようにするのが staging の役割です。
+ビルド成果物を各実行入口のパッケージレイアウトへコピーすることです。`packages/npm/dist/`、`packages/python/formulon/_wasm/`、Native Node アドオン用ディレクトリなどが対象です。`npm test` / `pytest` / `node -e '...'` がビルドしたばかりのコアに届くようにするのがステージングの役割です。
 :::
 
 リポジトリを clone:
@@ -20,7 +20,7 @@ make build
 make test
 ```
 
-`build/` を CMake で構成し、`SLOW` / `LOAD` ラベルを除いた fast CTest suite を実行します。core 変更のほぼすべてはこのループで回せます。
+`build/` を CMake で構成し、`SLOW` / `LOAD` ラベルを除いた高速な CTest 一式を実行します。コア変更のほぼすべてはこのループで回せます。
 
 ## リリースビルド
 
@@ -43,7 +43,7 @@ make npm-pack
 make size-check
 ```
 
-`make npm-package` は `formulon.js` / `formulon.wasm` / `formulon.d.ts` を `packages/npm/dist/` に stage します。`make size-check` が [サイズ予算](/ja/development/size-budgets) を強制するので、コードを増やしうる変更の前に必ず通してください。
+`make npm-package` は `formulon.js` / `formulon.wasm` / `formulon.d.ts` を `packages/npm/dist/` にステージします。`make size-check` が [サイズ予算](/ja/development/size-budgets) を強制するので、コードを増やしうる変更の前に必ず通してください。
 
 ## Python パッケージ
 
@@ -55,7 +55,7 @@ make python-test
 make python-wheel
 ```
 
-wheel は `formulon_capi.wasm` を `packages/python/formulon/_wasm/` に stage し、`py3-none-any` パッケージとしてビルドします。プラットフォーム固有 runtime は install 時に `wasmtime` wheel として解決されます。install 時にネイティブコンパイラは不要です。
+wheel は `formulon_capi.wasm` を `packages/python/formulon/_wasm/` にステージし、`py3-none-any` パッケージとしてビルドします。プラットフォーム固有ランタイムはインストール時に `wasmtime` wheel として解決されます。インストール時にネイティブコンパイラは不要です。
 
 ## Native Node パッケージ
 
@@ -65,11 +65,11 @@ make node-package
 make node-test
 ```
 
-N-API アドオンを build / stage / smoke test します。prebuilt は CI から `(os, arch)` 別に公開されており、ローカル target は主に開発用です。
+N-API アドオンをビルド、ステージ、スモークテストします。ビルド済みバイナリは CI から `(os, arch)` 別に公開されており、ローカル target は主に開発用です。
 
 ## Oracle ツール群
 
-oracle 生成は Excel と host-specific setup が必要です。
+Oracle データ生成は Excel とホスト固有のセットアップが必要です。
 
 ```sh
 make oracle-setup
@@ -77,14 +77,14 @@ make oracle-gen
 make oracle-verify
 ```
 
-CI 検証は committed golden を読むだけで、Excel は起動しません。contributor 向けフローは [Oracle 提供](/ja/development/oracle-contribution) を参照。
+CI 検証はコミット済みの期待値データを読むだけで、Excel は起動しません。コントリビュータ向けフローは [Oracle 提供](/ja/development/oracle-contribution) を参照。
 
 ::: tip 必要最小限の集合を選ぶ
-formula evaluator だけ触る contributor は通常 `make build && make test` で十分。WASM packaging だけ触るなら `make wasm && make npm-test && make size-check`。全 target を回す変更はそれほど多くありません。
+数式評価器だけ触るコントリビュータは通常 `make build && make test` で十分です。WASM パッケージングだけ触るなら `make wasm && make npm-test && make size-check`。全 target を回す変更はそれほど多くありません。
 :::
 
 ## 次に読むもの
 
 - [テストマトリクス](/ja/development/test-matrix) ─ どのテスト target が何を捕えるか
-- [サイズ予算](/ja/development/size-budgets) ─ `size-check` が強制する ceiling
+- [サイズ予算](/ja/development/size-budgets) ─ `size-check` が強制する上限
 - [リリースチェックリスト](/ja/development/release-checklist) ─ リリース前に走らせる内容

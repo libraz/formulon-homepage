@@ -1,6 +1,6 @@
 # Python API
 
-Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ小さな Pythonic wrapper です。公開 wheel は `py3-none-any`。プラットフォームランタイムは `pip` が `wasmtime` の wheel として解決します。
+Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ小さな Python 向けラッパーです。公開 wheel は `py3-none-any`。プラットフォームランタイムは `pip` が `wasmtime` の wheel として解決します。
 
 ::: info 用語: py3-none-any wheel
 Python ABI タグ・プラットフォームタグ・ネイティブコードのいずれも持たない wheel。依存が解決できるなら、どの CPython 3 でも動きます。プラットフォーム依存部分は `wasmtime` が担い、`formulon` 自体には含まれません。
@@ -11,7 +11,7 @@ Python ABI タグ・プラットフォームタグ・ネイティブコードの
 | API | 用途 |
 | --- | --- |
 | `formulon.eval_formula(formula)` | 単発の数式評価 |
-| `formulon.library_version()` | ロード済み Formulon module のバージョン |
+| `formulon.library_version()` | ロード済み Formulon モジュールのバージョン |
 | `formulon.version_string()` | `library_version()` の別名 |
 | `ValueKind` | C ABI と一致する enum |
 | `FormulonError` | ホスト側の失敗を表す例外 |
@@ -33,7 +33,7 @@ with Workbook.create_default() as wb:
 - `Workbook.create_empty()`
 - `Workbook.load(data)`
 
-主な methods:
+主なメソッド:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
@@ -60,7 +60,7 @@ elif value.kind is ValueKind.ERROR:
 
 ## エラー処理
 
-`FormulonError` はホスト側の失敗（bytes 不正・ハンドル失効・IO エラー・engine 内部失敗）。Excel のセルエラーは値です。
+`FormulonError` はホスト側の失敗（バイト列不正・ハンドル失効・IO エラー・エンジン内部失敗）を表します。Excel のセルエラーは値です。
 
 ```python
 import formulon
@@ -79,4 +79,4 @@ except FormulonError as e:
 ## 次に読むもの
 
 - [ワークブックの流れ](/ja/workbook/lifecycle) ─ open / mutate / recalc / save
-- [Python で一括再計算](/ja/scenarios/python-batch) ─ end-to-end パイプライン
+- [Python で一括再計算](/ja/scenarios/python-batch) ─ 一連のパイプライン

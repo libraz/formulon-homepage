@@ -1,24 +1,23 @@
 ---
 title: formulon-cell のインストール
-description: Formulon WASM エンジン向けベータ版 spreadsheet UI パッケージの導入方法。
+description: Formulon WASM エンジン向けベータ版スプレッドシート UI パッケージの導入方法。
 ---
 
 # インストール
 
 `formulon-cell` は、このサイトで Formulon のブラウザ版デモホストとして使って
-いるベータ版 spreadsheet UI パッケージです。`@libraz/formulon` の WASM
-エンジンに desktop-spreadsheet-style なブラウザ surface を載せたい場合に
-使います。
+いるベータ版スプレッドシート UI パッケージです。`@libraz/formulon` の WASM
+エンジンに、ブラウザ上で動く表計算ソフト風 UI を載せたい場合に使います。
 
 ```sh
 npm install @libraz/formulon-cell zustand
 ```
 
-`zustand` は peer dependency です。ビルトイン chrome が購読している store を、
-ホストアプリ側からも読むために公開しています。
+`zustand` は peer dependency です。組み込み UI が購読しているストアを、
+ホストアプリ側からも読めるように公開しています。
 
-UI surface は安定化途上です。アプリケーションの再現性は package manager の
-lockfile で管理し、新しい release は意図して取り込んでください。
+UI パッケージは安定化途上です。アプリケーションの再現性はパッケージマネージャの
+lockfile で管理し、新しいリリースは意図して取り込んでください。
 
 ## クイックスタート
 
@@ -52,4 +51,4 @@ Cross-Origin-Embedder-Policy: require-corp
 
 これらのヘッダが無い場合、`formulon-cell` はインメモリのスタブエンジンへ
 フォールバックします。UI のレイアウトや操作確認には使えますが、数式評価、
-再計算、ワークブック round-trip は実エンジンの挙動ではなくなります。
+再計算、ワークブックの読み書きは実エンジンの挙動ではなくなります。

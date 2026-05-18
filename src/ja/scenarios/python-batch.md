@@ -1,9 +1,9 @@
 # Python で一括再計算
 
-スケジュールジョブ、ノートブック、データパイプラインの一部としてスプレッドシート再計算を組み込むパターンです。ブラウザで動く engine と同じものを、ホスト言語だけ Python に置き換えて動かします。
+スケジュールジョブ、ノートブック、データパイプラインの一部としてスプレッドシート再計算を組み込むパターンです。ブラウザで動くエンジンと同じものを、ホスト言語だけ Python に置き換えて動かします。
 
 ::: tip ワークブック IO は端に寄せる
-最初に bytes をロードし、明示的に変更 / recalc し、最後に bytes を書き出します。計算ロジックと無関係なデータロードを混ぜないこと。原因の切り分けとテストが楽になります。
+最初にバイト列をロードし、明示的に変更 / 再計算し、最後にバイト列を書き出します。計算ロジックと無関係なデータロードを混ぜないこと。原因の切り分けとテストが楽になります。
 :::
 
 ::: info 用語: scheduled job（スケジュールジョブ）
@@ -17,19 +17,19 @@ sequenceDiagram
   participant Job as バッチジョブ
   participant FS as ファイルシステム
   participant WB as Workbook
-  Job->>FS: テンプレート bytes 読込
+  Job->>FS: テンプレートのバイト列読込
   Job->>WB: Workbook.load(bytes)
   Job->>WB: set_number / set_formula(入力)
   Job->>WB: recalc()
   Job->>WB: get_value(検証)
   alt 検証 OK
     Job->>WB: save()
-    WB-->>Job: 出力 bytes
+    WB-->>Job: 出力バイト列
     Job->>FS: 出力書込
   else 検証 NG
     Job-->>Job: log + raise
   end
-  Note over WB: with ブロックを抜けると<br/>native handle が解放
+  Note over WB: with ブロックを抜けると<br/>ネイティブハンドルが解放
 ```
 
 ## ジョブの例
@@ -74,7 +74,7 @@ with Workbook.load(template_bytes) as wb:
 
 `set_number` / `set_text` / `set_formula` が定番。座標は 0-based の `(sheet, row, col)` です。詳しくは [ワークブック操作](/ja/workbook/operations)。
 
-## 互換性プロファイルを pin する
+## 互換性プロファイルを固定する
 
 ```python
 with Workbook.load(template_bytes) as wb:
@@ -83,11 +83,11 @@ with Workbook.load(template_bytes) as wb:
     ...
 ```
 
-CI fixture や本番ジョブでは profile を明示し、ロケール依存結果を再現可能にしてください。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
+CI の検証用ワークブックや本番ジョブではプロファイルを明示し、ロケール依存結果を再現可能にしてください。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
 
 ## 検証パターン
 
-リポジトリに小さな fixture ワークブックを置きます。
+リポジトリに小さな検証用ワークブックを置きます。
 
 ```sh
 python jobs/recalc_reports.py
@@ -95,10 +95,10 @@ formulon dump --values report.xlsx > report.values.txt
 git diff --exit-code report.values.txt
 ```
 
-Python の入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を end-to-end で検知できます。
+Python の入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を一連の流れとして検知できます。
 
-::: warning volatile な入力は要対処
-`NOW` / `TODAY` / `RAND` / network 関数は非決定的です。golden snapshot に含めるなら、テンプレート側で固定値に置き換えるか、スナップショット範囲外に移動してください。
+::: warning 揮発性の入力は要対処
+`NOW` / `TODAY` / `RAND` / ネットワーク関数は非決定的です。期待値スナップショットに含めるなら、テンプレート側で固定値に置き換えるか、スナップショット範囲外に移動してください。
 :::
 
 ## エラー処理
@@ -114,14 +114,14 @@ try:
             # セルの Excel エラー ─ 例外にせずデータとして処理
             log.warning("cell error: %s", value.error_code)
 except FormulonError as e:
-    # ホスト失敗（bytes 不正・ハンドル失効・IO）
+    # ホスト失敗（バイト列不正・ハンドル失効・IO）
     log.error("formulon host failure: %s", e)
     raise
 ```
 
 ## 適合性の確認
 
-| ワークフロー | 推奨 runtime |
+| ワークフロー | 推奨実行環境 |
 | --- | --- |
 | cron 駆動の夜間レポート | Python |
 | Jupyter / Colab ノートブック | Python |
@@ -131,6 +131,6 @@ except FormulonError as e:
 
 ## 次に読むもの
 
-- [Python API](/ja/api/python) ─ トップレベル surface
+- [Python API](/ja/api/python) ─ トップレベル API
 - [ワークブックの流れ](/ja/workbook/lifecycle) ─ スクリプトの裏で動く engine フロー
 - [CI でワークブック回帰検査](/ja/scenarios/ci-regression) ─ Python とスナップショットの組み合わせ

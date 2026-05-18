@@ -1,9 +1,9 @@
 # WASM 連携
 
-WASM パッケージは Formulon の最も広い surface です。ブラウザ・Web Worker・Node から、JS API も `formulon-cell` も同じ `@libraz/formulon` バイナリで動かします。
+WASM パッケージは Formulon の最も広い JavaScript API です。ブラウザ・Web Worker・Node から、JS API も `formulon-cell` も同じ `@libraz/formulon` バイナリで動かします。
 
 ::: warning ホスティングが重要
-ブラウザでの成功は server ヘッダ・worker 形式・bundler 挙動に依存します。ローカル dev だけでなく、デプロイ先で必ず確認してください。
+ブラウザでの成功はサーバーのヘッダー、Worker 形式、バンドラ挙動に依存します。ローカル開発環境だけでなく、デプロイ先で必ず確認してください。
 :::
 
 ::: info 用語: pthread worker
@@ -18,7 +18,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-どちらかでも欠けると `createFormulon()` は stub engine にフォールバックします。
+どちらかでも欠けると、`formulon-cell` は簡易エンジンにフォールバックする場合があります。
 :::
 
 ## Module は 1 度だけ初期化する
@@ -34,9 +34,9 @@ const result = Module.evalFormula('=SUM(1,2,3)')
 
 `createFormulon()` は非同期です。ブラウザでは `.wasm` の取得と pthread プールの起動を伴うため、`Module` 参照は長寿命にしてください。
 
-## bytes を明示的に渡す
+## バイト列を明示的に渡す
 
-ワークブックの入出力は bytes で行います。UI 層・アップロード層・永続化層と計算層を切り離す設計です。
+ワークブックの入出力はバイト列で行います。UI 層・アップロード層・永続化層と計算層を切り離す設計です。
 
 WASM `Workbook` ハンドルはネイティブメモリを持ち、JS の GC 対象ではありません。使い終わったら必ず `delete()` してください。
 
@@ -77,6 +77,6 @@ export default defineConfig({
 
 ## 次に読むもの
 
-- [WASM API](/ja/api/wasm) ─ surface の詳細
+- [WASM API](/ja/api/wasm) ─ API の詳細
 - [ワークブックの流れ](/ja/workbook/lifecycle) ─ open / edit / recalc / save
 - [ブラウザでアップロード](/ja/scenarios/browser-upload) ─ end-to-end の例

@@ -5,10 +5,10 @@ description: formulon-cell UI パッケージが公開する主な API。
 
 # API 一覧
 
-`formulon-cell` は、合成可能なピース ─ engine をラップする `WorkbookHandle`、`SpreadsheetInstance` を作る `Spreadsheet.mount()`、型付きイベントバス、zustand backed store、command helper、i18n コントローラ、テーマコントローラ ─ で構成されています。主役のエンジンは `@libraz/formulon` のまま、これらは spreadsheet surface を作るための API です。
+`formulon-cell` は、合成可能な部品で構成されています。エンジンをラップする `WorkbookHandle`、`SpreadsheetInstance` を作る `Spreadsheet.mount()`、型付きイベントバス、zustand ベースのストア、コマンドヘルパー、i18n コントローラ、テーマコントローラを提供します。主役のエンジンは `@libraz/formulon` のまま、これらはスプレッドシート UI を作るための API です。
 
 ::: info 用語: WorkbookHandle
-`@libraz/formulon` の workbook インスタンスと engine ステータスを包む薄いラッパー。`Spreadsheet.mount()` とホストコードがネイティブメモリを直接管理せずに同じワークブックを共有するためにあります。
+`@libraz/formulon` のワークブックインスタンスとエンジン状態を包む薄いラッパーです。`Spreadsheet.mount()` とホストコードがネイティブメモリを直接管理せずに同じワークブックを共有するためにあります。
 :::
 
 ## WorkbookHandle
@@ -23,11 +23,11 @@ const wb = await WorkbookHandle.createEmpty()
 const wb = await WorkbookHandle.fromBytes(arrayBufferOrUint8Array)
 
 if (isUsingStub()) {
-  // SharedArrayBuffer が無効 ─ recalc は no-op
+  // SharedArrayBuffer が無効 - 再計算は実行されない
 }
 ```
 
-`WorkbookHandle` は engine 参照を所有します。`Spreadsheet.mount({ workbook })` に渡し、UI と engine が同じ状態を共有するようにします。
+`WorkbookHandle` はエンジン参照を所有します。`Spreadsheet.mount({ workbook })` に渡し、UI とエンジンが同じ状態を共有するようにします。
 
 ## マウント
 
@@ -48,30 +48,30 @@ const instance = await Spreadsheet.mount(host, {
 | フィールド / メソッド | 役割 |
 | --- | --- |
 | `workbook` | `WorkbookHandle` |
-| `store` | chrome が使う zustand リアクティブストア |
+| `store` | 組み込み UI が使う zustand リアクティブストア |
 | `history` | undo / redo スタック |
 | `i18n` | ランタイムロケールコントローラ |
 | `setTheme(name)` | `paper` / `ink` / 独自テーマの切替 |
 | `on(event, fn)` | 型付きイベント購読 |
 | `dispose()` | マウント解除 / リスナ解放 |
 
-## Presets
+## プリセット
 
-preset は機能のまとまりを「UI 密度」で束ねたものです。
+プリセットは機能のまとまりを「UI 密度」で束ねたものです。
 
-| Preset | 用途 |
+| プリセット | 用途 |
 | --- | --- |
 | `presets.minimal()` | グリッド、数式バー、ステータスバー、基本キーマップ |
-| `presets.standard()` | View toolbar、Quick Analysis、workbook object inspector、context menu、検索 / 置換、clipboard、format painter、wheel scroll |
-| `presets.full()` | デフォルトの full chrome。format dialog、paste special、conditional formatting、iterative calculation、Go To Special、page setup、named ranges、hyperlink、PivotTable 作成、validation、autocomplete、hover comment、spreadsheet keymap |
+| `presets.standard()` | 表示ツールバー、クイック分析、ワークブックオブジェクト調査、コンテキストメニュー、検索 / 置換、クリップボード、書式コピー、ホイールスクロール |
+| `presets.full()` | デフォルトのフル UI。書式ダイアログ、形式を選択して貼り付け、条件付き書式、反復計算、ジャンプ機能、ページ設定、名前定義、ハイパーリンク、ピボットテーブル作成、入力規則、自動補完、ホバーコメント、スプレッドシート用キーマップ |
 
-::: tip 必要最小の preset を選ぶ
-preset は DOM とバンドルを増やします。ホストが既に独自ダイアログを持っているなら `presets.minimal()` まで下げ、[command helper](#command-helpers) を直接呼ぶのが軽量です。
+::: tip 必要最小のプリセットを選ぶ
+プリセットは DOM とバンドルを増やします。ホストが既に独自ダイアログを持っているなら `presets.minimal()` まで下げ、[コマンドヘルパー](#command-helpers) を直接呼ぶのが軽量です。
 :::
 
-## Extensions
+## 拡張
 
-preset 以外に、置換可能な UI ピースは extension factory として `features` に渡せます。
+プリセット以外に、置換可能な UI 部品は拡張ファクトリとして `features` に渡せます。
 
 ```ts
 import {
@@ -95,7 +95,7 @@ const instance = await Spreadsheet.mount(host, {
 
 カタログとライフサイクルは [埋め込みガイド](/ja/cell/embedding) を参照。
 
-## Events
+## イベント
 
 ```ts
 const off = instance.on('selectionChange', (event) => {
@@ -114,11 +114,11 @@ off()
 | `workbookChange` | sheet 追加・削除・改名 / defined name 変更 |
 | `localeChange` | `i18n.setLocale()` が辞書を切り替えた |
 | `themeChange` | `setTheme()` がテーマを切り替えた |
-| `recalc` | engine の再計算が完了した |
+| `recalc` | エンジンの再計算が完了した |
 
 ## Store
 
-chrome と extension は zustand store を読みます。ホストも同じ store にそのまま接続できます。
+組み込み UI と拡張は zustand ストアを読みます。ホストも同じストアにそのまま接続できます。
 
 ```ts
 import { useSpreadsheetStore } from '@libraz/formulon-cell'
@@ -130,18 +130,18 @@ const unsubscribe = useSpreadsheetStore.subscribe(
 )
 ```
 
-## Command Helpers
+## コマンドヘルパー
 
-ビルトイン UI を使わず、ホスト独自の chrome から呼べる command helper も export しています。
+組み込み UI を使わず、ホスト独自の UI から呼べるコマンドヘルパーも export しています。
 
-- clipboard / paste-special
+- クリップボード / 形式を選択して貼り付け
 - formatting
 - named ranges、comments、hyperlinks、validation
-- status bar 向け selection aggregates
-- workbook object / 互換性サマリ
-- sheet view、page setup、protection、trace arrow、slicer、session chart
+- ステータスバー向けの選択範囲集計
+- ワークブックオブジェクト / 互換性サマリ
+- シート表示、ページ設定、保護、参照元 / 参照先トレース、スライサー、セッション内チャート
 
-この分離は意図的です。同梱 playground はこれらを使って spreadsheet UI を構成しますが、アプリ側は playground chrome を採用せず engine 連携済み command だけを再利用できます。
+この分離は意図的です。同梱プレイグラウンドはこれらを使ってスプレッドシート UI を構成しますが、アプリ側はプレイグラウンドの UI を採用せず、エンジン連携済みコマンドだけを再利用できます。
 
 ## i18n コントローラ
 

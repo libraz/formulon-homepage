@@ -79,9 +79,11 @@ const startSidebar = [
   {
     text: 'Next steps',
     items: [
+      { text: 'Why Formulon', link: '/why' },
       { text: 'Choose a runtime', link: '/start/choose-runtime' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
-      { text: 'File format support', link: '/compatibility/file-format-support' }
+      { text: 'File format support', link: '/compatibility/file-format-support' },
+      { text: 'FAQ', link: '/faq' }
     ]
   }
 ]
@@ -114,6 +116,7 @@ const runtimesSidebar = [
   {
     text: 'API details',
     items: [
+      { text: 'Overview', link: '/api/' },
       { text: 'Surface matrix', link: '/api/surfaces' },
       { text: 'WASM API', link: '/api/wasm' },
       { text: 'Python API', link: '/api/python' },
@@ -127,9 +130,28 @@ const compatibilitySidebar = [
     text: 'Compatibility',
     items: [
       { text: 'Overview', link: '/compatibility/' },
+      { text: 'Compatibility model', link: '/compatibility/model' },
+      { text: 'Locale profiles', link: '/compatibility/locale-profiles' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
       { text: 'File format support', link: '/compatibility/file-format-support' },
-      { text: 'Error model', link: '/compatibility/errors' }
+      { text: 'Error model', link: '/compatibility/errors' },
+      { text: 'Oracle testing', link: '/compatibility/oracle-testing' },
+      { text: 'Non-goals', link: '/compatibility/non-goals' }
+    ]
+  }
+]
+
+const workbookSidebar = [
+  {
+    text: 'Workbook',
+    items: [
+      { text: 'Overview', link: '/workbook/' },
+      { text: 'Formula engine', link: '/workbook/formula-engine' },
+      { text: 'Recalculation', link: '/workbook/recalculation' },
+      { text: 'Operations', link: '/workbook/operations' },
+      { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' },
+      { text: 'File formats', link: '/workbook/file-formats' },
+      { text: 'Lifecycle', link: '/workbook/lifecycle' }
     ]
   }
 ]
@@ -167,9 +189,14 @@ const developmentSidebar = [
     text: 'Development',
     items: [
       { text: 'Overview', link: '/development/' },
+      { text: 'Core architecture', link: '/development/core' },
+      { text: 'Architecture', link: '/development/architecture' },
+      { text: 'Bindings', link: '/development/bindings' },
       { text: 'Build from source', link: '/development/build-from-source' },
       { text: 'Test matrix', link: '/development/test-matrix' },
-      { text: 'Oracle contribution', link: '/development/oracle-contribution' }
+      { text: 'Oracle contribution', link: '/development/oracle-contribution' },
+      { text: 'Size budgets', link: '/development/size-budgets' },
+      { text: 'Release checklist', link: '/development/release-checklist' }
     ]
   }
 ]
@@ -188,9 +215,11 @@ const jaStartSidebar = [
   {
     text: '次のステップ',
     items: [
+      { text: 'Formulon が必要な理由', link: '/ja/why' },
       { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
-      { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' }
+      { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
+      { text: 'FAQ', link: '/ja/faq' }
     ]
   }
 ]
@@ -223,6 +252,7 @@ const jaRuntimesSidebar = [
   {
     text: 'API 詳細',
     items: [
+      { text: '概要', link: '/ja/api/' },
       { text: 'API 一覧', link: '/ja/api/surfaces' },
       { text: 'WASM API', link: '/ja/api/wasm' },
       { text: 'Python API', link: '/ja/api/python' },
@@ -236,9 +266,28 @@ const jaCompatibilitySidebar = [
     text: '互換性',
     items: [
       { text: '概要', link: '/ja/compatibility/' },
+      { text: '互換性モデル', link: '/ja/compatibility/model' },
+      { text: 'ロケールプロファイル', link: '/ja/compatibility/locale-profiles' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
-      { text: 'エラーモデル', link: '/ja/compatibility/errors' }
+      { text: 'エラーモデル', link: '/ja/compatibility/errors' },
+      { text: 'Oracle 検証', link: '/ja/compatibility/oracle-testing' },
+      { text: '対象外の機能', link: '/ja/compatibility/non-goals' }
+    ]
+  }
+]
+
+const jaWorkbookSidebar = [
+  {
+    text: 'ワークブック',
+    items: [
+      { text: '概要', link: '/ja/workbook/' },
+      { text: '数式エンジン', link: '/ja/workbook/formula-engine' },
+      { text: '再計算', link: '/ja/workbook/recalculation' },
+      { text: '操作', link: '/ja/workbook/operations' },
+      { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
+      { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
+      { text: 'ライフサイクル', link: '/ja/workbook/lifecycle' }
     ]
   }
 ]
@@ -276,9 +325,14 @@ const jaDevelopmentSidebar = [
     text: '開発',
     items: [
       { text: '概要', link: '/ja/development/' },
+      { text: 'コア設計', link: '/ja/development/core' },
+      { text: 'アーキテクチャ', link: '/ja/development/architecture' },
+      { text: 'バインディング', link: '/ja/development/bindings' },
       { text: 'ソースからビルド', link: '/ja/development/build-from-source' },
       { text: 'テストマトリクス', link: '/ja/development/test-matrix' },
-      { text: 'Oracle 提供', link: '/ja/development/oracle-contribution' }
+      { text: 'Oracle 提供', link: '/ja/development/oracle-contribution' },
+      { text: 'サイズ予算', link: '/ja/development/size-budgets' },
+      { text: 'リリースチェックリスト', link: '/ja/development/release-checklist' }
     ]
   }
 ]
@@ -418,6 +472,7 @@ export default withMermaid(
               ]
             },
             { text: 'Use cases', link: '/scenarios/' },
+            { text: 'Workbook', link: '/workbook/' },
             { text: 'Runtimes', link: '/runtimes/' },
             { text: 'Compatibility', link: '/compatibility/' },
             { text: 'Development', link: '/development/' },
@@ -429,6 +484,7 @@ export default withMermaid(
             '/scenarios/': useCasesSidebar,
             '/runtimes/': runtimesSidebar,
             '/api/': runtimesSidebar,
+            '/workbook/': workbookSidebar,
             '/mcp/': mcpSidebar,
             '/cell/': cellSidebar,
             '/compatibility/': compatibilitySidebar,
@@ -480,6 +536,7 @@ export default withMermaid(
               ]
             },
             { text: '利用例', link: '/ja/scenarios/' },
+            { text: 'ワークブック', link: '/ja/workbook/' },
             { text: '実行環境', link: '/ja/runtimes/' },
             { text: '互換性', link: '/ja/compatibility/' },
             { text: '開発', link: '/ja/development/' },
@@ -491,6 +548,7 @@ export default withMermaid(
             '/ja/scenarios/': jaUseCasesSidebar,
             '/ja/runtimes/': jaRuntimesSidebar,
             '/ja/api/': jaRuntimesSidebar,
+            '/ja/workbook/': jaWorkbookSidebar,
             '/ja/mcp/': jaMcpSidebar,
             '/ja/cell/': jaCellSidebar,
             '/ja/compatibility/': jaCompatibilitySidebar,

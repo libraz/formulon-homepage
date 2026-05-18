@@ -1,6 +1,6 @@
 # CLI ワークフロー
 
-CLI は Formulon の最も軽量な surface です。ホスト言語の integration を書かずに、shell・CI・問題再現でスプレッドシート計算を使いたいときに便利です。
+CLI は Formulon の最も軽量な実行入口です。ホスト言語との連携コードを書かずに、シェル・CI・問題再現でスプレッドシート計算を使いたいときに便利です。
 
 ::: info 用語: standalone バイナリ
 Formulon と最小限のコマンドランナーをリンクした単一実行ファイル。Node / Python / 共有ライブラリは不要です。GitHub Releases から `(os, arch)` 別に配布されます。
@@ -8,11 +8,11 @@ Formulon と最小限のコマンドランナーをリンクした単一実行�
 
 主なコマンド:
 
-- `eval`: 名前付き profile で式を評価
+- `eval`: 名前付きプロファイルで式を評価
 - `recalc`: ワークブックを再計算して保存
 - `dump`: ワークブック構造や計算値を確認
 
-ホスト言語の integration を書く前に CLI で問題を再現できます。
+ホスト言語との連携コードを書く前に CLI で問題を再現できます。
 
 ## 例
 
@@ -33,7 +33,7 @@ formulon dump --metadata input.xlsx
 
 ## CI での使い方
 
-`recalc` と `dump --values` で計算値スナップショットを golden に対して取れます。同じワークブック + profile に対して CLI は決定論的なので、ダンプファイルへの `git diff` が安定したシグナルになります。
+`recalc` と `dump --values` で計算値スナップショットを期待値として保存できます。同じワークブック + プロファイルに対して CLI は決定論的なので、ダンプファイルへの `git diff` が安定したシグナルになります。
 
 ```sh
 formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
@@ -48,10 +48,10 @@ formulon dump --formulas model.xlsx > model.formulas.txt
 git diff --exit-code model.formulas.txt
 ```
 
-cached value に依存せずに数式編集を検知できます。
+キャッシュ値に依存せずに数式編集を検知できます。
 
-::: warning volatile は決定論的ではない
-`NOW` / `TODAY` / `RAND` / `RANDBETWEEN` や一部のネットワーク関数は呼び出すたびに値が変わります。CI スナップショット fixture では避けるか、ワークブック側で固定値に置き換えてください。
+::: warning 揮発性関数は決定論的ではない
+`NOW` / `TODAY` / `RAND` / `RANDBETWEEN` や一部のネットワーク関数は呼び出すたびに値が変わります。CI スナップショット用の検証データでは避けるか、ワークブック側で固定値に置き換えてください。
 :::
 
 ## 次に読むもの

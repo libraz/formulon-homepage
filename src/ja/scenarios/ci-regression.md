@@ -6,8 +6,8 @@ CLI を使い、ワークブックの変更をコードレビューで可視化�
 `NOW` / `TODAY` / `RAND` / `RANDBETWEEN` を含むワークブックは値スナップショットに向きません。隔離、明文化、またはスナップショット対象外にしてください。
 :::
 
-::: info 用語: golden file
-期待出力としてコミットされているファイル。テストは現在出力と比較し、ずれていれば fail します。レビュアーが意図的変更（golden 更新）か回帰（コード / ワークブックの修正）か判断します。
+::: info 用語: 期待値ファイル
+期待出力としてコミットされているファイルです。テストは現在出力と比較し、ずれていれば失敗します。レビュアーが意図的変更（期待値更新）か回帰（コード / ワークブックの修正）か判断します。
 :::
 
 ## パイプラインの形
@@ -20,20 +20,20 @@ flowchart LR
   F --> SNAP[testdata/*.txt]
   V --> SNAP
   SNAP --> DIFF{git diff --exit-code}
-  DIFF -->|差分なし| PASS[pass]
+  DIFF -->|差分なし| PASS[成功]
   DIFF -->|ドリフト| REVIEW[レビュアーが分類:<br/>想定 / 互換 / バグ]
 ```
 
-## Formula のドリフト
+## 数式のドリフト
 
 ```sh
 formulon dump --formulas model.xlsx > testdata/model.formulas.txt
 git diff --exit-code testdata/model.formulas.txt
 ```
 
-cached value に依存せず、ワークブックの数式編集を検知します。再計算しないので安価です。
+キャッシュ値に依存せず、ワークブックの数式編集を検知します。再計算しないので安価です。
 
-## Value のドリフト
+## 値のドリフト
 
 ```sh
 formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
@@ -41,7 +41,7 @@ formulon dump --values /tmp/model.recalc.xlsx > testdata/model.values.txt
 git diff --exit-code testdata/model.values.txt
 ```
 
-計算値の変化を検知します。`dump --values` は事前に再計算するため、スナップショットは「ファイルにキャッシュされた値」ではなく「engine が実際に計算した値」を反映します。
+計算値の変化を検知します。`dump --values` は事前に再計算するため、スナップショットは「ファイルにキャッシュされた値」ではなく「エンジンが実際に計算した値」を反映します。
 
 ## GitHub Actions 例
 
@@ -70,7 +70,7 @@ jobs:
           git diff --exit-code testdata/
 ```
 
-同じワークブック + profile + Formulon バージョンに対して結果は決定論的なので、fail するのはワークブックか engine が変わったときだけ ─ どちらもレビュー価値があります。
+同じワークブック + プロファイル + Formulon バージョンに対して結果は決定論的なので、失敗するのはワークブックかエンジンが変わったときだけです。どちらもレビュー価値があります。
 
 ## レビュー方針
 
@@ -82,14 +82,14 @@ jobs:
 - Excel の挙動変化
 - バグ
 
-この分類を PR 本文（または commit trailer）に書き残すと、将来同じ差分を見た人が「なぜ受け入れたのか」を追跡できます。golden file が「ただの bin diff」になるのを防ぎます。
+この分類を PR 本文（またはコミット末尾の注記）に書き残すと、将来同じ差分を見た人が「なぜ受け入れたのか」を追跡できます。期待値ファイルが「ただのバイナリ差分」になるのを防ぎます。
 
-::: tip CI では Formulon バージョンを pin する
-dump 出力フォーマットと値の意味はパッチリリース間で安定していますが、Formulon バージョン（または CLI バイナリ URL）を明示的に pin してください。無関係なリリースアップグレードがワークブック回帰として顕在化するのを避けられます。
+::: tip CI では Formulon バージョンを固定する
+dump 出力フォーマットと値の意味はパッチリリース間で安定していますが、Formulon バージョン（または CLI バイナリ URL）を明示的に固定してください。無関係なリリースアップグレードがワークブック回帰として顕在化するのを避けられます。
 :::
 
 ## 次に読むもの
 
 - [CLI ワークフロー](/ja/runtimes/cli) ─ このシナリオの裏で動くコマンド
 - [CI 回帰検査](/ja/runtimes/ci-regression) ─ より広いパターン
-- [互換性モデル](/ja/compatibility/model) ─ profile を pin する理由
+- [互換性モデル](/ja/compatibility/model) ─ プロファイルを固定する理由

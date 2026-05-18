@@ -7,7 +7,7 @@ Formulon は 2 つの評価器を持ちます。tree-walker はパース済み A
 :::
 
 ::: info 用語: value kind（値の種類）
-セル値・数式結果に付く弁別子。`Blank` / `Number` / `Bool` / `Text` / `Error` / `Array` / `Ref` / `Lambda` の 8 種類。各 binding は enum として公開します（例: WASM `ValueKind.Number`、Python `ValueKind.NUMBER`）。
+セル値・数式結果に付く弁別子です。`Blank` / `Number` / `Bool` / `Text` / `Error` / `Array` / `Ref` / `Lambda` の 8 種類があります。各バインディングは enum として公開します（例: WASM `ValueKind.Number`、Python `ValueKind.NUMBER`）。
 :::
 
 ```mermaid
@@ -19,7 +19,7 @@ flowchart LR
   EVAL -->|AST 解釈| TW[Tree-walker]
   EVAL -->|命令列に下げて実行| BC[Bytecode VM]
   REG[認識対象の関数<br/>ローカル実装 505 / 522<br/>環境依存 / スタブ 17 件] --> EVAL
-  PROF[互換性 profile] --> EVAL
+  PROF[互換性プロファイル] --> EVAL
   TW --> VAL[Value<br/>kind: Number / Text / Bool /<br/>Error / Array / Ref / Lambda /<br/>Blank]
   BC --> VAL
 ```
@@ -61,18 +61,18 @@ Excel error はホスト言語の例外ではなく **値** として扱いま�
 | `#N/A` | 値なし。`MATCH` / `VLOOKUP` 系で発生 |
 | `#NULL!` | 範囲交差が空 |
 | `#SPILL!` | 動的配列の spill が成立しない（衝突・範囲外） |
-| `#CALC!` | engine が結果を返せない（再帰・未完了評価など） |
+| `#CALC!` | エンジンが結果を返せない（再帰・未完了評価など） |
 | `#GETTING_DATA` | 外部参照の取得中 |
 
 ::: tip セルの error とホスト失敗は別物
-`#DIV/0!` を返す数式は API として **失敗していません**。呼び出しは成功しており、結果が error *値* なのです。`value.kind === ValueKind.Error` で判定してください。bytes 不正・handle 失効・IO 失敗などは status envelope / 例外 / 非ゼロ終了で別経路で報告されます。
+`#DIV/0!` を返す数式は API として **失敗していません**。呼び出しは成功しており、結果がエラー値なのです。`value.kind === ValueKind.Error` で判定してください。バイト列不正・ハンドル失効・IO 失敗などはステータスの包み / 例外 / 非ゼロ終了で別経路で報告されます。
 :::
 
 ## 座標
 
-binding は 0-based の数値座標を使い、ロケールごとのアドレス解析を避けます。
+バインディングは 0 から始まる数値座標を使い、ロケールごとのアドレス解析を避けます。
 
-| Excel のアドレス | binding のタプル `(sheet, row, col)` |
+| Excel のアドレス | バインディングのタプル `(sheet, row, col)` |
 | --- | --- |
 | `Sheet1!A1` | `(0, 0, 0)` |
 | `Sheet1!B4` | `(0, 3, 1)` |
@@ -82,10 +82,10 @@ A1 テキストは CLI 引数・数式文字列・MCP ツール入力など、�
 
 ## ロケール依存挙動
 
-テキスト整形・日付パース・通貨・リスト区切りなど、一部関数は有効な compatibility profile を参照します。既定は `win-365-ja_JP`。対応する oracle データが揃ったプロファイルだけが公開されます。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
+テキスト整形・日付パース・通貨・リスト区切りなど、一部関数は有効な互換性プロファイルを参照します。既定は `win-365-ja_JP` です。対応する Oracle データが揃ったプロファイルだけが公開されます。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
 
 ## 次に読むもの
 
-- [再計算](/ja/workbook/recalculation) ─ engine が評価をどう順序付けるか
+- [再計算](/ja/workbook/recalculation) ─ エンジンが評価をどう順序付けるか
 - [数式カバレッジ](/ja/compatibility/formula-coverage) ─ 関数族ごとの登録状況
-- [エラーモデル](/ja/compatibility/errors) ─ error 値とホスト失敗の違い
+- [エラーモデル](/ja/compatibility/errors) ─ エラー値とホスト失敗の違い

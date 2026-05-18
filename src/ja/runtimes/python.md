@@ -11,25 +11,25 @@ Bytecode Alliance がメンテナンスするスタンドアロン WebAssembly �
 :::
 
 ::: info 用語: C ABI
-Formulon のネイティブライブラリが公開するフラットな C 関数インタフェース。binding はこの安定契約を介して engine を呼びます。Python / CLI / WASM のどれも同じ C ABI の上に乗っています。詳しくは [C ABI](/ja/development/bindings)。
+Formulon のネイティブライブラリが公開するフラットな C 関数インタフェース。各バインディングはこの安定したインタフェースを介してエンジンを呼びます。Python / CLI / WASM のどれも同じ C ABI の上に乗っています。詳しくは [C ABI](/ja/development/bindings)。
 :::
 
 典型用途:
 
 - アップロードされたワークブックの数式検証
 - 帳票・モデルのバッチ再計算
-- ワークブック出力と golden 比較
+- ワークブック出力と期待値比較
 - 計算値を下流システムへ展開
 
-ワークブック IO はスクリプトの端で行い、テスト fixture では選択 profile を明示してください。
+ワークブックの入出力はスクリプトの端で行い、テスト用データでは選択プロファイルを明示してください。
 
 ## パッケージング
 
-PyPI パッケージは platform-native な `libformulon` を同梱しません。`formulon_capi.wasm` と pure Python wrapper を含む `py3-none-any` wheel で配布し、ロードを担うのは `wasmtime` です。実行時に Cython / pybind11 / NumPy への依存はありません。
+PyPI パッケージはプラットフォーム別の `libformulon` を同梱しません。`formulon_capi.wasm` と純 Python ラッパーを含む `py3-none-any` wheel で配布し、ロードを担うのは `wasmtime` です。実行時に Cython / pybind11 / NumPy への依存はありません。
 
 ## エラー処理
 
-`FormulonError` はホスト操作の失敗（bytes 不正・ハンドル失効・IO 失敗・engine の内部失敗）を表します。Excel のセルエラーは `Value(kind=ValueKind.ERROR)` として返ります。
+`FormulonError` はホスト操作の失敗（バイト列不正・ハンドル失効・IO 失敗・エンジン内部失敗）を表します。Excel のセルエラーは `Value(kind=ValueKind.ERROR)` として返ります。
 
 ```python
 import formulon
@@ -77,6 +77,6 @@ with open("output.xlsx", "wb") as f:
 
 ## 次に読むもの
 
-- [Python API](/ja/api/python) ─ surface 詳細
-- [ワークブックの流れ](/ja/workbook/lifecycle) ─ engine 側から見た同じフロー
-- [Python で一括再計算](/ja/scenarios/python-batch) ─ end-to-end 例
+- [Python API](/ja/api/python) ─ API 詳細
+- [ワークブックの流れ](/ja/workbook/lifecycle) ─ エンジン側から見た同じフロー
+- [Python で一括再計算](/ja/scenarios/python-batch) ─ 一連の処理例
