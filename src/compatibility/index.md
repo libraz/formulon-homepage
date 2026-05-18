@@ -20,7 +20,7 @@ Formulon is still pre-1.0. The function catalog is fully registered, but APIs ca
 
 | Area | What to check |
 | --- | --- |
-| Formula functions | Full catalog registration and validation guidance in [Formula coverage](/compatibility/formula-coverage) |
+| Formula functions | Local implementation count, service stubs, and validation guidance in [Formula coverage](/compatibility/formula-coverage) |
 | Files | Read / write / preserve boundaries in [File format support](/compatibility/file-format-support) |
 | Errors | `#VALUE!`, `#REF!`, parser failures, and host exceptions in [Error model](/compatibility/errors) |
-| Status | Pre-1.0 APIs, full function registration, fixture-based verification recommended |
+| Status | Pre-1.0 APIs, 505 / 522 local function implementations, fixture-based verification recommended |

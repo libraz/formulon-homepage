@@ -37,7 +37,7 @@ flowchart LR
 
 ## パッケージ
 
-MCP server は `@libraz/formulon-mcp` として公開されており、内部で `@libraz/formulon@0.9.0` を使います。**Node.js 22 以上** が必要です。
+MCP サーバーは `@libraz/formulon-mcp` として公開されており、内部で `@libraz/formulon@0.9.2` を使います。**Node.js 22 以上** が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

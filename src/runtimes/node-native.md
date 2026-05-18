@@ -19,7 +19,7 @@ The Native Node binding currently exposes a focused subset of the WASM surface. 
 ## Install
 
 ```sh
-yarn add @libraz/formulon-native@0.9.0
+yarn add @libraz/formulon-native@0.9.2
 ```
 
 Prebuilt binaries are published per `(os, arch)`. The installer picks the matching artifact at install time.

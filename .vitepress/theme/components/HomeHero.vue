@@ -13,26 +13,29 @@ const copy = computed(() =>
     ? {
         masthead: 'Formulon',
         volume: '0.9',
-        issue: 'v0.9.0 · 2026 / 05',
-        eyebrow: 'Headless Spreadsheet Engine',
+        issue: 'v0.9.2 · 2026 / 05',
+        eyebrow: 'Workbook calculation platform',
         claimParts: [
           { text: 'Excel ワークブックを ' },
-          { text: 'browser・Python・CI', mono: true },
-          { text: ' で再計算するエンジン。' }
+          { text: 'アプリ・自動化・AI エージェント', mono: true },
+          { text: ' から扱う計算基盤。' }
         ] as Part[],
-        sub: 'Formulon は C++17 core を WASM、Python、CLI に展開し、Excel のインストールなしで .xlsx / .xlsb の読み込み、式評価、再計算、書き戻しを扱います。',
+        sub: 'Formulon は 1 つの C++17 計算エンジンを WebAssembly、Python、CLI、MCP から使えるようにし、Excel をインストールせずに .xlsx / .xlsb の読み込み、式評価、再計算、書き戻しを扱います。',
         primary: { text: 'クイックスタート', link: '/ja/start/install' },
         secondary: { text: 'MCP で使う', link: '/ja/mcp/' },
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモ UI を試す', link: '/ja/cell/demo' },
         stats: [
-          { value: '522 / 522', label: 'カタログ化された関数' },
-          { value: '92', label: 'Excel 期待値カテゴリ' },
-          { value: '31', label: 'MCP tools' }
+          { value: 'v0.9.2', label: '最新リリース' },
+          { value: '505 / 522', label: 'ローカル実装 / 認識対象' },
+          { value: '31', label: 'MCP ツール' }
         ] as Stat[],
-        flow: ['parse', 'recalc', 'serialize', 'export'],
+        coverageNote:
+          '残り 17 件は Copilot、クラウド Python、画像取得、株価取得、CUBE 接続など外部サービス依存です。',
+        coverageLink: { text: '理由を見る', link: '/ja/compatibility/formula-coverage' },
+        flow: ['読み込み', '再計算', '保存形式へ変換', '出力'],
         sheetTitle: 'quarterly-plan.xlsx',
-        stamp: 'Verified',
+        stamp: '検証済み',
         cells: [
           ['Region', 'Q1', 'Q2', 'Δ'],
           ['Tokyo', '128', '144', '=C2-B2'],
@@ -40,28 +43,31 @@ const copy = computed(() =>
           ['Total', '=SUM(B2:B3)', '=SUM(C2:C3)', '=C4-B4']
         ],
         result: 'Excel なしで再計算',
-        resultMeta: 'recalc ok · 0.4 ms'
+        resultMeta: 'validated · local recalc'
       }
     : {
         masthead: 'Formulon',
         volume: '0.9',
-        issue: 'v0.9.0 · 2026 / 05',
+        issue: 'v0.9.2 · 2026 / 05',
         eyebrow: 'Headless Spreadsheet Engine',
         claimParts: [
-          { text: 'A recalculation engine for ' },
-          { text: 'browser, Python, and CI', mono: true },
+          { text: 'A workbook calculation platform for ' },
+          { text: 'apps, automation, and AI agents', mono: true },
           { text: '.' }
         ] as Part[],
-        sub: 'Formulon ships one C++17 calculation core across WASM, Python, and CLI so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
+        sub: 'Formulon ships one C++17 calculation core across WASM, Python, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
         primary: { text: 'Quick Start', link: '/start/install' },
         secondary: { text: 'Use from MCP', link: '/mcp/' },
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the demo UI', link: '/cell/demo' },
         stats: [
-          { value: '522 / 522', label: 'Catalogued functions' },
-          { value: '92', label: 'Oracle categories' },
+          { value: 'v0.9.2', label: 'Latest release' },
+          { value: '505 / 522', label: 'Local / recognized functions' },
           { value: '31', label: 'MCP tools' }
         ] as Stat[],
+        coverageNote:
+          'The remaining 17 require external services such as Copilot, cloud Python, image fetch, market data, or CUBE connections.',
+        coverageLink: { text: 'See why', link: '/compatibility/formula-coverage' },
         flow: ['parse', 'recalc', 'serialize', 'export'],
         sheetTitle: 'quarterly-plan.xlsx',
         stamp: 'Verified',
@@ -72,7 +78,7 @@ const copy = computed(() =>
           ['Total', '=SUM(B2:B3)', '=SUM(C2:C3)', '=C4-B4']
         ],
         result: 'Recalculated without Excel',
-        resultMeta: 'recalc ok · 0.4 ms'
+        resultMeta: 'validated · local recalc'
       }
 )
 
@@ -141,5 +147,9 @@ const flowLabel = (i: number) => String(i + 1).padStart(2, '0')
         <dd class="fln-ledger-key">{{ stat.label }}</dd>
       </div>
     </dl>
+    <p class="fln-coverage-note">
+      {{ copy.coverageNote }}
+      <a :href="copy.coverageLink.link">{{ copy.coverageLink.text }}</a>
+    </p>
   </section>
 </template>

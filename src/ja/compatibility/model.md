@@ -1,9 +1,9 @@
 # 互換性モデル
 
-Formulon は互換性を *測定可能な性質* として扱います。一般的な「Excel-compatible」を主張するのではなく、oracle データに裏付けられた **名前付き profile** に対する互換性を主張します。やるべきことは 2 つに分かれます ─ profile ごとの oracle データ取得と、受け入れ済み差分の明示。
+Formulon は互換性を *測定可能な性質* として扱います。一般的な「Excel-compatible」と広く言い切るのではなく、oracle データに裏付けられた **名前付き profile** に対する互換性として説明します。やるべきことは 2 つに分かれます ─ profile ごとの oracle データ取得と、受け入れ済み差分の明示。
 
 ::: info 用語: measured compatibility（測定可能な互換性）
-profile と、それを裏付ける oracle データ群を指して行う互換性主張のこと。「`win-365-ja_JP` と互換」は *その Excel で実際に動かして値を取得した* ことを意味します。profile を指定しない「Excel-compatible」という言い回しは意図的に避けます。
+profile と、それを裏付ける oracle データ群を指す互換性の説明です。「`win-365-ja_JP` と互換」は *その Excel で実際に動かして値を取得した* ことを意味します。profile を指定しない「Excel-compatible」という言い回しは意図的に避けます。
 :::
 
 ```mermaid
@@ -14,7 +14,7 @@ flowchart LR
   PROFILE --> ENGINE
   ENGINE --> RESULT[計算値]
   RESULT -->|oracle と比較| DIVERGE{差分}
-  DIVERGE -->|なし| OK[profile 主張が成立]
+  DIVERGE -->|なし| OK[profile 互換が成立]
   DIVERGE -->|追跡済み| NOTE[受入差分<br/>+ 理由 + last-verified build]
   DIVERGE -->|未追跡| BUG[バグ ─ 修正 or 文書化]
 ```
@@ -42,7 +42,7 @@ flowchart LR
 | --- | --- |
 | Formulon を使うアプリ | 計算に使った profile を永続化する |
 | テスト | 期待する profile と Formulon バージョンを明示する |
-| ドキュメント | profile 未指定の「Excel-compatible」という雑な主張は避ける |
+| ドキュメント | profile 未指定の「Excel-compatible」という曖昧な表現は避ける |
 | Issue 報告 | profile、Formulon バージョン、oracle の Excel build、最小再現ワークブックを含める |
 
 ## 次に読むもの

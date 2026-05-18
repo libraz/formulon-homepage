@@ -34,7 +34,7 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
-    "@libraz/formulon": "0.9.0",
+    "@libraz/formulon": "0.9.2",
     "@libraz/formulon-cell": "^0.2.0",
     "@libraz/formulon-cell-vue": "^0.2.0",
     "mermaid": "^11.14.0",

@@ -37,7 +37,7 @@ flowchart LR
 
 ## Package
 
-The MCP server is published as `@libraz/formulon-mcp` and uses `@libraz/formulon@0.9.0` under the hood. It requires **Node.js 22 or newer**.
+The MCP server is published as `@libraz/formulon-mcp` and uses `@libraz/formulon@0.9.2` under the hood. It requires **Node.js 22 or newer**.
 
 ```sh
 npx -y @libraz/formulon-mcp

@@ -18,7 +18,7 @@ flowchart LR
   RESOLVE --> EVAL{Evaluator}
   EVAL -->|interpret AST| TW[Tree-walker]
   EVAL -->|lower &amp; run| BC[Bytecode VM]
-  REG[Function catalog<br/>522 / 522] --> EVAL
+  REG[Function catalog<br/>505 / 522 local +<br/>17 bounded/stub entries] --> EVAL
   PROF[Compatibility profile] --> EVAL
   TW --> VAL[Value<br/>kind: Number / Text / Bool /<br/>Error / Array / Ref / Lambda /<br/>Blank]
   BC --> VAL
@@ -26,11 +26,22 @@ flowchart LR
 
 ## Function catalog
 
-The catalog tracks 522 Excel functions across math, statistical, logical, text, date/time, lookup, financial, engineering, information, database, web, cube, and recent (LET / LAMBDA / dynamic array) families. The runtime registry currently reports 522 / 522 implemented. See [Formula coverage](/compatibility/formula-coverage) for the category breakdown and validation guidance.
+The catalog tracks 522 Excel function names across math, statistical, logical, text, date/time, lookup, financial, engineering, information, database, web, cube, and recent (LET / LAMBDA / dynamic array) families. That is the recognition catalog, not a claim that every Microsoft 365 service-backed function is locally implemented.
+
+As of v0.9.2, **505 / 522** catalog entries have real local engine implementations, 2 are environment-bound (`CELL`, `INFO`), and 15 are deliberate unavailable stubs for features that require external services or live connections. See [Formula coverage](/compatibility/formula-coverage) for the category and availability breakdown.
 
 ## Evaluation modes
 
 The tree-walker and bytecode VM can run in parallel for parity checks. That keeps optimization work honest: the faster path must produce the same values as the simpler path, on the same workbook, under the same profile.
+
+## v0.9.2 evaluation updates
+
+v0.9.2 made several Excel-parity fixes that can change edge-case results:
+
+- numeric literals are truncated to Excel's 15-significant-digit representation during parsing;
+- `ARRAYTOTEXT` propagates a scalar error argument instead of formatting around it;
+- `FREQUENCY` follows Excel's bin-ordering behavior more closely;
+- `PERCENTILE.EXC` returns `#NUM!` at the upper boundary (`pos == n`) instead of returning the largest sample value.
 
 ## Error behavior
 

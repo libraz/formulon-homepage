@@ -5,7 +5,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.9.0'
+const docsVersion = '0.9.2'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -20,7 +20,13 @@ const applyCrossOriginIsolationHeaders = (
 }
 
 const patchFormulonWorkerOptions = () => {
-  const files = [resolve(process.cwd(), 'node_modules/@libraz/formulon/dist/formulon.js')]
+  const files = [
+    resolve(process.cwd(), 'node_modules/@libraz/formulon/dist/formulon.js'),
+    resolve(
+      process.cwd(),
+      'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon.js'
+    )
+  ]
 
   for (const file of files) {
     if (!existsSync(file)) continue
@@ -86,6 +92,7 @@ const useCasesSidebar = [
     items: [
       { text: 'Overview', link: '/scenarios/' },
       { text: 'Browser workbook upload', link: '/scenarios/browser-upload' },
+      { text: 'Node service recalculation', link: '/scenarios/node-service' },
       { text: 'Python batch recalculation', link: '/scenarios/python-batch' },
       { text: 'CI workbook regression', link: '/scenarios/ci-regression' }
     ]
@@ -194,6 +201,7 @@ const jaUseCasesSidebar = [
     items: [
       { text: '概要', link: '/ja/scenarios/' },
       { text: 'ブラウザで開く', link: '/ja/scenarios/browser-upload' },
+      { text: 'Node サービスで再計算', link: '/ja/scenarios/node-service' },
       { text: 'Python で一括再計算', link: '/ja/scenarios/python-batch' },
       { text: 'CI で回帰検査', link: '/ja/scenarios/ci-regression' }
     ]

@@ -19,7 +19,7 @@ Native Node binding は現在、WASM surface の絞られた subset を公開し
 ## Install
 
 ```sh
-yarn add @libraz/formulon-native@0.9.0
+yarn add @libraz/formulon-native@0.9.2
 ```
 
 prebuilt は `(os, arch)` 別に公開されており、インストーラが該当 artifact を選択します。

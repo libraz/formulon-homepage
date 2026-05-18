@@ -10,6 +10,7 @@ After the one-formula quick start, test one representative workbook as early as 
 flowchart TD
   Q{What kind of work?}
   Q -->|User uploads xlsx in browser| BU[Browser workbook upload<br/>WASM]
+  Q -->|Upload API / internal service| NS[Node service recalculation<br/>Native Node / WASM]
   Q -->|Scheduled job / notebook| PB[Python batch recalculation<br/>Python]
   Q -->|Detect drift in PRs| CI[CI workbook regression<br/>CLI]
   Q -->|AI agent edits workbooks| MCP[Agent workbook editing<br/>MCP]
@@ -18,6 +19,7 @@ flowchart TD
 | Scenario | Runtime | Goal |
 | --- | --- | --- |
 | [Browser workbook upload](/scenarios/browser-upload) | WASM | Recalculate a user-uploaded `.xlsx` without sending it to a server |
+| [Node service recalculation](/scenarios/node-service) | Native Node / WASM | Recalculate uploaded or internally generated workbooks behind an API |
 | [Python batch recalculation](/scenarios/python-batch) | Python | Recalculate reports or models in jobs and notebooks |
 | [CI workbook regression](/scenarios/ci-regression) | CLI | Detect formula and value drift in automated checks |
 | [Agent workbook editing](/mcp/) | MCP | Let AI agents open, edit, recalculate, and save `.xlsx` through `formulon-mcp` |
@@ -30,5 +32,9 @@ Every scenario follows the same `load → mutate → recalc → save` lifecycle 
 - where the bytes go (`save()` result, written file, returned `bytes` field),
 - which runtime owns memory and IO,
 - how errors cross the host boundary.
+
+## Compatibility gate
+
+Before adopting any scenario, inspect the workbook's formulas and decide how to handle external-service functions. Formulon locally implements **505 / 522** catalogued names; the remaining entries are environment-bound or deliberate unavailable stubs such as `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE connection functions. Treat those as product decisions: reject the workbook, show a compatibility warning, or route it to an Excel-backed workflow.
 
 For runtime-specific setup, see [Runtimes](/runtimes/). For the engine-side flow, see [Workbook lifecycle](/workbook/lifecycle).

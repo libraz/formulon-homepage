@@ -43,6 +43,14 @@ Spill behavior is most visible with:
 
 Implicit intersection (`@`) is still supported for backward compatibility with workbooks authored in pre-dynamic-array Excel.
 
+## v0.9.2 array-function updates
+
+v0.9.2 tightened Excel parity for several array-aware functions:
+
+- `MAP` and `MAKEARRAY` now spill errors in the same shape Excel reports for the covered oracle cases.
+- `WRAPROWS` and `WRAPCOLS` align their output shape and padding behavior with the Mac Excel oracle.
+- `TRIMRANGE` blank handling was adjusted so leading / trailing blank rows and columns match the oracle more closely.
+
 ## Recalculation interaction
 
 The recalc engine stores per-anchor spill metadata:

@@ -28,6 +28,13 @@ const paths = computed<Path[]>(() =>
         },
         {
           key: 'Backend',
+          title: 'Node サービスで再計算する',
+          description:
+            'アップロード API や社内サービスで .xlsx を受け取り、Native Node または WASM で再計算して返します。',
+          link: '/ja/scenarios/node-service'
+        },
+        {
+          key: 'Batch',
           title: 'Python で一括再計算する',
           description:
             '帳票生成や ETL でスプレッドシートの計算ロジックをサーバー側へ移し、定型業務を自動化します。',
@@ -58,6 +65,13 @@ const paths = computed<Path[]>(() =>
         },
         {
           key: 'Backend',
+          title: 'Recalculate inside a Node service',
+          description:
+            'Accept .xlsx files in an upload API or internal service, then recalculate with Native Node or WASM.',
+          link: '/scenarios/node-service'
+        },
+        {
+          key: 'Batch',
           title: 'Batch recalculation from Python',
           description:
             'Move spreadsheet logic into report generation, ETL pipelines, and scheduled recalc jobs.',
@@ -90,7 +104,7 @@ const capabilities = computed<Capability[]>(() =>
         },
         {
           key: 'Runtime',
-          value: 'WASM / Python / CLI が 1 つの C++17 core を共有',
+          value: 'WebAssembly / Python / CLI が 1 つの C++17 エンジンを共有',
           link: '/ja/runtimes/'
         },
         {
@@ -100,7 +114,7 @@ const capabilities = computed<Capability[]>(() =>
         },
         {
           key: 'Compatibility',
-          value: '全関数登録と Excel 由来の期待値',
+          value: '関数の対応状況と Excel 由来の期待値',
           link: '/ja/compatibility/'
         }
       ]
@@ -122,7 +136,7 @@ const capabilities = computed<Capability[]>(() =>
         },
         {
           key: 'Compatibility',
-          value: 'Full function registration and Excel oracle data',
+          value: 'Function availability and Excel oracle data',
           link: '/compatibility/'
         }
       ]

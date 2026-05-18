@@ -26,15 +26,15 @@ const copy = computed(() =>
     ? {
         section: 'Ecosystem',
         heading: 'パッケージ構成と関係性',
-        body: 'L1 が C++17 計算 core (formulon)、L2 が言語ごとの IF パッケージ (npm の @libraz/formulon、PyPI の formulon、CLI バイナリ)、L3 が用途別アプリパッケージ、L4 が利用側のアプリ・エージェントです。',
+        body: 'L1 が C++17 計算エンジン、L2 が言語ごとのインターフェイスパッケージ、L3 が用途別アプリパッケージ、L4 が利用側のアプリやエージェントです。',
         layers: <Layer[]>[
           {
             kind: 'pair',
             mark: 'L4',
-            caption: 'Consumer',
+            caption: '利用側',
             cells: [
-              { name: 'AI agents', meta: 'Claude Code · Codex · Claude Desktop' },
-              { name: 'Browser apps', meta: 'React / Vue / vanilla フロントエンド' }
+              { name: 'AI エージェント', meta: 'Claude Code · Codex · Claude Desktop' },
+              { name: 'ブラウザアプリ', meta: 'React / Vue / 素のフロントエンド' }
             ]
           },
           {
@@ -44,12 +44,12 @@ const copy = computed(() =>
             cells: [
               {
                 name: '@libraz/formulon-mcp',
-                meta: 'stdio MCP server · 31 tools',
+                meta: 'stdio MCP サーバー · 31 ツール',
                 link: '/ja/mcp/'
               },
               {
                 name: '@libraz/formulon-cell',
-                meta: 'framework-free spreadsheet UI host',
+                meta: 'フレームワーク非依存のスプレッドシート UI',
                 children: ['@libraz/formulon-cell-react', '@libraz/formulon-cell-vue'],
                 link: '/ja/cell/'
               }
@@ -58,7 +58,7 @@ const copy = computed(() =>
           {
             kind: 'triple',
             mark: 'L2',
-            caption: '言語 IF',
+            caption: '言語インターフェイス',
             cells: [
               {
                 name: '@libraz/formulon',
@@ -80,10 +80,10 @@ const copy = computed(() =>
           {
             kind: 'single',
             mark: 'L1',
-            caption: '計算 core',
+            caption: '計算エンジン',
             cell: {
               name: 'formulon',
-              meta: 'C++17 calculation core · 522 functions · Excel 由来の期待値 (github.com/libraz/formulon)',
+              meta: 'C++17 · Excel 由来の期待値で検証 (github.com/libraz/formulon)',
               link: '/ja/development/architecture'
             }
           }
@@ -149,7 +149,7 @@ const copy = computed(() =>
             caption: 'Calculation core',
             cell: {
               name: 'formulon',
-              meta: 'C++17 calculation core · 522 functions · Excel-derived oracle (github.com/libraz/formulon)',
+              meta: 'C++17 calculation core · Excel-derived oracle data (github.com/libraz/formulon)',
               link: '/development/architecture'
             }
           }

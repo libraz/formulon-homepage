@@ -18,4 +18,4 @@ Formulon is not a spreadsheet UI, chart renderer, VBA runtime, PowerQuery engine
 
 ## Current status
 
-Formulon is under active development and is not yet production-ready. The 522-function catalog is fully registered, the file-format layer is substantial, and bindings are wired, but APIs and package layout may still change before the first stable release. Validate business-critical workbooks with fixtures against the Excel profile you target.
+Formulon is under active development and is not yet production-ready. The formula engine has broad local coverage and explicitly marks service-backed functions such as `COPILOT`, `PY`, and `WEBSERVICE` as unavailable stubs rather than pretending to implement the corresponding Microsoft 365 services. APIs and package layout may still change before the first stable release. Validate business-critical workbooks with fixtures against the Excel profile you target.

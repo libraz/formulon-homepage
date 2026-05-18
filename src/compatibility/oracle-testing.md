@@ -40,6 +40,8 @@ A failure usually falls into one of four buckets:
 
 Locale coverage grows when contributors run the oracle capture flow on their own Excel installations. The same workbook can be captured on `win-365-ja_JP`, `mac-365-ja_JP`, and other profiles, expanding what the engine can validate against. See [Oracle contribution](/development/oracle-contribution) for the capture flow.
 
+v0.9.2 added workbook-oracle coverage for pivot tables and print pagination through the Windows Excel bridge, with `win-365-ja_JP` as the primary profile. Mac and Windows captures now share a comparator, which makes cross-platform differences easier to review instead of hiding them as unrelated test output.
+
 ## Read next
 
 - [Compatibility model](/compatibility/model) — profiles, divergences, practical rules.

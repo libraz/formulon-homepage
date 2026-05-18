@@ -104,4 +104,4 @@ No. The MCP server validates inputs and dispatches only allowlisted methods. Ses
 
 ### Is Formulon production-ready?
 
-It is pre-1.0. The 522-function catalog is fully registered and the file-format layer is substantial, but APIs and packaging may still change. Pin exact versions and keep representative workbook fixtures for business-critical use cases.
+It is pre-1.0. The local formula engine is broad, but service-backed functions are marked as unavailable stubs and the file-format layer still needs workbook-level validation. APIs and packaging may change. Pin exact versions and keep representative workbook fixtures for business-critical use cases.

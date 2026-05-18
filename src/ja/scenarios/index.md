@@ -10,6 +10,7 @@ Formulon を具体的な処理の流れに組み込む例です。シナリオ�
 flowchart TD
   Q{どんな処理}
   Q -->|ブラウザで xlsx アップロード| BU[ブラウザでワークブックを開く<br/>WASM]
+  Q -->|アップロード API / 社内サービス| NS[Node サービスで再計算<br/>Native Node / WASM]
   Q -->|スケジュールジョブ / ノートブック| PB[Python で一括再計算<br/>Python]
   Q -->|PR でドリフトを検出| CI[CI でワークブックの回帰検出<br/>CLI]
   Q -->|AI エージェントが編集| MCP[エージェントから編集<br/>MCP]
@@ -18,6 +19,7 @@ flowchart TD
 | 利用例 | 実行環境 | 目的 |
 | --- | --- | --- |
 | [ブラウザでワークブックを開く](/ja/scenarios/browser-upload) | WASM | `.xlsx` をサーバーに送らずブラウザ内で再計算 |
+| [Node サービスで再計算](/ja/scenarios/node-service) | Native Node / WASM | アップロードまたは社内生成したワークブックを API の裏側で再計算 |
 | [Python で一括再計算](/ja/scenarios/python-batch) | Python | ジョブやノートブックで帳票やモデルを再計算 |
 | [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) | CLI | 自動チェックで数式や計算値のずれを検出 |
 | [AI エージェントから workbook を編集](/ja/mcp/) | MCP | `formulon-mcp` 経由でエージェントが `.xlsx` を開いて編集・再計算・保存 |
@@ -30,5 +32,9 @@ flowchart TD
 - bytes の行き先（`save()` の戻り値、ファイル書き込み、返却 `bytes` フィールド）
 - メモリと IO の所有者
 - エラーがホスト境界をどう渡るか
+
+## 互換性ゲート
+
+どのシナリオでも、導入前にワークブック内の数式を確認し、外部サービス依存の関数をどう扱うか決めてください。Formulon がローカル実装しているのは、認識対象 522 件のうち **505 / 522** 件です。残りは環境依存または利用不可スタブで、`COPILOT`、`PY`、`IMAGE`、`WEBSERVICE`、`STOCKHISTORY`、`RTD`、CUBE 接続関数などが該当します。これらを含むワークブックは、拒否する、互換性警告を表示する、Excel 連携の別経路に回す、といったプロダクト上の判断が必要です。
 
 runtime ごとの設定は [Runtimes](/ja/runtimes/)、engine 側のフローは [ワークブックの流れ](/ja/workbook/lifecycle) を参照してください。

@@ -1,6 +1,6 @@
 # 数式エンジン
 
-評価器は scalar / range / array / error / reference / ロケール依存の挙動を Excel と一致させることを目指しています。関数カタログは起動時に登録され、各 binding はその中で評価できる関数を呼び出せます。
+評価器は、スカラー値、範囲、配列、エラー、参照、ロケール依存の挙動を Excel と一致させることを目指しています。Formulon は認識対象の関数名を起動時に登録し、各バインディングはその中で評価できる関数を呼び出せます。
 
 ::: info 用語: tree-walker / bytecode VM
 Formulon は 2 つの評価器を持ちます。tree-walker はパース済み AST をそのまま解釈し、bytecode VM は数式をコンパクトな命令列に下げて高速に実行します。両者は同じ結果を返す必要があり、テストでは並走させて差分が出ないか常に検査します。
@@ -18,23 +18,34 @@ flowchart LR
   RESOLVE --> EVAL{評価器}
   EVAL -->|AST 解釈| TW[Tree-walker]
   EVAL -->|命令列に下げて実行| BC[Bytecode VM]
-  REG[関数カタログ<br/>522 / 522] --> EVAL
+  REG[認識対象の関数<br/>ローカル実装 505 / 522<br/>環境依存 / スタブ 17 件] --> EVAL
   PROF[互換性 profile] --> EVAL
   TW --> VAL[Value<br/>kind: Number / Text / Bool /<br/>Error / Array / Ref / Lambda /<br/>Blank]
   BC --> VAL
 ```
 
-## 関数カタログ
+## 認識対象の関数
 
-カタログは math、statistical、logical、text、date/time、lookup、financial、engineering、information、database、web、cube、近年追加の `LET` / `LAMBDA` / 動的配列系などの合計 522 件を対象としています。実行時レジストリでは現在 522 / 522 が実装済みです。カテゴリ別の内訳と検証方針は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
+Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 522 件の Excel 関数名を認識します。これは「名前を解決できる」という意味であり、Microsoft 365 の外部サービスに依存する関数までローカル実装済みという意味ではありません。
+
+v0.9.2 時点では、**505 / 522** 件が実際のローカルエンジン実装、2 件が環境依存（`CELL`、`INFO`）、15 件が外部サービスやライブ接続を必要とするため意図的に固定エラーを返すスタブです。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
 
 ::: info 関数登録 ≠ ワークブック互換
-関数が実装されていても、ワークブックの最終結果はロケール挙動・ファイル構造・cached value・Excel の境界ケースに依存します。業務上重要な数式は小さな検証ファイルで確認してください。
+関数が登録されていても、ワークブックの最終結果はロケール挙動、ファイル構造、キャッシュ値、Excel の境界ケースに依存します。業務上重要な数式は小さな検証ファイルで確認してください。
 :::
 
 ## 評価モード
 
 tree-walker と bytecode VM は並走でき、互いの parity を検査します。同じワークブック・同じプロファイルで両者が一致することが、最適化を進める前提条件です。
+
+## v0.9.2 の評価挙動更新
+
+v0.9.2 では、Excel 由来の期待値に合わせるため、いくつかの境界ケースで結果が変わります。
+
+- 数値リテラルは、構文解析時に Excel と同じ 15 桁有効数字の表現へ丸める。
+- `ARRAYTOTEXT` は、スカラーのエラー引数を文字列化せず、そのエラー値を伝播する。
+- `FREQUENCY` は、bin の並びに関する Excel の挙動へ近づけた。
+- `PERCENTILE.EXC` は、上限境界（`pos == n`）で最大値ではなく `#NUM!` を返す。
 
 ## エラーの扱い
 

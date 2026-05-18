@@ -1,20 +1,20 @@
 # インストール
 
-実行場所に合う利用面を選びます。Formulon 0.9 の package は alpha 扱いです。アプリケーションでは exact version を pin し、安定版まで API が増える可能性を前提にしてください。
+実行場所に合う利用面を選びます。Formulon 0.9 系のパッケージはアルファ版です。アプリケーションでは正確なバージョンを固定し、安定版まで API が増える可能性を前提にしてください。
 
 ::: warning Version を pin する
-実験や internal tooling では exact package version を使ってください。API と packaging が pre-stable の間は `latest` に追従しない方が安全です。
+実験や社内ツールでは、正確なパッケージバージョンを指定してください。API とパッケージ構成が安定するまでは、`latest` に追従しないほうが安全です。
 :::
 
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.9.0
+yarn add @libraz/formulon@0.9.2
 ```
 
 ブラウザ、worker、Node サービスで WASM build を使う場合の入口です。Node で使う場合は Node 18+ が必要です。
 
-Browser hosting では pthread worker のために cross-origin isolation を設定します。
+ブラウザで配信する場合は、pthread ワーカーのために cross-origin isolation を設定します。
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
@@ -24,16 +24,16 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.9.0
+python -m pip install formulon==0.9.2
 ```
 
-スクリプト、ノートブック、バッチジョブで使います。Wheel は Formulon C ABI の
-standalone WASM module と、それを `wasmtime` 経由で呼ぶ pure-Python wrapper を
-同梱します。NumPy、Cython、pybind11 は runtime では不要です。
+スクリプト、ノートブック、バッチジョブで使います。Wheel には Formulon C ABI の
+単体 WebAssembly モジュールと、それを `wasmtime` 経由で呼び出す純 Python ラッパーが
+同梱されています。NumPy、Cython、pybind11 は実行時には不要です。
 
 ## CLI
 
-GitHub Releases から対象 OS / architecture のバイナリを取得します。`eval`、`recalc`、検査系のワークフローに向いています。
+GitHub Releases から対象 OS / CPU アーキテクチャのバイナリを取得します。`eval`、`recalc`、検査系のワークフローに向いています。
 
 ```sh
 formulon --version
@@ -50,4 +50,4 @@ make build
 make test
 ```
 
-Package build は [ソースからビルド](/ja/development/build-from-source) を参照してください。
+パッケージビルドは [ソースからビルド](/ja/development/build-from-source) を参照してください。
