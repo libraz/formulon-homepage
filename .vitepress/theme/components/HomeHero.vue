@@ -13,7 +13,7 @@ const copy = computed(() =>
     ? {
         masthead: 'Formulon',
         volume: '0.9',
-        issue: 'v0.9.4 · 2026 / 07',
+        issue: 'v0.9.5 · 2026 / 07',
         eyebrow: 'Workbook calculation platform',
         claimParts: [
           { text: 'Excel ワークブックを ' },
@@ -26,7 +26,7 @@ const copy = computed(() =>
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモ UI を試す', link: '/ja/cell/demo' },
         stats: [
-          { value: 'v0.9.4', label: '最新リリース' },
+          { value: 'v0.9.5', label: '最新リリース' },
           { value: '505 / 522', label: 'ローカル実装 / 認識対象' },
           { value: '31', label: 'MCP ツール' }
         ] as Stat[],
@@ -48,7 +48,7 @@ const copy = computed(() =>
     : {
         masthead: 'Formulon',
         volume: '0.9',
-        issue: 'v0.9.4 · 2026 / 07',
+        issue: 'v0.9.5 · 2026 / 07',
         eyebrow: 'Headless Spreadsheet Engine',
         claimParts: [
           { text: 'A workbook calculation platform for ' },
@@ -61,7 +61,7 @@ const copy = computed(() =>
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the demo UI', link: '/cell/demo' },
         stats: [
-          { value: 'v0.9.4', label: 'Latest release' },
+          { value: 'v0.9.5', label: 'Latest release' },
           { value: '505 / 522', label: 'Local / recognized functions' },
           { value: '31', label: 'MCP tools' }
         ] as Stat[],
