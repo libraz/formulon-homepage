@@ -6,8 +6,6 @@ import DiagramLayers from './components/DiagramLayers.vue'
 import SvgEmail from './components/SvgEmail.vue'
 import Layout from './Layout.vue'
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell/styles/paper.css'
-import '@libraz/formulon-cell/styles/ink.css'
 import './custom.css'
 
 export default {

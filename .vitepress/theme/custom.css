@@ -4,32 +4,14 @@
   --vp-font-family-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
 }
 
-/* @libraz/formulon-cell-vue ships a demo stylesheet that pollutes global
- * `body` and only swaps to dark via `[data-theme="ink"]`. Restore VitePress
- * body tokens and remap the leaked --demo-* tokens to VitePress's .dark. */
+/* Keep the VitePress body tokens explicit so the embedded demo's stylesheet
+ * cannot influence the surrounding page background/typography. */
 html body {
   background: var(--vp-c-bg);
   color: var(--vp-c-text-1);
   font-family: var(--vp-font-family-base);
   font-size: 16px;
   line-height: 24px;
-}
-
-.dark {
-  --demo-bg: #14171b;
-  --demo-card: #1e2228;
-  --demo-fg: #ecedef;
-  --demo-fg-soft: #8d949c;
-  --demo-line: #2e333a;
-  --demo-line-soft: #323841;
-  --demo-ribbon-bg: #20242a;
-  --demo-ribbon-rail: #181c22;
-  --demo-ribbon-hover: #2b3038;
-  --demo-ribbon-line: #343a43;
-  --demo-input-bg: #252a31;
-  --demo-input-fg: #ecedef;
-  --demo-backstage-bg: #1e2228;
-  --demo-backstage-rail: #181c22;
 }
 
 /* ============================================================
@@ -2032,7 +2014,14 @@ a.fln-stack-chip:hover {
   outline-offset: -2px;
 }
 
-.cell-full-demo {
+/* The demo overlay (`__overlay` down) is teleported to <body>, outside the
+ * `.cell-full-demo` subtree, so the chrome tokens must be defined on both the
+ * inline section and the teleported overlay root to reach every surface. */
+.cell-full-demo,
+.cell-full-demo__overlay {
+  --demo-bg: #ffffff;
+  --demo-card: #faf9f8;
+  --demo-line: #e1dfdd;
   --demo-shell-bg: #faf9f8;
   --demo-shell-bg-2: #f3f2f1;
   --demo-shell-bg-3: #edebe9;
@@ -2047,16 +2036,13 @@ a.fln-stack-chip:hover {
   --demo-font:
     "Aptos", "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui,
     "IBM Plex Sans", sans-serif;
-  margin: 32px 0 48px;
-  border: 1px solid var(--demo-rule);
-  border-radius: 4px;
-  overflow: hidden;
-  background: var(--demo-shell-bg);
-  color: var(--demo-fg);
-  font-family: var(--demo-font);
 }
 
-.dark .cell-full-demo {
+.dark .cell-full-demo,
+.dark .cell-full-demo__overlay {
+  --demo-bg: #14171b;
+  --demo-card: #1e2228;
+  --demo-line: #2e333a;
   --demo-shell-bg: #1b1a19;
   --demo-shell-bg-2: #252423;
   --demo-shell-bg-3: #2d2c2b;
@@ -2068,6 +2054,16 @@ a.fln-stack-chip:hover {
   --demo-accent: #4cc26b;
   --demo-accent-strong: #6dd587;
   --demo-accent-soft: rgba(76, 194, 107, 0.16);
+}
+
+.cell-full-demo {
+  margin: 32px 0 48px;
+  border: 1px solid var(--demo-rule);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--demo-shell-bg);
+  color: var(--demo-fg);
+  font-family: var(--demo-font);
 }
 
 .cell-demo-overlay-open {
@@ -2171,16 +2167,12 @@ a.fln-stack-chip:hover {
   width: min(1680px, 100%);
   height: min(980px, 100%);
   display: grid;
-  grid-template-rows: 44px auto minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--demo-rule-2);
+  border: 1px solid var(--demo-line);
   border-radius: 4px;
-  background: var(--demo-surface);
+  background: var(--demo-bg);
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
-}
-
-.cell-full-demo__toolbar {
-  border-bottom: 1px solid var(--demo-rule);
 }
 
 .cell-full-demo__bar {
@@ -2189,8 +2181,8 @@ a.fln-stack-chip:hover {
   justify-content: space-between;
   gap: 16px;
   padding: 0 6px 0 12px;
-  border-bottom: 1px solid var(--demo-rule);
-  background: var(--demo-surface);
+  border-bottom: 1px solid var(--demo-line);
+  background: var(--demo-card);
 }
 
 .cell-full-demo__bar strong {
@@ -2203,7 +2195,7 @@ a.fln-stack-chip:hover {
 .cell-full-demo__sheet {
   width: 100%;
   height: 100%;
-  background: var(--demo-surface);
+  background: var(--demo-bg);
 }
 
 /* ---------- Responsive ---------- */

@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 10
+  version: 8
   cacheKey: 10c0
 
 "@algolia/abtesting@npm:1.18.0":
@@ -599,32 +599,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell-vue@npm:0.3.0":
-  version: 0.3.0
-  resolution: "@libraz/formulon-cell-vue@npm:0.3.0"
+"@libraz/formulon-cell-vue@npm:0.4.0":
+  version: 0.4.0
+  resolution: "@libraz/formulon-cell-vue@npm:0.4.0"
   dependencies:
-    "@libraz/formulon-cell": "npm:^0.3.0"
+    "@libraz/formulon-cell": "npm:^0.4.0"
   peerDependencies:
     vue: ^3.3
-  checksum: 10c0/0f51c09730ed03ac6d399d04ee81baf41a83564cf07775b17b1df6b99807e5b8a4f5496819b9c04116185e9ebd36b2467d0ce580170cb10e2c922c34770243dc
+  checksum: 10c0/c30b152025b65a299c7aa4a3cbea8548f46c582e90edceb96302b9e02790165b8bfe337a09e03d4ad57b344ec88b667ac00fce6114830095b57e0f26039f4ce2
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell@npm:0.3.0, @libraz/formulon-cell@npm:^0.3.0":
-  version: 0.3.0
-  resolution: "@libraz/formulon-cell@npm:0.3.0"
+"@libraz/formulon-cell@npm:0.4.0, @libraz/formulon-cell@npm:^0.4.0":
+  version: 0.4.0
+  resolution: "@libraz/formulon-cell@npm:0.4.0"
   dependencies:
-    "@libraz/formulon": "npm:0.9.4"
+    "@libraz/formulon": "npm:0.9.5"
   peerDependencies:
     zustand: ^5
-  checksum: 10c0/77b40ca028bc71ea7a002b2aa27bbb12e6a9022a9868e2eb5690d6f99092d2aa6277f620d0586bcd3936b918878948aff4a2d8289b402f4a1d1aa49434702f32
+  checksum: 10c0/b01f532b4808e6ef84aa798f7ab3d9ddf717023039e0248643a854bf4487a97a10002ffe3a9b6ebe8b6ce0adf6070d16277adfea31481538e56d1b77f632b581
   languageName: node
   linkType: hard
 
-"@libraz/formulon@npm:0.9.4":
-  version: 0.9.4
-  resolution: "@libraz/formulon@npm:0.9.4"
-  checksum: 10c0/6624c28c70a2c87305c2a2f93ac8b9deb46b86d8e944bcb77c335ae28e56bc9cb4fc4e165671b4318ae7816d7d8588188fed58dd8b68d59f0bf20f31a7cc50cc
+"@libraz/formulon@npm:0.9.5":
+  version: 0.9.5
+  resolution: "@libraz/formulon@npm:0.9.5"
+  checksum: 10c0/3fe276474cfbf7c38fabdf262da7cf1a0e3dbfa47f9481cbd26ea61c6455b3056137200796316f6e14bc60274b51d1fa4aeb73f48af82542e295af7d277c1be1
   languageName: node
   linkType: hard
 
@@ -1517,9 +1517,9 @@ __metadata:
   resolution: "formulon-homepage@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.5.2"
-    "@libraz/formulon": "npm:0.9.4"
-    "@libraz/formulon-cell": "npm:0.3.0"
-    "@libraz/formulon-cell-vue": "npm:0.3.0"
+    "@libraz/formulon": "npm:0.9.5"
+    "@libraz/formulon-cell": "npm:0.4.0"
+    "@libraz/formulon-cell-vue": "npm:0.4.0"
     typescript: "npm:^6.0.3"
     vitepress: "npm:^1.6.4"
     vue: "npm:^3.5.39"
@@ -2290,7 +2290,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zustand@npm:^5, zustand@npm:^5.0.14":
+"zustand@npm:^5.0.14":
   version: 5.0.14
   resolution: "zustand@npm:5.0.14"
   peerDependencies:

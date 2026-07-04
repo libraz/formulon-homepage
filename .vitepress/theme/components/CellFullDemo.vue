@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import type {
-  RibbonTab,
-  SpreadsheetInstance,
-  ToolbarInstance,
-  WorkbookHandle
-} from '@libraz/formulon-cell'
+import type { RibbonTab, SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -13,10 +8,8 @@ const isJa = computed(() => lang.value === 'ja')
 const open = ref(false)
 const instance = ref<SpreadsheetInstance | null>(null)
 const activeTab = ref<RibbonTab>('home')
-const toolbarHost = ref<HTMLDivElement | null>(null)
 const sheetHost = ref<HTMLDivElement | null>(null)
 
-let toolbar: ToolbarInstance | null = null
 let spreadsheet: SpreadsheetInstance | null = null
 let cellApi: Awaited<typeof import('@libraz/formulon-cell')> | null = null
 
@@ -98,8 +91,6 @@ const openDemo = () => {
 
 const closeDemo = () => {
   open.value = false
-  toolbar?.dispose()
-  toolbar = null
   spreadsheet?.dispose()
   spreadsheet = null
   instance.value = null
@@ -108,27 +99,25 @@ const closeDemo = () => {
 
 const mountDemo = async () => {
   await nextTick()
-  const toolbarEl = toolbarHost.value
   const sheetEl = sheetHost.value
-  if (!open.value || !toolbarEl || !sheetEl) return
+  if (!open.value || !sheetEl) return
   cellApi ??= await import('@libraz/formulon-cell')
 
-  toolbar?.dispose()
-  toolbar = null
   spreadsheet?.dispose()
+  // Single-call mount: the ribbon toolbar is built inside the host and shares
+  // the grid's theme, so one setTheme() re-themes both surfaces.
   spreadsheet = await cellApi.Spreadsheet.mount(sheetEl, {
     theme: isDark.value ? 'ink' : 'paper',
     locale: isJa.value ? 'ja' : 'en',
-    seed: seedSheet
+    seed: seedSheet,
+    toolbar: {
+      lang: isJa.value ? 'ja' : 'en',
+      activeTab: activeTab.value,
+      dynamicDropdowns: true,
+      onTabChange
+    }
   })
   instance.value = spreadsheet
-  toolbar = cellApi.Spreadsheet.mountToolbar(toolbarEl, spreadsheet, {
-    lang: isJa.value ? 'ja' : 'en',
-    activeTab: activeTab.value,
-    theme: isDark.value ? 'dark' : 'light',
-    dynamicDropdowns: true,
-    onTabChange
-  })
 }
 
 const onTabChange = (tab: RibbonTab) => {
@@ -137,7 +126,6 @@ const onTabChange = (tab: RibbonTab) => {
 
 watch(isDark, (dark) => {
   spreadsheet?.setTheme(dark ? 'ink' : 'paper')
-  toolbar?.setTheme(dark ? 'dark' : 'light')
 })
 
 watch(isJa, (ja) => {
@@ -146,11 +134,11 @@ watch(isJa, (ja) => {
 })
 
 watch(activeTab, (tab) => {
-  if (toolbar && toolbar.getActiveTab() !== tab) toolbar.setActiveTab(tab)
+  const tb = spreadsheet?.toolbar
+  if (tb && tb.getActiveTab() !== tab) tb.setActiveTab(tab)
 })
 
 onBeforeUnmount(() => {
-  toolbar?.dispose()
   spreadsheet?.dispose()
   document.documentElement.classList.remove('cell-demo-overlay-open')
 })
@@ -184,7 +172,6 @@ onBeforeUnmount(() => {
             </button>
           </header>
           <ClientOnly>
-            <div ref="toolbarHost" class="cell-full-demo__toolbar"></div>
             <div ref="sheetHost" class="cell-full-demo__sheet"></div>
           </ClientOnly>
         </div>
