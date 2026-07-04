@@ -10,7 +10,7 @@ description: Compose presets, extensions, and command helpers from the formulon-
 Do not treat the default chrome as a complete Excel-compatible application shell. It is useful for integration testing and examples; production products should decide their own feature coverage, UX, and quality bar.
 
 ::: info Glossary: preset vs extension
-A *preset* is a curated list of features. An *extension* is a single composable feature factory. `presets.full()` returns what amounts to a long array of extensions; you can build the same array yourself.
+A *preset* is a curated list of features. An *extension* is a single composable feature factory. `presets.minimal()` / `presets.standard()` / `presets.full()` each return a plain `FeatureFlags` object — not an array of extensions; you can build the same set of flags yourself.
 :::
 
 ## Three host shapes
@@ -19,7 +19,7 @@ A *preset* is a curated list of features. An *extension* is a single composable 
   { nodes: ['Host application'] },
   { nodes: ['Spreadsheet.mount(host, options)'] },
   { title: 'What mount() wires up', nodes: [
-    { label: 'WorkbookHandle', note: 'WASM engine, or 簡易エンジン stub if preferStub: true' },
+    { label: 'WorkbookHandle', note: 'WASM engine, or stub engine if preferStub: true' },
     { label: 'features + extensions', note: 'chrome — dialogs, toolbars, panels' },
     { label: 'store (zustand)', note: 'selection, undo, cell data' }
   ] },
@@ -35,7 +35,6 @@ A *preset* is a curated list of features. An *extension* is a single composable 
 ```ts
 import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell/styles/paper.css'
 
 const host = document.getElementById('sheet')!
 const workbook = await WorkbookHandle.createDefault()
@@ -139,7 +138,80 @@ Whatever the built-in toolbars do, the command helpers do the same way. That mea
 
 ## Ribbon toolbar
 
-The default chrome's ribbon is a separate mount from the grid: `Spreadsheet.mountToolbar(host, instance, opts)` in core. If you only mount `<Spreadsheet>` (or call `Spreadsheet.mount()` directly), you get a bare grid with no ribbon — mount the toolbar alongside it explicitly:
+The quickest way to add the ribbon is the `toolbar` option on `Spreadsheet.mount`. It builds the ribbon inside the host in a single call — no separate toolbar host to wire — and the ribbon shares the grid's `data-fc-theme`, so one `setTheme()` re-themes both surfaces:
+
+```ts
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  features: presets.full(),
+  toolbar: true, // or a MountToolbarOptions object
+})
+// instance.toolbar is the ToolbarInstance (null when the toolbar is not requested)
+```
+
+Pass a `MountToolbarOptions` object instead of `true` to add backstage content (`createBackstageView`), hooks, submenu factories, a ribbon-tab profile, or lifecycle callbacks (`onTabChange`, …) while keeping the single call — the fields you set are merged over the built-in defaults. `instance.dispose()` tears the toolbar down with the rest of the instance.
+
+In React / Vue, the framework packages' ready-made `SpreadsheetToolbar` component wraps the same ribbon — a thin adapter over core that ships the ribbon DOM, menu factories, activation model, and dropdown dispatcher for you:
+
+```tsx
+// React
+import { Spreadsheet, SpreadsheetToolbar } from '@libraz/formulon-cell-react'
+import '@libraz/formulon-cell-react/toolbar.css'
+
+export function Sheet() {
+  const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
+  const [activeTab, setActiveTab] = useState<RibbonTab>('home')
+
+  return (
+    <>
+      <SpreadsheetToolbar
+        instance={instance}
+        activeTab={activeTab}
+        locale="en"
+        onTabChange={setActiveTab}
+      />
+      <Spreadsheet locale="en" onReady={setInstance} />
+    </>
+  )
+}
+```
+
+```vue
+<!-- Vue -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import { type RibbonTab, type SpreadsheetInstance } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell-vue'
+import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
+import '@libraz/formulon-cell-vue/toolbar.css'
+
+const instance = ref<SpreadsheetInstance | null>(null)
+const activeTab = ref<RibbonTab>('home')
+</script>
+
+<template>
+  <SpreadsheetToolbar :instance="instance" :active-tab="activeTab" locale="en" @tab-change="(tab) => (activeTab = tab)" />
+  <Spreadsheet locale="en" @ready="(inst) => (instance = inst)" />
+</template>
+```
+
+Use the `dropdownActions` prop to override individual ribbon dropdown handlers (script/add-in actions, protect dialogs, etc.) without forking the ribbon:
+
+```tsx
+<SpreadsheetToolbar
+  instance={instance}
+  activeTab={activeTab}
+  locale="en"
+  onTabChange={setActiveTab}
+  dropdownActions={{ applyProtectAction: openProtectDialog }}
+/>
+```
+
+Both adapters mirror the same prop shape and delegate to core, so framework wrappers and host-built toolbars use the same command path.
+
+### Separate toolbar host (advanced)
+
+When the single-call `toolbar` option isn't enough — a host without React or Vue that needs the ribbon in a **fully separate DOM host** (outside `.fc-host`), or lower-level control than `SpreadsheetToolbar` exposes — call `Spreadsheet.mountToolbar(host, instance, opts)` from core directly. Its `theme` option and `ToolbarInstance.setTheme()` speak the same `paper` / `ink` / `contrast` vocabulary as the grid:
 
 ```vue
 <script setup lang="ts">
@@ -170,7 +242,7 @@ watch(instance, async (next) => {
 </template>
 ```
 
-The ribbon DOM, menu factories, activation model, and dropdown dispatcher all live in `@libraz/formulon-cell`, so framework wrappers and host-built toolbars use the same command path.
+For host audits or custom chrome, import the shared manifests from core (`ribbonActivationEntries`, `ribbonSurfaceCommandIds`, `DYNAMIC_RIBBON_DROPDOWN_HANDLER_ATTRS`) instead of reconstructing ribbon command sets.
 
 ## Lifecycle hooks
 
@@ -206,7 +278,7 @@ import { WorkbookHandle } from '@libraz/formulon-cell'
 
 const wb = await WorkbookHandle.createDefault({ preferStub: true })
 if (wb.isStub) {
-  showBanner('Running on the 簡易エンジン (stub) — only a small formula subset evaluates, and save is unavailable.')
+  showBanner('Running on the stub engine — only a small formula subset evaluates, and save is unavailable.')
 }
 ```
 
@@ -231,6 +303,15 @@ export function Sheet() {
 
 The React adapter mounts and disposes for you and forwards events as props. Pass `onError` and/or `errorFallback` to handle a rejected mount (see [Lifecycle hooks](#lifecycle-hooks)) instead of letting it surface as an unhandled rejection. For more control, drop down to the vanilla package.
 
+`@libraz/formulon-cell-react` also exports hooks for reading instance state without wiring up your own store subscription:
+
+| Hook | Description |
+| --- | --- |
+| `useSelection(instance)` | Subscribe to the active selection |
+| `useSpreadsheet(instance, selector, fallback)` | Subscribe to a selector over the store's `State`, with an SSR-safe fallback |
+| `useI18n(instance)` | Read the current locale + strings, reactive to runtime `setLocale`/`extend`/`register` |
+| `useSpreadsheetEvent(instance, event, handler)` | Subscribe to a `SpreadsheetInstance` lifecycle event (`cellChange`, `selectionChange`, …) |
+
 ## Vue adapter
 
 ```vue
@@ -248,6 +329,15 @@ import { Spreadsheet, presets } from '@libraz/formulon-cell-vue'
   />
 </template>
 ```
+
+`@libraz/formulon-cell-vue` exports the same set of composables as the React adapter, for reading instance state without wiring up your own store subscription:
+
+| Composable | Description |
+| --- | --- |
+| `useSelection(instance)` | Subscribe to the active selection |
+| `useSpreadsheet(instance, selector, fallback)` | Subscribe to a selector over the store's `State`, with an SSR-safe fallback |
+| `useI18n(instance)` | Read the current locale + strings, reactive to runtime `setLocale`/`extend`/`register` |
+| `useSpreadsheetEvent(instance, event, handler)` | Subscribe to a `SpreadsheetInstance` lifecycle event (`cellChange`, `selectionChange`, …) |
 
 ## Read next
 

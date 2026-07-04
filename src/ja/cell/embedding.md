@@ -10,7 +10,7 @@ description: formulon-cell 参考 UI のプリセット、拡張、コマンド�
 デフォルト chrome を Excel 互換の完成アプリケーション shell として扱わないでください。結合試験と実装例には有用ですが、本番プロダクトでは機能範囲、UX、品質基準を個別に決める必要があります。
 
 ::: info 用語: プリセットと拡張
-*プリセット* は機能のまとまり、*拡張* は 1 個の合成可能な機能ファクトリです。`presets.full()` は実体としては長い拡張配列を返しているだけなので、同じ配列を自分で組み立てることもできます。
+*プリセット* は機能のまとまり、*拡張* は 1 個の合成可能な機能ファクトリです。`presets.minimal()` / `presets.standard()` / `presets.full()` はいずれもプレーンな `FeatureFlags` オブジェクトを返します ─ 拡張の配列ではありません。同等のフラグ構成を自分で組み立てることもできます。
 :::
 
 ## 3 つのホスト形
@@ -35,7 +35,6 @@ description: formulon-cell 参考 UI のプリセット、拡張、コマンド�
 ```ts
 import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell/styles/paper.css'
 
 const host = document.getElementById('sheet')!
 const workbook = await WorkbookHandle.createDefault()
@@ -139,7 +138,80 @@ addConditionalRule(instance.store, {             // ルール / history 系の�
 
 ## リボンツールバー
 
-既定の chrome のリボンは、グリッドとは別にマウントするものです ─ core では `Spreadsheet.mountToolbar(host, instance, opts)` です。`<Spreadsheet>` だけ（あるいは `Spreadsheet.mount()` を直接呼ぶだけ）だとリボンの無いグリッドしか手に入りません ─ ツールバーは明示的に並べてマウントしてください。
+リボンを追加する最短の方法は、`Spreadsheet.mount` の `toolbar` オプションです。1 回の呼び出しでリボンをホスト内部に組み立て（別途 toolbar ホストを配線する必要なし）、リボンはグリッドの `data-fc-theme` を共有するため、`setTheme()` 一発で両面が再テーマされます。
+
+```ts
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  features: presets.full(),
+  toolbar: true, // または MountToolbarOptions オブジェクト
+})
+// instance.toolbar が ToolbarInstance（toolbar を要求しない場合は null）
+```
+
+`true` の代わりに `MountToolbarOptions` オブジェクトを渡すと、backstage コンテンツ（`createBackstageView`）、hooks、サブメニューファクトリ、ribbon タブプロファイル、ライフサイクルコールバック（`onTabChange` など）を、単一呼び出しのまま追加できます ─ 指定したフィールドは組み込み既定にマージされます。`instance.dispose()` は toolbar もまとめて破棄します。
+
+React / Vue では、framework パッケージ同梱の `SpreadsheetToolbar` コンポーネントが同じリボンをラップします ─ core の薄いアダプタで、リボンの DOM、メニューファクトリ、activation モデル、dropdown ディスパッチャを丸ごと引き受けます。
+
+```tsx
+// React
+import { Spreadsheet, SpreadsheetToolbar } from '@libraz/formulon-cell-react'
+import '@libraz/formulon-cell-react/toolbar.css'
+
+export function Sheet() {
+  const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
+  const [activeTab, setActiveTab] = useState<RibbonTab>('home')
+
+  return (
+    <>
+      <SpreadsheetToolbar
+        instance={instance}
+        activeTab={activeTab}
+        locale="ja"
+        onTabChange={setActiveTab}
+      />
+      <Spreadsheet locale="ja" onReady={setInstance} />
+    </>
+  )
+}
+```
+
+```vue
+<!-- Vue -->
+<script setup lang="ts">
+import { ref } from 'vue'
+import { type RibbonTab, type SpreadsheetInstance } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell-vue'
+import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
+import '@libraz/formulon-cell-vue/toolbar.css'
+
+const instance = ref<SpreadsheetInstance | null>(null)
+const activeTab = ref<RibbonTab>('home')
+</script>
+
+<template>
+  <SpreadsheetToolbar :instance="instance" :active-tab="activeTab" locale="ja" @tab-change="(tab) => (activeTab = tab)" />
+  <Spreadsheet locale="ja" @ready="(inst) => (instance = inst)" />
+</template>
+```
+
+`dropdownActions` プロパティを使うと、リボンを fork せずに個々の dropdown ハンドラ（スクリプト / アドインのアクション、保護ダイアログなど）だけを上書きできます。
+
+```tsx
+<SpreadsheetToolbar
+  instance={instance}
+  activeTab={activeTab}
+  locale="ja"
+  onTabChange={setActiveTab}
+  dropdownActions={{ applyProtectAction: openProtectDialog }}
+/>
+```
+
+2 つのアダプタは同じプロパティ形状を持ち、処理は core に委譲します。framework wrapper とホスト側で組んだ toolbar は、同じ command path を使います。
+
+### 独立した toolbar ホスト（高度）
+
+単一呼び出しの `toolbar` オプションで足りない場合 ─ React / Vue を使わないホストで、リボンを（`.fc-host` の外の）**完全に独立した DOM ホスト**に置きたい、あるいは `SpreadsheetToolbar` が公開するより低レベルの制御が必要な場合 ─ は、core の `Spreadsheet.mountToolbar(host, instance, opts)` を直接呼べます。`theme` オプションと `ToolbarInstance.setTheme()` は、グリッドと同じ `paper` / `ink` / `contrast` 語彙を使います。
 
 ```vue
 <script setup lang="ts">
@@ -170,7 +242,7 @@ watch(instance, async (next) => {
 </template>
 ```
 
-リボンの DOM、メニューファクトリ、activation モデル、dropdown ディスパッチャはすべて `@libraz/formulon-cell` 本体にあります。framework wrapper とホスト側で組んだ toolbar は、同じ command path を使います。
+ホスト側の監査やカスタム chrome を組む場合は、リボンのコマンドセットを自前で再構築せず、core の共有マニフェスト（`ribbonActivationEntries`、`ribbonSurfaceCommandIds`、`DYNAMIC_RIBBON_DROPDOWN_HANDLER_ATTRS`）を import してください。
 
 ## ライフサイクルフック
 
@@ -231,6 +303,15 @@ export function Sheet() {
 
 アダプタがマウント / dispose を担当し、イベントを prop で転送します。reject したマウントをハンドリングするには `onError` や `errorFallback` を渡してください（[ライフサイクルフック](#ライフサイクルフック) 参照）。渡さないと未処理の rejection として表面化します。より細かい制御が必要なら vanilla パッケージを直接使ってください。
 
+`@libraz/formulon-cell-react` は、自前でストア購読を組まずにインスタンス状態を読むための hooks も export しています。
+
+| Hook | 説明 |
+| --- | --- |
+| `useSelection(instance)` | アクティブな選択範囲を購読 |
+| `useSpreadsheet(instance, selector, fallback)` | ストアの `State` に対するセレクタを購読。SSR 安全な fallback 付き |
+| `useI18n(instance)` | 現在のロケールと strings を読む。ランタイムの `setLocale`/`extend`/`register` に反応 |
+| `useSpreadsheetEvent(instance, event, handler)` | `SpreadsheetInstance` のライフサイクルイベント（`cellChange`、`selectionChange`、…）を購読 |
+
 ## Vue adapter
 
 ```vue
@@ -248,6 +329,15 @@ import { Spreadsheet, presets } from '@libraz/formulon-cell-vue'
   />
 </template>
 ```
+
+`@libraz/formulon-cell-vue` は React アダプタと同じ 4 つの composables を export しており、自前でストア購読を組まずにインスタンス状態を読めます。
+
+| Composable | 説明 |
+| --- | --- |
+| `useSelection(instance)` | アクティブな選択範囲を購読 |
+| `useSpreadsheet(instance, selector, fallback)` | ストアの `State` に対するセレクタを購読。SSR 安全な fallback 付き |
+| `useI18n(instance)` | 現在のロケールと strings を読む。ランタイムの `setLocale`/`extend`/`register` に反応 |
+| `useSpreadsheetEvent(instance, event, handler)` | `SpreadsheetInstance` のライフサイクルイベント（`cellChange`、`selectionChange`、…）を購読 |
 
 ## 次に読むもの
 

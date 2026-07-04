@@ -4,7 +4,7 @@ import { defineConfig } from 'vitepress'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.9.4'
+const docsVersion = '0.9.5'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -164,6 +164,10 @@ const cellSidebar = [
       { text: 'Install', link: '/cell/install' },
       { text: 'Bundler setup', link: '/cell/bundler' },
       { text: 'Embedding guide', link: '/cell/embedding' },
+      { text: 'Extension catalogue', link: '/cell/extensions' },
+      { text: 'Theming', link: '/cell/theming' },
+      { text: 'Framework adapters', link: '/cell/frameworks' },
+      { text: 'Host integration', link: '/cell/host-integration' },
       { text: 'i18n', link: '/cell/i18n' },
       { text: 'API surface', link: '/cell/api' }
     ]
@@ -300,6 +304,10 @@ const jaCellSidebar = [
       { text: 'インストール', link: '/ja/cell/install' },
       { text: 'バンドラ設定', link: '/ja/cell/bundler' },
       { text: '埋め込みガイド', link: '/ja/cell/embedding' },
+      { text: '拡張機能一覧', link: '/ja/cell/extensions' },
+      { text: 'テーマ設定', link: '/ja/cell/theming' },
+      { text: 'フレームワーク連携', link: '/ja/cell/frameworks' },
+      { text: 'ホスト連携', link: '/ja/cell/host-integration' },
       { text: 'i18n', link: '/ja/cell/i18n' },
       { text: 'API 一覧', link: '/ja/cell/api' }
     ]
@@ -460,18 +468,22 @@ export default defineConfig({
         },
         nav: [
           { text: 'Start', link: '/start/' },
-          { text: 'MCP', link: '/mcp/' },
           {
-            text: 'formulon-cell',
+            text: 'Guide',
             items: [
-              { text: 'What it is', link: '/cell/' },
-              { text: 'Full demo', link: '/cell/demo' }
+              { text: 'Use cases', link: '/scenarios/' },
+              { text: 'Workbook', link: '/workbook/' },
+              { text: 'Runtimes', link: '/runtimes/' },
+              { text: 'Compatibility', link: '/compatibility/' }
             ]
           },
-          { text: 'Use cases', link: '/scenarios/' },
-          { text: 'Workbook', link: '/workbook/' },
-          { text: 'Runtimes', link: '/runtimes/' },
-          { text: 'Compatibility', link: '/compatibility/' },
+          {
+            text: 'Products',
+            items: [
+              { text: 'formulon-cell', link: '/cell/' },
+              { text: 'MCP server', link: '/mcp/' }
+            ]
+          },
           { text: 'Development', link: '/development/' },
           { text: 'FAQ', link: '/faq' },
           { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }
@@ -524,18 +536,22 @@ export default defineConfig({
         },
         nav: [
           { text: 'はじめる', link: '/ja/start/' },
-          { text: 'MCP', link: '/ja/mcp/' },
           {
-            text: 'formulon-cell',
+            text: 'ガイド',
             items: [
-              { text: '位置づけ', link: '/ja/cell/' },
-              { text: 'フルデモ', link: '/ja/cell/demo' }
+              { text: '利用例', link: '/ja/scenarios/' },
+              { text: 'ワークブック', link: '/ja/workbook/' },
+              { text: '実行環境', link: '/ja/runtimes/' },
+              { text: '互換性', link: '/ja/compatibility/' }
             ]
           },
-          { text: '利用例', link: '/ja/scenarios/' },
-          { text: 'ワークブック', link: '/ja/workbook/' },
-          { text: '実行環境', link: '/ja/runtimes/' },
-          { text: '互換性', link: '/ja/compatibility/' },
+          {
+            text: 'プロダクト',
+            items: [
+              { text: 'formulon-cell', link: '/ja/cell/' },
+              { text: 'MCP サーバー', link: '/ja/mcp/' }
+            ]
+          },
           { text: '開発', link: '/ja/development/' },
           { text: 'FAQ', link: '/ja/faq' },
           { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }

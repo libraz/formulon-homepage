@@ -9,6 +9,10 @@ description: formulon-cell is a reference UI library for Formulon browser integr
 
 It is not a complete spreadsheet product. It does not cover every workbook feature, does not try to match Excel UI/UX exactly, and may still contain UI bugs. Use it as a reference implementation and integration-test harness for the engine.
 
+::: warning β (beta) — not for production
+`formulon-cell` is built primarily as a demonstration host for the `@libraz/formulon` engine. The UI surface is still evolving; pin a version range you can upgrade on purpose, and do not treat it as a production-ready spreadsheet component.
+:::
+
 The package includes desktop-spreadsheet-style chrome around the engine — a canvas-rendered grid, formula bar, status bar, sheet tabs, selection, keyboard editing, context menus, runtime i18n, theme tokens, and optional authoring dialogs. If your application only needs calculation, workbook loading, or headless regression checks, start with the Formulon runtime docs instead.
 
 ::: info Glossary: chrome (UI)
@@ -25,7 +29,7 @@ A grid drawn into an HTML `<canvas>` element rather than as DOM nodes. The grid 
 - Function entry, formula recalculation, and visible cell results.
 - A canvas-rendered spreadsheet surface using the same store and command helpers that host applications can compose.
 - Runtime i18n with `en` and `ja` dictionaries.
-- Light (`paper`) and dark (`ink`) themes through CSS variable tokens.
+- Light (`paper`), dark (`ink`), and high-contrast (`contrast`) themes through CSS variable tokens.
 - A reference UI for integration testing and examples, not the canonical Formulon product interface.
 
 ## Packages
@@ -62,7 +66,7 @@ The WASM engine ships pthread-enabled and needs `SharedArrayBuffer`. Without cro
   { title: 'Outcome', nodes: [
     { label: 'WASM engine loads', note: 'real recalc, .xlsx round-trip, formula evaluation' },
     { label: 'Promise rejects', note: 'host catches via try/catch or MountOptions.onError' },
-    { label: '簡易エンジン (stub) loads', note: 'wb.isStub / isUsingStub() → true — tests/demos only' }
+    { label: 'Stub engine loads', note: 'wb.isStub / isUsingStub() → true — tests/demos only' }
   ] }
 ]" label="Spreadsheet.mount flow: WorkbookHandle.createDefault rejects without SharedArrayBuffer unless preferStub is set" />
 

@@ -7,6 +7,20 @@ description: Main API concepts exposed by the formulon-cell reference UI package
 
 `formulon-cell` is built from composable pieces: a `WorkbookHandle` over the engine, the `Spreadsheet` mounter that produces a `SpreadsheetInstance`, a typed event bus, a zustand-backed store, command helpers, an i18n controller, and a theme controller. The main engine remains `@libraz/formulon`; these APIs provide a reference spreadsheet surface for integration testing and examples, not a complete Excel-compatible UI layer.
 
+<DiagramLayers :layers="[
+  { nodes: ['@libraz/formulon (WASM engine)'] },
+  { nodes: ['WorkbookHandle'] },
+  { nodes: ['Spreadsheet.mount(host, options)'] },
+  { title: 'SpreadsheetInstance', nodes: [
+    { label: 'store', note: 'zustand — selection, undo, cell data' },
+    { label: 'history', note: 'undo / redo stack' },
+    { label: 'i18n', note: 'locale controller' },
+    { label: 'theme', note: 'setTheme() controller' },
+    { label: 'events', note: 'on(event, fn) — typed event bus' }
+  ] },
+  { nodes: [{ label: 'Host code', note: 'reads store, calls command helpers, subscribes to events' }] }
+]" label="Engine wrapped by WorkbookHandle, mounted by Spreadsheet.mount into a SpreadsheetInstance exposing store, history, i18n, theme, and events; host code drives it via command helpers" />
+
 ::: info Glossary: WorkbookHandle
 A thin wrapper over a `@libraz/formulon` workbook instance plus the engine status. It lets `Spreadsheet.mount()` and host code share the same workbook without managing native memory directly.
 :::
@@ -24,12 +38,27 @@ const bytes = new Uint8Array(await file.arrayBuffer())
 const loaded = await WorkbookHandle.loadBytes(bytes)
 
 if (wb.isStub) {
-  // preferStub: true was passed explicitly — the in-memory 簡易エンジン (stub
-  // engine) is standing in, evaluating only a small formula subset.
+  // preferStub: true was passed explicitly — the in-memory stub engine is
+  // standing in, evaluating only a small formula subset.
 }
 ```
 
 `WorkbookHandle` exposes exactly two static factories, `createDefault(opts)` and `loadBytes(bytes, opts)` — there is no `createEmpty()` or `fromBytes()`. Both reject by default without `SharedArrayBuffer`; see [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the `preferStub` opt-in. Pass it to `Spreadsheet.mount({ workbook })` so the UI and the engine share state.
+
+### Ad-hoc formula evaluation
+
+`WorkbookHandle.evaluateFormulaArray(addr, formula)` evaluates a dynamic-array / spill-returning formula against the workbook without mutating it, returning the whole array result instead of collapsing to the top-left scalar:
+
+```ts
+const result = wb.evaluateFormulaArray({ sheet: 0, row: 0, col: 0 }, '=SEQUENCE(2,2)')
+// result.rows, result.cols, result.cells (row-major: cells[r][c])
+```
+
+It is gated by the `arrayFormulaEvaluation` engine capability; when the engine does not expose it, the handle falls back to a 1×1 wrapper around scalar evaluation. This backs the F9 formula preview, which now renders a spilled selection as a spreadsheet array constant like `{a,b;c,d}` rather than its top-left value. The result type `EvalArrayResult` is re-exported from `@libraz/formulon-cell`.
+
+### Localized function metadata
+
+`WorkbookHandle.setFunctionMetadataProvider(provider)` installs a host-supplied source of localized function signatures, descriptions, and name aliases, merged over the engine's structural function catalog; pass `null` to clear it. The package also exports the pure helper `mergeFunctionMetadata` (alongside `LOCALE_TAGS` and `localeTag`) and re-exports the types `FunctionMetadataProvider`, `FunctionMetadataEntry`, `FunctionMetadataLocalized`, `FunctionMetadataResult`, and `MergedFunctionMetadataResult`. See [i18n](/cell/i18n#localizing-function-metadata) for how a host feeds localized function names and signatures into autocomplete and the formula tooltip.
 
 ## Mounting
 
@@ -64,7 +93,7 @@ Presets bundle features into common levels of UI density:
 | Preset | Use it for |
 | --- | --- |
 | `presets.minimal()` | Bare grid, formula bar, status bar, basic keymap |
-| `presets.standard()` | Common app chrome: View toolbar, Quick Analysis, workbook object inspector, context menu, find/replace, clipboard, format painter, wheel scroll |
+| `presets.standard()` | Common app chrome: View toolbar, Quick Analysis, session chart overlays, workbook object inspector, context menu, find/replace, clipboard, format painter, wheel scroll |
 | `presets.full()` | Default full chrome: format dialog, paste special, conditional formatting, iterative calculation, Go To Special, page setup, named ranges, hyperlinks, PivotTable creation, validation, autocomplete, hover comments, spreadsheet keymap |
 
 ::: tip Pick the smallest preset that still ships your feature
@@ -154,9 +183,9 @@ See [i18n](/cell/i18n) for the dictionary shape and override patterns.
 
 ```css
 .fc-theme-mine {
-  --fc-grid-bg: #faf6e8;
-  --fc-grid-line: #b09870;
-  /* ...full token list documented in styles/paper.css */
+  --fc-bg: #faf6e8;
+  --fc-rule: #b09870;
+  /* ...full token vocabulary documented in styles/tokens.css */
 }
 ```
 

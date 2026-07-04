@@ -52,8 +52,8 @@ Emscripten 由来の module worker として起動します。
 top-level await と条件付き dynamic import を使うためです。
 
 依存 pre-bundling からは `@libraz/formulon-cell` と `@libraz/formulon` の両方を
-外します。Worker / WASM アセット解決を Emscripten wrapper とアプリの
-バンドラに任せるためです。
+外します。Worker / WASM アセット解決の制御を Emscripten wrapper 側に
+残すためです。
 
 COOP / COEP ヘッダは `SharedArrayBuffer` のために必要です。ヘッダが無い場合、
 `WorkbookHandle.createDefault()` はデフォルトで **reject します** ─ 簡易エンジンへ

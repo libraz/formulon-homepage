@@ -67,8 +67,9 @@ reject を捕捉して（あるいは `Spreadsheet.mount()` に `MountOptions.on
 
 ```ts
 const wb = await WorkbookHandle.createDefault({ preferStub: true })
-wb.isStub // true ─ 評価できる数式はごく小さいサブセットに限られ、
-          // .xlsx / .xlsb の読み書きはできない
+wb.isStub // true ─ 評価できる数式は SUM・AVERAGE・IF などごく小さい
+          // サブセットに限られ（それ以外は #ERR! を返す）、
+          // .xlsx / .xlsb の読み書きは一切できない
 ```
 
 判定フローの詳細は [簡易エンジン](/ja/cell/index#sharedarraybuffer-が無いと-reject-する)、

@@ -68,8 +68,8 @@ For tests and explicit demos only, opt in to the in-memory stub engine with
 ```ts
 const wb = await WorkbookHandle.createDefault({ preferStub: true })
 wb.isStub // true — the stub only evaluates a tiny formula subset (SUM,
-          // AVERAGE, IF, …; everything else returns #NEEDS_ENGINE!) and
-          // cannot load or save .xlsx/.xlsb bytes at all
+          // AVERAGE, IF, …; everything else returns #ERR!) and cannot
+          // load or save .xlsx/.xlsb bytes at all
 ```
 
 See [Stub engine](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the
