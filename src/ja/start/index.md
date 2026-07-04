@@ -1,24 +1,25 @@
 # はじめる
 
-Formulon はヘッドレスなスプレッドシート計算エンジンです。まず小さな数式を動かし、その後に製品で使う実行環境に近い形で実ワークブックを試します。
+Formulon はヘッドレスなスプレッドシート計算エンジンです。まず小さな数式を動かし、その後に製品で使う実行入口に近い形で実ワークブックを試します。
 
-::: tip 実 workbook から始める
+::: tip 実ワークブックから始める
 Formulon を理解する最短ルートは、すでに使っているワークブックを 1 つ再計算することです。互換性ページは、Excel と結果が違うときに差分を理解するためにあります。
 :::
 
 ## 推奨順序
 
-```mermaid
-flowchart LR
-  A[1. インストール] --> B[2. 数式を 1 つ評価]
-  B --> C[3. ワークブックを 1 つ再計算]
-  C --> D{Excel と一致}
-  D -->|一致| E[4. 利用例へ]
-  D -->|不一致| F[カバレッジ / 形式 /<br/>エラーモデルを確認]
-  F --> C
-```
+<DiagramFlow
+  :steps="[
+    { label: '1. インストール' },
+    { label: '2. 数式を 1 つ評価' },
+    { label: '3. ワークブックを 1 つ再計算' },
+    { label: 'Excel と一致するか', note: '不一致 → カバレッジ / 形式サポート / エラーモデルを確認し、手順 3 をやり直す' },
+    { label: '4. 利用例へ進む' }
+  ]"
+  label="ドキュメントを読み進める推奨順序"
+/>
 
-1. 実行環境に合うパッケージをインストールする。
+1. 実行入口に合うパッケージをインストールする。
 2. 1 つの数式を Formulon で動かす。
 3. 1 つのワークブックを再計算する。
 4. Excel と結果が違う場合は [数式カバレッジ](/ja/compatibility/formula-coverage)、[ファイル形式サポート](/ja/compatibility/file-format-support)、[エラーモデル](/ja/compatibility/errors) を確認する。
@@ -31,7 +32,7 @@ flowchart LR
 | パッケージを入れる | [インストール](/ja/start/install) |
 | 1 つの数式を評価する | [数式を評価する](/ja/start/evaluate) |
 | ワークブックを再計算する | [ワークブックを再計算する](/ja/start/recalculate) |
-| WASM / Python / Native Node / CLI / C ABI を選ぶ | [実行環境を選ぶ](/ja/start/choose-runtime) |
+| WASM / Python / Native Node / CLI / C ABI を選ぶ | [実行入口を選ぶ](/ja/start/choose-runtime) |
 | よくある組み込みエラーを直す | [トラブルシュート](/ja/start/troubleshooting) |
 | 具体的な流れから始める | [利用例](/ja/scenarios/) |
 

@@ -6,35 +6,12 @@
 ホスト型（`Uint8Array` / `bytes` / `bytearray` / `std::span` など）をエンジン入力に、エンジン出力をホスト型に変換する薄い層です。バインディングは数式の意味論を実装せず、データの形を整え、ライフタイムを管理します。
 :::
 
-```mermaid
-flowchart LR
-  subgraph ホスト
-    JS[Uint8Array / Buffer]
-    PY[bytes / bytearray]
-    CXX[std::span / void*]
-    JSON[JSON 入力]
-  end
-  subgraph Bindings["バインディング ─ 型変換と寿命管理"]
-    WBIND[WASM]
-    NBIND[Native Node]
-    PBIND[Python]
-    CBIND[CLI]
-    MBIND[MCP]
-  end
-  ABI[(C ABI<br/>唯一の安定境界)]
-  CORE[C++17 コア<br/>parser / evaluator /<br/>計算グラフ / file IO]
-  JS --> WBIND
-  JS --> NBIND
-  PY --> PBIND
-  CXX --> CBIND
-  JSON --> MBIND
-  WBIND --> ABI
-  NBIND --> ABI
-  PBIND --> ABI
-  CBIND --> ABI
-  MBIND --> ABI
-  ABI --> CORE
-```
+<DiagramLayers :layers="[
+  { title: 'ホスト型', nodes: ['Uint8Array / Buffer', 'bytes / bytearray', 'std::span / void*', 'JSON 入力'] },
+  { title: 'バインディング', nodes: ['WASM', 'Native Node', 'Python', 'CLI', 'MCP'] },
+  { title: '境界', nodes: ['C ABI（唯一の安定境界）'] },
+  { title: 'コア', nodes: ['C++17 コア ─ parser / evaluator / 計算グラフ / file IO'] }
+]" />
 
 ## 担当すること
 
@@ -54,14 +31,14 @@ flowchart LR
 - 独自の dirty 集合・依存関係グラフ・再計算スケジューラを導入する（すべてコア側）
 
 ::: warning binding で Excel を再実装しないこと
-ある関数結果を特別扱いしたい、ある値をコアと違う形で変換したい。そう思ったら正解はコア側にあります。評価器にケースを追加し、Oracle 検証データを追加すれば、全バインディングが同時にその挙動を取り込めます。バインディングごとに修正するとずれが早く広がります。
+ある関数結果を特別扱いしたい、ある値をコアと違う形で変換したい。そう思ったら正解はコア側にあります。評価器にケースを追加し、Oracle ゴールデンデータを追加すれば、全バインディングが同時にその挙動を取り込めます。バインディングごとに修正するとずれが早く広がります。
 :::
 
 ## 実例
 
 | バインディング | 扱うホスト慣用 | 触らない領域 |
 | --- | --- | --- |
-| WASM | `Uint8Array`、ステータスの包み、`ValueKind` enum、非同期モジュールファクトリ | 関数意味論・ファイルパース・計算グラフ |
+| WASM | `Uint8Array`、ステータス envelope、`ValueKind` enum、非同期モジュールファクトリ | 関数意味論・ファイルパース・計算グラフ |
 | Native Node | N-API `Buffer`、同期 API、GC 紐付けハンドル | 関数意味論・ファイルパース・計算グラフ |
 | Python | `bytes`、context manager、`FormulonError`、`Value.to_python()` | 関数意味論・ファイルパース・計算グラフ |
 | CLI | `argv`、stdin / stdout / stderr、終了コード | 関数意味論・ファイルパース・計算グラフ |
@@ -71,4 +48,4 @@ flowchart LR
 
 - [アーキテクチャ](/ja/development/architecture) ─ バインディング層の位置
 - [C++ コア](/ja/development/core) ─ バインディングが呼ぶ対象
-- [API 一覧](/ja/api/surfaces) ─ 各バインディングが現在公開している範囲
+- [実行入口一覧](/ja/api/surfaces) ─ 各バインディングが現在公開している範囲

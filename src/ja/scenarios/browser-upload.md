@@ -12,14 +12,7 @@ Formulon がワークブックバイト列として受け取る、ブラウザ�
 
 ## 流れ
 
-```mermaid
-flowchart LR
-  A[User selects .xlsx] --> B[Read ArrayBuffer]
-  B --> C[Module.Workbook.loadBytes]
-  C --> D[Mutate inputs]
-  D --> E[recalc]
-  E --> F[値を読む / バイト列を保存]
-```
+<DiagramFlow steps="ユーザーが .xlsx を選択 → ArrayBuffer を読み込む → Module.Workbook.loadBytes → 入力値を変更 → recalc → 値を読む / バイト列を保存" />
 
 ## 最小実装
 
@@ -83,10 +76,16 @@ self.onmessage = async (event) => {
 // main.ts
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 worker.onmessage = (event) => updateUi(event.data)
-worker.postMessage(await file.arrayBuffer(), [await file.arrayBuffer()])
+
+const buffer = await file.arrayBuffer()
+worker.postMessage(buffer, [buffer])
 ```
 
-transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`postMessage` 以降、メインスレッド側からはバッファに触れなくなりますが、所有権は worker に移っているので問題ありません。
+バッファは 1 回だけ読み込み、そのまま送信ペイロードと転送リストの両方に渡します。`file.arrayBuffer()` を 2 回呼ぶと別々のバッファが 2 つできてしまい、転送リストに載らない方（実際のペイロード）はディープコピーされてしまいます。これでは transferable を使う意味がなくなります。
+
+<DiagramFlow steps="メインスレッド: ArrayBuffer を読み込む → postMessage(buffer, [buffer]) で所有権を worker へ転送 → worker がバッファを所有し再計算 → postMessage(bytes, [bytes.buffer]) で結果を転送し返す → メインスレッドが結果を所有" label="メインスレッドが ArrayBuffer を読み込み、転送リスト付きの postMessage で worker に所有権を渡す。worker が再計算してから結果のバッファをメインスレッドへ転送し返し、メインスレッドが出力バイト列の所有権を取り戻す図" />
+
+transferable `ArrayBuffer` を使うと、往路・復路ともにコピーが 1 回で済みます。`postMessage` 以降、送信側からはバッファに触れなくなりますが、所有権は受信側に移っているので問題ありません。
 
 ## エラーの分岐
 
@@ -95,7 +94,7 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 | `.xlsx` として不正 | `wb.isValid() === false`、`lastErrorMessage()` | 「対応していない Excel ファイルです」と表示 |
 | セルの Excel エラー | `value.kind === ValueKind.Error` | 行内にエラー値を描画。アップロード自体は成功扱い |
 | 保存失敗 | `saved.status.ok === false` | メッセージを出し、元のバイト列を保持 |
-| 簡易エンジンへのフォールバック | （cell パッケージで）`isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
+| 簡易エンジンが有効（`formulon-cell` の `WorkbookHandle` を `preferStub: true` でビルドした場合のみ発生） | `isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
 
 ::: tip 保存に成功するまで元のバイト列を捨てない
 アプリが再計算後の出力を永続化できるまでは、入力の `File` / `ArrayBuffer` を信頼すべき情報源として保持します。保存失敗時にユーザーのアップロードを失わずに済みます。
@@ -107,7 +106,7 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 - 未対応関数の失敗はアップロード失敗ではなく互換性問題として見せる
 - 保存成功までは元のバイト列を保持
 - UI 応答性が必要なら worker で計算
-- cross-origin isolation の欠落を明示する（簡易エンジンへの黙ったフォールバックはユーザーを混乱させます）
+- cross-origin isolation の欠落は明示的に扱う。上のコードが使う生の `createFormulon()` には簡易エンジンへの経路が一切なく、pthread / `SharedArrayBuffer` が使えなければ初期化に失敗するだけです。`formulon-cell` の `WorkbookHandle.createDefault()` も同様に、ホストが `preferStub: true` を明示しない限り拒否するので、COOP/COEP ヘッダの欠落は常に目に見える失敗になり、黙って機能が落ちることはありません。
 
 ## 適合性の確認
 
@@ -117,4 +116,4 @@ transferable `ArrayBuffer` を使うとコピーが 1 回で済みます。`post
 
 - [WASM 連携](/ja/runtimes/wasm) ─ ホスティングとバンドラ要件
 - [ワークブックの流れ](/ja/workbook/lifecycle) ─ シナリオを裏で支えるエンジンフロー
-- [formulon-cell](/ja/cell/) ─ 同じエンジンをスプレッドシート UI 付きで使いたい場合
+- [formulon-cell](/ja/cell/) ─ 同じエンジンを使ったブラウザ結合試験向け参考 UI

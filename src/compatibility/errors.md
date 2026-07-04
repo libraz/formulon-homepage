@@ -6,16 +6,19 @@ Spreadsheet errors are **first-class values**. A formula returning `#DIV/0!` did
 A *cell error* is a value with `kind = Error`. It travels through the binding as data. A *host failure* means the host operation itself failed (bad bytes, missing handle, IO error, internal engine failure) and is reported through a separate channel — `Status` envelope, exception, non-zero exit, or `fm_status_t`.
 :::
 
-```mermaid
-flowchart TD
-  CALL[Host call:<br/>getValue / recalc / save] --> OK{Did the call<br/>itself succeed?}
-  OK -->|no| HOST[Host failure path<br/>status envelope / exception /<br/>non-zero exit / fm_status_t]
-  HOST --> FIX[Bad bytes, missing handle,<br/>IO error → fix integration]
-  OK -->|yes| KIND{value.kind?}
-  KIND -->|Error| CELL[Cell error value<br/>#DIV/0! / #VALUE! / #REF! / …]
-  CELL --> SHOW[Surface inline,<br/>do NOT throw]
-  KIND -->|Number / Text / Bool / …| USE[Use the value]
-```
+<DiagramLayers :layers="[
+  { title: 'Host call', nodes: ['getValue / recalc / save'] },
+  { title: 'Did the call itself succeed?', nodes: [
+    { label: 'No → host failure path', note: 'status envelope · exception · non-zero exit · fm_status_t' },
+    { label: 'Yes → check value.kind' }
+  ] },
+  { title: 'value.kind', nodes: [
+    { label: 'Error → cell error value', note: '#DIV/0! · #VALUE! · #REF! · … — surface inline, never throw' },
+    { label: 'Number / Text / Bool / …', note: 'use the value directly' }
+  ] }
+]" />
+
+A host failure (bad bytes, missing handle, IO error) means fix the integration; a cell error means show it inline and keep going.
 
 | Error | Meaning |
 | --- | --- |
@@ -61,8 +64,10 @@ Bindings should preserve these values instead of converting them into host excep
 ```ts
 const value = wb.getValue(0, 0, 0)
 if (value.kind === ValueKind.Error) {
-  // cell error — surface to the user, do not throw
-  showInline(value.errorText)
+  // cell error — surface to the user, do not throw.
+  // value.errorCode is a formulon.ErrorCode ordinal; map it to a
+  // display string (e.g. "#DIV/0!") with your own lookup table.
+  showInline(value.errorCode)
 } else if (value.kind === ValueKind.Number) {
   consume(value.number)
 }
@@ -71,7 +76,8 @@ if (value.kind === ValueKind.Error) {
 ```python
 v = wb.get_value(0, 0, 0)
 if v.kind is ValueKind.ERROR:
-    show_inline(v.error_text)
+    # v.error_code is an int ErrorCode ordinal; map it yourself.
+    show_inline(v.error_code)
 elif v.kind is ValueKind.NUMBER:
     consume(v.number)
 ```

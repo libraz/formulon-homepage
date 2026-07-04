@@ -55,5 +55,9 @@ top-level await と条件付き dynamic import を使うためです。
 外します。Worker / WASM アセット解決を Emscripten wrapper とアプリの
 バンドラに任せるためです。
 
-COOP / COEP ヘッダは `SharedArrayBuffer` のために必要です。ヘッダがない場合、
-`WorkbookHandle.createDefault()` はスタブエンジンへフォールバックします。
+COOP / COEP ヘッダは `SharedArrayBuffer` のために必要です。ヘッダが無い場合、
+`WorkbookHandle.createDefault()` はデフォルトで **reject します** ─ 簡易エンジンへ
+自動でフォールバックすることはありません。ローカル開発やテストで代わりの
+エンジンが欲しいホストは、`preferStub: true` を明示的に渡してオプトインして
+ください。reject はそれ以外の場面では修正すべき設定不備として扱い、UI 側で
+穏便に吸収しないでください。[SharedArrayBuffer が無いと reject する](/ja/cell/index#sharedarraybuffer-が無いと-reject-する) 参照。

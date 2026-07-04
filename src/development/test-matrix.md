@@ -6,27 +6,12 @@ The test surface is broader than a single `make test` because Formulon ships mul
 CTest groups tests with text labels (`SLOW`, `LOAD`, `VARIANT`, …). Targets can include or exclude labels, so a fast pre-commit run can skip slow tests while CI still runs them.
 :::
 
-```mermaid
-flowchart TB
-  subgraph Core["Core — catches core regressions"]
-    CT[make test<br/>fast CTest]
-    CTA[make test-all<br/>incl. SLOW / LOAD]
-  end
-  subgraph Oracle["Oracle — catches Excel divergence"]
-    OV[make oracle-verify<br/>vs committed Excel JSON]
-    VAR[VARIANT tests<br/>FORMULON_ORACLE_VARIANTS=ON]
-  end
-  subgraph Packaging["Packaging — catches binding regressions"]
-    WASM[WASM:<br/>make wasm / test-wasm / npm-test]
-    PY[Python:<br/>make python-test]
-    NN[Native Node:<br/>make node-test]
-    CLI[CLI:<br/>tests/cli CTest target]
-  end
-  subgraph Parity["Parity — catches surface drift"]
-    P[make parity-test<br/>cross-surface agreement]
-  end
-  Core --> Oracle --> Packaging --> Parity
-```
+<DiagramLayers :layers="[
+  { title: 'Core', nodes: [{ label: 'make test', note: 'fast CTest' }, { label: 'make test-all', note: 'incl. SLOW / LOAD' }] },
+  { title: 'Oracle', nodes: [{ label: 'make oracle-verify', note: 'vs committed goldens' }, { label: 'VARIANT tests', note: 'FORMULON_ORACLE_VARIANTS=ON' }] },
+  { title: 'Packaging', nodes: [{ label: 'WASM', note: 'wasm / test-wasm / npm-test' }, { label: 'Python', note: 'python-test' }, { label: 'Native Node', note: 'node-test' }, { label: 'CLI', note: 'tests/cli CTest target' }] },
+  { title: 'Parity', nodes: [{ label: 'make parity-test', note: 'cross-surface agreement' }] }
+]" />
 
 ## Core tests
 
@@ -45,7 +30,7 @@ make test-all
 make oracle-verify
 ```
 
-Oracle verification compares Formulon output with committed JSON generated from Excel. It does not launch Excel and is safe for CI.
+Oracle verification compares Formulon output with committed goldens generated from Excel. It does not launch Excel and is safe for CI.
 
 Variant oracle tests are opt-in:
 
@@ -84,10 +69,12 @@ Parity says "our surfaces agree with each other." Oracle says "our surfaces agre
 
 | Command | Purpose |
 | --- | --- |
-| `RegistryCatalog.CoverageReport` | Runtime function-registration status against the canonical catalog |
+| `ctest -R RegistryCatalog.CoverageReport -V --output-on-failure` (run from the build directory, after `make build`) | Runtime function-registration status against the canonical catalog |
 | `make behavior-status` | Behavior-vocabulary status |
 | `make coverage` | Local coverage diagnostic |
 | `make mutation` | Local mutation-testing diagnostic |
+
+`RegistryCatalog.CoverageReport` is a diagnostic-only gtest case — it always passes and prints its coverage percentage to stdout, which only surfaces with `ctest -V`. It is not a gate; treat it as a way to read the current number, not a pass/fail check.
 
 ## Read next
 

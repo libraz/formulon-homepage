@@ -47,7 +47,7 @@ make size-check
 
 ## Python package
 
-Requires CMake, Python 3.9+, setuptools, and wheel:
+Requires CMake, Python 3.9+, setuptools, wheel, and [Emscripten](https://emscripten.org/) — `make python-package` depends on the `wasm-capi` target, which builds the embedded `formulon_capi.wasm` via `emcmake`:
 
 ```sh
 make python-package
@@ -65,7 +65,7 @@ make node-package
 make node-test
 ```
 
-This builds and stages the N-API addon. Prebuilt binaries are published per `(os, arch)` from CI; the local target is mostly for development.
+This builds the addon (`node-native`), stages it into the package layout (`node-package`), and runs its N-API test suite via `node --test` (`node-test`). Prebuilt binaries are published per `(os, arch)` from CI; the local target is mostly for development.
 
 ## Oracle tooling
 

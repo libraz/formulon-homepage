@@ -6,16 +6,19 @@
 *セルエラー* は `kind = Error` の値であり、バインディングを通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（バイト列の不正・ハンドル失効・入出力エラー・エンジン内部失敗）であり、別チャネル（`Status` envelope / 例外 / 非ゼロ終了 / `fm_status_t`）で報告されます。
 :::
 
-```mermaid
-flowchart TD
-  CALL[ホスト呼び出し:<br/>getValue / recalc / save] --> OK{呼び出し自体は<br/>成功か}
-  OK -->|失敗| HOST[ホスト失敗経路<br/>status envelope / 例外 /<br/>非ゼロ終了 / fm_status_t]
-  HOST --> FIX[バイト列不正 / handle 失効 /<br/>IO 失敗 → 統合を直す]
-  OK -->|成功| KIND{value.kind}
-  KIND -->|Error| CELL[セルエラー値<br/>#DIV/0! / #VALUE! / #REF! / …]
-  CELL --> SHOW[UI に表示し、<br/>throw しない]
-  KIND -->|Number / Text / Bool / …| USE[値を使う]
-```
+<DiagramLayers :layers="[
+  { title: 'ホスト呼び出し', nodes: ['getValue / recalc / save'] },
+  { title: '呼び出し自体は成功したか', nodes: [
+    { label: 'いいえ → ホスト失敗経路', note: 'status envelope · 例外 · 非ゼロ終了 · fm_status_t' },
+    { label: 'はい → value.kind を確認' }
+  ] },
+  { title: 'value.kind', nodes: [
+    { label: 'Error → セルエラー値', note: '#DIV/0! · #VALUE! · #REF! · … — インラインに表示し、throw しない' },
+    { label: 'Number / Text / Bool / …', note: '値をそのまま使う' }
+  ] }
+]" />
+
+ホスト失敗（不正なバイト列・ハンドル失効・IO エラー）は統合コード側を直す必要があり、セルエラーはインラインに表示してそのまま処理を続けます。
 
 | Error | 意味 |
 | --- | --- |
@@ -34,7 +37,7 @@ flowchart TD
 
 ## ホスト側の失敗経路
 
-| 入口 | ホスト側の失敗経路 |
+| 実行入口 | ホスト側の失敗経路 |
 | --- | --- |
 | WASM | `status.ok === false` または invalid workbook handle + `lastErrorMessage()` |
 | Python | `FormulonError` |
@@ -61,8 +64,10 @@ flowchart TD
 ```ts
 const value = wb.getValue(0, 0, 0)
 if (value.kind === ValueKind.Error) {
-  // セルエラー ─ UI 上で示すだけ。throw しない
-  showInline(value.errorText)
+  // セルエラー ─ ユーザーに表示するだけで throw しない。
+  // value.errorCode は formulon.ErrorCode の序数。表示文字列
+  // （例: "#DIV/0!"）への変換は自前の対応表で行う。
+  showInline(value.errorCode)
 } else if (value.kind === ValueKind.Number) {
   consume(value.number)
 }
@@ -71,7 +76,8 @@ if (value.kind === ValueKind.Error) {
 ```python
 v = wb.get_value(0, 0, 0)
 if v.kind is ValueKind.ERROR:
-    show_inline(v.error_text)
+    # v.error_code は int の ErrorCode 序数。変換は自前で行う。
+    show_inline(v.error_code)
 elif v.kind is ValueKind.NUMBER:
     consume(v.number)
 ```

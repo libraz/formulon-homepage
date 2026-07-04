@@ -3,7 +3,7 @@
 スプレッドシート出力がプロダクトの重要な成果物になっているとき、Formulon は CI で力を発揮します。数式の編集や計算値の変化が明示的な diff として PR レビューに現れ、レビュアーが分類できる形になります。
 
 ::: info 用語: parity runner
-リポジトリ内テストランナーです。共有の検証用ワークブックを WASM / Native Node / Python / CLI など利用可能な全実行入口で評価し、*missing*（バインディングがビルドされていない）と *mismatched*（実行入口間で値が違う）を区別して報告します。`make parity-test` で実行。
+リポジトリ内テストランナーです。共有の検証用ワークブックを WASM / Python / CLI など利用可能な全実行入口で評価し、*missing*（バインディングがビルドされていない）と *mismatched*（実行入口間で値が違う）を区別して報告します。`make parity-test` で実行。Native Node はまだ parity runner に組み込まれておらず、比較対象のチャネルがありません。
 :::
 
 ## 数式スナップショット
@@ -33,11 +33,23 @@ git diff --exit-code model.values.txt
 make parity-test
 ```
 
-利用可能な実行入口で共有の検証用ワークブックを評価し、missing と mismatched を分けて報告します。バインディングやパッケージングを変更したときに有効です。
+`cli` / `npm`（WASM）/ `python` の各チャネルで共有の検証用ワークブックを評価し、missing と mismatched を分けて報告します。バインディングやパッケージングを変更したときに有効です。
 
 ::: tip parity と oracle の違い
 parity runner は *自分たちの* 実行入口同士が一致していることを検査します。[Oracle テスト](/ja/compatibility/oracle-testing) は *Excel と* 一致していることを検査します。両方必要です。parity は素早い事前チェック、Oracle テストは互換性の根拠です。
 :::
+
+<DiagramLayers :layers="[
+  { title: '入力', nodes: ['共有の検証用ワークブック'] },
+  { title: '検証トラック', nodes: [
+    { label: 'Parity runner', note: 'WASM vs Python vs CLI' },
+    { label: 'Oracle テスト', note: '任意のチャネル vs 実際の Excel' }
+  ] },
+  { title: '答える問い', nodes: [
+    { label: '自分たちの実行入口同士が一致するか' },
+    { label: 'Excel の正解と一致するか' }
+  ] }
+]" />
 
 ## CI スナップショットに向かないとき
 

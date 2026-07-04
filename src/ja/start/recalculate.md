@@ -2,9 +2,11 @@
 
 再計算はデスクトップアプリではなくバイト列から始まります。
 
-::: tip 実 workbook で早めに試す
-Single-formula test は package が load できることの確認です。Representative workbook で file structure、formula、locale assumption が合うか確認してください。
+::: tip 実ワークブックで早めに試す
+単一の数式によるテストは、パッケージが正しく読み込めることの確認にしかなりません。実際に使う想定のワークブックで、ファイル構造や数式、ロケールの前提が自分のユースケースに合うかどうかを確認してください。
 :::
+
+<DiagramFlow steps="入力バイト列 → Workbook.loadBytes / Workbook.load → セルを変更 → recalc() → save() → 出力バイト列" />
 
 ## JavaScript / WASM
 
@@ -26,6 +28,8 @@ try {
   if (!saved.status.ok || saved.bytes === null) {
     throw new Error(saved.status.message)
   }
+
+  await upload(saved.bytes)
 } finally {
   workbook.delete()
 }
@@ -55,4 +59,4 @@ formulon recalc input.xlsx -o output.xlsx
 formulon dump --values output.xlsx
 ```
 
-構造を保持しながら計算値を更新するため、アップロード検証、サーバー側チェック、バッチ変換に使えます。
+エンジンはワークブックの構造を保持したまま計算値を更新します。このパスは、サーバー側の検証、ブラウザからのアップロード処理、バッチ変換、既知のワークブックに対する回帰テストに使えます。

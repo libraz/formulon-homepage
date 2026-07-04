@@ -10,7 +10,7 @@ These are deliberate boundaries. They keep the engine small and easier to verify
 | PowerQuery and DAX | Separate languages and execution models from spreadsheet formulas. |
 | Pivot cache recomputation | Structural preservation is in scope; recomputation requires a separate execution model. |
 | Live external connections (OLE DB, Web, OData) | Production runs must stay deterministic and offline. |
-| Spreadsheet UI | Formulon is headless; UIs sit on top (see [`formulon-cell`](/cell/) for one such UI). |
+| Spreadsheet UI | Formulon is headless; UIs sit on top. [`formulon-cell`](/cell/) is a reference integration-test UI, not a complete Excel-compatible UI. |
 
 ::: info Glossary: headless engine
 A calculation engine with no visual surface and no end-user UI. Hosts call it; humans do not interact with it directly. Headlessness lets the same engine power a server job, a browser tab, a CLI, and a UI library without changing semantics.
@@ -29,7 +29,7 @@ A blurred non-goal list invites scope creep and ambiguous compatibility claims. 
 - VBA / macros → use Excel directly, or a host-specific automation tool.
 - Charts and drawings → preserve through Formulon, render with a separate library.
 - PowerQuery → run upstream, write `.xlsx` outputs that Formulon ingests.
-- UI → [`formulon-cell`](/cell/) is a beta browser surface that sits on top of the engine.
+- UI → [`formulon-cell`](/cell/) is a public reference UI for integration testing and examples.
 
 ## Read next
 

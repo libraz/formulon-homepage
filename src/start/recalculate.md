@@ -6,6 +6,8 @@ Recalculation starts with bytes, not with a desktop application.
 Single-formula tests prove the package loads. A representative workbook proves whether file structures, formulas, and locale assumptions fit your use case.
 :::
 
+<DiagramFlow steps="Bytes in → Workbook.loadBytes / Workbook.load → Mutate cells → recalc() → save() → Bytes out" />
+
 ## JavaScript / WASM
 
 ```ts

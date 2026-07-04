@@ -1,6 +1,6 @@
 # Python API
 
-The Python package exposes a small, Pythonic wrapper over the Formulon C ABI compiled to `formulon_capi.wasm`. The published wheel is `py3-none-any`; `pip` installs `wasmtime` as the platform runtime.
+The Python package exposes a Pythonic wrapper over the Formulon C ABI compiled to `formulon_capi.wasm`. The published wheel is `py3-none-any`; `pip` installs `wasmtime` as the platform runtime.
 
 ::: info Glossary: py3-none-any wheel
 A Python wheel with no Python ABI tag, no platform tag, and no native code. It works on any CPython 3 implementation as long as its dependencies are available. The platform-specific runtime is supplied by `wasmtime`, not by `formulon`.
@@ -33,18 +33,28 @@ Factories:
 - `Workbook.create_empty()`
 - `Workbook.load(data)`
 
-Methods:
+Common methods:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`
-- `recalc`, `set_iterative`
-- `save`
+- `get_value`, `lambda_text_at`
+- `recalc`, `partial_recalc`, `set_iterative`
+- `save`, `save_ex` (choose the XLSX/XLSB container format)
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
+- sheet structure edits, row/column edits, defined names
+- merges, `get_comment`/`set_comment`, hyperlinks, data validations
+- styles, conditional formats, sheet view/protection
+- pivot cache/table APIs, dependency tracing, spill info, function metadata
 
 ::: tip Lifetime is a context manager
 The `with` block releases the native handle on exit, including when an exception is raised. Avoid keeping a `Workbook` reference past its `with` block.
 :::
+
+::: warning No ad-hoc evaluation or comment enumeration yet
+Python has no `evaluate_formula_text` / `evaluate_conditional_format` equivalent to the WASM/Native Node/C API 0.9.4 additions, and only exposes single-cell `get_comment` / `set_comment` — there is no sheet-wide comment enumeration call. See [Surface matrix](/api/surfaces) for the full parity picture.
+:::
+
+The authoritative Python method list lives in the package type stubs and docstrings.
 
 ## Values
 
@@ -55,8 +65,10 @@ value = wb.get_value(0, 0, 0)
 if value.kind is ValueKind.NUMBER:
     print(value.number)
 elif value.kind is ValueKind.ERROR:
-    print(value.error_code, value.error_text)
+    print(value.error_code)  # int ordinal; see /compatibility/errors for the mapping
 ```
+
+Python's `Value` only carries `error_code` — there is no `error_text` field. Map the ordinal to a symbolic error (`#DIV/0!`, `#VALUE!`, …) yourself using the [error model](/compatibility/errors) table.
 
 ## Error handling
 

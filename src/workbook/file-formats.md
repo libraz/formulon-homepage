@@ -24,7 +24,7 @@ The OOXML reader/writer handles:
 - merges,
 - data validations,
 - conditional formatting,
-- pivot tables and pivot caches (layout-level subset),
+- pivot tables and pivot caches,
 - external links,
 - protection metadata,
 - sheet views, freeze panes, hidden tabs,
@@ -36,20 +36,36 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path exists for workflows that need MS-XLSB reading and writing while keeping the same calculation model. The supported workbook feature set is a subset of the XLSX writer, focused on cells, sheets, styles, defined names, and tables.
+The binary workbook path exists for workflows that need MS-XLSB reading and writing while keeping the same calculation model. As of v0.9.3, styles (`BrtFmt`/`BrtXF`), workbook-scope defined names (including future-function and `LET` formulas), cross-sheet 3-D references, and dynamic-array spill formulas (`BrtArrFmla`) all round-trip through XLSB — several of these previously produced `.xlsb` files that real Excel could not open. Array-constant literals remain limited to numeric elements: string, boolean, and error array-constant elements are recognized but not decoded, and are surfaced as an explicit error rather than silently miscoded.
+
+| XLSB feature | Before v0.9.3 | v0.9.3+ |
+| --- | --- | --- |
+| Styles (`BrtFmt` / `BrtXF`) | limited | round-trips |
+| Cross-sheet 3-D references | limited | round-trips |
+| Workbook-scope names, future functions, `LET` | limited | round-trips |
+| Dynamic-array spill formulas (`BrtArrFmla`) | limited | round-trips |
+| Array-constant literals | numeric elements only | still numeric elements only |
+
+Conditional formatting, pivot tables, comments, and data validation remain OOXML-only — the XLSB reader/writer does not have record handling for those parts, regardless of version. Round-tripping a workbook that uses them through XLSB drops the feature rather than erroring; keep those workbooks on XLSX if you need the feature preserved.
+
+Saving is explicit about container format: `saveEx()` / `save_ex()` take a `WorkbookFormat` to choose XLSB over XLSX, and the CLI derives the same choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` detect XLSX vs XLSB from the bytes themselves (ZIP signature vs BIFF12 record stream), not from a file name, so a `.xlsb` payload loads correctly even without a matching extension.
 
 ## What is preserved vs. evaluated
 
-```mermaid
-flowchart LR
-  IN[(*.xlsx / *.xlsb<br/>bytes in)] --> READ[Reader]
-  READ --> EVAL[Evaluated parts<br/>cells / formulas /<br/>defined names / tables /<br/>cond-format subset]
-  READ --> PASS[Passthrough parts<br/>charts / drawings /<br/>form controls / VBA]
-  EVAL --> RECALC[Engine recalc]
-  PASS -. preserved as bytes .-> WRITE
-  RECALC --> WRITE[Writer]
-  WRITE --> OUT[(*.xlsx / *.xlsb<br/>bytes out)]
-```
+<DiagramLayers :layers="[
+  { title: 'Input', nodes: ['*.xlsx / *.xlsb bytes in'] },
+  { title: 'Read', nodes: ['Reader'] },
+  { nodes: [
+      { label: 'Evaluated parts', note: 'cells · formulas · defined names · tables · CF subset' },
+      { label: 'Passthrough parts', note: 'charts · drawings · form controls · VBA' }
+    ] },
+  { nodes: [
+      { label: 'Engine recalc' },
+      { label: 'Preserved as bytes' }
+    ] },
+  { title: 'Write', nodes: ['Writer'] },
+  { title: 'Output', nodes: ['*.xlsx / *.xlsb bytes out'] }
+]" label="Read splits into evaluated parts (recalculated) and passthrough parts (preserved as bytes), both converging at the writer" />
 
 | Feature | Read | Recalculate | Write |
 | --- | --- | --- | --- |
@@ -57,7 +73,7 @@ flowchart LR
 | Styles / number formats | yes | n/a | yes |
 | Defined names / tables | yes | yes (resolved as references) | yes |
 | Conditional formatting | yes | partial (evaluate subset) | yes |
-| Pivot tables | layout / cache (subset) | no | yes |
+| Pivot tables | layout / cache | no | yes |
 | Charts | parts preserved | no | yes |
 | Form controls / drawings | passthrough | no | yes |
 | VBA project | passthrough | never | yes |

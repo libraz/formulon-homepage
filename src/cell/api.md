@@ -1,11 +1,11 @@
 ---
 title: formulon-cell API surface
-description: Main API concepts exposed by the formulon-cell UI package.
+description: Main API concepts exposed by the formulon-cell reference UI package.
 ---
 
 # API Surface
 
-`formulon-cell` is built from composable pieces: a `WorkbookHandle` over the engine, the `Spreadsheet` mounter that produces a `SpreadsheetInstance`, a typed event bus, a zustand-backed store, command helpers, an i18n controller, and a theme controller. The main engine remains `@libraz/formulon`; these APIs provide an app-facing spreadsheet surface around it.
+`formulon-cell` is built from composable pieces: a `WorkbookHandle` over the engine, the `Spreadsheet` mounter that produces a `SpreadsheetInstance`, a typed event bus, a zustand-backed store, command helpers, an i18n controller, and a theme controller. The main engine remains `@libraz/formulon`; these APIs provide a reference spreadsheet surface for integration testing and examples, not a complete Excel-compatible UI layer.
 
 ::: info Glossary: WorkbookHandle
 A thin wrapper over a `@libraz/formulon` workbook instance plus the engine status. It lets `Spreadsheet.mount()` and host code share the same workbook without managing native memory directly.
@@ -14,20 +14,22 @@ A thin wrapper over a `@libraz/formulon` workbook instance plus the engine statu
 ## WorkbookHandle
 
 ```ts
-import { WorkbookHandle, isUsingStub } from '@libraz/formulon-cell'
+import { WorkbookHandle } from '@libraz/formulon-cell'
 
+// New empty workbook, backed by the WASM engine.
 const wb = await WorkbookHandle.createDefault()
-// or
-const wb = await WorkbookHandle.createEmpty()
-// or
-const wb = await WorkbookHandle.fromBytes(arrayBufferOrUint8Array)
 
-if (isUsingStub()) {
-  // SharedArrayBuffer is unavailable — recalc is a no-op
+// Load an existing .xlsx / .xlsb / .xls / .csv from bytes.
+const bytes = new Uint8Array(await file.arrayBuffer())
+const loaded = await WorkbookHandle.loadBytes(bytes)
+
+if (wb.isStub) {
+  // preferStub: true was passed explicitly — the in-memory 簡易エンジン (stub
+  // engine) is standing in, evaluating only a small formula subset.
 }
 ```
 
-`WorkbookHandle` owns the engine reference. Pass it to `Spreadsheet.mount({ workbook })` so the UI and the engine share state.
+`WorkbookHandle` exposes exactly two static factories, `createDefault(opts)` and `loadBytes(bytes, opts)` — there is no `createEmpty()` or `fromBytes()`. Both reject by default without `SharedArrayBuffer`; see [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the `preferStub` opt-in. Pass it to `Spreadsheet.mount({ workbook })` so the UI and the engine share state.
 
 ## Mounting
 
@@ -71,29 +73,19 @@ Each preset adds DOM and bundle weight. If a host already provides its own dialo
 
 ## Extensions
 
-Beyond the presets, replaceable UI pieces are factories you can pass in `features`:
+Beyond the presets, replaceable UI pieces are zero-argument factories you pass through a separate `extensions` array — `features` stays a boolean-flag object:
 
 ```ts
-import {
-  Spreadsheet,
-  presets,
-  formatDialogExtension,
-  findReplaceExtension,
-  hoverCommentsExtension
-} from '@libraz/formulon-cell'
+import { Spreadsheet, presets, findReplace, formatDialog, hoverComment } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(host, {
   workbook,
-  features: [
-    ...presets.minimal(),
-    findReplaceExtension(),
-    hoverCommentsExtension({ delayMs: 200 }),
-    formatDialogExtension({ accent: 'orange' })
-  ]
+  features: { ...presets.minimal(), findReplace: false },
+  extensions: [findReplace(), formatDialog(), hoverComment()]
 })
 ```
 
-See [Embedding guide](/cell/embedding) for the catalogue and lifecycle.
+See [Embedding guide](/cell/embedding#selective-extensions) for the full factory catalogue, the `features` vs `extensions` split, and lifecycle hooks.
 
 ## Events
 
@@ -118,17 +110,17 @@ Common events:
 
 ## Store
 
-The chrome and extensions read from a zustand store. The host can subscribe to the same store without re-implementing reactive state:
+The chrome and extensions read from a per-mount [zustand](https://github.com/pmndrs/zustand) vanilla store, exposed as `instance.store`. There is no global `useSpreadsheetStore` hook — each `Spreadsheet.mount()` call creates its own store, and the host subscribes to that instance directly:
 
 ```ts
-import { useSpreadsheetStore } from '@libraz/formulon-cell'
+const selection = instance.store.getState().selection
 
-const selection = useSpreadsheetStore.getState().selection
-const unsubscribe = useSpreadsheetStore.subscribe(
-  (state) => state.selection,
-  (sel) => console.log(sel)
-)
+const unsubscribe = instance.store.subscribe((state) => {
+  console.log(state.selection)
+})
 ```
+
+`subscribe` takes a whole-state listener (`(state, prevState) => void`), not a selector — filter inside the callback if you only care about part of `State`.
 
 ## Command Helpers
 
@@ -141,7 +133,7 @@ The package exports command helpers for host chrome that does not want the built
 - workbook object and compatibility summaries,
 - sheet views, page setup, protection, trace arrows, slicers, and session charts.
 
-The split is intentional: the bundled playground uses these pieces to present a spreadsheet UI; applications can reuse the engine-backed commands without adopting the playground chrome.
+The split is intentional: the bundled playground uses these pieces to present a reference spreadsheet UI; applications can reuse the engine-backed commands without adopting the playground chrome.
 
 ## i18n controller
 

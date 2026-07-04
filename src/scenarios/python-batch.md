@@ -12,25 +12,22 @@ A recurring batch process — typically run by cron, Airflow, GitHub Actions, or
 
 ## Flow
 
-```mermaid
-sequenceDiagram
-  participant Job as Batch job
-  participant FS as File system
-  participant WB as Workbook
-  Job->>FS: read template bytes
-  Job->>WB: Workbook.load(bytes)
-  Job->>WB: set_number / set_formula (inputs)
-  Job->>WB: recalc()
-  Job->>WB: get_value (validate)
-  alt validation passes
-    Job->>WB: save()
-    WB-->>Job: output bytes
-    Job->>FS: write output
-  else validation fails
-    Job-->>Job: log + raise
-  end
-  Note over WB: with-block releases<br/>native handle on exit
-```
+<DiagramLayers
+  :layers="[
+    { nodes: ['Read template bytes (file system)'] },
+    { nodes: ['Workbook.load(bytes)'] },
+    { nodes: ['set_number / set_formula (inputs)'] },
+    { nodes: ['recalc()'] },
+    { nodes: ['get_value (validate)'] },
+    { nodes: [
+      { label: 'Validation passes → save()', note: 'write output bytes to file system' },
+      { label: 'Validation fails', note: 'log + raise' }
+    ] }
+  ]"
+  label="Batch job flow: read template bytes, Workbook.load, set_number/set_formula for inputs, recalc, get_value to validate, then either save and write output on success or log and raise on failure"
+/>
+
+The `with` block around the `Workbook` releases the native handle on exit either way, including when the failure branch raises.
 
 ## Example job
 
@@ -46,8 +43,6 @@ def recalc_report(input_path: Path, output_path: Path, revenue: float) -> None:
 
 recalc_report(Path("template.xlsx"), Path("report.xlsx"), 125_000.0)
 ```
-
-The `with` block releases the native handle on exit, including when an exception is raised inside.
 
 ## Mutating many cells
 

@@ -6,22 +6,30 @@ Formulon は互換性を *測定可能な性質* として扱います。一般�
 プロファイルと、それを裏付ける Oracle データ群を指す互換性の説明です。「`win-365-ja_JP` と互換」は *その Excel で実際に動かして値を取得した* ことを意味します。プロファイルを指定しない「Excel-compatible」という言い回しは意図的に避けます。
 :::
 
-```mermaid
-flowchart LR
-  EXCEL[Excel build<br/>例: Win 365 ja-JP] -->|取得| ORACLE[oracle データ]
-  ORACLE -->|裏付け| PROFILE[互換性プロファイル<br/>win-365-ja_JP]
-  WB[ワークブック] --> ENGINE[Formulon エンジン]
-  PROFILE --> ENGINE
-  ENGINE --> RESULT[計算値]
-  RESULT -->|oracle と比較| DIVERGE{差分}
-  DIVERGE -->|なし| OK[プロファイル互換が成立]
-  DIVERGE -->|追跡済み| NOTE[受入差分<br/>+ 理由 + last-verified build]
-  DIVERGE -->|未追跡| BUG[バグ ─ 修正 or 文書化]
-```
+プロファイルの取得は、実機の Excel から再利用可能なデータセットへの一方向パイプラインです。
+
+<DiagramFlow :steps="[
+  { label: 'Excel build', note: '例: Win 365 ja-JP' },
+  { label: 'Oracle データ', note: '取得' },
+  { label: '互換性プロファイル', note: 'win-365-ja_JP ─ 検証済み' }
+]" />
+
+再計算のたびに、その同じ Oracle データと突き合わせます。
+
+<DiagramLayers :layers="[
+  { title: '入力', nodes: ['ワークブック', '互換性プロファイル'] },
+  { nodes: ['Formulon エンジン'] },
+  { nodes: ['計算値'] },
+  { title: 'Oracle データと比較', nodes: [
+    { label: '差分なし', note: 'プロファイル互換が成立' },
+    { label: '追跡済みの差分', note: '理由 + last-verified build' },
+    { label: '未追跡の差分', note: 'バグ ─ 修正または文書化' }
+  ] }
+]" />
 
 ## プロファイル
 
-主要プロファイルは `win-365-ja_JP` です。データが揃っている範囲で Mac Excel 365 ja-JP も追跡します。英語ロケールのプロファイルは、対応する Oracle 検証データを備えるまで公開しません。
+主要プロファイルは `win-365-ja_JP` です。データが揃っている範囲で Mac Excel 365 ja-JP も追跡します。英語ロケールのプロファイルは、対応するゴールデンデータを備えるまで公開しません。
 
 公開リストと固定方法は [ロケールプロファイル](/ja/compatibility/locale-profiles) を参照してください。
 
@@ -49,4 +57,4 @@ flowchart LR
 
 - [ロケールプロファイル](/ja/compatibility/locale-profiles) ─ プロファイル一覧
 - [Oracle テスト](/ja/compatibility/oracle-testing) ─ プロファイルをどう検証するか
-- [Non-goals](/ja/compatibility/non-goals) ─ 互換性が意図的にカバーしない範囲
+- [非目標](/ja/compatibility/non-goals) ─ 互換性が意図的にカバーしない範囲

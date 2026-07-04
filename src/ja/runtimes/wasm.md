@@ -18,8 +18,10 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-どちらかでも欠けると、`formulon-cell` は簡易エンジンにフォールバックする場合があります。
+どちらかでも欠けると、`createFormulon()` はそのままインスタンス化に失敗します ── pthread プール用の `SharedArrayBuffer` 生成が例外を投げ、Promise は reject されます。生の WASM ローダー自体にフォールバックはなく、`createFormulon()` を直接呼ぶコードは reject を自分で処理しなければなりません。`formulon-cell` のような上位ラッパーは、失敗する代わりに簡易エンジンへフォールバックすることを選べます（`preferStub: true`）が、それは `formulon-cell` 側の挙動であって `@libraz/formulon` の挙動ではありません。opt-in のフォールバック経路は [formulon-cell](/ja/cell/) を参照してください。
 :::
+
+<DiagramFlow steps="ページ読み込み → COOP/COEP ヘッダー確認 → createFormulon() → SharedArrayBuffer / pthread プール → Workbook.loadBytes()" />
 
 ## Module は 1 度だけ初期化する
 

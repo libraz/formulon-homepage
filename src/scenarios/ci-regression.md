@@ -12,36 +12,27 @@ A checked-in expected-output file that a test compares against the current outpu
 
 ## Pipeline shape
 
-```mermaid
-flowchart LR
-  PR[Pull request] --> CI[CI job]
-  CI --> F[formulon dump --formulas]
-  CI --> R[formulon recalc] --> V[formulon dump --values]
-  F --> SNAP[testdata/*.txt]
-  V --> SNAP
-  SNAP --> DIFF{git diff --exit-code}
-  DIFF -->|clean| PASS[pass]
-  DIFF -->|drift| REVIEW[review classifies:<br/>expected / compat / bug]
-```
+<DiagramLayers
+  :layers="[
+    { nodes: ['Pull request'] },
+    { nodes: ['CI job'] },
+    { nodes: [
+      { label: 'formulon dump --formulas', note: 'formula snapshot' },
+      { label: 'formulon recalc → formulon dump --values', note: 'value snapshot' }
+    ] },
+    { nodes: ['testdata/*.txt'] },
+    { nodes: ['git diff --exit-code'] },
+    { nodes: [
+      { label: 'Clean → pass', note: '' },
+      { label: 'Drift → review classifies', note: 'expected / compat / bug' }
+    ] }
+  ]"
+  label="Pipeline: a pull request triggers a CI job that runs both a formula snapshot and a recalculated-value snapshot, writes them to testdata, diffs them with git, and either passes cleanly or routes drift to reviewer classification"
+/>
 
-## Formula drift
+The base snapshot commands (`formulon dump --formulas`, `formulon recalc && formulon dump --values`) are the same ones covered in [CI regression workflows](/runtimes/ci-regression) — see that page for the exact invocations and for when to skip snapshotting volatile formulas. This page focuses on wiring them into a PR pipeline and on the review policy for classifying drift.
 
-```sh
-formulon dump --formulas model.xlsx > testdata/model.formulas.txt
-git diff --exit-code testdata/model.formulas.txt
-```
-
-Formula snapshots catch workbook authoring changes even when cached values are stale. They are cheap because no recalculation is involved.
-
-## Value drift
-
-```sh
-formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
-formulon dump --values /tmp/model.recalc.xlsx > testdata/model.values.txt
-git diff --exit-code testdata/model.values.txt
-```
-
-Value snapshots catch changes in calculated output. `dump --values` triggers a recalculation first, so the snapshot reflects what the engine actually computes — not the cached values that happened to be in the file.
+Before pushing, `make parity-test` is a fast complementary local check: it evaluates shared fixtures across the available channels (`cli`, `npm` WASM, `python`) and reports channel disagreement, which is a form of regression the CI job above does not catch on its own. See [CI regression workflows](/runtimes/ci-regression#compare-package-surfaces) for details.
 
 ## GitHub Actions example
 
@@ -52,7 +43,7 @@ jobs:
   workbook:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install formulon CLI
         run: |
           curl -L -o formulon "https://github.com/libraz/formulon/releases/latest/download/formulon-cli-linux-x86_64"

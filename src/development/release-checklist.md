@@ -14,7 +14,7 @@ A release where every shipped artifact — WASM, Native Node, Python wheel, CLI 
 - [ ] Build JavaScript, Python, CLI, and native artifacts from the same revision.
 - [ ] Smoke-test each package surface.
 - [ ] Run `make parity-test` after staging available package surfaces.
-- [ ] Run `RegistryCatalog.CoverageReport` and update [Formula coverage](/compatibility/formula-coverage) if it changed.
+- [ ] Run `RegistryCatalog.CoverageReport` (`ctest -R RegistryCatalog.CoverageReport -V` from the build directory — diagnostic-only, always passes, reads the coverage percentage from stdout) and update [Formula coverage](/compatibility/formula-coverage) if it changed.
 - [ ] Check [Compatibility](/compatibility/) for stale status claims.
 - [ ] Update changelog and docs version.
 
@@ -38,10 +38,16 @@ The release is only healthy if the surfaces agree on workbook behavior. A WASM b
 
 ## After release
 
-- [ ] Tag the release in Git and push.
-- [ ] Publish artifacts (npm, PyPI, GitHub Releases).
+- [ ] Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`) — this push *is* the release: it triggers the tag-driven `release.yml` workflow, which builds and publishes npm, PyPI, CLI binaries, and the GitHub Release automatically over OIDC trusted publishing. There is no separate manual publish step. Watch the workflow run to completion rather than looking for something to publish by hand.
 - [ ] Update the `docsVersion` in the homepage repo if the docs site tracks it.
 - [ ] Watch for incoming compatibility issues and route them to the right oracle / profile.
+
+<DiagramFlow steps="Work on develop → Open PR to main → CI green → Merge → Push vX.Y.Z tag" />
+
+<DiagramLayers :layers="[
+  { title: 'release.yml (tag-triggered)', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },
+  { title: 'Result', nodes: ['npm + PyPI + CLI binaries + GitHub Release — live'] }
+]" />
 
 ## Read next
 

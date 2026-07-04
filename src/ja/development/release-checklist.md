@@ -14,7 +14,7 @@
 - [ ] JavaScript / Python / CLI / ネイティブ成果物を同じ revision からビルド
 - [ ] 各パッケージ API のスモークテスト
 - [ ] 利用可能な実行入口をステージ後に `make parity-test`
-- [ ] `RegistryCatalog.CoverageReport` を実行し、変化があれば [数式カバレッジ](/ja/compatibility/formula-coverage) を更新
+- [ ] `RegistryCatalog.CoverageReport` を実行し（`ctest -R RegistryCatalog.CoverageReport -V` を build ディレクトリで ─ 診断専用で常に成功し、カバレッジ比率は標準出力に出ます）、変化があれば [数式カバレッジ](/ja/compatibility/formula-coverage) を更新
 - [ ] [互換性](/ja/compatibility/) のステータス表現を確認
 - [ ] changelog とドキュメントバージョンの更新
 
@@ -38,10 +38,16 @@
 
 ## リリース後
 
-- [ ] Git でタグを付けて push
-- [ ] 成果物の公開（npm / PyPI / GitHub Releases）
+- [ ] タグを付けて push する（`git tag vX.Y.Z && git push origin vX.Y.Z`）─ この push そのものがリリースです。タグ駆動の `release.yml` ワークフローがトリガーされ、OIDC trusted publishing 経由で npm / PyPI / CLI バイナリ / GitHub Release を自動的にビルド・公開します。手動で公開する手順は別途ありません。手作業で何かを公開しようとせず、ワークフローの完走を見届けてください。
 - [ ] docs サイトが追いかけているならホームページリポジトリの `docsVersion` を更新
 - [ ] 入ってくる互換性報告を監視し、適切な Oracle データ / プロファイルに振り分け
+
+<DiagramFlow steps="develop で作業 → main への PR → CI green → merge → vX.Y.Z タグを push" />
+
+<DiagramLayers :layers="[
+  { title: 'release.yml（タグ起点）', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },
+  { title: '結果', nodes: ['npm + PyPI + CLI バイナリ + GitHub Release ─ 公開済み'] }
+]" />
 
 ## 次に読むもの
 

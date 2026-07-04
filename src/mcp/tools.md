@@ -6,17 +6,23 @@ This page lists every MCP tool exposed by `formulon-mcp`, grouped by purpose. Th
 Unless A1 notation is used, sheet / row / column indices are zero-based to match the Formulon API. Both styles are accepted on tools that take addresses.
 :::
 
-```mermaid
-flowchart TB
-  ROOT[formulon-mcp tools]
-  ROOT --> ENG[Engine<br/>version / eval / lookup / trace]
-  ROOT --> SES[Sessions<br/>open / list / close / recalc /<br/>save / metadata]
-  ROOT --> INS[Inspection<br/>session / layout / regions /<br/>analyze]
-  ROOT --> CR[Cells &amp; ranges<br/>set / get / range /<br/>find / replace]
-  ROOT --> STR[Structure<br/>sheets / defined names /<br/>insert-delete / view]
-  ROOT --> RICH[Rich data<br/>merge / comment / hyperlink /<br/>validation / cond-format]
-  ROOT --> ADV[Advanced<br/>workbook_call /<br/>one-shot inspect &amp; update]
-```
+::: warning Only bounded, single-sheet ranges
+The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`). It rejects whole-row/column references (`A:A`, `1:1` — the pattern requires both a column letter and a row digit) and cross-sheet 3-D ranges (`Sheet1:Sheet3!A1:B2`), even though the Formulon engine itself supports 3-D references since v0.9.3. Build the bounded range you need from the sheet's used range (`formulon_inspect_layout`) instead of a whole-row/column shorthand.
+:::
+
+<DiagramLayers :layers="[
+  { nodes: ['formulon-mcp tools'] },
+  { nodes: [
+      { label: 'Engine', note: 'version / eval / lookup / trace' },
+      { label: 'Sessions', note: 'open / list / close / recalc / save / metadata' },
+      { label: 'Inspection', note: 'session / layout / regions / analyze' },
+      { label: 'Cells & ranges', note: 'set / get / range / find / replace' },
+      { label: 'Structure', note: 'sheets / defined names / insert-delete / view' },
+      { label: 'Rich data', note: 'merge / comment / hyperlink / validation / cond-format' },
+      { label: 'Advanced', note: 'workbook_call / one-shot inspect & update' }
+    ]
+  }
+]" />
 
 ## Engine
 
@@ -35,7 +41,7 @@ flowchart TB
 | `formulon_list_sessions` | Lists open workbook sessions. |
 | `formulon_close_workbook` | Releases a session. |
 | `formulon_recalc_session` | Triggers a recalculation on an open session. |
-| `formulon_save_session` | Writes a session to an `.xlsx` path or returns bytes inline. |
+| `formulon_save_session` | Writes a session to disk (`outputPath` → session's last saved path → its original source path) and returns the byte count written. |
 | `formulon_session_metadata` | Reads function names or external links from the session. |
 
 ## Inspection
@@ -43,7 +49,7 @@ flowchart TB
 | Tool | What it does |
 | --- | --- |
 | `formulon_inspect_session` | Returns sheets, defined names, tables, and optionally sparse cell entries. |
-| `formulon_inspect_layout` | Per-sheet layout: used ranges, merges, row / column overrides, protection, cells, calculated values, formulas, and optional style details. |
+| `formulon_inspect_layout` | Per-sheet layout: used ranges, merges, row / column overrides, protection, cells, calculated values, formulas, optional style details, and sheet view (zoom, frozen panes, hidden state). |
 | `formulon_detect_regions` | Detects table-like regions, label-value pairs, and totals with rule-based confidence and evidence. |
 | `formulon_analyze_workbook` | Classifies workbook shape (invoice, list, report, schedule, form, …) with deterministic evidence. |
 

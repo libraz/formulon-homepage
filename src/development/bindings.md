@@ -6,35 +6,12 @@ Bindings expose workbook operations to host environments while keeping calculati
 A thin per-host layer that translates host types (`Uint8Array`, `bytes`, `bytearray`, `std::span`) into engine inputs and engine outputs back into host types. Bindings do not implement formula semantics — they shape data and manage lifetimes.
 :::
 
-```mermaid
-flowchart LR
-  subgraph Host
-    JS[Uint8Array / Buffer]
-    PY[bytes / bytearray]
-    CXX[std::span / void*]
-    JSON[JSON inputs]
-  end
-  subgraph Bindings["Bindings — translate types &amp; lifetimes"]
-    WBIND[WASM]
-    NBIND[Native Node]
-    PBIND[Python]
-    CBIND[CLI]
-    MBIND[MCP]
-  end
-  ABI[(C ABI<br/>only stable boundary)]
-  CORE[C++17 core<br/>parser / evaluator /<br/>calc graph / file IO]
-  JS --> WBIND
-  JS --> NBIND
-  PY --> PBIND
-  CXX --> CBIND
-  JSON --> MBIND
-  WBIND --> ABI
-  NBIND --> ABI
-  PBIND --> ABI
-  CBIND --> ABI
-  MBIND --> ABI
-  ABI --> CORE
-```
+<DiagramLayers :layers="[
+  { title: 'Host types', nodes: ['Uint8Array / Buffer', 'bytes / bytearray', 'std::span / void*', 'JSON inputs'] },
+  { title: 'Bindings', nodes: ['WASM', 'Native Node', 'Python', 'CLI', 'MCP'] },
+  { title: 'Boundary', nodes: ['C ABI (only stable boundary)'] },
+  { title: 'Core', nodes: ['C++17 core — parser / evaluator / calc graph / file IO'] }
+]" />
 
 ## Responsibilities
 
@@ -54,7 +31,7 @@ Bindings should not:
 - introduce a separate dirty-set, dependency graph, or recalc scheduler (all of those belong to the core).
 
 ::: warning Don't reimplement Excel in the binding
-If a binding is tempted to special-case a function result or coerce a value differently than the core, the right fix is in the core: add the case to the evaluator, add an oracle fixture, and let every binding pick up the change at once. Per-binding patches drift fast.
+If a binding is tempted to special-case a function result or coerce a value differently than the core, the right fix is in the core: add the case to the evaluator, add an oracle golden, and let every binding pick up the change at once. Per-binding patches drift fast.
 :::
 
 ## What this looks like in practice

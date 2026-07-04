@@ -6,15 +6,9 @@ The server is **session-oriented**. Open a workbook once, perform many operation
 An in-memory open workbook plus its engine state, keyed by a string `sessionId`. Sessions are isolated from each other — two open files have separate caches, dirty sets, and dependency graphs.
 :::
 
-```mermaid
-flowchart LR
-  A[formulon_open_workbook] --> B[formulon_set_cells / sheet_operation / …]
-  B --> C[formulon_recalc_session]
-  C --> D[formulon_get_range / get_cell]
-  D --> B
-  B --> E[formulon_save_session]
-  E --> F[formulon_close_workbook]
-```
+<DiagramFlow steps="formulon_open_workbook → formulon_set_cells / sheet_operation / … → formulon_recalc_session → formulon_get_range / get_cell → formulon_save_session → formulon_close_workbook" />
+
+Repeat the middle three steps — mutate, recalculate, read — as many times as the workflow needs before saving and closing.
 
 ## Open
 
@@ -99,7 +93,20 @@ through `formulon_recalc_session` before reading dependent values.
 }
 ```
 
-If `outputPath` is omitted, the server returns the bytes inline (base64) — useful for agents that hand the result back to the user.
+`formulon_save_session` always writes to disk; it never returns file content inline. The destination resolves through a fallback chain:
+
+<DiagramFlow :steps="[
+  { label: 'outputPath argument', note: 'explicit, if provided' },
+  { label: 'session.outputPath', note: 'set by a previous save' },
+  { label: 'session.sourcePath', note: 'the path the workbook was opened from' },
+  { label: 'Error', note: 'none of the above are set' }
+]" />
+
+The response's `bytes` field is a **byte count** (a number), not the file's contents.
+
+::: warning Omitting `outputPath` overwrites the original file
+If the session was opened from an existing `path` and you call `formulon_save_session` without `outputPath`, the server silently overwrites that source file — there is no dry-run or confirmation step. A session created fresh (no `path` at open time) has no `sourcePath` to fall back to, so an omitted `outputPath` fails with `outputPath is required for a new workbook session` instead of guessing. Pass an explicit `outputPath` whenever you want to avoid touching the original file.
+:::
 
 ## Close
 

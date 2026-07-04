@@ -21,12 +21,17 @@ A stdio MCP server runs as a child process of the client. The OS process boundar
 - Killing the client (or the agent that owns it) terminates the server and clears every open session.
 - Multiple clients run separate server processes; sessions never cross processes.
 
+<DiagramFlow :steps="[
+  { label: 'Client process', note: 'owns lifetime; sandbox here sandboxes below' },
+  { label: 'formulon-mcp', note: 'child process; killed when the client exits' }
+]" />
+
 ## File-system access
 
 Tools that name a path (`formulon_open_workbook`, `formulon_save_session`, `formulon_get_cell` direct-from-path) operate on whatever paths the server process can see. Restrict the parent's working directory, or run the agent inside a sandbox, if you want to keep workbook IO inside a project.
 
 ::: tip Agents and write paths
-If the workflow only requires reading, instruct the agent to write outputs to a designated subdirectory or pass bytes back inline (omit `outputPath` in `formulon_save_session`). The server has no `target directory` policy of its own — that is up to the host.
+Always pass an explicit `outputPath` under an allowed directory when calling `formulon_save_session`. Omitting it does **not** avoid a disk write — it reuses the session's `outputPath` from a prior save, or failing that, the original `sourcePath` the workbook was opened from, and overwrites it. See [Workflow: Save](/mcp/workflow#save) for the full fallback chain. The server has no `target directory` policy of its own — that is up to the host.
 :::
 
 ## Tool input validation
@@ -35,7 +40,19 @@ Every tool's inputs are validated against a JSON schema before reaching the engi
 
 ## Low-level access is allowlisted
 
-`formulon_workbook_call` exists for advanced features that do not yet have dedicated tools. Even so, it only dispatches methods on an explicit allowlist defined in the server source. Examples of allowlisted methods include:
+`formulon_workbook_call` exists for advanced features that do not yet have dedicated tools. Even so, it only dispatches methods on an explicit allowlist defined in the server source.
+
+<DiagramLayers :layers="[
+  { nodes: ['formulon_workbook_call(method, args)'] },
+  { nodes: ['Allowlist gate: is method in WORKBOOK_METHODS?'] },
+  { nodes: [
+      { label: 'Accept', note: 'method invoked on the Workbook' },
+      { label: 'Reject', note: 'MCP error: method is not allowlisted' }
+    ]
+  }
+]" />
+
+Examples of allowlisted methods include:
 
 - PivotTable / PivotCache reads,
 - style / merge / comment / hyperlink / validation accessors,

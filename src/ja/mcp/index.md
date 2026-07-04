@@ -12,19 +12,17 @@ AI エージェントに構造化されたツール・リソースを与える�
 最もシンプルな MCP 転送方式です。クライアントがサーバーを子プロセスとして起動し、stdin / stdout 上で JSON-RPC を交わします。ネットワークもポートも開かず、OS のプロセス境界がそのままセキュリティ境界になります。
 :::
 
-```mermaid
-flowchart LR
-  subgraph ホストプロセス
-    AGENT[エージェント / LLM] --> CLIENT[MCP クライアント<br/>Claude Desktop / Code / Codex]
-  end
-  CLIENT <-->|JSON-RPC over stdio| SERVER[formulon-mcp]
-  subgraph サーバープロセス
-    SERVER --> ALLOW[許可リストで振り分け]
-    ALLOW --> SESS[セッションテーブル<br/>sessionId → Workbook]
-    SESS --> WB[Workbook<br/>via @libraz/formulon]
-    WB --> XLSX[(*.xlsx)]
-  end
-```
+<DiagramFlow :steps="[
+  { label: 'エージェント / LLM' },
+  { label: 'MCP クライアント', note: 'Claude Desktop / Code / Codex' },
+  { label: 'formulon-mcp', note: 'JSON-RPC over stdio' },
+  { label: '許可リストで振り分け' },
+  { label: 'セッションテーブル', note: 'sessionId → Workbook' },
+  { label: 'Workbook', note: 'via @libraz/formulon' },
+  { label: '*.xlsx' }
+]" />
+
+最初の 2 ステップはホストプロセス（MCP クライアントを動かすプロセス）内で完結し、`formulon-mcp` 以降はサーバー自身の子プロセス内で動作します。到達経路は stdio のみです。
 
 ## どこから読むか
 
@@ -37,7 +35,7 @@ flowchart LR
 
 ## パッケージ
 
-MCP サーバーは `@libraz/formulon-mcp` として公開されており、内部で `@libraz/formulon@0.9.2` を使います。**Node.js 22 以上** が必要です。
+MCP サーバーは `@libraz/formulon-mcp` として公開されており、Formulon の WASM パッケージに依存します。現在のリリースは `@libraz/formulon` 0.9 系を受け入れ、パッケージマネージャが互換範囲の最新版を解決します。**Node.js 22 以上** が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

@@ -1,22 +1,14 @@
 # Node Service Recalculation
 
-Use this pattern when a server-side Node service accepts an uploaded or internally generated workbook, recalculates it, and returns either values, diagnostics, or a saved workbook. Choose Native Node when deployment can install a platform binary; choose WASM when portability matters more than native throughput.
+Use this pattern when a server-side Node service accepts an uploaded or internally generated workbook, recalculates it, and returns either values, diagnostics, or a saved workbook. Choose Native Node when deployment can build or stage a platform binary from the source tree; choose WASM when portability matters more than native throughput.
 
 ::: tip Pick the runtime by deployment
-Native Node avoids WASM heap-copy costs and browser isolation concerns, but it needs a matching `.node` binary. WASM is easier to deploy uniformly across Node environments. Formula semantics should be the same; if they differ, treat it as a bug or documented compatibility gap.
+Native Node avoids WASM heap-copy costs and browser isolation concerns, but it needs a matching `.node` binary from `packages/npm-native`. WASM is easier to deploy uniformly across Node environments. Formula semantics should be the same; if they differ, treat it as a bug or documented compatibility gap.
 :::
 
 ## Flow
 
-```mermaid
-flowchart LR
-  A[HTTP upload / internal job] --> B[Validate file size and type]
-  B --> C[Load workbook bytes]
-  C --> D[Set inputs / profile]
-  D --> E[recalc]
-  E --> F[Read checks and values]
-  F --> G[Return JSON or saved workbook]
-```
+<DiagramFlow steps="HTTP upload / internal job → Validate file size and type → Load workbook bytes → Set inputs / profile → recalc → Read checks and values → Return JSON or saved workbook" />
 
 ## Runtime choice
 
@@ -25,7 +17,20 @@ flowchart LR
 | Large workbooks, high request volume, controlled deployment | Native Node |
 | Serverless or portable Node deployment | WASM |
 | Same code path as browser upload | WASM |
-| Need the broadest JavaScript workbook API today | WASM |
+| Avoid building/staging a platform-specific native binary today | WASM |
+
+<DiagramLayers
+  :layers="[
+    { nodes: ['Can you build or stage a platform-specific .node binary in this deployment today?'] },
+    { nodes: [
+      { label: 'Yes → Native Node', note: 'operational throughput, no browser isolation constraints' },
+      { label: 'No → WASM', note: 'portable across Node environments, no native build step' }
+    ] }
+  ]"
+  label="Decision: if the deployment can build or stage a platform-specific native binary today, choose Native Node for operational throughput; otherwise choose WASM for portability"
+/>
+
+Native Node and WASM expose the same Workbook API surface — see [Surface matrix](/api/surfaces) and [Native Node integration](/runtimes/node-native). The choice above is operational (binary staging, deployment portability), not a difference in what either surface can compute.
 
 ## Service boundary
 

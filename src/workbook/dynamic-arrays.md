@@ -17,17 +17,12 @@ The cell that owns the dynamic-array formula. Editing or clearing the anchor cha
 - Collisions — when a spill would overwrite a non-empty cell — return `#SPILL!` rather than silently overwriting data.
 - Dimension mismatches (e.g. mixing a 3-row argument with a 5-row argument under implicit broadcasting) follow Excel's error rules per function family.
 
-```mermaid
-flowchart TD
-  EVAL[Anchor formula evaluates] --> SHAPE[Compute result shape:<br/>scalar / row / column / 2-D]
-  SHAPE --> CHECK{Cells in target<br/>spill rectangle empty?}
-  CHECK -->|yes| WRITE[Write spill range,<br/>store shape on anchor]
-  CHECK -->|no| ERR[#SPILL! at anchor,<br/>no values written]
-  WRITE --> COMP{Shape changed<br/>vs last eval?}
-  COMP -->|yes| INVAL[Mark dependents dirty<br/>in old ∪ new rectangle]
-  COMP -->|no| DONE[Spill stable]
-  INVAL --> DONE
-```
+<DiagramFlow :steps="[
+  { label: 'Anchor formula evaluates' },
+  { label: 'Compute result shape', note: 'scalar · row · column · 2-D' },
+  { label: 'Spill rectangle empty?', note: 'yes → write spill range, store shape on anchor; no → #SPILL! at anchor, no values written' },
+  { label: 'Shape changed vs last eval?', note: 'yes → mark dependents dirty in old ∪ new rectangle; no → spill stable' }
+]" label="Spill evaluation: anchor evaluates, shape computed, collision checked, dependents invalidated on shape change" />
 
 ## Functions that spill
 
@@ -43,12 +38,19 @@ Spill behavior is most visible with:
 
 Implicit intersection (`@`) is still supported for backward compatibility with workbooks authored in pre-dynamic-array Excel.
 
+## v0.9.3 array-function updates
+
+v0.9.3 fixed two behaviors that bear directly on the spill rules above:
+
+- Implicit broadcasting between mismatched array shapes now follows Excel's actual array-broadcast rule, instead of an approximation — this is what "follow Excel's error rules per function family" means above.
+- `INDEX`, `XLOOKUP`, and `INDIRECT` range results now route through the dynamic-array allocator and spill like any other array-producing formula, instead of collapsing to a single scalar.
+
 ## v0.9.2 array-function updates
 
 v0.9.2 tightened Excel parity for several array-aware functions:
 
 - `MAP` and `MAKEARRAY` now spill errors in the same shape Excel reports for the covered oracle cases.
-- `WRAPROWS` and `WRAPCOLS` align their output shape and padding behavior with the Mac Excel oracle.
+- `WRAPROWS` and `WRAPCOLS` align their output shape and padding behavior with the captured Excel oracle data.
 - `TRIMRANGE` blank handling was adjusted so leading / trailing blank rows and columns match the oracle more closely.
 
 ## Recalculation interaction
@@ -70,7 +72,7 @@ WASM and Native Node expose `spillInfo(sheet, row, col)` and the MCP `formulon_t
 
 ## Compatibility caveats
 
-Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE arrays exist in the same sheet. Mixed dynamic-array / CSE workbooks should be checked against oracle fixtures before relying on the results.
+Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE arrays exist in the same sheet. Mixed dynamic-array / CSE workbooks should be checked against the goldens before relying on the results.
 
 ## Read next
 

@@ -6,18 +6,26 @@ Formulon treats compatibility as a *measured property*. It does not claim generi
 A compatibility claim that points at a profile and a body of oracle data that proves it. "Compatible with `win-365-ja_JP`" means *we ran this on Excel and captured the values*. "Excel-compatible" without a profile is intentionally not used.
 :::
 
-```mermaid
-flowchart LR
-  EXCEL[Excel build<br/>e.g. Win 365 ja-JP] -->|capture| ORACLE[Oracle dataset]
-  ORACLE -->|verifies| PROFILE[Compatibility profile<br/>win-365-ja_JP]
-  WB[Workbook] --> ENGINE[Formulon engine]
-  PROFILE --> ENGINE
-  ENGINE --> RESULT[Calculated values]
-  RESULT -->|compare vs oracle| DIVERGE{Divergence?}
-  DIVERGE -->|none| OK[Profile claim holds]
-  DIVERGE -->|tracked| NOTE[Accepted divergence<br/>+ reason + last-verified build]
-  DIVERGE -->|untracked| BUG[Bug — fix or document]
-```
+Capturing a profile is a one-way pipeline from a real Excel build to a reusable dataset:
+
+<DiagramFlow :steps="[
+  { label: 'Excel build', note: 'e.g. Win 365 ja-JP' },
+  { label: 'Oracle dataset', note: 'captured' },
+  { label: 'Compatibility profile', note: 'win-365-ja_JP — verified' }
+]" />
+
+Every recalculation then checks itself against that same oracle data:
+
+<DiagramLayers :layers="[
+  { title: 'Inputs', nodes: ['Workbook', 'Compatibility profile'] },
+  { nodes: ['Formulon engine'] },
+  { nodes: ['Calculated values'] },
+  { title: 'Compare vs oracle data', nodes: [
+    { label: 'No divergence', note: 'profile claim holds' },
+    { label: 'Tracked divergence', note: 'reason + last-verified build' },
+    { label: 'Untracked divergence', note: 'bug — fix or document' }
+  ] }
+]" />
 
 ## Profiles
 

@@ -1,6 +1,6 @@
 # Native Node Integration
 
-`@libraz/formulon-native` is a Node.js [N-API](https://nodejs.org/api/n-api.html) addon. It exposes a subset of the WASM package shape while running as a native binary, so it avoids both the WASM heap-copy overhead and the cross-origin isolation requirements that the browser path carries.
+The Native Node package in `packages/npm-native` is a Node.js [N-API](https://nodejs.org/api/n-api.html) addon. It exposes the same Workbook shape as the WASM package while running as a native binary, so it avoids both the WASM heap-copy overhead and the browser-only cross-origin isolation requirements.
 
 ::: info Glossary: N-API
 A C ABI Node provides for native addons. Modules built against N-API run on any Node version that ships the same API level, so the same prebuilt `.node` binary works across multiple Node minor versions.
@@ -12,22 +12,28 @@ Choose it when:
 - large workbooks make WASM heap copies expensive,
 - you want native scheduler behavior without browser isolation constraints.
 
-::: warning MVP subset
-The Native Node binding currently exposes a focused subset of the WASM surface. Use WASM when the application needs the broader workbook-management API today (styles, conditional formatting, layout, pivot tables, comments, hyperlinks, …).
+::: info Surface parity
+The native package exposes the same 174 Workbook instance methods and the same three static factories (`createDefault`, `createEmpty`, `loadBytes`) as the WASM package, including the v0.9.4 `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` additions. WASM additionally exposes a `delete()` lifecycle method, since it has no host garbage collector to release native memory for it. Result envelopes and value shapes are otherwise byte-identical; the reasons to choose Native Node are operational, not API completeness.
 :::
 
-## Install
+## Availability
+
+The native Node addon exists in the source tree as `packages/npm-native`, but it is not currently published to the public npm registry. Use this path when you build from a Formulon checkout or stage the package for your own deployment.
+
+From a source checkout:
 
 ```sh
-yarn add @libraz/formulon-native@0.9.2
+make node-native
+make node-package
+make node-test
 ```
 
-Prebuilt binaries are published per `(os, arch)`. The installer picks the matching artifact at install time.
+Then import the staged package from `packages/npm-native/dist/index.mjs`, or publish/stage it through your own internal package flow.
 
 ## Usage
 
 ```js
-import { Workbook, ValueKind, evalFormula } from '@libraz/formulon-native'
+import { Workbook, ValueKind, evalFormula } from './packages/npm-native/dist/index.mjs'
 
 console.log(evalFormula('=SUM(1,2,3)'))
 
@@ -43,21 +49,26 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 
 Native handles do not need an explicit `delete()` call — the addon ties native memory to the JS object's GC. The pattern is otherwise identical to the WASM surface.
 
-## Current subset
+## API surface
 
 | Group | Methods |
 | --- | --- |
 | Factories | `Workbook.createDefault()`, `createEmpty()`, `loadBytes(bytes)` |
 | Cell mutation | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula` |
-| Read | `getValue` |
-| Engine | `recalc`, `save` |
-| Sheets | `addSheet`, `removeSheet`, `renameSheet`, `sheetCount`, `sheetName` |
-| Names | `setDefinedName` |
+| Recalc and readback | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `save`, `spillInfo`, `precedents`, `dependents` |
+| Sheets and structure | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, row/column insert/delete, names, tables, passthrough parts |
+| Rich workbook data | styles, merges, comments, `getComments`, hyperlinks, validations, conditional formatting, sheet view/layout/protection |
+| PivotTables | pivot cache and pivot table creation, mutation, and layout projection |
+| Policy and catalog | calc mode, Excel profile id, function metadata, localized names, external links |
 | Top-level | `evalFormula`, `version`, `lastErrorMessage`, `lastErrorContext`, `statusString` |
 
-The full WASM surface is larger. Treat Native Node as the performance-oriented Node path, not as the most complete JavaScript API yet.
+The authoritative method list is the package TypeScript declaration file. Treat Native Node as the performance-oriented Node path when you can ship a platform-specific binary; choose WASM when you need a browser or no native addon.
+
+::: tip evaluateFormulaText / evaluateConditionalFormula are read-only
+Both v0.9.4 additions evaluate formula text against the current workbook state without mutating it or joining the dependency graph — nothing recalculates as a side effect. Array and spill results are reduced to their top-left element; this is a deliberate Phase 1 API shape, not a bug. See [Dynamic arrays](/workbook/dynamic-arrays) for how spill ranges normally work.
+:::
 
 ## Read next
 
 - [Surface matrix](/api/surfaces) — what each binding currently exposes.
-- [Workbook operations](/workbook/operations) — what the wider API can do (and what is missing here).
+- [Workbook operations](/workbook/operations) — what the shared workbook API can do.

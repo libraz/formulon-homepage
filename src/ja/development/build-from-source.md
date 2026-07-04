@@ -47,7 +47,7 @@ make size-check
 
 ## Python パッケージ
 
-CMake、Python 3.9+、setuptools、wheel が必要です。
+CMake、Python 3.9+、setuptools、wheel、そして [Emscripten](https://emscripten.org/) が必要です ─ `make python-package` は組み込み用 `formulon_capi.wasm` を `emcmake` でビルドする `wasm-capi` target に依存します。
 
 ```sh
 make python-package
@@ -65,7 +65,7 @@ make node-package
 make node-test
 ```
 
-N-API アドオンをビルド、ステージ、スモークテストします。ビルド済みバイナリは CI から `(os, arch)` 別に公開されており、ローカル target は主に開発用です。
+アドオンをビルドし（`node-native`）、パッケージレイアウトへステージし（`node-package`）、`node --test` で N-API テストスイートを実行します（`node-test`）。ビルド済みバイナリは CI から `(os, arch)` 別に公開されており、ローカル target は主に開発用です。
 
 ## Oracle ツール群
 
@@ -77,7 +77,7 @@ make oracle-gen
 make oracle-verify
 ```
 
-CI 検証はコミット済みの期待値データを読むだけで、Excel は起動しません。コントリビュータ向けフローは [Oracle 提供](/ja/development/oracle-contribution) を参照。
+CI 検証はコミット済みのゴールデンデータを読むだけで、Excel は起動しません。コントリビュータ向けフローは [Oracle 提供](/ja/development/oracle-contribution) を参照。
 
 ::: tip 必要最小限の集合を選ぶ
 数式評価器だけ触るコントリビュータは通常 `make build && make test` で十分です。WASM パッケージングだけ触るなら `make wasm && make npm-test && make size-check`。全 target を回す変更はそれほど多くありません。

@@ -1,13 +1,15 @@
 ---
 title: formulon-cell
-description: formulon-cell is a beta spreadsheet UI package built primarily as a Formulon browser demonstration host.
+description: formulon-cell is a reference UI library for Formulon browser integration testing.
 ---
 
 # formulon-cell
 
-`@libraz/formulon-cell` is a beta spreadsheet UI package that sits on top of the `@libraz/formulon` WASM calculation engine. In this site it is used primarily as a **demonstration host**: Formulon remains the headless engine, while `formulon-cell` provides a concrete workbook surface for browser inspection.
+`@libraz/formulon-cell` is a publicly available **reference UI library for Formulon integration testing**. It sits on top of the `@libraz/formulon` WASM calculation engine so the browser package can be exercised through a workbook-like surface.
 
-Use it when you want desktop-spreadsheet-style chrome around the engine — a canvas-rendered grid, formula bar, status bar, sheet tabs, selection, keyboard editing, context menus, runtime i18n, theme tokens, and optional authoring dialogs. If your application only needs calculation, workbook loading, or headless regression checks, start with the Formulon runtime docs instead.
+It is not a complete spreadsheet product. It does not cover every workbook feature, does not try to match Excel UI/UX exactly, and may still contain UI bugs. Use it as a reference implementation and integration-test harness for the engine.
+
+The package includes desktop-spreadsheet-style chrome around the engine — a canvas-rendered grid, formula bar, status bar, sheet tabs, selection, keyboard editing, context menus, runtime i18n, theme tokens, and optional authoring dialogs. If your application only needs calculation, workbook loading, or headless regression checks, start with the Formulon runtime docs instead.
 
 ::: info Glossary: chrome (UI)
 The non-content parts of a UI surface that surround the working area — toolbars, menus, status bar, scrollbars, dialogs. *Chrome* in this sense is unrelated to the Chrome browser.
@@ -17,14 +19,14 @@ The non-content parts of a UI surface that surround the working area — toolbar
 A grid drawn into an HTML `<canvas>` element rather than as DOM nodes. The grid stays performant on workbooks with tens of thousands of cells because cells are not individual elements; the trade-off is that DOM-based accessibility and CSS styling apply only to the chrome around the canvas.
 :::
 
-## What It Shows
+## What It Is For
 
-- A real browser workbook backed by `@libraz/formulon`.
+- Exercising a real browser workbook backed by `@libraz/formulon`.
 - Function entry, formula recalculation, and visible cell results.
 - A canvas-rendered spreadsheet surface using the same store and command helpers that host applications can compose.
 - Runtime i18n with `en` and `ja` dictionaries.
 - Light (`paper`) and dark (`ink`) themes through CSS variable tokens.
-- A deliberately app-like UI for this demonstration, not the canonical Formulon product interface.
+- A reference UI for integration testing and examples, not the canonical Formulon product interface.
 
 ## Packages
 
@@ -45,39 +47,52 @@ npm install @libraz/formulon-cell-vue vue
 `zustand` is exposed as a peer dependency so host applications can subscribe to *the same store* the built-in chrome subscribes to. This lets you build custom status bars, side panels, or analytics observers without forking the package.
 :::
 
-## Stub engine fallback
+## No SharedArrayBuffer, no silent fallback
 
-The WASM engine ships pthread-enabled and needs `SharedArrayBuffer`. Without cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp`), `formulon-cell` falls back to an in-memory **stub engine**: the UI keeps rendering and responding to selection and edit gestures, but formula evaluation, recalculation, and `.xlsx` round-trip degrade to no-ops.
+The WASM engine ships pthread-enabled and needs `SharedArrayBuffer`. Without cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp`), `WorkbookHandle.createDefault()` **rejects** — it does not quietly hand you a degraded engine. A host configuration problem should look like an error, not like a spreadsheet that mysteriously never recalculates.
 
-```mermaid
-flowchart TD
-  A[formulon-cell mounts] --> B{COOP / COEP +<br/>SharedArrayBuffer?}
-  B -->|yes| C[WASM engine loads]
-  C --> D[Real recalc,<br/>.xlsx round-trip,<br/>formula evaluation]
-  B -->|no| E[Stub engine loads]
-  E --> F[UI works:<br/>selection / edit gestures]
-  E --> G[recalc / save / formulas<br/>are no-ops]
-  G --> H[isUsingStub returns true<br/>→ warn the user]
-```
+<DiagramLayers :layers="[
+  { nodes: ['Spreadsheet.mount(host, options)'] },
+  { nodes: ['WorkbookHandle.createDefault()'] },
+  { title: 'SharedArrayBuffer available?', nodes: [
+    { label: 'Yes', note: 'COOP/COEP set correctly' },
+    { label: 'No, preferStub not set', note: 'default behavior' },
+    { label: 'No, preferStub: true', note: 'explicit opt-in' }
+  ] },
+  { title: 'Outcome', nodes: [
+    { label: 'WASM engine loads', note: 'real recalc, .xlsx round-trip, formula evaluation' },
+    { label: 'Promise rejects', note: 'host catches via try/catch or MountOptions.onError' },
+    { label: '簡易エンジン (stub) loads', note: 'wb.isStub / isUsingStub() → true — tests/demos only' }
+  ] }
+]" label="Spreadsheet.mount flow: WorkbookHandle.createDefault rejects without SharedArrayBuffer unless preferStub is set" />
 
-Detect at runtime:
+Pass `preferStub: true` only for tests and explicit demos — never as a silent production fallback. Wrap the call so the rejection has somewhere to go:
 
 ```ts
-import { WorkbookHandle, isUsingStub } from '@libraz/formulon-cell'
+import { WorkbookHandle } from '@libraz/formulon-cell'
 
-const wb = await WorkbookHandle.createDefault()
-if (isUsingStub()) {
-  console.warn('formulon-cell: stub engine in use — recalc disabled')
+try {
+  const wb = await WorkbookHandle.createDefault()
+  // wb.isStub is false here — the real WASM engine is running
+} catch (err) {
+  // SharedArrayBuffer missing (no COOP/COEP) or WASM failed to init
+  showConfigurationError(err)
 }
+
+// Tests / demos only — never as an automatic production fallback:
+const wb = await WorkbookHandle.createDefault({ preferStub: true })
+wb.isStub // true
 ```
+
+`Spreadsheet.mount()` propagates the same rejection; pass `MountOptions.onError` (and optionally `renderError: false`) if you'd rather handle the failure yourself than let core render its built-in error panel. See [Embedding guide](/cell/embedding#lifecycle-hooks) for `onError` and the framework adapters' `error` event / `errorFallback` prop.
 
 See [Bundler setup](/cell/bundler) for the hosting headers and [Install](/cell/install) for the runtime contract.
 
-## Full Demo
+## Reference Playground
 
-The homepage includes a compact live function picker. The fuller UI/UX demo opens the bundled `formulon-cell` playground in an overlay window so it remains clearly framed as a demo surface.
+The homepage includes a compact live function picker. The larger playground opens the bundled `formulon-cell` UI in an overlay window so it remains clearly framed as an integration-test surface rather than the Formulon product itself.
 
-[Open the full UI demo](/cell/demo)
+[Open the reference playground](/cell/demo)
 
 ## Read next
 

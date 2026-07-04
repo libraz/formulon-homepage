@@ -12,6 +12,15 @@ formulon --help
 The CLI follows a two-tier convention. Cell-level Excel errors (`#DIV/0!`, `#VALUE!`, …) print to stdout and the process returns 0 — the command succeeded, the formula simply produced an error value. Structural failures (missing file, bad bytes, internal engine failure) return non-zero so shell scripts can branch on `$?`.
 :::
 
+<DiagramLayers label="Two-tier exit-code convention" :layers="[
+  { nodes: ['Command runs (eval / recalc / dump)'] },
+  { nodes: [
+      { label: 'Cell-level Excel error', note: 'stdout + exit 0' },
+      { label: 'Structural failure', note: 'stderr + non-zero exit' }
+    ]
+  }
+]" />
+
 ## `eval`
 
 ```sh
@@ -38,12 +47,14 @@ Cell-level Excel errors print to stdout and return exit code 0. Structural failu
 formulon recalc [--iterative] [--quiet] <in.xlsx> -o <out.xlsx>
 ```
 
-Loads an `.xlsx`, recalculates, and writes a new workbook.
+Loads a workbook, recalculates, and writes a new workbook.
 
 | Flag | Effect |
 | --- | --- |
 | `--iterative` | Enable iterative calculation for intentional cycles |
 | `--quiet` | Suppress progress / status output |
+
+The output container format is chosen from `-o`'s extension: `.xlsb` writes MS-XLSB, any other extension (or none) writes OOXML `.xlsx`. The input file's format is auto-detected from its bytes, not its extension, so `<in>` may itself be `.xlsb` even though the usage string says `<in.xlsx>`.
 
 ## `dump`
 
@@ -57,6 +68,8 @@ formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx>
 | `--values` | Non-blank cells after recalculation |
 | `--sheets` | Sheet names in document order |
 | `--metadata` | Defined names, tables, passthrough parts |
+
+Like `recalc`, the input format is content-sniffed rather than restricted to `.xlsx` — `.xlsb` input works for every dump mode.
 
 ::: tip CI use
 `dump --formulas` and `dump --metadata` skip recalculation, so they are cheap enough to gate every PR. `dump --values` recalculates first, so it is the right snapshot for golden-output tests.

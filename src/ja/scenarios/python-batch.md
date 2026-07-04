@@ -12,25 +12,22 @@ cron / Airflow / GitHub Actions / クラウドスケジューラなどから定�
 
 ## 流れ
 
-```mermaid
-sequenceDiagram
-  participant Job as バッチジョブ
-  participant FS as ファイルシステム
-  participant WB as Workbook
-  Job->>FS: テンプレートのバイト列読込
-  Job->>WB: Workbook.load(bytes)
-  Job->>WB: set_number / set_formula(入力)
-  Job->>WB: recalc()
-  Job->>WB: get_value(検証)
-  alt 検証 OK
-    Job->>WB: save()
-    WB-->>Job: 出力バイト列
-    Job->>FS: 出力書込
-  else 検証 NG
-    Job-->>Job: log + raise
-  end
-  Note over WB: with ブロックを抜けると<br/>ネイティブハンドルが解放
-```
+<DiagramLayers
+  :layers="[
+    { nodes: ['テンプレートのバイト列を読み込む（ファイルシステム）'] },
+    { nodes: ['Workbook.load(bytes)'] },
+    { nodes: ['set_number / set_formula（入力を設定）'] },
+    { nodes: ['recalc()'] },
+    { nodes: ['get_value（検証）'] },
+    { nodes: [
+      { label: '検証 OK → save()', note: '出力バイト列をファイルシステムへ書込' },
+      { label: '検証 NG', note: 'log + raise' }
+    ] }
+  ]"
+  label="バッチジョブの流れ。テンプレートのバイト列読込、Workbook.load、set_number / set_formula での入力設定、recalc、get_value による検証を経て、検証 OK なら save して書き込み、検証 NG なら log して raise する"
+/>
+
+`Workbook` を包む `with` ブロックは、どちらの分岐でもネイティブハンドルを抜け際に解放します。失敗分岐で例外が送出される場合も同様です。
 
 ## ジョブの例
 
@@ -46,8 +43,6 @@ def recalc_report(input_path: Path, output_path: Path, revenue: float) -> None:
 
 recalc_report(Path("template.xlsx"), Path("report.xlsx"), 125_000.0)
 ```
-
-`with` ブロックを抜けるとネイティブハンドルが解放されます。内部で例外が出ても確実に走ります。
 
 ## 複数セルを変更する
 
@@ -95,7 +90,7 @@ formulon dump --values report.xlsx > report.values.txt
 git diff --exit-code report.values.txt
 ```
 
-Python の入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を一連の流れとして検知できます。
+Python の実行入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を一連の流れとして検知できます。
 
 ::: warning 揮発性の入力は要対処
 `NOW` / `TODAY` / `RAND` / ネットワーク関数は非決定的です。期待値スナップショットに含めるなら、テンプレート側で固定値に置き換えるか、スナップショット範囲外に移動してください。
@@ -121,7 +116,7 @@ except FormulonError as e:
 
 ## 適合性の確認
 
-| ワークフロー | 推奨実行環境 |
+| ワークフロー | 推奨実行入口 |
 | --- | --- |
 | cron 駆動の夜間レポート | Python |
 | Jupyter / Colab ノートブック | Python |

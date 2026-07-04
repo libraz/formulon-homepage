@@ -1,6 +1,6 @@
 # Install
 
-Use the surface that matches where the workbook will run. Formulon 0.9 packages are alpha packages: pin exact versions in applications and expect API growth before the first stable release.
+Use the surface that matches where the workbook will run. Formulon 0.9 packages are pre-1.0: pin exact versions in applications and expect API growth before the first stable release.
 
 ::: warning Pin versions
 Use exact package versions for experiments and internal tooling. Do not float on `latest` while APIs and packaging are still pre-stable.
@@ -9,10 +9,10 @@ Use exact package versions for experiments and internal tooling. Do not float on
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.9.2
+yarn add @libraz/formulon@0.9.4
 ```
 
-Use this for browsers, workers, and Node-based services that should run the WASM build. The package is ESM-only and requires Node 18+ when used in Node.
+Use this for browsers, workers, and Node-based services that should run the WASM build. The package is ESM-only and requires Node 22 or newer when used in Node.
 
 For browser hosting, configure cross-origin isolation when pthread workers are enabled:
 
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.9.2
+python -m pip install formulon==0.9.4
 ```
 
 Use this for scripts, notebooks, and batch jobs. The wheel ships a standalone

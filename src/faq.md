@@ -14,7 +14,7 @@ The default profile is `win-365-ja_JP`, modelled on Excel 365 for Windows with t
 
 ### How many Excel functions can it run?
 
-As of v0.9.2, Formulon recognizes **522** Excel function names. **505 / 522** are real local implementations in the calculation engine.
+Formulon recognizes **522** Excel function names. **505 / 522** are real local implementations in the calculation engine.
 
 The remaining 17 are 2 environment-bound functions (`CELL`, `INFO`) and 15 unavailable service / connection stubs: `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, `TRANSLATE`, `DETECTLANGUAGE`, and the CUBE functions. These names are recognized, but they are not local implementations. See [Formula coverage](/compatibility/formula-coverage).
 
@@ -27,6 +27,10 @@ Formulon recognizes the names so workbooks fail in a predictable, Excel-shaped w
 ### Do results exactly match Excel?
 
 Formulon checks behavior against Excel oracle data per profile, such as `win-365-ja_JP`. That is not a blanket guarantee for every workbook. Locale behavior, volatile functions, external-service dependencies, file structures, and undocumented Excel details can still produce differences.
+
+<DiagramFlow steps="Excel (reference) → captured oracle data → profile (win-365-ja_JP) → divergence.yaml → Formulon output" label="How a compatibility profile is built and checked" />
+
+Real Excel is the reference. Its observed behavior is captured as oracle data, organized under a named profile such as `win-365-ja_JP`, and any accepted difference from that reference is recorded in `divergence.yaml` with a reason and last-verified Excel build — rather than left as an unexplained mismatch in Formulon's output. See [Oracle testing](/compatibility/oracle-testing) for the full pipeline.
 
 For business-critical workbooks, pin the Formulon version and profile, and keep representative workbook fixtures.
 
@@ -60,7 +64,9 @@ English-locale profiles are intentionally not exposed until matching oracle data
 
 The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, CLI, and MCP surfaces are primarily designed to load `.xlsx`, recalculate, and save `.xlsx`.
 
-Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. The core has MS-XLSB reader / writer code, but the FAQ treats `.xlsx` as the standard user-facing path. Legacy `.xls` / BIFF is out of scope.
+`.xlsb` (MS-XLSB) is also read and written. As of v0.9.3, styles, cross-sheet 3-D references, workbook-scope defined names (including `LET` and future-function names), and dynamic-array spill formulas all round-trip through `.xlsb`. Conditional formatting, pivot tables, comments, and data validation are still OOXML-only, and array-constant literals in `.xlsb` are limited to numeric elements. The CLI and `saveEx` / `save_ex` APIs pick the format from the output extension (`-o file.xlsb` writes MS-XLSB) and sniff the input format by content rather than extension.
+
+Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. Legacy `.xls` / BIFF is out of scope.
 
 ### Does it execute VBA?
 
@@ -72,7 +78,7 @@ No. PowerQuery, DAX, live external connections, Web / OData / OLAP refresh, and 
 
 ### What about pivot tables?
 
-Pivot cache and PivotTable structure preservation, C ABI / WASM pivot operations, and pivot layout inspection are implemented. v0.9.2 added workbook oracle coverage for pivot tables through the Windows Excel bridge.
+Pivot cache and PivotTable structure preservation, pivot operations, and pivot layout inspection are implemented, with full parity across the C API, Node addon, WASM, and Python bindings since v0.9.3. v0.9.2 added workbook oracle coverage for pivot tables through the Windows Excel bridge.
 
 Formulon is not a replacement for Excel's external-data refresh and pivot-cache rebuild pipeline.
 
@@ -86,7 +92,7 @@ Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs
 
 The Formulon engine is headless. Grid rendering and interactive spreadsheet UI are not part of the core engine.
 
-[`@libraz/formulon-cell`](/cell/) and its Vue wrapper are separate beta UI packages. Treat them as browser UI integration layers, not as a complete Excel UI replacement.
+[`@libraz/formulon-cell`](/cell/) and its framework wrappers are public reference UI libraries for browser integration testing. They are useful examples of wiring the engine to a workbook-like surface, but they are not complete Excel-compatible UI products: feature coverage is partial, UI/UX intentionally does not mirror Excel exactly, and UI bugs may remain.
 
 ### Can I safely run arbitrary `.xlsx` files from users?
 
@@ -121,8 +127,8 @@ Pick by deployment target:
 | Use case | Recommended surface |
 | --- | --- |
 | Browser calculation | `@libraz/formulon` (WASM) |
-| Broad Workbook API in Node.js | `@libraz/formulon` (WASM) |
-| Native Node execution | `@libraz/formulon-native` (MVP subset) |
+| Browser or no-native-addon Node.js | `@libraz/formulon` (WASM) |
+| Native Node execution from a source checkout | `packages/npm-native` |
 | Python batches or notebooks | `formulon` on PyPI |
 | Shell or CI jobs | CLI from GitHub Releases |
 | AI-agent workbook editing | `@libraz/formulon-mcp` |
@@ -135,9 +141,9 @@ No. The `formulon` wheel is `py3-none-any` and ships `formulon_capi.wasm` plus a
 
 ### Does Native Node expose the full WASM API?
 
-No. `@libraz/formulon-native` is an N-API addon, but in v0.9.2 it is an MVP subset: `Workbook.createDefault()`, `loadBytes()`, cell reads and writes, `recalc()`, `save()`, sheet add/remove/rename, `setDefinedName()`, and top-level `evalFormula()`.
+Yes for the Workbook shape. The source-tree Native Node package under `packages/npm-native` exposes the same 174 Workbook instance methods plus the three static factories (`createDefault` / `createEmpty` / `loadBytes`) as the WASM-backed package, including the v0.9.4 `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` additions. WASM additionally exposes a `delete()` lifecycle method, since it has no host garbage collector to free the underlying engine instance. Result envelopes and value shapes are otherwise the same.
 
-Use the WASM package when you need the broader Workbook API today: styles, conditional formatting, layout, pivot tables, comments, hyperlinks, and similar workbook-management features.
+Choose Native Node when you build or stage the source-tree package and can deploy a platform-specific `.node` binary. It is useful for native threads and fewer heap copies on `loadBytes` / `save`. Choose WASM for browsers or Node deployments that cannot ship native addons.
 
 ### Does it work offline?
 
@@ -160,7 +166,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without those headers, `formulon-cell` may fall back to a minimal stub engine. The UI can keep responding, but formula evaluation, recalculation, and `.xlsx` round-trip are not running through the real engine.
+Without those headers, `@libraz/formulon` (the raw WASM package) has no fallback: `createFormulon()` hard-fails. `formulon-cell`'s `WorkbookHandle.createDefault()` also rejects by default when `SharedArrayBuffer` is unavailable; the in-memory stub engine only runs if the host opts in with `preferStub: true`. Use `wb.isStub` / `isUsingStub()` to detect the stub at runtime, and handle the rejection with `onError` or a `try`/`catch` around `createDefault()` instead of assuming a silent fallback.
 
 ### Are Vite warnings about `node:module` or `node:worker_threads` a problem?
 
@@ -218,7 +224,24 @@ No. The MCP server validates inputs and isolates sessions by `sessionId`. The lo
 
 The MCP server can still read and write files, so production use should control the client permissions, working directory, and allowed file scope.
 
-## 0.9.2
+## Recent Releases
+
+### What changed in v0.9.4 for users?
+
+v0.9.4 adds read-only ad-hoc formula evaluation on existing workbooks, on the C API, Node addon, and WASM surfaces (Python has no equivalent yet). `evaluateFormulaText` and `evaluateConditionalFormula` let hosts ask "what would this formula return here?" without writing a formula into a cell first. Evaluation is strictly read-only: it does not mutate the workbook or join the dependency graph, and array/spill results are reduced to their top-left element rather than returned as a range — see [Dynamic arrays](/workbook/dynamic-arrays) for what that element selection means in practice. They resolve workbook references and names, and the conditional-format path applies the relative-reference and predicate rules expected by Excel-style CF evaluation.
+
+It also adds comment enumeration (`getComments` on Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) for sheets, round-trips data-validation dropdown visibility with Excel's inverted `showDropDown` OOXML semantics handled for callers, and makes conditional-format rule creation (`addConditionalFormat` / `fm_sheet_cf_add_rule`) return the new rule's index. The comment and CF-index additions land on C API, Node addon, and WASM; the Python binding does not yet expose them, and Python's `add_conditional_format` still does not return the new rule's index.
+
+### What changed in v0.9.3 for users?
+
+v0.9.3 closed most of the remaining gaps between surfaces and file formats:
+
+- **Full binding-surface parity** across the C API, Node addon, WASM, and Python: pivot-cache worksheet source/layout, sheet-view display/orientation flags, `save_ex` (explicit XLSX/XLSB selection), sheet-scoped defined names, and conditional-format `ColorScale` / `DataBar` / `IconSet` payloads are now available identically on every binding.
+- **Conditional formatting** gained whole-row/whole-column `sqref` support and x14 data-bar overlay decoding (gradient, axis position, negative fill/border).
+- **XLSB protocol gaps closed**: styles, workbook-scope defined names (including `LET` and future-function names), cross-sheet 3-D references, and dynamic-array spill formulas now round-trip through `.xlsb` — several of these previously produced files real Excel could not open.
+- **OOXML round-trip fidelity**: `workbookPr` / `bookViews` / `workbookProtection`, `date1904`, table style info, and per-cell theme/indexed color specs all survive a load-modify-save cycle on real Excel-authored workbooks.
+
+See the [file format support matrix](/compatibility/file-format-support) for the current per-format detail.
 
 ### What changed in v0.9.2 for users?
 

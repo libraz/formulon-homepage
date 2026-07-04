@@ -58,4 +58,10 @@ onMounted(async () => {
   text-decoration: underline;
   fill: var(--vp-c-brand-2);
 }
+
+.svg-email:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 </style>

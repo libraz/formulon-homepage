@@ -1,6 +1,6 @@
 # Python API
 
-Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ小さな Python 向けラッパーです。公開 wheel は `py3-none-any`。プラットフォームランタイムは `pip` が `wasmtime` の wheel として解決します。
+Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ Python 向けラッパーです。公開 wheel は `py3-none-any`。プラットフォームランタイムは `pip` が `wasmtime` の wheel として解決します。
 
 ::: info 用語: py3-none-any wheel
 Python ABI タグ・プラットフォームタグ・ネイティブコードのいずれも持たない wheel。依存が解決できるなら、どの CPython 3 でも動きます。プラットフォーム依存部分は `wasmtime` が担い、`formulon` 自体には含まれません。
@@ -37,14 +37,24 @@ with Workbook.create_default() as wb:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`
-- `recalc`, `set_iterative`
-- `save`
+- `get_value`, `lambda_text_at`
+- `recalc`, `partial_recalc`, `set_iterative`
+- `save`, `save_ex`（XLSX / XLSB のコンテナ形式を選択）
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
+- シート構造編集、行 / 列編集、定義名
+- merges、`get_comment` / `set_comment`、hyperlinks、data validations
+- styles、conditional formats、sheet view / protection
+- pivot cache / table API、依存関係 trace、spill 情報、function metadata
 
 ::: tip ライフタイムは context manager
 `with` ブロックを抜けるとネイティブハンドルが解放されます。例外が出ても解放は走るため、`Workbook` 参照を `with` の外で持ち回さないでください。
 :::
+
+::: warning アドホック評価とコメント列挙は未対応
+Python には WASM / Native Node / C API の 0.9.4 で追加された `evaluate_formula_text` / `evaluate_conditional_format` に相当するメソッドがなく、コメントも単一セル向けの `get_comment` / `set_comment` のみです。シート単位でコメントを列挙する API はありません。実行入口ごとの対応状況は [実行入口の一覧](/ja/api/surfaces) を参照してください。
+:::
+
+正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。
 
 ## Values
 
@@ -55,8 +65,10 @@ value = wb.get_value(0, 0, 0)
 if value.kind is ValueKind.NUMBER:
     print(value.number)
 elif value.kind is ValueKind.ERROR:
-    print(value.error_code, value.error_text)
+    print(value.error_code)  # int の序数。対応表は /ja/compatibility/errors を参照
 ```
+
+Python の `Value` が持つのは `error_code` だけで、`error_text` というフィールドはありません。序数から `#DIV/0!` や `#VALUE!` のような記号表記への変換は、[エラーモデル](/ja/compatibility/errors) の対応表を使って呼び出し側で行ってください。
 
 ## エラー処理
 

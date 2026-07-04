@@ -8,15 +8,16 @@ The quickest way to understand Formulon is to recalculate a workbook you already
 
 ## Recommended path
 
-```mermaid
-flowchart LR
-  A[1. Install] --> B[2. Evaluate one formula]
-  B --> C[3. Recalculate one workbook]
-  C --> D{Result matches Excel?}
-  D -->|yes| E[4. Move to a use case]
-  D -->|no| F[Check coverage / file support /<br/>error model]
-  F --> C
-```
+<DiagramFlow
+  :steps="[
+    { label: '1. Install' },
+    { label: '2. Evaluate one formula' },
+    { label: '3. Recalculate one workbook' },
+    { label: 'Result matches Excel?', note: 'no → check coverage / file support / error model, then retry step 3' },
+    { label: '4. Move to a use case' }
+  ]"
+  label="Recommended path through the docs"
+/>
 
 1. Install the package for your runtime.
 2. Run one formula through Formulon.

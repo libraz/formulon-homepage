@@ -6,15 +6,19 @@ These pages show how Formulon fits into concrete workflows. Each scenario choose
 After the one-formula quick start, test one representative workbook as early as possible. Spreadsheet engines fail or succeed on workbook details, not only on isolated formulas.
 :::
 
-```mermaid
-flowchart TD
-  Q{What kind of work?}
-  Q -->|User uploads xlsx in browser| BU[Browser workbook upload<br/>WASM]
-  Q -->|Upload API / internal service| NS[Node service recalculation<br/>Native Node / WASM]
-  Q -->|Scheduled job / notebook| PB[Python batch recalculation<br/>Python]
-  Q -->|Detect drift in PRs| CI[CI workbook regression<br/>CLI]
-  Q -->|AI agent edits workbooks| MCP[Agent workbook editing<br/>MCP]
-```
+<DiagramLayers
+  :layers="[
+    { nodes: ['What kind of work?'] },
+    { nodes: [
+      { label: 'User uploads .xlsx in browser', note: 'Browser workbook upload · WASM' },
+      { label: 'Upload API / internal service', note: 'Node service recalculation · Native Node / WASM' },
+      { label: 'Scheduled job / notebook', note: 'Python batch recalculation · Python' },
+      { label: 'Detect drift in PRs', note: 'CI workbook regression · CLI' },
+      { label: 'AI agent edits workbooks', note: 'Agent workbook editing · MCP' }
+    ] }
+  ]"
+  label="Choose a scenario by the kind of work: browser upload leads to Browser workbook upload on WASM; upload API or internal service leads to Node service recalculation on Native Node or WASM; scheduled job or notebook leads to Python batch recalculation on Python; detecting drift in PRs leads to CI workbook regression on the CLI; AI agent edits lead to Agent workbook editing on MCP"
+/>
 
 | Scenario | Runtime | Goal |
 | --- | --- | --- |
@@ -35,6 +39,6 @@ Every scenario follows the same `load → mutate → recalc → save` lifecycle 
 
 ## Compatibility gate
 
-Before adopting any scenario, inspect the workbook's formulas and decide how to handle external-service functions. Formulon locally implements **505 / 522** catalogued names; the remaining entries are environment-bound or deliberate unavailable stubs such as `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE connection functions. Treat those as product decisions: reject the workbook, show a compatibility warning, or route it to an Excel-backed workflow.
+Before adopting any scenario, inspect the workbook's formulas and decide how to handle external-service functions. Formulon locally implements **505 / 522** catalogued names; the remaining 17 are either environment-bound (`CELL`, `INFO`) or deliberate unavailable service stubs such as `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE connection functions. Treat those as product decisions: reject the workbook, show a compatibility warning, or route it to an Excel-backed workflow.
 
 For runtime-specific setup, see [Runtimes](/runtimes/). For the engine-side flow, see [Workbook lifecycle](/workbook/lifecycle).

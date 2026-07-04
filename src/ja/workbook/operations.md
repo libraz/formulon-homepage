@@ -1,6 +1,6 @@
 # ワークブック操作
 
-Workbook API はセルの変更と再計算に加えて、構造編集も扱います。WASM バインディングが最も広い API を公開し、Python は安定した部分集合、CLI は再計算と調査に絞っています。
+Workbook API はセルの変更と再計算に加えて、構造編集も扱います。WASM、Native Node、Python は同じ C ABI に沿って広い Workbook API を公開し、CLI は再計算と調査に絞っています。
 
 ::: info 用語: 0-based 座標
 バインディングは `(sheet, row, col)` をすべて 0 から始まる整数で扱います。`Sheet1!A1` は `(0, 0, 0)` です。ロケール依存のアドレス解析を避け、C ABI と一致させるためです。A1 テキストは CLI 引数・数式文字列のように明示的に要求している箇所だけで使います。
@@ -20,7 +20,7 @@ try {
 }
 ```
 
-Python は安定した部分集合を公開します。
+Python でも同じ座標体系でシート操作を扱います。
 
 ```python
 with Workbook.create_default() as wb:
@@ -66,7 +66,7 @@ wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 
 ## レイアウト・style・metadata
 
-WASM バインディングが現時点で最も広いワークブック API を公開します。
+WASM、Native Node、Python の各バインディングは、次のようなワークブック操作を公開します。表面上の名前付けはホスト言語に合わせていますが、処理は同じ C ABI を通ります。
 
 - row / column の挿入・削除と formula 書き換え
 - defined names
@@ -81,9 +81,41 @@ WASM バインディングが現時点で最も広いワークブック API を�
 - merges、comments、hyperlinks、data validations
 - precedent / dependent の tracing
 - function metadata、function-name ヘルパ
-- 動的配列の spill information
+- 動的配列のスピル情報
 
-Python バインディングはワークブックの作成 / 読み込み、セル変更、再計算 / 保存、反復計算ヘルパーに意図的に絞った安定 API です。より広いワークブック管理 API が現時点で必要であれば、WASM・Native Node・あるいは C ABI を直接使ってください。
+条件付き書式ルールの追加（`addConditionalFormat()` / `fm_sheet_cf_add_rule`）も、新しい rule の flattened index を返すようになったため、ホスト側の UI 選択や後続編集がしやすくなりました。
+
+WASM と Native Node は、さらに comment の *列挙* を公開しています。`getComments(sheet)`（内部は `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）は、他のセルが空でも comment だけが付いているセルを含め、シート上のすべての comment を一覧できます。Python は既知の `(sheet, row, col)` に対する comment の読み書きを `get_comment()` / `set_comment()` で行えますが、シート全体の列挙 API はありません。Python から一覧が必要な場合は used range を走査してセルごとに `get_comment()` を呼んでください。
+
+### アドホック数式評価
+
+WASM と Native Node（C API）は、これに加えて読み取り専用のアドホック数式評価を公開しています — Python にはまだありません。`evaluateFormulaText()` と `evaluateConditionalFormula()` は、数式をセルへ書き込む前に「この場所でこの数式を評価したら何を返すか」に答えます。
+
+```ts
+const result = wb.evaluateFormulaText(/*sheet*/ 0, /*row*/ 0, /*col*/ 0, '=A1+B1')
+if (result.status.ok && result.value.kind === ValueKind.Number) {
+  console.log(result.value.number)
+}
+```
+
+これは読み取り専用です。ワークブックを変更せず、どこにも値を書き込まず、依存関係グラフにも参加しません — ここで評価しても、後の編集で dirty になるセルは増えません。配列・スピル結果もトップレフトの要素だけに縮約されます。この方法で `=SEQUENCE(3)` を評価すると 3 行のスピルではなく単一の数値が返ります。これは意図的な Phase 1 の API 形状であり、退行ではありません — 実際に `=SEQUENCE(3)` をセルへ書き込めば、通常どおりスピルします。数式を実際にセルへ書き込んだときのスピルの仕組みは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
+
+`evaluateConditionalFormula()` も同じ読み取り専用ルールに従いますが、加えてルールのアンカーからの相対参照シフトと、Excel の CF 述語変換(エラー / 空白 / 文字列 / 数値ゼロは `false`、それ以外の数値は `true`)を適用するため、結果はそのセルで実際の条件付き書式ルールが評価したときの値と一致します。
+
+通常の編集経路とアドホック経路は異なる問いに答えます。前者はあとで読み返せる値を確定させ、後者は使い捨ての「もし」問い合わせです。
+
+<DiagramFlow :steps="[
+  { label: 'setFormula()' },
+  { label: 'recalc()' },
+  { label: 'getValue()', note: 'model を変更する。結果は次の編集まで保持される' }
+]" label="通常の編集経路: setFormula、recalc、getValue" />
+
+<DiagramFlow :steps="[
+  { label: 'evaluateFormulaText()', note: '変更なし・依存関係グラフへの登録なし' },
+  { label: 'スカラー結果', note: '配列・スピル結果はトップレフトの要素に縮約される' }
+]" label="アドホック経路: evaluateFormulaText、読み取り専用、スカラーのみ" />
+
+CLI はセルを細かく編集する API ではなく、`eval`、`recalc`、`dump` などの調査・変換コマンドに絞っています。アプリケーションに組み込む場合は、WASM、Native Node、Python のいずれかを選んでください。
 
 ::: tip 実装済み関数を実行時に確認する
 WASM `Module.functionNames()` や MCP の `formulon function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。

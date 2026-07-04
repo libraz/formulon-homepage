@@ -10,7 +10,7 @@
 | PowerQuery / DAX | スプレッドシート数式とは別言語・別実行モデル。 |
 | pivot cache の再計算 | 構造保持は対象、再計算は別の実行モデルが必要。 |
 | ライブ外部接続（OLE DB / Web / OData） | 本番実行を決定論的・オフラインに保つため。 |
-| スプレッドシート UI | Formulon はヘッドレス。UI は上に乗せる（一例は [`formulon-cell`](/ja/cell/)）。 |
+| スプレッドシート UI | Formulon はヘッドレス。UI は上に乗せる。[`formulon-cell`](/ja/cell/) は結合試験用の参考 UI で、Excel 互換の完成 UI ではない。 |
 
 ::: info 用語: headless engine
 描画機能もエンドユーザー UI も持たない計算エンジンです。ホストが呼び、人間は直接触りません。ヘッドレスであれば、サーバージョブ・ブラウザタブ・CLI・UI ライブラリのいずれでも同じ意味論で動かせます。
@@ -29,7 +29,7 @@
 - VBA / マクロ → Excel そのもの、またはホスト独自の自動化
 - chart / drawing → Formulon で保持し、描画は別ライブラリ
 - PowerQuery → 上流で実行し、`.xlsx` を Formulon に渡す
-- UI → [`formulon-cell`](/ja/cell/)（ベータ版、ブラウザ UI）
+- UI → [`formulon-cell`](/ja/cell/)（結合試験と実装例のための参考 UI）
 
 ## 次に読むもの
 

@@ -2,15 +2,22 @@
 
 よくある組み込み時の失敗を扱います。
 
-```mermaid
-flowchart TD
-  S{症状} -->|SharedArrayBuffer 不可| A[COOP / COEP headers を設定]
-  S -->|bundler が node:* を警告| B[node: を external、<br/>optimizeDeps から除外]
-  S -->|loadBytes が invalid| C[wb.isValid を確認、<br/>lastErrorMessage を読む]
-  S -->|セルが #DIV/0! / #VALUE!| D[Excel エラーは値、<br/>value kind を見る]
-  S -->|Python から WASM が読めない| E[wheel を install、<br/>または make python-package]
-  S -->|CLI と Excel で結果が違う| F[profile / 揮発性 /<br/>保持のみを確認]
-```
+<DiagramLayers
+  :layers="[
+    {
+      title: '症状 → 対処法',
+      nodes: [
+        { label: 'SharedArrayBuffer が使えない', note: 'COOP / COEP headers を設定' },
+        { label: 'bundler が node:* を警告する', note: 'node: を external 指定し、optimizeDeps から除外' },
+        { label: 'loadBytes が invalid を返す', note: 'wb.isValid() を確認し、lastErrorMessage() を読む' },
+        { label: 'セルが #DIV/0! / #VALUE!', note: 'Excel エラーは値 — value kind を確認する' },
+        { label: 'Python から WASM が見つからない', note: 'wheel を install、または make python-package' },
+        { label: 'CLI の結果が Excel と違う', note: 'ロケール、揮発性関数、保持のみ（未評価）を確認' }
+      ]
+    }
+  ]"
+  label="トラブルシューティング早見表"
+/>
 
 ## SharedArrayBuffer が使えない
 
@@ -43,6 +50,13 @@ export default defineConfig({
 
 WASM では `loadBytes(bytes)` の直後に `wb.isValid()` を確認し、`Module.lastErrorMessage()` を読みます。
 
+```ts
+const wb = Module.Workbook.loadBytes(bytes)
+if (!wb.isValid()) {
+  throw new Error(Module.lastErrorMessage())
+}
+```
+
 ## 数式が Excel エラーを返す
 
 Excel エラーは値です。`#DIV/0!`、`#VALUE!`、`#NAME?` はホスト API の失敗ではありません。
@@ -63,7 +77,7 @@ source tree から import する場合は、C ABI WASM module が
 
 まず次を確認してください。
 
-- `PY` や CUBE 接続関数など、外部サービスがないため Excel エラーを返す関数か。
+- `PY` や CUBE 接続関数のように、外部サービススタブとして登録されているため意図的に Excel エラーを返す関数か。
 - `win-365-ja_JP` 外のロケール挙動に依存していないか。
 - 揮発性関数が絡んでいないか。
 - 保持はされるが評価対象ではないワークブック構造に依存していないか。

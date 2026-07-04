@@ -3,13 +3,13 @@
 Formulon exposes the same core through several packaging surfaces.
 
 ::: info Same engine, different host contracts
-Runtime choice affects packaging, memory lifetime, deployment, and error reporting. It should not change spreadsheet semantics.
+Surface choice affects packaging, memory lifetime, deployment, and error reporting. It should not change spreadsheet semantics.
 :::
 
 | Surface | Best for | Package |
 | --- | --- | --- |
 | WebAssembly | Browser apps, workers, Node services | `@libraz/formulon` |
-| Native Node | Node services that want a `.node` addon | `@libraz/formulon-native` |
+| Native Node | Node services that can build or stage a `.node` addon | `packages/npm-native` |
 | Python | Notebooks, batch jobs, data pipelines | `formulon` |
 | CLI | Shell scripts, CI checks, workbook inspection | GitHub Releases |
 | C ABI | Host applications and custom bindings | repository build |
@@ -18,19 +18,35 @@ Pick the highest-level surface that fits your deployment. Drop to the C ABI only
 
 ## Decision guide
 
-```mermaid
-flowchart TD
-  Q1{Where does it run?}
-  Q1 -->|Browser| WASM[WASM<br/>@libraz/formulon]
-  Q1 -->|Server / job| Q2{Language?}
-  Q1 -->|Shell / CI| CLI[CLI<br/>GitHub Releases]
-  Q1 -->|Agent / LLM| MCP[MCP server<br/>formulon-mcp]
-  Q2 -->|Python| PY[Python<br/>formulon]
-  Q2 -->|Node| Q3{Native install OK?}
-  Q2 -->|Other| ABI[C ABI<br/>repository build]
-  Q3 -->|Yes| NN[Native Node<br/>formulon-native]
-  Q3 -->|No| WASM
-```
+<DiagramLayers
+  :layers="[
+    {
+      title: 'Where does it run?',
+      nodes: [
+        { label: 'Browser', note: '→ WASM (@libraz/formulon)' },
+        { label: 'Server / job', note: '→ next: which language?' },
+        { label: 'Shell / CI', note: '→ CLI (GitHub Releases)' },
+        { label: 'Agent / LLM', note: '→ MCP server (formulon-mcp)' }
+      ]
+    },
+    {
+      title: 'Server / job: which language?',
+      nodes: [
+        { label: 'Python', note: '→ Python (formulon)' },
+        { label: 'Node', note: '→ next: native install OK?' },
+        { label: 'Other', note: '→ C ABI (repository build)' }
+      ]
+    },
+    {
+      title: 'Node: native install OK?',
+      nodes: [
+        { label: 'Yes', note: '→ Native Node (packages/npm-native)' },
+        { label: 'No', note: '→ WASM (@libraz/formulon)' }
+      ]
+    }
+  ]"
+  label="Decision guide: which surface to use"
+/>
 
 | Requirement | Recommended surface |
 | --- | --- |

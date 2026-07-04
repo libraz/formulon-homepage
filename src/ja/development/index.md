@@ -12,16 +12,16 @@
 | --- | --- |
 | ローカルでビルドする | [ソースからビルド](/ja/development/build-from-source) |
 | テストを実行する | [テストマトリクス](/ja/development/test-matrix) |
-| Excel 由来の期待値を追加する | [Oracle 提供](/ja/development/oracle-contribution) |
+| Excel の Oracle データを追加する | [Oracle 提供](/ja/development/oracle-contribution) |
 
 ## コードマップ
 
 | 領域 | 参照先 |
 | --- | --- |
 | C++ 計算コア | [C++ コア](/ja/development/core) |
-| 実行環境ごとのバインディング | [バインディング](/ja/development/bindings) |
+| 実行入口ごとのバインディング | [バインディング](/ja/development/bindings) |
 | 内部構造 | [アーキテクチャ](/ja/development/architecture) |
 | ブラウザ向けパッケージのサイズ | [サイズ予算](/ja/development/size-budgets) |
 | リリース作業 | [リリースチェックリスト](/ja/development/release-checklist) |
 
-Formulon の開発運用では再現性を重視します。同じコア revision から各パッケージを作り、Oracle データを更新し、許容する差分を記録し、実行環境間の結果一致を確認します。
+Formulon の開発運用では再現性を重視します。同じコア revision から各実行入口をパッケージし、Oracle データを更新し、許容する差分を記録し、実行入口間の結果一致を確認します。

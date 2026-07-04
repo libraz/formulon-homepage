@@ -1,25 +1,24 @@
 <script setup lang="ts">
-import type { SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
-import type { RibbonTab } from '@libraz/formulon-cell-vue'
+import type {
+  RibbonTab,
+  SpreadsheetInstance,
+  ToolbarInstance,
+  WorkbookHandle
+} from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
-import { computed, defineAsyncComponent, onBeforeUnmount, ref } from 'vue'
-
-const Spreadsheet = defineAsyncComponent(async () => {
-  const mod = await import('@libraz/formulon-cell-vue')
-  return mod.Spreadsheet
-})
-
-const SpreadsheetToolbar = defineAsyncComponent(async () => {
-  await import('@libraz/formulon-cell-vue/toolbar.css')
-  const mod = await import('@libraz/formulon-cell-vue/toolbar.vue')
-  return mod.default
-})
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const { lang, isDark } = useData()
 const isJa = computed(() => lang.value === 'ja')
 const open = ref(false)
 const instance = ref<SpreadsheetInstance | null>(null)
 const activeTab = ref<RibbonTab>('home')
+const toolbarHost = ref<HTMLDivElement | null>(null)
+const sheetHost = ref<HTMLDivElement | null>(null)
+
+let toolbar: ToolbarInstance | null = null
+let spreadsheet: SpreadsheetInstance | null = null
+let cellApi: Awaited<typeof import('@libraz/formulon-cell')> | null = null
 
 const regions = [
   ['Tokyo', 12800, 7400],
@@ -94,23 +93,65 @@ const copy = computed(() =>
 const openDemo = () => {
   open.value = true
   document.documentElement.classList.add('cell-demo-overlay-open')
+  void mountDemo()
 }
 
 const closeDemo = () => {
   open.value = false
+  toolbar?.dispose()
+  toolbar = null
+  spreadsheet?.dispose()
+  spreadsheet = null
   instance.value = null
   document.documentElement.classList.remove('cell-demo-overlay-open')
 }
 
-const onReady = (inst: SpreadsheetInstance) => {
-  instance.value = inst
+const mountDemo = async () => {
+  await nextTick()
+  const toolbarEl = toolbarHost.value
+  const sheetEl = sheetHost.value
+  if (!open.value || !toolbarEl || !sheetEl) return
+  cellApi ??= await import('@libraz/formulon-cell')
+
+  toolbar?.dispose()
+  toolbar = null
+  spreadsheet?.dispose()
+  spreadsheet = await cellApi.Spreadsheet.mount(sheetEl, {
+    theme: isDark.value ? 'ink' : 'paper',
+    locale: isJa.value ? 'ja' : 'en',
+    seed: seedSheet
+  })
+  instance.value = spreadsheet
+  toolbar = cellApi.Spreadsheet.mountToolbar(toolbarEl, spreadsheet, {
+    lang: isJa.value ? 'ja' : 'en',
+    activeTab: activeTab.value,
+    theme: isDark.value ? 'dark' : 'light',
+    dynamicDropdowns: true,
+    onTabChange
+  })
 }
 
 const onTabChange = (tab: RibbonTab) => {
   activeTab.value = tab
 }
 
+watch(isDark, (dark) => {
+  spreadsheet?.setTheme(dark ? 'ink' : 'paper')
+  toolbar?.setTheme(dark ? 'dark' : 'light')
+})
+
+watch(isJa, (ja) => {
+  spreadsheet?.i18n.setLocale(ja ? 'ja' : 'en')
+  if (open.value) void mountDemo()
+})
+
+watch(activeTab, (tab) => {
+  if (toolbar && toolbar.getActiveTab() !== tab) toolbar.setActiveTab(tab)
+})
+
 onBeforeUnmount(() => {
+  toolbar?.dispose()
+  spreadsheet?.dispose()
   document.documentElement.classList.remove('cell-demo-overlay-open')
 })
 </script>
@@ -143,20 +184,8 @@ onBeforeUnmount(() => {
             </button>
           </header>
           <ClientOnly>
-            <SpreadsheetToolbar
-              class="cell-full-demo__toolbar"
-              :instance="instance"
-              :active-tab="activeTab"
-              :locale="isJa ? 'ja' : 'en'"
-              @tab-change="onTabChange"
-            />
-            <Spreadsheet
-              class="cell-full-demo__sheet"
-              :theme="isDark ? 'ink' : 'paper'"
-              :locale="isJa ? 'ja' : 'en'"
-              :seed="seedSheet"
-              @ready="onReady"
-            />
+            <div ref="toolbarHost" class="cell-full-demo__toolbar"></div>
+            <div ref="sheetHost" class="cell-full-demo__sheet"></div>
           </ClientOnly>
         </div>
       </div>

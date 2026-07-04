@@ -10,14 +10,13 @@ A flat C function interface that exposes the workbook model, evaluator, and IO t
 The in-memory representation of an opened workbook — sheets, cells, styles, defined names, tables, dependency graph, dirty set, profile binding, and the workbook-level engine state needed to recalculate. Bindings hold a handle to the model, never the underlying bytes after parsing.
 :::
 
-```mermaid
-flowchart TB
-  A[Host API] --> B[C ABI / binding layer]
-  B --> C[C++17 workbook model]
-  C --> D[Formula parser and evaluator]
-  C --> E[OOXML / XLSB readers and writers]
-  D --> F[Oracle and parity tests]
-```
+<DiagramLayers :layers="[
+  { title: 'Host', nodes: ['Host API (JS / Python / CLI / MCP / cell UI)'] },
+  { title: 'Boundary', nodes: ['C ABI / binding layer'] },
+  { title: 'Core', nodes: ['C++17 workbook model'] },
+  { title: 'Evaluation & IO', nodes: ['Formula parser and evaluator', 'OOXML / XLSB readers and writers'] },
+  { title: 'Verification', nodes: ['Oracle and parity tests'] }
+]" />
 
 ## What lives where
 

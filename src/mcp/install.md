@@ -20,6 +20,23 @@ claude mcp list
 
 `formulon` should report `✓ Connected`. If it does not, the [Claude Code docs](https://docs.claude.com/en/docs/claude-code/mcp) include logs and troubleshooting steps.
 
+### Project scope
+
+The command above uses `--scope user`, which registers `formulon` for every project. To scope it to a single repository instead, write a `.mcp.json` file in the project root:
+
+```json
+{
+  "mcpServers": {
+    "formulon": {
+      "command": "npx",
+      "args": ["-y", "@libraz/formulon-mcp"]
+    }
+  }
+}
+```
+
+Claude Code picks up `.mcp.json` automatically for any session opened inside that directory — no `claude mcp add` call needed. The interactive installer below can write this file for you.
+
 ## Codex CLI
 
 Add this entry to `~/.codex/config.toml`:
@@ -54,6 +71,31 @@ Add `formulon` to `claude_desktop_config.json` (location depends on OS):
 ```
 
 Restart Claude Desktop. The tools will be available in the next session.
+
+## Interactive setup
+
+Instead of hand-editing config files, the package ships an installer that registers (or removes) `formulon` across one or more clients:
+
+```sh
+npx -y @libraz/formulon-mcp init
+```
+
+It prompts for one or more targets, comma-separated:
+
+1. Claude Code — user (`~/.claude.json`)
+2. Claude Code — project (`./.mcp.json`)
+3. Codex CLI (`~/.codex/config.toml`)
+4. Claude Desktop (path per OS, see above)
+
+It previews what each file will change (new / merge / replace an existing `formulon` entry) before writing, and never touches other servers already registered in the same file. Restart the client afterward to pick up the change.
+
+To remove the entry later:
+
+```sh
+npx -y @libraz/formulon-mcp uninstall
+```
+
+Same target menu; each target is left untouched if it has no `formulon` entry to remove.
 
 ## Other stdio MCP clients
 

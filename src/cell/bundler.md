@@ -54,4 +54,8 @@ Dependency pre-bundling should skip both packages so the Emscripten wrapper can
 keep control of worker and WASM asset resolution.
 
 The COOP/COEP headers are required for `SharedArrayBuffer`. Without them,
-`WorkbookHandle.createDefault()` falls back to the stub engine.
+`WorkbookHandle.createDefault()` **rejects** by default — it does not fall
+back to the stub engine automatically. Hosts that want a placeholder engine
+for local dev or tests can opt in explicitly with `preferStub: true`; treat a
+rejection everywhere else as a configuration bug to fix, not a case to handle
+gracefully in the UI. See [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback).

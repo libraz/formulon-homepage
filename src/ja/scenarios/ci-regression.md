@@ -12,36 +12,27 @@ CLI を使い、ワークブックの変更をコードレビューで可視化�
 
 ## パイプラインの形
 
-```mermaid
-flowchart LR
-  PR[Pull request] --> CI[CI ジョブ]
-  CI --> F[formulon dump --formulas]
-  CI --> R[formulon recalc] --> V[formulon dump --values]
-  F --> SNAP[testdata/*.txt]
-  V --> SNAP
-  SNAP --> DIFF{git diff --exit-code}
-  DIFF -->|差分なし| PASS[成功]
-  DIFF -->|ドリフト| REVIEW[レビュアーが分類:<br/>想定 / 互換 / バグ]
-```
+<DiagramLayers
+  :layers="[
+    { nodes: ['Pull request'] },
+    { nodes: ['CI ジョブ'] },
+    { nodes: [
+      { label: 'formulon dump --formulas', note: '数式スナップショット' },
+      { label: 'formulon recalc → formulon dump --values', note: '値スナップショット' }
+    ] },
+    { nodes: ['testdata/*.txt'] },
+    { nodes: ['git diff --exit-code'] },
+    { nodes: [
+      { label: '差分なし → 成功', note: '' },
+      { label: 'ドリフト → レビュアーが分類', note: '想定 / 互換 / バグ' }
+    ] }
+  ]"
+  label="パイプラインの形。Pull request が CI ジョブを起動し、数式スナップショットと再計算後の値スナップショットの両方を取得して testdata に書き込み、git で差分を取る。差分なしなら成功、ドリフトがあればレビュアーが分類する"
+/>
 
-## 数式のドリフト
+数式・値のスナップショットを取る基本コマンド（`formulon dump --formulas`、`formulon recalc && formulon dump --values`）は [CI 回帰検査](/ja/runtimes/ci-regression) で説明しているものと同じです。具体的な呼び出し方や、揮発性数式でスナップショットを避けるべき場面についてはそちらを参照してください。このページでは、それらを PR パイプラインに組み込む方法と、ドリフトのレビュー方針を扱います。
 
-```sh
-formulon dump --formulas model.xlsx > testdata/model.formulas.txt
-git diff --exit-code testdata/model.formulas.txt
-```
-
-キャッシュ値に依存せず、ワークブックの数式編集を検知します。再計算しないので安価です。
-
-## 値のドリフト
-
-```sh
-formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
-formulon dump --values /tmp/model.recalc.xlsx > testdata/model.values.txt
-git diff --exit-code testdata/model.values.txt
-```
-
-計算値の変化を検知します。`dump --values` は事前に再計算するため、スナップショットは「ファイルにキャッシュされた値」ではなく「エンジンが実際に計算した値」を反映します。
+push する前のローカルチェックとしては、`make parity-test` が手早い補完手段になります。利用可能なチャネル（`cli`、`npm`（WASM）、`python`）で共有の検証用ワークブックを評価し、チャネル間の不一致を報告します。これも CI ジョブ単体では捉えられない種類のドリフトです。詳しくは [CI 回帰検査](/ja/runtimes/ci-regression#パッケージ間の整合性検査) を参照してください。
 
 ## GitHub Actions 例
 
@@ -52,7 +43,7 @@ jobs:
   workbook:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install formulon CLI
         run: |
           curl -L -o formulon "https://github.com/libraz/formulon/releases/latest/download/formulon-cli-linux-x86_64"

@@ -8,17 +8,32 @@ The 522-function number is the count of Excel function names Formulon recognizes
 
 ## Summary
 
-Formulon currently recognizes **522** Excel function names. In v0.9.2, **505 / 522** are real local engine implementations. The full availability split is:
+Formulon currently recognizes **522** Excel function names. **505 / 522** are unconditionally real local engine implementations. The full availability split, which sums to 522, is:
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| Real engine implementation | 505 | Evaluated locally by Formulon's calculation engine |
-| Environment-bound | 2 | Recognized and implemented where possible, but some results depend on workbook or host state (`CELL`, `INFO`) |
-| Unavailable service / connection stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
+| Fully local implementation | 505 | Evaluated locally with no workbook/host-state dependency, covered by unit and/or oracle tests |
+| Environment-bound | 2 | Also evaluated locally, but some results depend on workbook or host state (`CELL`, `INFO`) |
+| Unavailable service stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
+| **Total recognized** | **522** | |
+
+<DiagramLayers :layers="[
+  { title: '522 recognized function names', nodes: [
+    { label: '505 fully local', note: 'no workbook/host state needed' },
+    { label: '2 environment-bound', note: 'CELL, INFO — also local, but state-dependent' },
+    { label: '15 unavailable service stubs', note: 'service/connection dependent' }
+  ] }
+]" />
+
+::: info Why not 507?
+Formulon's own README and `tools/catalog/status.py` report **507** real implementations. That figure is `done - unavailable` (522 − 15) and does not subtract the 2 environment-bound names, so it counts `CELL`/`INFO` twice — once as real, once as environment-bound. This page uses the strict, non-overlapping partition (505 + 2 + 15 = 522) instead.
+:::
 
 This is the honest compatibility claim: Formulon has broad local formula coverage, but it does not embed Microsoft 365 cloud services, a Python cloud runtime, an HTTP client, an OLAP cube connection, an RTD COM provider, or Copilot.
 
-As of v0.9.2, several implemented-function edge cases were aligned with Excel oracle data: numeric literals now follow Excel's 15-significant-digit parsing surface; `ARRAYTOTEXT` propagates scalar error arguments; `PIVOTBY` layout matches the Mac Excel oracle more closely; `MAP` / `MAKEARRAY`, `FREQUENCY`, `WRAPROWS` / `WRAPCOLS`, and `TRIMRANGE` had covered edge cases adjusted; and `PERCENTILE.EXC` returns `#NUM!` at the upper boundary instead of the largest sample value.
+Current local verification is `14342/14342` fast tests passing and `4026/4026` primary formula-oracle cases passing with `166` documented skips. Those skips are explicit divergence, host-service, volatile/environment-bound, or driver-limitation cases; they are not silent unimplemented paths.
+
+Of the 522 catalogued functions, `515` satisfy all six closure checks (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, and `behavior_drift`). The remaining `7` (`FILTERXML`, `ARRAYTOTEXT`, `CONCAT`, `CHAR`, `TRUE`, `GETPIVOTDATA`, `PHONETIC`) are blocked on oracle metadata gaps, not known implementation mismatches.
 
 ## Recognized Functions By Category
 
@@ -34,11 +49,17 @@ As of v0.9.2, several implemented-function edge cases were aligned with Excel or
 | Engineering | 54 | Local implementation |
 | Information | 19 | Includes environment-bound `CELL` and `INFO`, plus unavailable service stubs such as `IMAGE`, `PY`, and `RTD` |
 | Database | 12 | Local implementation |
-| Web | 4 | `ENCODEURL` and `FILTERXML` are implemented; `WEBSERVICE` and `PY` are unavailable stubs |
-| Cube | 7 | Recognized as unavailable connection stubs; live OLAP connections are outside Formulon |
-| 2024 / 2025 additions | 6 | Includes unavailable cloud-service stubs such as `COPILOT`, `TRANSLATE`, and `DETECTLANGUAGE` |
+| Web | 4 | `ENCODEURL` and `FILTERXML` are implemented; `WEBSERVICE` and `PY` are unavailable service stubs |
+| Cube | 7 | Recognized as unavailable service stubs; live OLAP connections are outside Formulon |
+| 2024 / 2025 additions | 6 | Includes unavailable service stubs such as `COPILOT`, `TRANSLATE`, and `DETECTLANGUAGE` |
 
-## Unavailable stubs
+## Workbook oracle track
+
+Formula oracle cases check cell values. Pivot tables and print layout need a workbook-level oracle because their behavior is stored in workbook structures, not just formula results.
+
+That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Pivot suites close at `28/28`. The `print_basic`, `print_pagination`, `print_fit`, and `print_matrix` suites pass `35/41` cases through `formulon_workbook_oracle_tests`; the remaining `6` are documented `win-365-ja_JP` divergence skips for a known Excel PageBreakPreview COM quirk at `PageSetup.Zoom <= 50`.
+
+## Unavailable service stubs
 
 These names are intentionally recognized so workbooks fail in a predictable, Excel-shaped way instead of producing `#NAME?` from an unknown parser path. They are outside Formulon's local calculation boundary.
 

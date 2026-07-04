@@ -8,7 +8,7 @@ A single executable file that links Formulon and a minimal command runner. No No
 
 Common workflows:
 
-- `eval`: evaluate a formula or expression under a named profile.
+- `eval`: evaluate a formula or expression on a fresh, empty workbook (supports `--json` and `--repeat N`).
 - `recalc`: recalculate a workbook and write updated bytes.
 - `dump`: inspect workbook structure and calculated values.
 
@@ -30,6 +30,26 @@ formulon dump --metadata input.xlsx
 ::: tip --values recalculates; --formulas does not
 `dump --values` recalculates the workbook before printing values, so it sees up-to-date results. `dump --formulas` and `dump --metadata` skip recalculation to stay cheap and side-effect-free.
 :::
+
+## Output format follows the -o extension
+
+`recalc` picks the saved container format from `-o`'s extension, not from the input file: `.xlsb` writes MS-XLSB, anything else writes OOXML `.xlsx`.
+
+```sh
+formulon recalc model.xlsx -o model.xlsb
+```
+
+Since v0.9.3, XLSB round-trips styles, workbook-scope defined names (including `LET` and other future-function names), and cross-sheet 3-D references, so this is safe for most workbooks. Conditional formatting, pivot tables, comments, and data validation are still OOXML-only — see [XLSB coverage](/compatibility/file-format-support) before relying on `.xlsb` for a workbook that uses them.
+
+## Iterative calculation
+
+Workbooks with intentional circular references need iterative calculation enabled, or `recalc` converges to whatever the engine's non-iterative circular-reference handling produces:
+
+```sh
+formulon recalc circular.xlsx -o circular.xlsx --iterative
+```
+
+`--iterative` turns on Excel's default knobs: a maximum of 100 iterations and a 0.001 change threshold per iteration. There is no flag to override those two numbers from the CLI.
 
 ## CI usage
 

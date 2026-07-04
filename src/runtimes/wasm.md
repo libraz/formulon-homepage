@@ -18,8 +18,10 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without them, `createFormulon()` falls back to a stub engine.
+Without them, `createFormulon()` fails to instantiate — constructing the `SharedArrayBuffer` backing the pthread pool throws, and the promise rejects. The raw WASM loader has no fallback; code calling `createFormulon()` directly must catch that rejection itself. Higher-level wrappers such as `formulon-cell` can opt into a stub engine instead of failing (`preferStub: true`), but that behavior belongs to `formulon-cell`, not to `@libraz/formulon`. See [formulon-cell](/cell/) for the opt-in stub path.
 :::
+
+<DiagramFlow steps="Page load → COOP/COEP header check → createFormulon() → SharedArrayBuffer / pthread pool → Workbook.loadBytes()" />
 
 ## Load once
 

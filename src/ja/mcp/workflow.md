@@ -1,20 +1,14 @@
 # ワークフロー
 
-server は **session 指向** です。ワークブックを 1 度開き、`sessionId` に対して複数の操作を投げ、最後に保存して閉じます。これにより毎回ファイルを再パースする無駄が消え、数式評価の状態が一貫します。
+サーバーは **セッション指向** です。ワークブックを 1 度開き、`sessionId` に対して複数の操作を投げ、最後に保存して閉じます。これにより毎回ファイルを再パースする無駄が消え、数式評価の状態が一貫します。
 
-::: info 用語: session
-in-memory に開いたワークブックと engine 状態の組。`sessionId` 文字列をキーにします。session 同士は分離されており、別ファイル同士が cache・dirty 集合・依存関係グラフを共有することはありません。
+::: info 用語: セッション
+in-memory に開いたワークブックとエンジン状態の組です。`sessionId` 文字列をキーにします。セッション同士は分離されており、別ファイル同士が cache・dirty 集合・依存関係グラフを共有することはありません。
 :::
 
-```mermaid
-flowchart LR
-  A[formulon_open_workbook] --> B[formulon_set_cells / sheet_operation など]
-  B --> C[formulon_recalc_session]
-  C --> D[formulon_get_range / get_cell]
-  D --> B
-  B --> E[formulon_save_session]
-  E --> F[formulon_close_workbook]
-```
+<DiagramFlow steps="formulon_open_workbook → formulon_set_cells / sheet_operation など → formulon_recalc_session → formulon_get_range / get_cell → formulon_save_session → formulon_close_workbook" />
+
+中央の 3 ステップ（変更・再計算・読み取り）は、保存して閉じるまで何度でも繰り返せます。
 
 ## 開く
 
@@ -25,7 +19,7 @@ flowchart LR
 }
 ```
 
-新規ワークブックを作りたい場合は `path` を省略すると、`Sheet1` だけを持つ既定ワークブックの session が返ります。
+新規ワークブックを作りたい場合は `path` を省略すると、`Sheet1` だけを持つ既定ワークブックのセッションが返ります。
 
 ## セルを変更する
 
@@ -97,7 +91,20 @@ flowchart LR
 }
 ```
 
-`outputPath` を省略すると bytes を inline（base64）で返します。エージェントが結果をユーザーに直接戻すときに便利です。
+`formulon_save_session` は常にディスクへ書き込みます。ファイル内容をそのまま返すことはありません。書き込み先は次のフォールバックチェーンで解決されます。
+
+<DiagramFlow :steps="[
+  { label: 'outputPath 引数', note: '明示的に指定した場合' },
+  { label: 'session.outputPath', note: '直前の保存で設定された値' },
+  { label: 'session.sourcePath', note: 'ワークブックを開いたときのパス' },
+  { label: 'エラー', note: 'どれも設定されていない場合' }
+]" />
+
+レスポンスの `bytes` フィールドは **バイト数**（数値）であり、ファイルの内容そのものではありません。
+
+::: warning `outputPath` を省略すると元のファイルを上書きする
+既存の `path` から開いたセッションに対して `outputPath` を付けずに `formulon_save_session` を呼ぶと、確認なしに元のファイルを上書きします。`path` を指定せずに新規作成したセッションには `sourcePath` のフォールバック先がないため、`outputPath` を省略すると `outputPath is required for a new workbook session` というエラーになります。元のファイルを保護したい場合は、必ず明示的な `outputPath` を渡してください。
+:::
 
 ## 閉じる
 
@@ -105,7 +112,7 @@ flowchart LR
 { "sessionId": "work" }
 ```
 
-session の engine 状態を即座に解放します。server プロセス終了でも session は破棄されますが、長時間のエージェント実行では明示的に閉じる方が安く、可読性も高くなります。
+セッションのエンジン状態を即座に解放します。サーバープロセス終了でもセッションは破棄されますが、長時間のエージェント実行では明示的に閉じる方がコストが低く、見通しも良くなります。
 
 ## ワンショット便利系
 
@@ -114,12 +121,12 @@ session の engine 状態を即座に解放します。server プロセス終了
 | ツール | 効果 |
 | --- | --- |
 | `formulon_eval_formula` | 使い捨てワークブックで数式評価 |
-| `formulon_inspect_workbook` | 開く → 要約 → 閉じる。session は残さない |
-| `formulon_update_workbook` | load / create → mutate → recalc → save。session は残さない |
+| `formulon_inspect_workbook` | 開く → 要約 → 閉じる。セッションは残さない |
+| `formulon_update_workbook` | load / create → mutate → recalc → save。セッションは残さない |
 
 同じワークブックを何度も読み直す必要がないときに使います。
 
 ## 次に読むもの
 
-- [Tools](/ja/mcp/tools) ─ カテゴリ別ツール一覧
+- [ツール一覧](/ja/mcp/tools) ─ カテゴリ別ツール一覧
 - [セキュリティモデル](/ja/mcp/security) ─ 許可されること / されないこと

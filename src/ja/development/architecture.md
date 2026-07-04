@@ -10,14 +10,13 @@ C++ 以外のホストにワークブックモデル・評価器・IO を公開�
 開かれたワークブックを表すメモリ上の表現です。sheets / cells / styles / defined name / table / 依存関係グラフ / dirty 集合 / profile / 再計算に必要なエンジン状態を持ちます。バインディングはパース後のバイト列ではなく、このモデルへのハンドルを保持します。
 :::
 
-```mermaid
-flowchart TB
-  A[Host API] --> B[C ABI / バインディング層]
-  B --> C[C++17 ワークブックモデル]
-  C --> D[Formula parser and evaluator]
-  C --> E[OOXML / XLSB readers and writers]
-  D --> F[Oracle and parity tests]
-```
+<DiagramLayers :layers="[
+  { title: 'ホスト', nodes: ['Host API（JS / Python / CLI / MCP / cell UI）'] },
+  { title: '境界', nodes: ['C ABI / バインディング層'] },
+  { title: 'コア', nodes: ['C++17 ワークブックモデル'] },
+  { title: '評価と IO', nodes: ['数式パーサと評価器', 'OOXML / XLSB の reader / writer'] },
+  { title: '検証', nodes: ['Oracle / parity テスト'] }
+]" />
 
 ## どこに何があるか
 

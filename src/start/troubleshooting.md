@@ -2,15 +2,22 @@
 
 This page covers common integration failures.
 
-```mermaid
-flowchart TD
-  S{Symptom} -->|SharedArrayBuffer missing| A[Set COOP / COEP headers]
-  S -->|Bundler warns about node:*| B[Mark node: external,<br/>exclude from optimizeDeps]
-  S -->|loadBytes returns invalid| C[Check wb.isValid<br/>read lastErrorMessage]
-  S -->|Cell shows #DIV/0! / #VALUE!| D[Excel error is a value,<br/>inspect value kind]
-  S -->|Python cannot find WASM| E[Install wheel<br/>or run make python-package]
-  S -->|CLI result differs from Excel| F[Check profile, volatile,<br/>preserved-but-not-evaluated]
-```
+<DiagramLayers
+  :layers="[
+    {
+      title: 'Symptom → fix',
+      nodes: [
+        { label: 'SharedArrayBuffer missing', note: 'Set COOP / COEP headers' },
+        { label: 'Bundler warns about node:*', note: 'Mark node: external, exclude from optimizeDeps' },
+        { label: 'loadBytes returns invalid', note: 'Check wb.isValid(), read lastErrorMessage()' },
+        { label: 'Cell shows #DIV/0! / #VALUE!', note: 'Excel error is a value — inspect the value kind' },
+        { label: 'Python cannot find WASM', note: 'Install the wheel, or run make python-package' },
+        { label: 'CLI result differs from Excel', note: 'Check locale, volatile functions, preserved-but-not-evaluated' }
+      ]
+    }
+  ]"
+  label="Troubleshooting quick reference"
+/>
 
 ## Browser says SharedArrayBuffer is unavailable
 
@@ -70,7 +77,7 @@ The source-tree import expects the staged C-ABI WASM module under
 
 Check these first:
 
-- whether the function is registered but intentionally returns an Excel error for an unavailable service, such as `PY` or CUBE connection functions,
+- whether the function is an unavailable service stub — registered, but intentionally returning an Excel error, such as `PY` or CUBE connection functions,
 - whether the workbook depends on locale behavior outside `win-365-ja_JP`,
 - whether volatile functions are involved,
 - whether the workbook structure is preserved but not evaluated.

@@ -3,7 +3,7 @@
 Formulon is useful in CI when spreadsheet outputs are part of your product contract. Formula or calculated-value changes become explicit diffs that PR reviewers can classify.
 
 ::: info Glossary: parity runner
-A repo-internal test runner that evaluates shared fixtures across every available channel (WASM, Native Node, Python, CLI) and reports both *missing* channels (binding not built) and *mismatched* results (channels disagree on a value). Run with `make parity-test`.
+A repo-internal test runner that evaluates shared fixtures across every available channel (WASM, Python, CLI) and reports both *missing* channels (binding not built) and *mismatched* results (channels disagree on a value). Run with `make parity-test`. Native Node is not wired into the parity runner yet — there is no channel to compare it against.
 :::
 
 ## Snapshot formulas
@@ -33,11 +33,23 @@ The repository includes a parity runner:
 make parity-test
 ```
 
-It evaluates shared fixtures across available channels and reports missing channels separately from mismatched results. Use it when changing bindings or packaging.
+It evaluates shared fixtures across the `cli`, `npm` (WASM), and `python` channels and reports missing channels separately from mismatched results. Use it when changing bindings or packaging.
 
 ::: tip Parity vs oracle
 The parity runner checks that *our own* surfaces agree with each other. The [oracle testing](/compatibility/oracle-testing) flow checks that we agree with *Excel*. Both are useful: parity is a fast pre-commit signal, oracle is the compatibility ground truth.
 :::
+
+<DiagramLayers :layers="[
+  { title: 'Input', nodes: ['Shared workbook fixtures'] },
+  { title: 'Verification track', nodes: [
+    { label: 'Parity runner', note: 'WASM vs Python vs CLI' },
+    { label: 'Oracle testing', note: 'any channel vs real Excel' }
+  ] },
+  { title: 'Answers', nodes: [
+    { label: 'Do our own surfaces agree?' },
+    { label: 'Do we match Excel ground truth?' }
+  ] }
+]" />
 
 ## When not to use CI snapshots
 

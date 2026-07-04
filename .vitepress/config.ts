@@ -1,11 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitepress'
-import { withMermaid } from 'vitepress-plugin-mermaid'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.9.2'
+const docsVersion = '0.9.4'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -55,7 +54,7 @@ const softwareApplicationJsonLd = {
   operatingSystem: 'Linux, macOS, Windows, WebAssembly',
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   description:
-    'Headless Excel-compatible calculation engine with a C++17 core, WebAssembly, Python, and CLI surfaces.',
+    'Headless Excel-compatible calculation engine with a C++17 core, exposed through WebAssembly, Native Node, Python, and CLI surfaces.',
   url: siteUrl,
   downloadUrl: githubUrl,
   softwareVersion: docsVersion,
@@ -80,7 +79,7 @@ const startSidebar = [
     text: 'Next steps',
     items: [
       { text: 'Why Formulon', link: '/why' },
-      { text: 'Choose a runtime', link: '/start/choose-runtime' },
+      { text: 'Choose a surface', link: '/start/choose-runtime' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
       { text: 'File format support', link: '/compatibility/file-format-support' },
       { text: 'FAQ', link: '/faq' }
@@ -117,7 +116,7 @@ const runtimesSidebar = [
     text: 'API details',
     items: [
       { text: 'Overview', link: '/api/' },
-      { text: 'Surface matrix', link: '/api/surfaces' },
+      { text: 'Package surfaces', link: '/api/surfaces' },
       { text: 'WASM API', link: '/api/wasm' },
       { text: 'Python API', link: '/api/python' },
       { text: 'CLI reference', link: '/api/cli' }
@@ -189,7 +188,7 @@ const developmentSidebar = [
     text: 'Development',
     items: [
       { text: 'Overview', link: '/development/' },
-      { text: 'Core architecture', link: '/development/core' },
+      { text: 'C++ core', link: '/development/core' },
       { text: 'Architecture', link: '/development/architecture' },
       { text: 'Bindings', link: '/development/bindings' },
       { text: 'Build from source', link: '/development/build-from-source' },
@@ -216,7 +215,7 @@ const jaStartSidebar = [
     text: '次のステップ',
     items: [
       { text: 'Formulon が必要な理由', link: '/ja/why' },
-      { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
+      { text: '実行入口を選ぶ', link: '/ja/start/choose-runtime' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'FAQ', link: '/ja/faq' }
@@ -253,7 +252,7 @@ const jaRuntimesSidebar = [
     text: 'API 詳細',
     items: [
       { text: '概要', link: '/ja/api/' },
-      { text: 'API 一覧', link: '/ja/api/surfaces' },
+      { text: 'パッケージと実行入口', link: '/ja/api/surfaces' },
       { text: 'WASM API', link: '/ja/api/wasm' },
       { text: 'Python API', link: '/ja/api/python' },
       { text: 'CLI リファレンス', link: '/ja/api/cli' }
@@ -271,8 +270,8 @@ const jaCompatibilitySidebar = [
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'エラーモデル', link: '/ja/compatibility/errors' },
-      { text: 'Oracle 検証', link: '/ja/compatibility/oracle-testing' },
-      { text: '対象外の機能', link: '/ja/compatibility/non-goals' }
+      { text: 'Oracle テスト', link: '/ja/compatibility/oracle-testing' },
+      { text: '非目標', link: '/ja/compatibility/non-goals' }
     ]
   }
 ]
@@ -314,7 +313,7 @@ const jaMcpSidebar = [
       { text: '概要', link: '/ja/mcp/' },
       { text: 'インストール', link: '/ja/mcp/install' },
       { text: 'ワークフロー', link: '/ja/mcp/workflow' },
-      { text: 'Tools', link: '/ja/mcp/tools' },
+      { text: 'ツール一覧', link: '/ja/mcp/tools' },
       { text: 'セキュリティモデル', link: '/ja/mcp/security' }
     ]
   }
@@ -325,7 +324,7 @@ const jaDevelopmentSidebar = [
     text: '開発',
     items: [
       { text: '概要', link: '/ja/development/' },
-      { text: 'コア設計', link: '/ja/development/core' },
+      { text: 'C++ コア', link: '/ja/development/core' },
       { text: 'アーキテクチャ', link: '/ja/development/architecture' },
       { text: 'バインディング', link: '/ja/development/bindings' },
       { text: 'ソースからビルド', link: '/ja/development/build-from-source' },
@@ -337,231 +336,228 @@ const jaDevelopmentSidebar = [
   }
 ]
 
-export default withMermaid(
-  defineConfig({
-    srcDir: 'src',
-    appearance: true,
-    title: 'Formulon',
-    description:
-      'Headless Excel-compatible calculation engine for WebAssembly, Python, CLI, and native applications.',
-    cleanUrls: true,
+export default defineConfig({
+  srcDir: 'src',
+  appearance: true,
+  title: 'Formulon',
+  description:
+    'Headless Excel-compatible calculation engine for WebAssembly, Native Node, Python, and CLI applications.',
+  cleanUrls: true,
 
-    markdown: {
-      theme: { light: 'github-light', dark: 'github-dark' },
-      html: true
-    },
+  markdown: {
+    theme: { light: 'github-light', dark: 'github-dark' },
+    html: true
+  },
 
-    sitemap: { hostname: siteUrl },
+  sitemap: { hostname: siteUrl },
 
-    vite: {
-      plugins: [
-        {
-          name: 'formulon-cross-origin-isolation',
-          configureServer(server) {
-            server.middlewares.use(applyCrossOriginIsolationHeaders)
-          },
-          configurePreviewServer(server) {
-            server.middlewares.use(applyCrossOriginIsolationHeaders)
-          }
-        }
-      ],
-      server: {
-        headers: {
-          'Cross-Origin-Opener-Policy': 'same-origin',
-          'Cross-Origin-Embedder-Policy': 'require-corp'
+  vite: {
+    plugins: [
+      {
+        name: 'formulon-cross-origin-isolation',
+        configureServer(server) {
+          server.middlewares.use(applyCrossOriginIsolationHeaders)
         },
-        fs: {
-          allow: ['..', '../..']
+        configurePreviewServer(server) {
+          server.middlewares.use(applyCrossOriginIsolationHeaders)
         }
+      }
+    ],
+    server: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp'
       },
-      preview: {
-        headers: {
-          'Cross-Origin-Opener-Policy': 'same-origin',
-          'Cross-Origin-Embedder-Policy': 'require-corp'
-        }
-      },
-      optimizeDeps: {
-        exclude: ['@libraz/formulon', '@libraz/formulon-cell']
-      },
-      build: {
-        target: 'es2022',
-        chunkSizeWarningLimit: 3000,
-        rollupOptions: {
-          output: {
-            manualChunks(id) {
-              if (id.includes('/node_modules/mermaid/')) return 'mermaid'
-              if (id.includes('/node_modules/katex/')) return 'katex'
-              if (id.includes('/node_modules/dompurify/')) return 'dompurify'
-            }
-          }
-        }
-      },
-      worker: {
-        format: 'es'
+      fs: {
+        allow: ['..', '../..']
       }
     },
+    preview: {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'require-corp'
+      }
+    },
+    optimizeDeps: {
+      exclude: ['@libraz/formulon', '@libraz/formulon-cell']
+    },
+    build: {
+      target: 'es2022',
+      chunkSizeWarningLimit: 3000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('/node_modules/katex/')) return 'katex'
+            if (id.includes('/node_modules/dompurify/')) return 'dompurify'
+          }
+        }
+      }
+    },
+    worker: {
+      format: 'es'
+    }
+  },
 
-    head: [
-      ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
-      ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
-      [
-        'link',
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap'
-        }
-      ],
-      ['script', { type: 'application/ld+json' }, JSON.stringify(softwareApplicationJsonLd)],
-      [
-        'meta',
-        {
-          name: 'keywords',
-          content:
-            'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
-        }
-      ],
-      ['link', { rel: 'canonical', href: siteUrl }],
-      ['meta', { property: 'og:site_name', content: 'Formulon' }],
-      ['meta', { property: 'og:title', content: 'Formulon - Excel-compatible calculation engine' }],
-      [
-        'meta',
-        {
-          property: 'og:description',
-          content:
-            'A headless C++17 spreadsheet calculation engine packaged for WebAssembly, Python, and CLI workflows.'
-        }
-      ],
-      ['meta', { property: 'og:type', content: 'website' }],
-      ['meta', { property: 'og:url', content: siteUrl }]
+  head: [
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    [
+      'link',
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap'
+      }
     ],
+    ['script', { type: 'application/ld+json' }, JSON.stringify(softwareApplicationJsonLd)],
+    [
+      'meta',
+      {
+        name: 'keywords',
+        content:
+          'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
+      }
+    ],
+    ['link', { rel: 'canonical', href: siteUrl }],
+    ['meta', { property: 'og:site_name', content: 'Formulon' }],
+    ['meta', { property: 'og:title', content: 'Formulon - Excel-compatible calculation engine' }],
+    [
+      'meta',
+      {
+        property: 'og:description',
+        content:
+          'A headless C++17 spreadsheet calculation engine packaged for WebAssembly, Native Node, Python, and CLI workflows.'
+      }
+    ],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:url', content: siteUrl }]
+  ],
 
-    locales: {
-      root: {
-        label: 'English',
-        lang: 'en',
-        themeConfig: {
-          search: {
-            provider: 'local',
-            options: {
-              locales: {
-                root: {
-                  translations: {
-                    button: { buttonText: 'Search', buttonAriaLabel: 'Search docs' },
-                    modal: {
-                      noResultsText: 'No results for',
-                      resetButtonTitle: 'Reset search',
-                      footer: {
-                        selectText: 'to select',
-                        navigateText: 'to navigate',
-                        closeText: 'to close'
-                      }
+  locales: {
+    root: {
+      label: 'English',
+      lang: 'en',
+      themeConfig: {
+        search: {
+          provider: 'local',
+          options: {
+            locales: {
+              root: {
+                translations: {
+                  button: { buttonText: 'Search', buttonAriaLabel: 'Search docs' },
+                  modal: {
+                    noResultsText: 'No results for',
+                    resetButtonTitle: 'Reset search',
+                    footer: {
+                      selectText: 'to select',
+                      navigateText: 'to navigate',
+                      closeText: 'to close'
                     }
                   }
                 }
               }
             }
-          },
-          nav: [
-            { text: 'Start', link: '/start/' },
-            { text: 'MCP', link: '/mcp/' },
-            {
-              text: 'formulon-cell',
-              items: [
-                { text: 'What it is', link: '/cell/' },
-                { text: 'Full demo', link: '/cell/demo' }
-              ]
-            },
-            { text: 'Use cases', link: '/scenarios/' },
-            { text: 'Workbook', link: '/workbook/' },
-            { text: 'Runtimes', link: '/runtimes/' },
-            { text: 'Compatibility', link: '/compatibility/' },
-            { text: 'Development', link: '/development/' },
-            { text: 'FAQ', link: '/faq' },
-            { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }
-          ],
-          sidebar: {
-            '/start/': startSidebar,
-            '/scenarios/': useCasesSidebar,
-            '/runtimes/': runtimesSidebar,
-            '/api/': runtimesSidebar,
-            '/workbook/': workbookSidebar,
-            '/mcp/': mcpSidebar,
-            '/cell/': cellSidebar,
-            '/compatibility/': compatibilitySidebar,
-            '/development/': developmentSidebar,
-            '/faq': startSidebar
-          },
-          socialLinks: [{ icon: 'github', link: githubUrl }],
-          footer: {
-            message:
-              'a personal project by <a href="https://libraz.net" target="_blank" rel="noopener">libraz</a>'
           }
+        },
+        nav: [
+          { text: 'Start', link: '/start/' },
+          { text: 'MCP', link: '/mcp/' },
+          {
+            text: 'formulon-cell',
+            items: [
+              { text: 'What it is', link: '/cell/' },
+              { text: 'Full demo', link: '/cell/demo' }
+            ]
+          },
+          { text: 'Use cases', link: '/scenarios/' },
+          { text: 'Workbook', link: '/workbook/' },
+          { text: 'Runtimes', link: '/runtimes/' },
+          { text: 'Compatibility', link: '/compatibility/' },
+          { text: 'Development', link: '/development/' },
+          { text: 'FAQ', link: '/faq' },
+          { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }
+        ],
+        sidebar: {
+          '/start/': startSidebar,
+          '/scenarios/': useCasesSidebar,
+          '/runtimes/': runtimesSidebar,
+          '/api/': runtimesSidebar,
+          '/workbook/': workbookSidebar,
+          '/mcp/': mcpSidebar,
+          '/cell/': cellSidebar,
+          '/compatibility/': compatibilitySidebar,
+          '/development/': developmentSidebar,
+          '/faq': startSidebar
+        },
+        socialLinks: [{ icon: 'github', link: githubUrl }],
+        footer: {
+          message:
+            'a personal project by <a href="https://libraz.net" target="_blank" rel="noopener">libraz</a>'
         }
-      },
-      ja: {
-        label: '日本語',
-        lang: 'ja',
-        description:
-          'WebAssembly、Python、CLI、ネイティブ用途に組み込めるヘッドレスな Excel 互換計算エンジン。',
-        themeConfig: {
-          search: {
-            provider: 'local',
-            options: {
-              locales: {
-                ja: {
-                  translations: {
-                    button: { buttonText: '検索', buttonAriaLabel: 'ドキュメント内検索' },
-                    modal: {
-                      noResultsText: '一致する結果がありません',
-                      resetButtonTitle: '検索をリセット',
-                      footer: {
-                        selectText: '選択',
-                        navigateText: '移動',
-                        closeText: '閉じる'
-                      }
+      }
+    },
+    ja: {
+      label: '日本語',
+      lang: 'ja',
+      description:
+        'WebAssembly、Python、CLI、ネイティブ用途に組み込めるヘッドレスな Excel 互換計算エンジン。',
+      themeConfig: {
+        search: {
+          provider: 'local',
+          options: {
+            locales: {
+              ja: {
+                translations: {
+                  button: { buttonText: '検索', buttonAriaLabel: 'ドキュメント内検索' },
+                  modal: {
+                    noResultsText: '一致する結果がありません',
+                    resetButtonTitle: '検索をリセット',
+                    footer: {
+                      selectText: '選択',
+                      navigateText: '移動',
+                      closeText: '閉じる'
                     }
                   }
                 }
               }
             }
-          },
-          nav: [
-            { text: 'はじめる', link: '/ja/start/' },
-            { text: 'MCP', link: '/ja/mcp/' },
-            {
-              text: 'formulon-cell',
-              items: [
-                { text: '位置づけ', link: '/ja/cell/' },
-                { text: 'フルデモ', link: '/ja/cell/demo' }
-              ]
-            },
-            { text: '利用例', link: '/ja/scenarios/' },
-            { text: 'ワークブック', link: '/ja/workbook/' },
-            { text: '実行環境', link: '/ja/runtimes/' },
-            { text: '互換性', link: '/ja/compatibility/' },
-            { text: '開発', link: '/ja/development/' },
-            { text: 'FAQ', link: '/ja/faq' },
-            { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }
-          ],
-          sidebar: {
-            '/ja/start/': jaStartSidebar,
-            '/ja/scenarios/': jaUseCasesSidebar,
-            '/ja/runtimes/': jaRuntimesSidebar,
-            '/ja/api/': jaRuntimesSidebar,
-            '/ja/workbook/': jaWorkbookSidebar,
-            '/ja/mcp/': jaMcpSidebar,
-            '/ja/cell/': jaCellSidebar,
-            '/ja/compatibility/': jaCompatibilitySidebar,
-            '/ja/development/': jaDevelopmentSidebar,
-            '/ja/faq': jaStartSidebar
-          },
-          socialLinks: [{ icon: 'github', link: githubUrl }],
-          footer: {
-            message:
-              'a personal project by <a href="https://libraz.net" target="_blank" rel="noopener">libraz</a>'
           }
+        },
+        nav: [
+          { text: 'はじめる', link: '/ja/start/' },
+          { text: 'MCP', link: '/ja/mcp/' },
+          {
+            text: 'formulon-cell',
+            items: [
+              { text: '位置づけ', link: '/ja/cell/' },
+              { text: 'フルデモ', link: '/ja/cell/demo' }
+            ]
+          },
+          { text: '利用例', link: '/ja/scenarios/' },
+          { text: 'ワークブック', link: '/ja/workbook/' },
+          { text: '実行環境', link: '/ja/runtimes/' },
+          { text: '互換性', link: '/ja/compatibility/' },
+          { text: '開発', link: '/ja/development/' },
+          { text: 'FAQ', link: '/ja/faq' },
+          { text: docsVersionTag, items: [{ text: 'Changelog', link: changelogUrl }] }
+        ],
+        sidebar: {
+          '/ja/start/': jaStartSidebar,
+          '/ja/scenarios/': jaUseCasesSidebar,
+          '/ja/runtimes/': jaRuntimesSidebar,
+          '/ja/api/': jaRuntimesSidebar,
+          '/ja/workbook/': jaWorkbookSidebar,
+          '/ja/mcp/': jaMcpSidebar,
+          '/ja/cell/': jaCellSidebar,
+          '/ja/compatibility/': jaCompatibilitySidebar,
+          '/ja/development/': jaDevelopmentSidebar,
+          '/ja/faq': jaStartSidebar
+        },
+        socialLinks: [{ icon: 'github', link: githubUrl }],
+        footer: {
+          message:
+            'a personal project by <a href="https://libraz.net" target="_blank" rel="noopener">libraz</a>'
         }
       }
     }
-  })
-)
+  }
+})

@@ -12,19 +12,17 @@ An open protocol for giving AI agents structured tools and resources. A *server*
 The simplest MCP transport. The client launches the server as a child process and talks JSON-RPC over its stdin / stdout. No network, no ports — the OS process boundary is the security boundary.
 :::
 
-```mermaid
-flowchart LR
-  subgraph Host process
-    AGENT[Agent / LLM] --> CLIENT[MCP client<br/>Claude Desktop / Code / Codex]
-  end
-  CLIENT <-->|JSON-RPC over stdio| SERVER[formulon-mcp]
-  subgraph Server process
-    SERVER --> ALLOW[Allowlist dispatch]
-    ALLOW --> SESS[Session table<br/>sessionId → Workbook]
-    SESS --> WB[Workbook<br/>via @libraz/formulon]
-    WB --> XLSX[(*.xlsx)]
-  end
-```
+<DiagramFlow :steps="[
+  { label: 'Agent / LLM' },
+  { label: 'MCP client', note: 'Claude Desktop / Code / Codex' },
+  { label: 'formulon-mcp', note: 'JSON-RPC over stdio' },
+  { label: 'Allowlist dispatch' },
+  { label: 'Session table', note: 'sessionId → Workbook' },
+  { label: 'Workbook', note: 'via @libraz/formulon' },
+  { label: '*.xlsx' }
+]" />
+
+The first two steps run in the host process (whatever runs the MCP client); everything from `formulon-mcp` onward runs in the server's own child process, reachable only over stdio.
 
 ## Where to start
 
@@ -37,7 +35,7 @@ flowchart LR
 
 ## Package
 
-The MCP server is published as `@libraz/formulon-mcp` and uses `@libraz/formulon@0.9.2` under the hood. It requires **Node.js 22 or newer**.
+The MCP server is published as `@libraz/formulon-mcp` and depends on the Formulon WASM package. Current releases accept the `@libraz/formulon` 0.9 line and resolve to the latest compatible package through your package manager. It requires **Node.js 22 or newer**.
 
 ```sh
 npx -y @libraz/formulon-mcp

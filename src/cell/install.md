@@ -1,13 +1,15 @@
 ---
 title: Install formulon-cell
-description: Install the beta spreadsheet UI package for the Formulon WASM engine.
+description: Install the reference UI library used for Formulon browser integration testing.
 ---
 
 # Install
 
-`formulon-cell` is the beta spreadsheet UI package used here as the Formulon
-browser demo host. Install it when you want a desktop-spreadsheet-style browser
-surface around the `@libraz/formulon` WASM engine.
+`formulon-cell` is the reference UI library used here for Formulon browser
+integration testing. It is public, but it is not a complete Excel-compatible UI:
+feature coverage is partial, UI/UX does not try to mirror Excel exactly, and UI
+bugs may remain. Install it when you want a workbook-like browser surface around
+the `@libraz/formulon` WASM engine for testing or reference.
 
 ```sh
 npm install @libraz/formulon-cell zustand
@@ -16,8 +18,8 @@ npm install @libraz/formulon-cell zustand
 `zustand` is a peer dependency because host applications can read the same store
 that the built-in chrome subscribes to.
 
-The UI surface is still evolving. Use your package manager lockfile for
-application reproducibility, and upgrade intentionally when new releases land.
+The UI surface is intentionally reference-grade. Use your package manager
+lockfile for reproducibility, and upgrade intentionally when new releases land.
 
 ## Quick Start
 
@@ -26,16 +28,22 @@ import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
 import '@libraz/formulon-cell/styles.css'
 
 const host = document.getElementById('sheet')!
-const workbook = await WorkbookHandle.createDefault()
 
-const sheet = await Spreadsheet.mount(host, {
-  workbook,
-  features: presets.full(),
-  locale: 'en'
-})
+try {
+  const workbook = await WorkbookHandle.createDefault()
 
-sheet.i18n.setLocale('ja')
-sheet.setTheme('ink')
+  const sheet = await Spreadsheet.mount(host, {
+    workbook,
+    features: presets.full(),
+    locale: 'en'
+  })
+
+  sheet.i18n.setLocale('ja')
+  sheet.setTheme('ink')
+} catch (err) {
+  // SharedArrayBuffer missing (no COOP/COEP), or WASM failed to init.
+  showConfigurationError(err)
+}
 ```
 
 ## Runtime Requirement
@@ -48,7 +56,22 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without those headers, `formulon-cell` falls back to an in-memory stub engine.
-The UI remains useful for layout and interaction work, but formula evaluation,
-recalculation, and workbook round-trip behavior are no longer representative of
-the real engine.
+Without those headers, `WorkbookHandle.createDefault()` **rejects** by
+default — it does not fall back to a degraded engine silently. Catch the
+rejection (or pass `MountOptions.onError` to `Spreadsheet.mount()`) and show
+the host a configuration error instead of a spreadsheet that looks fine but
+never recalculates.
+
+For tests and explicit demos only, opt in to the in-memory stub engine with
+`preferStub: true`:
+
+```ts
+const wb = await WorkbookHandle.createDefault({ preferStub: true })
+wb.isStub // true — the stub only evaluates a tiny formula subset (SUM,
+          // AVERAGE, IF, …; everything else returns #NEEDS_ENGINE!) and
+          // cannot load or save .xlsx/.xlsb bytes at all
+```
+
+See [Stub engine](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the
+full decision flow and [Bundler setup](/cell/bundler) for hosting the required
+headers.

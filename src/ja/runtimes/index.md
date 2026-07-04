@@ -16,28 +16,24 @@ WASM、Python、Native Node、CLI は計算結果を共有するべきです。�
 
 ## 判断ルール
 
-```mermaid
-flowchart LR
-  subgraph 共通コア
-    direction TB
-    CORE[C++17 計算コア] --> ABI[C ABI]
-  end
-  ABI --> WASM[WASM]
-  ABI --> NN[Native Node]
-  ABI --> PY[Python]
-  ABI --> CLI[CLI]
-  WASM --> BROWSER[ブラウザ / worker /<br/>native 不要な Node]
-  NN --> NODE[Node サービス<br/>native 配置可]
-  PY --> BATCH[バッチ / ノートブック /<br/>データパイプライン]
-  CLI --> SHELL[シェル / CI /<br/>再現レポート]
-```
+<DiagramLayers :layers="[
+  { title: '共通コア', nodes: ['C++17 計算コア'] },
+  { title: 'ABI', nodes: ['C ABI'] },
+  { title: '実行入口', nodes: ['WASM', 'Native Node', 'Python', 'CLI'] },
+  { title: '実行環境', nodes: [
+    { label: 'ブラウザ / worker', note: 'native 不要な Node' },
+    { label: 'Node サービス', note: 'native 配置可' },
+    { label: 'バッチ / ノートブック', note: 'データパイプライン' },
+    { label: 'シェル / CI', note: '再現レポート' }
+  ] }
+]" />
 
 - ワークブックデータがブラウザにある、アップロード時の privacy が重要、サーバーに raw file を渡したくない場合は WASM。
 - 帳票生成、定期ジョブ、データ検証、ノートブックなら Python。
 - ネイティブ成果物を配置でき、WASM より低い起動コストが必要な Node サービスなら Native Node。
 - 再現可能な issue report、CI スナップショット、単発の再計算チェックなら CLI。
 
-## API の入口
+## API の実行入口
 
 詳細 API ページは top-level navigation から外し、この実行環境セクションにまとめます。
 

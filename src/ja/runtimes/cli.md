@@ -8,7 +8,7 @@ Formulon と最小限のコマンドランナーをリンクした単一実行�
 
 主なコマンド:
 
-- `eval`: 名前付きプロファイルで式を評価
+- `eval`: 新規の空ワークブック上で式を評価（`--json` / `--repeat N` に対応）
 - `recalc`: ワークブックを再計算して保存
 - `dump`: ワークブック構造や計算値を確認
 
@@ -30,6 +30,26 @@ formulon dump --metadata input.xlsx
 ::: tip --values は再計算する。--formulas は再計算しない
 `dump --values` は表示前に再計算するため、最新結果を見られます。`dump --formulas` と `dump --metadata` は副作用と再計算を避けるためにスキップします。
 :::
+
+## 出力フォーマットは -o の拡張子で決まる
+
+`recalc` は入力ファイルではなく `-o` の拡張子から保存フォーマットを選びます。`.xlsb` を指定すると MS-XLSB を書き出し、それ以外は OOXML の `.xlsx` を書き出します。
+
+```sh
+formulon recalc model.xlsx -o model.xlsb
+```
+
+v0.9.3 以降、XLSB はスタイル・ワークブックスコープの定義名（`LET` など future function 名を含む）・シート間の 3-D 参照を往復保存できるため、ほとんどのワークブックで安全に使えます。条件付き書式・pivot table・コメント・入力規則はまだ OOXML 専用です。これらを使うワークブックで `.xlsb` に頼る前に、[XLSB のカバレッジ](/ja/compatibility/file-format-support) を確認してください。
+
+## 反復計算
+
+意図的な循環参照を含むワークブックでは、反復計算を有効にしないと `recalc` はエンジンの非反復循環参照処理がそのまま返す値に収束します。
+
+```sh
+formulon recalc circular.xlsx -o circular.xlsx --iterative
+```
+
+`--iterative` は Excel の既定値（最大反復回数 100、変化量のしきい値 0.001）を有効にします。CLI からこの 2 つの数値を上書きするフラグはありません。
 
 ## CI での使い方
 

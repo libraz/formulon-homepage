@@ -12,14 +12,7 @@ The browser APIs Formulon takes as workbook bytes. `File.arrayBuffer()` returns 
 
 ## Flow
 
-```mermaid
-flowchart LR
-  A[User selects .xlsx] --> B[Read ArrayBuffer]
-  B --> C[Module.Workbook.loadBytes]
-  C --> D[Mutate inputs]
-  D --> E[recalc]
-  E --> F[Read values or save bytes]
-```
+<DiagramFlow steps="User selects .xlsx → Read ArrayBuffer → Module.Workbook.loadBytes → Mutate inputs → recalc → Read values or save bytes" />
 
 ## Minimal implementation
 
@@ -83,10 +76,16 @@ self.onmessage = async (event) => {
 // main.ts
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 worker.onmessage = (event) => updateUi(event.data)
-worker.postMessage(await file.arrayBuffer(), [await file.arrayBuffer()])
+
+const buffer = await file.arrayBuffer()
+worker.postMessage(buffer, [buffer])
 ```
 
-The transferable `ArrayBuffer` keeps the copy from happening twice; the main thread loses access to it after `postMessage`, which is fine because the worker now owns the bytes.
+Read the buffer once and pass that same reference as both the message payload and the transfer list. Calling `file.arrayBuffer()` twice would produce two distinct buffers — the payload copy would still be deep-cloned because it isn't the one being transferred, silently defeating the point of using a transferable at all.
+
+<DiagramFlow steps="Main thread: read ArrayBuffer → postMessage(buffer, [buffer]) transfers ownership → Worker owns buffer, recalculates → postMessage(bytes, [bytes.buffer]) transfers back → Main thread owns result" label="Main thread reads the ArrayBuffer, transfers ownership to the worker via postMessage with a transfer list, the worker recalculates and transfers the result buffer back, and the main thread regains ownership of the output bytes" />
+
+The transferable `ArrayBuffer` keeps the copy from happening twice in each direction; the sending side loses access to the buffer after `postMessage`, which is fine because the receiving side now owns the bytes.
 
 ## Error surfaces
 
@@ -95,7 +94,7 @@ The transferable `ArrayBuffer` keeps the copy from happening twice; the main thr
 | File is not a valid `.xlsx` | `wb.isValid() === false`, `lastErrorMessage()` | Show "this file is not a supported Excel workbook" |
 | Cell-level Excel error | `value.kind === ValueKind.Error` | Render the error code inline; the upload itself succeeded |
 | Save failed | `saved.status.ok === false` | Surface the message; keep the original bytes available |
-| Stub engine fallback | `isUsingStub()` returns true (cell package) | Warn the user that calculations are disabled |
+| Stub engine active (only when built on `formulon-cell`'s `WorkbookHandle` with `preferStub: true`) | `isUsingStub()` returns true | Warn the user that calculations are disabled |
 
 ::: tip Keep original bytes until save succeeds
 Treat the input `File` / `ArrayBuffer` as the source of truth until your app has successfully written the recalculated output somewhere durable. That way a failed save does not lose the user's upload.
@@ -107,7 +106,7 @@ Treat the input `File` / `ArrayBuffer` as the source of truth until your app has
 - Show unsupported-function failures as workbook compatibility issues, not as upload failures.
 - Keep original bytes until save succeeds.
 - Run the calculation in a worker if the UI must stay responsive.
-- Surface cross-origin isolation problems explicitly — silent stub-engine fallback confuses users.
+- Surface cross-origin isolation problems explicitly. The raw `createFormulon()` path used above has no stub fallback at all — without pthread/`SharedArrayBuffer` support it fails to initialize. `formulon-cell`'s `WorkbookHandle.createDefault()` rejects the same way unless the host opts into `preferStub: true`, so a missing COOP/COEP header is always a visible failure, never a silent degradation.
 
 ## Fit check
 
@@ -117,4 +116,4 @@ This scenario works best when all data can remain local and users value privacy 
 
 - [WASM Integration](/runtimes/wasm) — hosting and bundler requirements.
 - [Workbook lifecycle](/workbook/lifecycle) — the engine flow behind this scenario.
-- [formulon-cell](/cell/) — if you want the same engine *plus* a spreadsheet UI.
+- [formulon-cell](/cell/) — reference UI for browser integration testing with the same engine.

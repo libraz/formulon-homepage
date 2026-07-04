@@ -10,25 +10,20 @@ Formulon は 2 つの評価器を持ちます。tree-walker はパース済み A
 セル値・数式結果に付く弁別子です。`Blank` / `Number` / `Bool` / `Text` / `Error` / `Array` / `Ref` / `Lambda` の 8 種類があります。各バインディングは enum として公開します（例: WASM `ValueKind.Number`、Python `ValueKind.NUMBER`）。
 :::
 
-```mermaid
-flowchart LR
-  TXT[数式テキスト<br/>=SUM A1:A10] --> LEX[字句 / 構文解析]
-  LEX --> AST[AST]
-  AST --> RESOLVE[参照解決<br/>names / tables / ranges]
-  RESOLVE --> EVAL{評価器}
-  EVAL -->|AST 解釈| TW[Tree-walker]
-  EVAL -->|命令列に下げて実行| BC[Bytecode VM]
-  REG[認識対象の関数<br/>ローカル実装 505 / 522<br/>環境依存 / スタブ 17 件] --> EVAL
-  PROF[互換性プロファイル] --> EVAL
-  TW --> VAL[Value<br/>kind: Number / Text / Bool /<br/>Error / Array / Ref / Lambda /<br/>Blank]
-  BC --> VAL
-```
+<DiagramFlow :steps="[
+  { label: '数式テキスト', note: '=SUM(A1:A10)' },
+  { label: '字句 / 構文解析' },
+  { label: 'AST' },
+  { label: '参照解決', note: 'names・tables・ranges' },
+  { label: '評価器', note: 'tree-walker と bytecode VM が parity を保ちつつ実行。関数カタログ（ローカル実装 505/522）と有効な互換性プロファイルを参照する' },
+  { label: 'Value', note: 'Number・Text・Bool・Error・Array・Ref・Lambda・Blank' }
+]" />
 
 ## 認識対象の関数
 
-Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 522 件の Excel 関数名を認識します。これは「名前を解決できる」という意味であり、Microsoft 365 の外部サービスに依存する関数までローカル実装済みという意味ではありません。
+Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 522 件の Excel 関数名を認識します。これは認識カタログであり、Microsoft 365 の外部サービスに依存する関数まですべてローカル実装済みという意味ではありません。
 
-v0.9.2 時点では、**505 / 522** 件が実際のローカルエンジン実装、2 件が環境依存（`CELL`、`INFO`）、15 件が外部サービスやライブ接続を必要とするため意図的に固定エラーを返すスタブです。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
+現在は **505 / 522** 件が実際のローカルエンジン実装、2 件が環境依存（`CELL`、`INFO`）、15 件が外部サービスやライブ接続を必要とするため意図的に用意された未提供スタブです。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
 
 ::: info 関数登録 ≠ ワークブック互換
 関数が登録されていても、ワークブックの最終結果はロケール挙動、ファイル構造、キャッシュ値、Excel の境界ケースに依存します。業務上重要な数式は小さな検証ファイルで確認してください。
@@ -37,6 +32,20 @@ v0.9.2 時点では、**505 / 522** 件が実際のローカルエンジン実�
 ## 評価モード
 
 tree-walker と bytecode VM は並走でき、互いの parity を検査します。同じワークブック・同じプロファイルで両者が一致することが、最適化を進める前提条件です。
+
+## アドホック評価
+
+同じ評価器の上に、WASM と Native Node（C API）は読み取り専用のアドホック数式評価を公開しています。`evaluateFormulaText()` と `evaluateConditionalFormula()` は、セルに何も書き込まずに「この数式をここで評価したら何が返るか」に答えます。API の形状、WASM / Native Node のみという scope、配列・スピル結果をトップレフトのスカラーへ縮約する制約については [ワークブック操作 — アドホック数式評価](/ja/workbook/operations#アドホック数式評価) を参照してください。
+
+## v0.9.3 の評価挙動更新
+
+v0.9.3 では、このページに直結する評価器レベルの修正が入りました。
+
+- `date1904` が tree-walker と bytecode VM の両方に伝播するようになり、1900 年基準・1904 年基準どちらの日付システムのワークブックも、どちらの評価器でも一貫した結果を返します。
+- defined name の解決が循環参照を検出するようになり、以前のようにハングしたり古い値を黙って返したりしません。
+- 列全体 / 行全体参照（`A:A`、`3:3`）は、固定の上限ではなくシートの used range に対して展開されます。
+- 形状が一致しない配列同士の暗黙のブロードキャストが、Excel の実際の array-broadcast ルールに従うようになりました（[動的配列](/ja/workbook/dynamic-arrays) 参照）。
+- 単一セルの 3-D 参照だけでなく、`Sheet1:Sheet3!A1:B2` のような 3-D range の末尾指定も正しく解決されます。
 
 ## v0.9.2 の評価挙動更新
 
@@ -60,12 +69,12 @@ Excel error はホスト言語の例外ではなく **値** として扱いま�
 | `#NUM!` | 数値オーバーフローや不正な数値入力 |
 | `#N/A` | 値なし。`MATCH` / `VLOOKUP` 系で発生 |
 | `#NULL!` | 範囲交差が空 |
-| `#SPILL!` | 動的配列の spill が成立しない（衝突・範囲外） |
+| `#SPILL!` | 動的配列のスピルが成立しない（衝突・範囲外） |
 | `#CALC!` | エンジンが結果を返せない（再帰・未完了評価など） |
 | `#GETTING_DATA` | 外部参照の取得中 |
 
 ::: tip セルの error とホスト失敗は別物
-`#DIV/0!` を返す数式は API として **失敗していません**。呼び出しは成功しており、結果がエラー値なのです。`value.kind === ValueKind.Error` で判定してください。バイト列不正・ハンドル失効・IO 失敗などはステータスの包み / 例外 / 非ゼロ終了で別経路で報告されます。
+`#DIV/0!` を返す数式は API として **失敗していません**。呼び出しは成功しており、結果がエラー値なのです。`value.kind === ValueKind.Error` で判定してください。バイト列不正・ハンドル失効・IO 失敗などはステータス envelope / 例外 / 非ゼロ終了で別経路で報告されます。
 :::
 
 ## 座標
@@ -87,5 +96,6 @@ A1 テキストは CLI 引数・数式文字列・MCP ツール入力など、�
 ## 次に読むもの
 
 - [再計算](/ja/workbook/recalculation) ─ エンジンが評価をどう順序付けるか
+- [ワークブック操作](/ja/workbook/operations#アドホック数式評価) ─ セルを変更せずに数式を評価する
 - [数式カバレッジ](/ja/compatibility/formula-coverage) ─ 関数族ごとの登録状況
 - [エラーモデル](/ja/compatibility/errors) ─ エラー値とホスト失敗の違い

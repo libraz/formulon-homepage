@@ -24,7 +24,7 @@ OOXML reader / writer は以下を扱います。
 - merges
 - data validations
 - conditional formatting
-- pivot tables / pivot caches（レイアウトレベルの部分対応）
+- pivot tables / pivot caches
 - external links
 - protection metadata
 - sheet view、freeze panes、hidden tabs
@@ -36,20 +36,36 @@ OOXML reader / writer は以下を扱います。
 
 ## XLSB
 
-MS-XLSB の読み書きを必要とするワークフローのために、同じ計算モデルを維持したまま使えるバイナリ形式の経路を用意しています。書き出し時にサポートされる機能集合は XLSX ライターの一部で、セル・シート・styles・defined name・table が中心です。
+MS-XLSB の読み書きを必要とするワークフローのために、同じ計算モデルを維持したまま使えるバイナリ形式の経路を用意しています。v0.9.3 の時点で、styles（`BrtFmt` / `BrtXF`）、workbook スコープの defined names（future function や `LET` を含む数式も）、cross-sheet 3-D references、dynamic-array のスピル数式（`BrtArrFmla`）はすべて XLSB を往復保存できます — これらの一部は以前、実際の Excel では開けない `.xlsb` を生成していました。array-constant literals は数値要素のみに限定されたままです。文字列 / 真偽値 / エラーの array-constant 要素は認識はされますが decode されず、黙って誤変換されるのではなく明示的なエラーとして表面化します。
+
+| XLSB の機能 | v0.9.3 より前 | v0.9.3 以降 |
+| --- | --- | --- |
+| Styles（`BrtFmt` / `BrtXF`） | 制限あり | 往復保存できる |
+| Cross-sheet 3-D references | 制限あり | 往復保存できる |
+| Workbook スコープの names、future function、`LET` | 制限あり | 往復保存できる |
+| Dynamic-array のスピル数式（`BrtArrFmla`） | 制限あり | 往復保存できる |
+| Array-constant literals | 数値要素のみ | 引き続き数値要素のみ |
+
+条件付き書式、pivot table、comment、data validation は引き続き OOXML 専用です — XLSB の reader / writer にはこれらのパートを扱うレコード処理自体がなく、バージョンによらず対象外です。これらの機能を使うワークブックを XLSB で往復保存すると、エラーにはならず機能が黙って失われます。機能を保持したい場合は XLSX のままにしてください。
+
+保存時のコンテナ形式は明示的です。`saveEx()` / `save_ex()` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。CLI は `-o` パスの拡張子から同じ判断をします（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みはバイト列の中身を見て判定します。`loadBytes()` / `Workbook.load()` はバイト列そのもの（ZIP シグネチャか BIFF12 レコードストリームか）から XLSX / XLSB を判別するため、拡張子が一致していない `.xlsb` ペイロードでも正しく読み込めます。
 
 ## 保持と評価の対応
 
-```mermaid
-flowchart LR
-  IN[(*.xlsx / *.xlsb<br/>入力バイト列)] --> READ[Reader]
-  READ --> EVAL[評価対象パート<br/>cells / formulas /<br/>defined names / tables /<br/>cond-format subset]
-  READ --> PASS[Passthrough パート<br/>charts / drawings /<br/>form controls / VBA]
-  EVAL --> RECALC[エンジンで再計算]
-  PASS -. バイト列のまま保持 .-> WRITE
-  RECALC --> WRITE[Writer]
-  WRITE --> OUT[(*.xlsx / *.xlsb<br/>出力バイト列)]
-```
+<DiagramLayers :layers="[
+  { title: '入力', nodes: ['*.xlsx / *.xlsb バイト列'] },
+  { title: '読み込み', nodes: ['Reader'] },
+  { nodes: [
+      { label: '評価対象パート', note: 'cells・formulas・defined names・tables・条件付き書式の subset' },
+      { label: 'Passthrough パート', note: 'charts・drawings・form controls・VBA' }
+    ] },
+  { nodes: [
+      { label: 'エンジンで再計算' },
+      { label: 'バイト列のまま保持' }
+    ] },
+  { title: '書き出し', nodes: ['Writer'] },
+  { title: '出力', nodes: ['*.xlsx / *.xlsb バイト列'] }
+]" label="読み込みは評価対象パート（再計算される）と passthrough パート（バイト列のまま保持される）に分かれ、どちらも Writer で合流する" />
 
 | 機能 | 読み込み | 再計算 | 書き出し |
 | --- | --- | --- | --- |
@@ -57,7 +73,7 @@ flowchart LR
 | Styles / number formats | yes | n/a | yes |
 | Defined names / tables | yes | yes（参照として解決） | yes |
 | 条件付き書式 | yes | partial（評価対象 subset） | yes |
-| Pivot tables | layout / cache（subset） | no | yes |
+| Pivot tables | layout / cache | no | yes |
 | Chart | パートを保持 | no | yes |
 | Form controls / drawings | passthrough | no | yes |
 | VBA project | passthrough | 実行しない | yes |

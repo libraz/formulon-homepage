@@ -14,9 +14,9 @@ Excel を使うのは、開発・検証時に *Oracle データ*（実 Excel が
 
 ### Excel 関数は何件使えますか？
 
-v0.9.2 時点で、Formulon は **522** 件の Excel 関数名を認識します。そのうち **505 / 522** 件が、計算エンジンでローカル評価できる実装済み関数です。
+Formulon は **522** 件の Excel 関数名を認識します。そのうち **505 / 522** 件が、計算エンジンでローカル評価できる実装済み関数です。
 
-残り 17 件は、2 件の環境依存関数（`CELL`、`INFO`）と、15 件の外部サービス / 接続スタブです。スタブは `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、`TRANSLATE`、`DETECTLANGUAGE`、CUBE 関数群です。これらは名前と引数の形を認識しますが、ローカルで実行できる関数とは扱いません。詳しくは [数式カバレッジ](/ja/compatibility/formula-coverage)。
+残り 17 件は、2 件の環境依存関数（`CELL`、`INFO`）と、15 件の外部サービススタブです。スタブは `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、`TRANSLATE`、`DETECTLANGUAGE`、CUBE 関数群です。これらは名前と引数の形を認識しますが、ローカルで実行できる関数とは扱いません。詳しくは [数式カバレッジ](/ja/compatibility/formula-coverage)。
 
 ### `COPILOT`、`PY`、`STOCKHISTORY`、`WEBSERVICE` は実行できますか？
 
@@ -27,6 +27,10 @@ Formulon がこれらの関数名を認識するのは、未知関数として�
 ### 数式の結果は Excel と完全に一致しますか？
 
 Formulon は `win-365-ja_JP` などのプロファイルごとに、実 Excel から取得した Oracle データと突合します。ただし、すべてのワークブックについて無条件に同一結果を保証するものではありません。ロケール依存、揮発性関数、外部サービス依存、ファイル構造、Excel 側の未文書挙動は差分要因になります。
+
+<DiagramFlow steps="Excel（参照実装） → 取得した Oracle データ → プロファイル（win-365-ja_JP） → divergence.yaml → Formulon の出力" label="互換性プロファイルの構築と検証の流れ" />
+
+実 Excel を参照実装とし、その実測挙動を Oracle データとして取得します。それを `win-365-ja_JP` のような名前付きプロファイルにまとめ、参照実装との差分のうち許容するものは理由と最終確認済みの Excel ビルドとともに `divergence.yaml` に記録します。説明のつかない不一致として Formulon の出力に残すのではなく、明示的に管理する仕組みです。パイプライン全体は [Oracle テスト](/ja/compatibility/oracle-testing) を参照してください。
 
 業務上重要なワークブックは、対象プロファイルと Formulon のバージョンを固定し、代表的な検証ファイルを持つ運用にしてください。
 
@@ -58,13 +62,15 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### 読み書きできるファイル形式は？
 
-公開 API の通常入口は `.xlsx` 形式のバイト列です。WASM、Python、Native Node、CLI、MCP の各実行環境は、基本的に `.xlsx` を読み込み、再計算し、`.xlsx` として保存する流れを提供します。
+公開 API の通常の実行入口は `.xlsx` 形式のバイト列です。WASM、Python、Native Node、CLI、MCP の各実行入口は、基本的に `.xlsx` を読み込み、再計算し、`.xlsx` として保存する流れを提供します。
 
-`.xlsm` / `.xltm` のようなマクロ付き OOXML パッケージは、`vbaProject.bin` をバイト列として保持するテストがあります。ただし、VBA は実行しません。`.xlsb` の読み込み / 書き出し処理はコアに実装されていますが、FAQ では「一般利用の標準入口」は `.xlsx` として説明します。旧 `.xls`（BIFF / Excel 97-2003）は対象外です。
+`.xlsb`（MS-XLSB）も読み書きできます。v0.9.3 以降、スタイル、シート間 3-D 参照、`LET` や新しい関数名を含むワークブック単位の定義名、動的配列のスピル数式が `.xlsb` を往復保存できるようになりました。条件付き書式、ピボットテーブル、コメント、入力規則は引き続き OOXML 専用で、`.xlsb` の配列定数リテラルは数値要素に限られます。CLI と `saveEx` / `save_ex` API は出力先の拡張子から形式を選び（`-o file.xlsb` で MS-XLSB 出力）、入力側は拡張子ではなく内容から形式を判定します。
+
+`.xlsm` / `.xltm` のようなマクロ付き OOXML パッケージは、`vbaProject.bin` をバイト列として保持するテストがあります。ただし、VBA は実行しません。旧 `.xls`（BIFF / Excel 97-2003）は対象外です。
 
 ### VBA は実行しますか？
 
-実行しません。VBA プロジェクトは保存・読み込みの往復で保持できますが、マクロは一切実行しません。マクロがセル値やブック状態を書き換える前提のワークブックでは、Excel と結果が変わる可能性があります。
+実行しません。VBA プロジェクトは往復保存で保持できますが、マクロは一切実行しません。マクロがセル値やワークブックの状態を書き換える前提のワークブックでは、Excel と結果が変わる可能性があります。
 
 ### PowerQuery、DAX、外部接続は使えますか？
 
@@ -72,7 +78,7 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### ピボットテーブルは対応していますか？
 
-ピボットキャッシュとピボットテーブルの構造保持、C ABI / WASM 経由のピボット操作、レイアウト取得は実装されています。v0.9.2 では、Windows Excel ブリッジによるピボットテーブルのワークブック Oracle 検証も追加されました。
+ピボットキャッシュとピボットテーブルの構造保持、ピボット操作、レイアウト取得は実装されており、v0.9.3 以降は C API、Node addon、WASM、Python の各バインディングで同等に使えます。v0.9.2 では、Windows Excel ブリッジによるピボットテーブルのワークブック Oracle 検証も追加されました。
 
 一方で、PowerQuery や外部接続を再実行してピボットキャッシュを最新化する用途は対象外です。Excel の「データ更新」機能そのものを置き換えるものではありません。
 
@@ -86,11 +92,11 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 Formulon 本体はヘッドレスエンジンです。セルグリッドの表示や操作 UI は本体の責務ではありません。
 
-ブラウザ UI の例として [`@libraz/formulon-cell`](/ja/cell/) と Vue ラッパーがありますが、これは別パッケージのベータ版 UI ライブラリです。完全な Excel 互換 UI ではなく、エンジン統合のための表示・編集層として扱ってください。
+ブラウザ UI の参考実装として [`@libraz/formulon-cell`](/ja/cell/) と各フレームワーク向けラッパーを公開しています。位置づけは結合試験用の参考 UI です。全機能を網羅した Excel 互換 UI ではなく、UI/UX も Excel に完全には寄せていません。UI 側のバグが残る可能性もあるため、完成品ではなくエンジン統合例として扱ってください。
 
 ### ユーザーがアップロードした任意の `.xlsx` を安全に処理できますか？
 
-任意のスプレッドシートファイルを無害なものとして扱わないでください。Formulon は VBA、PowerQuery、外部接続、HTTP 経由の数式関数を実行しないため、よくある実行経路はいくつか消えます。それでも、複雑な ZIP / XML ワークブックデータをパースし、利用する実行環境によってはファイルを読み書きします。
+任意のスプレッドシートファイルを無害なものとして扱わないでください。Formulon は VBA、PowerQuery、外部接続、HTTP 経由の数式関数を実行しないため、よくある実行経路はいくつか消えます。それでも、複雑な ZIP / XML ワークブックデータをパースし、利用する実行入口によってはファイルを読み書きします。
 
 信頼できないアップロードを扱う場合は、Formulon をサンドボックス化されたプロセスまたは worker で実行し、ファイルサイズと実行時間に上限を設け、ファイルシステムアクセスを制限し、パッケージバージョンを固定した上で更新してください。
 
@@ -100,7 +106,7 @@ Formulon 本体はヘッドレスエンジンです。セルグリッドの表�
 
 見た目の最終確認には Excel または別のレンダリング層を使ってください。Formulon は計算とワークブック変更のためのものです。
 
-## 実行環境とパッケージ
+## 実行入口とパッケージ
 
 ### なぜコアは C++17 なのですか？
 
@@ -114,15 +120,15 @@ C++17 は、このプロジェクトでは保守的なポータビリティ選�
 
 主な互換性リスクも、メモリ安全性だけではありません。難所は Excel の挙動です。型変換、エラー伝播、ロケール、日付、動的配列、OOXML 往復保存、Oracle 差分が中心です。Rust は多くの実装リスクに効きますが、表計算仕様の地獄は消してくれません。Formulon は現在の C++17 規約、C ABI 境界、formatter、Oracle / CTest gate を中心に組まれています。他の人に新規スプレッドシートエンジンを C++ で始めることを勧めるものではありません。
 
-### どの実行環境を選べばよいですか？
+### どの実行入口を選べばよいですか？
 
-数式ではなく、配置先で選びます。
+配置先で選びます。
 
 | 用途 | 推奨パッケージ |
 | --- | --- |
 | ブラウザ上で計算したい | `@libraz/formulon`（WASM） |
-| Node.js で広い Workbook API を使いたい | `@libraz/formulon`（WASM） |
-| Node.js でネイティブ実行を優先したい | `@libraz/formulon-native`（最小構成） |
+| ブラウザまたは native addon なしの Node.js | `@libraz/formulon`（WASM） |
+| ソース checkout から Node.js ネイティブ実行を優先したい | `packages/npm-native` |
 | Python バッチやノートブックで使いたい | `formulon`（PyPI） |
 | CI やシェルから使いたい | GitHub Releases の CLI |
 | AI エージェントにワークブック操作を渡したい | `@libraz/formulon-mcp` |
@@ -135,9 +141,9 @@ C++17 は、このプロジェクトでは保守的なポータビリティ選�
 
 ### Native Node は WASM と同じ機能を全部使えますか？
 
-いいえ。`@libraz/formulon-native` は N-API アドオンですが、v0.9.2 時点では最小構成です。`Workbook.createDefault()`、`loadBytes()`、セルの読み書き、`recalc()`、`save()`、シート追加・削除・リネーム、`setDefinedName()`、トップレベルの `evalFormula()` などに絞られています。
+Workbook の形としては同じです。ソースツリーの `packages/npm-native` は、WASM パッケージと同じ 174 個の Workbook instance method と 3 個の static factory（`createDefault` / `createEmpty` / `loadBytes`）を公開し、v0.9.4 で追加された `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` も含みます。WASM 側はホストにガベージコレクタがないため、追加でエンジンインスタンスを解放する `delete()` ライフサイクルメソッドを持ちます。それ以外の result envelope と値の形は同じです。
 
-スタイル、条件付き書式、レイアウト、ピボット、コメント、ハイパーリンクなど広い Workbook API が必要な場合は、現時点では WASM パッケージを選んでください。
+ソースツリー内のパッケージをビルド / stage でき、配置先に platform-specific な `.node` バイナリを置けるなら Native Node を選べます。native thread や `loadBytes` / `save` の heap copy 削減を重視する用途向けです。ブラウザや native addon を置けない Node 配置では WASM を使います。
 
 ### オフラインで動きますか？
 
@@ -160,7 +166,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-これらがない環境では、`formulon-cell` は最小限の簡易エンジンにフォールバックする場合があります。その場合、UI は動いても、数式評価、再計算、`.xlsx` 往復保存は本物のエンジンとしては動きません。
+これらのヘッダーがない場合、`@libraz/formulon`（生の WASM パッケージ）にフォールバックはありません。`createFormulon()` はそのまま失敗します。`formulon-cell` の `WorkbookHandle.createDefault()` も、既定では `SharedArrayBuffer` が使えない環境で reject します。簡易エンジンは、ホスト側が `preferStub: true` を指定して明示的に選んだ場合にのみ動きます。実行時にどちらが動いているかは `wb.isStub` / `isUsingStub()` で判定でき、`createDefault()` の reject は `onError` または `try` / `catch` で処理してください。暗黙のフォールバックを前提にしないでください。
 
 ### Vite のビルド警告は問題ですか？
 
@@ -174,13 +180,13 @@ Cross-Origin-Embedder-Policy: require-corp
 
 Excel ワークブックをアプリや業務フローの一部として扱う用途に向いています。たとえば、ブラウザ上の見積もり・料金計算、サーバー側の帳票計算、CI での計算差分検査、Python バッチ、AI エージェントによるワークブック編集です。
 
-反対に、Excel そのものを置き換えるデスクトップ UI、VBA 実行環境、PowerQuery / DAX 実行基盤、外部データ接続の更新基盤として使うものではありません。用途別の入口は [ユースケース](/ja/scenarios/) を参照してください。
+反対に、Excel そのものを置き換えるデスクトップ UI、VBA 実行環境、PowerQuery / DAX 実行基盤、外部データ接続の更新基盤として使うものではありません。用途別の詳しい紹介は [ユースケース](/ja/scenarios/) を参照してください。
 
 ### 速いですか？
 
 スプレッドシートに対して、単一の正直なベンチマーク値はありません。実行時間は、ワークブック構造、数式の種類、動的配列、共有数式、ファイルサイズ、パース時間を測るのか、再計算を測るのか、保存時間を測るのか、ホスト言語のオーバーヘッドを含めるのかで変わります。
 
-実用上の主張はアーキテクチャ上のものです。各実行環境は同じネイティブ C++ コアを共有し、WASM / Python / CLI / Native Node はそのコアを包む配布面です。レイテンシやコストを約束する前に、代表的なワークブックで測ってください。
+実用上の主張はアーキテクチャ上のものです。各実行入口は同じネイティブ C++ コアを共有し、WASM / Python / CLI / Native Node はそのコアを包む配布面です。レイテンシやコストを約束する前に、代表的なワークブックで測ってください。
 
 ### 本番投入できますか？
 
@@ -218,7 +224,24 @@ npx -y @libraz/formulon-mcp
 
 ただし、MCP はファイルを読み書きするツールです。運用時は、MCP クライアント側の権限、作業ディレクトリ、扱うファイルの範囲を制御してください。
 
-## 0.9.2
+## 最近のリリース
+
+### v0.9.4 で利用者に影響する変更は？
+
+v0.9.4 では、既存ワークブックに対する読み取り専用の ad-hoc formula evaluation が、C API・Node addon・WASM に追加されました（Python には対応する API はまだありません）。`evaluateFormulaText` と `evaluateConditionalFormula` により、数式をセルへ書き込まずに「この場所で評価したら何を返すか」を確認できます。評価は厳密に読み取り専用で、ワークブックを変更せず依存グラフにも参加しません。配列やスピルの結果は範囲ではなく左上端の 1 要素に縮約されます。この挙動の詳細は [動的配列](/ja/workbook/dynamic-arrays) を参照してください。ワークブック内参照と定義名を解決し、条件付き書式向けの経路では Excel 風の相対参照と predicate の規則を適用します。
+
+また、シート上のコメント列挙（Node addon の `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）、入力規則ドロップダウン表示状態の往復保存、条件付き書式ルール追加（`addConditionalFormat` / `fm_sheet_cf_add_rule`）時の新規 rule index 返却にも対応しました。入力規則の `showDropDown` は OOXML 上では意味が反転しているため、ホスト API 側では扱いやすい `show_dropdown` の意味で公開します。コメント列挙と CF の rule index 返却は C API・Node addon・WASM に入りましたが、Python バインディングにはまだなく、Python の `add_conditional_format` も新規 rule index を返しません。
+
+### v0.9.3 で利用者に影響する変更は？
+
+v0.9.3 では、実行入口とファイル形式の間に残っていたギャップの大部分を解消しました。
+
+- **バインディング間の完全なパリティ**: C API、Node addon、WASM、Python の全バインディングで、ピボットキャッシュのワークシートソース / レイアウト、シートビューの表示 / 方向フラグ、`save_ex`（XLSX / XLSB を明示的に選択）、シートスコープの定義名、条件付き書式の `ColorScale` / `DataBar` / `IconSet` payload が同等に使えるようになりました。
+- **条件付き書式**が、行全体 / 列全体を指す `sqref` と、x14 データバーオーバーレイ（グラデーション、軸位置、負の値の塗り・枠線）のデコードに対応しました。
+- **XLSB のプロトコルギャップを解消**: スタイル、`LET` や新しい関数名を含むワークブック単位の定義名、シート間 3-D 参照、動的配列のスピル数式が `.xlsb` を往復保存できるようになりました。これらの一部は、以前は実 Excel が開けない `.xlsb` ファイルを生成していました。
+- **OOXML の往復保存忠実性**: `workbookPr` / `bookViews` / `workbookProtection`、`date1904`、テーブルスタイル情報、セルごとのテーマ / インデックス色指定が、実 Excel 由来のワークブックに対する読み込み・変更・保存のサイクルを経ても保持されるようになりました。
+
+現在の形式別の詳細は [ファイル形式サポート一覧](/ja/compatibility/file-format-support) を参照してください。
 
 ### v0.9.2 で利用者に影響する変更は？
 

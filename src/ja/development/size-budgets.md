@@ -12,8 +12,21 @@ target 別の成果物サイズ上限です。上限を超えるとビルド失�
 
 | 対象 | 予算 |
 | --- | --- |
-| 非圧縮サイズ | 目標 1.65 MB / 上限 1.8 MB |
-| Brotli | 目標 530 KB / 上限 600 KB |
+| 非圧縮サイズ | 目標 2.5 MB（ソフト上限）/ ハード上限 3.0 MB |
+| Brotli | 目標 560 KB / 上限 600 KB |
+
+この上限は v0.9.3 で引き上げられました。OOXML / XLSB / pivot の忠実度向上作業でバイナリが正当に増えた後、機能追加のたびに上限を再調整せずに済むよう、あらかじめ余裕を持たせるためです。現在のビルドは非圧縮でおよそ 2.09 MiB、Brotli で約 560 KiB ─ 目標の範囲内に十分収まっており、ハード上限までまだ約 1 MB の余裕があります。
+
+<svg viewBox="0 0 600 110" width="100%" role="img" aria-label="WASM 非圧縮サイズのゲージ: 現在のビルドは約 2.09 MiB、ソフト上限 2.5 MiB、ハード上限 3.0 MiB">
+  <rect x="1" y="40" width="598" height="28" rx="6" fill="var(--vp-c-bg-soft)" stroke="var(--vp-c-divider)" />
+  <rect x="1" y="40" width="418" height="28" rx="6" fill="var(--vp-c-brand-1)" />
+  <line x1="500" y1="32" x2="500" y2="76" stroke="var(--vp-c-text-2)" stroke-width="2" stroke-dasharray="4 3" />
+  <line x1="597" y1="32" x2="597" y2="76" stroke="var(--vp-c-text-1)" stroke-width="2" />
+  <text x="4" y="26" font-size="12" fill="var(--vp-c-text-3)">0 MiB</text>
+  <text x="500" y="26" text-anchor="middle" font-size="12" fill="var(--vp-c-text-2)">ソフト上限 2.5 MiB</text>
+  <text x="596" y="98" text-anchor="end" font-size="12" fill="var(--vp-c-text-1)">ハード上限 3.0 MiB</text>
+  <text x="209" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="var(--vp-c-text-1)">現在 約 2.09 MiB</text>
+</svg>
 
 ## 「予算化」が意味すること
 

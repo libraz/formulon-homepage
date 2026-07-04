@@ -115,26 +115,28 @@ const seedWorkbook = (wb: WorkbookHandleType) => {
 onMounted(async () => {
   if (!host.value) return
 
-  spreadsheetApi = await import('@libraz/formulon-cell')
-  const { Spreadsheet, WorkbookHandle, mutators, formatCell, isUsingStub } = spreadsheetApi
-  workbook = await WorkbookHandle.createDefault({
-    onFallback(reason) {
-      console.info('[formulon-cell]', reason)
-    }
-  })
-  seedWorkbook(workbook)
+  try {
+    spreadsheetApi = await import('@libraz/formulon-cell')
+    const { Spreadsheet, WorkbookHandle, mutators, formatCell, isUsingStub } = spreadsheetApi
+    workbook = await WorkbookHandle.createDefault()
+    seedWorkbook(workbook)
 
-  spreadsheet = await Spreadsheet.mount(host.value, {
-    workbook,
-    features: spreadsheetApi.presets.minimal(),
-    locale: isJa.value ? 'ja' : 'en',
-    theme: isDark.value ? 'ink' : 'paper'
-  })
+    spreadsheet = await Spreadsheet.mount(host.value, {
+      workbook,
+      features: spreadsheetApi.presets.minimal(),
+      locale: isJa.value ? 'ja' : 'en',
+      theme: isDark.value ? 'ink' : 'paper'
+    })
 
-  mutators.setActive(spreadsheet.store, targetAddr)
-  result.value = formatCell(workbook.getValue(targetAddr), isJa.value ? 'ja-JP' : 'en-US')
-  engine.value = workbook.isStub || isUsingStub() ? 'stub' : `formulon ${workbook.version}`
-  status.value = workbook.isStub || isUsingStub() ? 'fallback' : 'ready'
+    mutators.setActive(spreadsheet.store, targetAddr)
+    result.value = formatCell(workbook.getValue(targetAddr), isJa.value ? 'ja-JP' : 'en-US')
+    engine.value = workbook.isStub || isUsingStub() ? 'stub' : `formulon ${workbook.version}`
+    status.value = workbook.isStub || isUsingStub() ? 'fallback' : 'ready'
+  } catch (error) {
+    console.error('[formulon-cell demo]', error)
+    engine.value = 'unavailable'
+    status.value = 'error'
+  }
 })
 
 onBeforeUnmount(() => {

@@ -16,21 +16,17 @@ WASM, Python, Native Node, and CLI should share calculation behavior. What chang
 
 ## Decision rules
 
-```mermaid
-flowchart LR
-  subgraph Same core
-    direction TB
-    CORE[C++17 calculation core] --> ABI[C ABI]
-  end
-  ABI --> WASM[WASM]
-  ABI --> NN[Native Node]
-  ABI --> PY[Python]
-  ABI --> CLI[CLI]
-  WASM --> BROWSER[Browser / worker /<br/>Node without native]
-  NN --> NODE[Node service<br/>with native deploy]
-  PY --> BATCH[Batch / notebook /<br/>data pipeline]
-  CLI --> SHELL[Shell / CI /<br/>repro reports]
-```
+<DiagramLayers :layers="[
+  { title: 'Core', nodes: ['C++17 calculation core'] },
+  { title: 'ABI', nodes: ['C ABI'] },
+  { title: 'Surfaces', nodes: ['WASM', 'Native Node', 'Python', 'CLI'] },
+  { title: 'Host context', nodes: [
+    { label: 'Browser / worker', note: 'Node without native' },
+    { label: 'Node service', note: 'with native deploy' },
+    { label: 'Batch / notebook', note: 'data pipeline' },
+    { label: 'Shell / CI', note: 'repro reports' }
+  ] }
+]" />
 
 - Use WASM when workbook data starts in the browser, when upload privacy matters, or when a server should not receive the raw file.
 - Use Python when the workbook is part of report generation, scheduled jobs, data validation, or notebook workflows.
