@@ -12,7 +12,7 @@
 
 ファイル形式層が workbook parts、relationships、shared strings、styles、worksheets、defined names、tables、comments、hyperlinks、merges、validations、conditional formatting、pivot cache、その他拡張パートを読み込みます。意味解釈しないパートは保持対象として扱い、保存時に欠落しないようにします。
 
-現在のビルドでは、入力規則のドロップダウン表示状態も扱います。OOXML では `showDropDown` の意味が反転して保存されるため、Formulon はホスト API 向けに扱いやすい意味へ正規化し、保存時に正しい package 表現へ戻します。
+入力規則はドロップダウン表示状態のフラグ（`show_dropdown`）を公開します。OOXML では `showDropDown` の意味が反転して保存されるため、Formulon はホスト API 向けに扱いやすい意味へ正規化し、保存時に正しい package 表現へ戻します。
 
 ロード後は必ず妥当性を確認します。
 

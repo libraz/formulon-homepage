@@ -3,7 +3,7 @@
 | 実行入口 | パッケージ | 実行環境 |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | ブラウザ、worker、Node |
-| Native Node | `packages/npm-native` | ソース checkout から使う Node.js N-API アドオン |
+| Native Node | `@libraz/formulon-native` | Node.js N-API アドオン。darwin-arm64 / linux-x64 / linux-arm64 向けのビルド済みバイナリを同梱（ソース checkout からのビルドも可） |
 | Python | `formulon` | wasmtime を使う py3 wheel |
 | CLI | `formulon-cli-<os>-<arch>` | 単体バイナリ |
 | C ABI | ヘッダとネイティブライブラリ | 独自ホスト向け |
@@ -18,7 +18,7 @@
   { title: '実行入口', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: '0.9.4 のアドホック評価・コメント列挙は未対応' },
+      { label: 'Python (formulon)', note: 'スカラーのアドホック評価・コメント列挙は未対応（0.9.5 で配列全体を返す evaluate_formula_array は対応）' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -44,7 +44,7 @@
 | `formulon-cell` | 参考 UI | 結合試験と実装例のための公開 UI。Excel 互換の完成 UI ではない |
 
 ::: warning Python は 0.9.4 の追加機能にまだ対応していません
-読み取り専用のアドホック評価 `evaluateFormulaText` / `evaluateConditionalFormula` と、シート単位のコメント列挙は C API・Native Node アドオン・WASM だけが持つ機能です。Python の `Workbook` にはこれに相当する評価メソッドがなく、コメントも単一セル向けの `get_comment` / `set_comment` しかありません — Native Node の `getComments(sheet)` や C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` に相当する列挙 API は存在しません。Python の `add_conditional_format` も、他の 3 つの実行入口が 0.9.4 で得た新しいルールインデックスの返却には対応していません。
+読み取り専用の**スカラー**アドホック評価 `evaluateFormulaText` / `evaluateConditionalFormula` と、シート単位のコメント列挙は C API・Native Node アドオン・WASM だけが持つ機能です。Python の `Workbook` にはこれに相当する評価メソッドがなく、コメントも単一セル向けの `get_comment` / `set_comment` しかありません — Native Node の `getComments(sheet)` や C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` に相当する列挙 API は存在しません。なお 0.9.5 で Python にも、配列全体を返すアドホック評価 `evaluate_formula_array` と、関数メタデータをマージする `merge_function_metadata` が追加されました（スカラーの `evaluate_formula_text` / `evaluate_conditional_formula` は引き続き未対応）。Python の `add_conditional_format` は、他の実行入口と同様に新規ルールのインデックスを返します。
 :::
 
 ## 実行入口ごとの結果が食い違ったとき

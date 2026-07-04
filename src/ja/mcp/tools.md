@@ -1,6 +1,6 @@
 # ツール一覧
 
-`formulon-mcp` が公開する全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間が実行入口全体を一望したいときに使えます。
+`formulon-mcp` が公開する全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間がツール群全体を一望したいときに使えます。
 
 ::: info A1 と 0-based の併用
 A1 表記を使う場合を除き、sheet / row / column インデックスは Formulon API と同じ 0-based です。アドレスを取るツールは両方の形式を受け付けます。
@@ -16,8 +16,8 @@ A1 パーサーが受け付けるのは、単一シート内の矩形範囲（`S
       { label: 'エンジン', note: 'version / eval / lookup / trace' },
       { label: 'セッション', note: 'open / list / close / recalc / save / metadata' },
       { label: '検査', note: 'session / layout / regions / analyze' },
-      { label: 'セルと範囲', note: 'set / get / range / find / replace' },
-      { label: '構造', note: 'sheet / defined name / insert-delete / view' },
+      { label: 'セルと範囲', note: 'set / get / range / set-range / find / replace' },
+      { label: '構造', note: 'sheet / defined name / insert-delete / view / dimension' },
       { label: 'リッチデータ', note: 'merge / comment / hyperlink / validation / cond-format' },
       { label: '詳細アクセス', note: 'workbook_call / ワンショット inspect & update' }
     ]
@@ -58,6 +58,7 @@ A1 パーサーが受け付けるのは、単一シート内の矩形範囲（`S
 | Tool | 役割 |
 | --- | --- |
 | `formulon_set_cells` | セッションに mutation を適用。A1（`Sheet1!B2`）または 0-based（`sheet` / `row` / `col`）どちらも可。 |
+| `formulon_set_range` | アンカーセルを起点に値の 2D ブロックを書き込む。各要素の JSON 型でセル型が決まり、`{"f":"=…"}` は数式、`null` はそのセルをスキップ。テーブルには `set_cells` より簡潔。 |
 | `formulon_get_cell` | 1 セルを読む。セッションからでも、パス直接でも可。 |
 | `formulon_get_range` | セッションから A1 矩形範囲を読む。 |
 | `formulon_find_cells` | テキスト値・数式テキストを検索。 |
@@ -70,6 +71,7 @@ A1 パーサーが受け付けるのは、単一シート内の矩形範囲（`S
 | `formulon_sheet_operation` | シートの追加 / 削除 / 改名 / 移動。 |
 | `formulon_set_defined_name` | ワークブック全体で有効な定義名を追加 / 置換 / 削除。 |
 | `formulon_edit_structure` | 行・列の挿入 / 削除。 |
+| `formulon_dimension_operation` | 列幅・行高の override を一覧、または width / height、hidden、outline level を設定。列は境界を含む `[first, last]` の範囲、行は単一の行インデックスに作用。 |
 | `formulon_set_sheet_view` | zoom、freeze pane、タブの hidden 状態を設定。 |
 
 ## リッチデータ

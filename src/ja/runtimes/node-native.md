@@ -16,7 +16,7 @@ Node がネイティブアドオン向けに提供する C ABI。N-API レベル
 Native Node パッケージは、WASM パッケージと同じ 174 個の Workbook instance method と同じ 3 個の static factory（`createDefault`、`createEmpty`、`loadBytes`）を公開します。v0.9.4 で追加された `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` も含みます。WASM 側だけは `delete()` という lifecycle method を追加で持ちます。これは WASM にはネイティブメモリを回収するホスト側 GC が存在しないためです。それ以外の result envelope と値の形は同一です。Native Node を選ぶ理由は API の広さではなく、運用面（native thread、コピーコストの回避など）です。
 :::
 
-## 利用方法
+## 提供状況
 
 Native Node アドオンはソースツリーの `packages/npm-native` にありますが、現時点では public npm registry には公開されていません。Formulon の checkout からビルドするか、自分の配布環境に stage して使います。
 
@@ -55,17 +55,17 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 | --- | --- |
 | 作成 | `Workbook.createDefault()`, `createEmpty()`, `loadBytes(bytes)` |
 | セル変更 | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula` |
-| 再計算と読み取り | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `save`, `spillInfo`, `precedents`, `dependents` |
+| 再計算と読み取り | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `save`, `spillInfo`, `precedents`, `dependents` |
 | シートと構造 | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, 行 / 列の挿入削除、定義名、テーブル、passthrough parts |
 | workbook data | styles、merges、comments、`getComments`、hyperlinks、validations、conditional formatting、sheet view / layout / protection |
 | PivotTables | pivot cache / pivot table の作成、変更、layout 投影 |
 | policy / catalog | calc mode、Excel profile id、function metadata、ローカライズ名、external links |
-| トップレベル | `evalFormula`, `version`, `lastErrorMessage`, `lastErrorContext`, `statusString` |
+| トップレベル | `evalFormula`, `version`, `lastErrorMessage`, `lastErrorContext`, `statusString`, `mergeFunctionMetadata` |
 
 正確な method 一覧はパッケージの TypeScript declaration を確認してください。Native Node は、配置先に platform-specific binary を置ける Node サービス向けです。ブラウザや native addon なしの Node 配置には WASM を使います。
 
 ::: tip evaluateFormulaText / evaluateConditionalFormula は読み取り専用
-v0.9.4 で追加されたこの 2 つは、ワークブックの状態を変更せず、依存関係グラフにも参加しない形で数式テキストを評価します ── 副作用として再計算が走ることはありません。配列やスピルの結果は左上端の 1 要素に縮約されます。これは意図的な Phase 1 の API 仕様であり、不具合ではありません。スピル範囲が通常どう振る舞うかは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
+v0.9.4 で追加されたこの 2 つは、ワークブックの状態を変更せず、依存関係グラフにも参加しない形で数式テキストを評価します ── 副作用として再計算が走ることはありません。配列やスピルの結果は左上端の 1 要素に縮約されます。これは意図的な Phase 1 の API 仕様であり、不具合ではありません。スピル範囲が通常どう振る舞うかは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。配列全体が必要なときは、v0.9.5 で追加された `evaluateFormulaArray` を使うと、同じ読み取り専用・非変更・自己参照の制約のもとで結果を左上端に縮約せず `EvalArrayResult` として返します。
 :::
 
 ## 次に読むもの

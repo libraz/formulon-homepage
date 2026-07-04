@@ -36,7 +36,9 @@ Formulon を理解する最短ルートは、すでに使っているワーク�
 | よくある組み込みエラーを直す | [トラブルシュート](/ja/start/troubleshooting) |
 | 具体的な流れから始める | [利用例](/ja/scenarios/) |
 
-## 次に読むもの
+## 関心事別の読み進め方
+
+最初の実行が済んだら、関心事ごとに読み進めます。
 
 - 実行環境への組み込み: [WASM](/ja/runtimes/wasm), [Python](/ja/runtimes/python), [Native Node](/ja/runtimes/node-native), [CLI](/ja/runtimes/cli)
 - ワークブックの挙動: [ライフサイクル](/ja/workbook/lifecycle), [数式エンジン](/ja/workbook/formula-engine), [再計算](/ja/workbook/recalculation)

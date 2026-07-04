@@ -63,6 +63,10 @@ The examples above always evaluate in a fresh, disposable formula context: there
 `evaluateFormulaText` / `evaluateConditionalFormula` never mutate the workbook and never join the dependency graph — a self-reference reads the target cell's cached value instead of raising `#REF!`. Array and spill results are reduced to their top-left element; this is a deliberate Phase 1 API shape, not Excel's implicit-intersection or spill behavior. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling actually works.
 :::
 
+::: tip Whole-array variant (v0.9.5)
+When you want the entire spilled result rather than just the top-left element, v0.9.5 adds `evaluateFormulaArray(sheet, row, col, formula)` — same read-only, no-mutation, and self-reference caveats as `evaluateFormulaText`, but it returns the whole Array (`EvalArrayResult`) of a dynamic-array formula instead of reducing it. It is available on the Node addon, WASM, and C API, and — unlike the scalar variant — Python exposes it too as `evaluate_formula_array(...)`.
+:::
+
 ### JavaScript / WASM and Native Node
 
 ```ts
@@ -94,5 +98,5 @@ try {
 The Native Node package (`packages/npm-native`) exposes the identical `evaluateFormulaText` / `evaluateConditionalFormula` methods on the same `Workbook` shape; see [Native Node integration](/runtimes/node-native).
 
 ::: warning Python gap
-`evaluateFormulaText` / `evaluateConditionalFormula` are available in the C API, the Node addon, and WASM only. The Python binding does not expose an equivalent yet: evaluate a fresh formula with `formulon.eval_formula`, or write the formula into a cell with `set_formula` and call `recalc()` when you need workbook context in Python.
+`evaluateFormulaText` / `evaluateConditionalFormula` are available in the C API, the Node addon, and WASM only. The Python binding does not expose a scalar equivalent yet: evaluate a fresh formula with `formulon.eval_formula`, or write the formula into a cell with `set_formula` and call `recalc()` when you need workbook context in Python. Python does have the whole-array variant `evaluate_formula_array(...)` as of v0.9.5.
 :::

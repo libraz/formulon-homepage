@@ -1,6 +1,6 @@
 # WASM 連携
 
-WASM パッケージは Formulon の最も広い JavaScript API です。ブラウザ・Web Worker・Node から、JS API も `formulon-cell` も同じ `@libraz/formulon` バイナリで動かします。
+WASM パッケージは Formulon の実行入口の中で最も適用範囲が広いものです。ブラウザ・Web Worker・Node から、JS API も `formulon-cell` も同じ `@libraz/formulon` バイナリで動かします。
 
 ::: warning ホスティングが重要
 ブラウザでの成功はサーバーのヘッダー、Worker 形式、バンドラ挙動に依存します。ローカル開発環境だけでなく、デプロイ先で必ず確認してください。
@@ -58,7 +58,7 @@ try / finally を `withWorkbook(bytes, fn)` のようなヘルパに閉じ込め
 
 ## サイズ予算
 
-WASM ビルドには厳しいサイズ予算があります。ブラウザに乗るパスへの依存追加は測定したうえで行ってください。実数値は [Size budgets](/ja/development/size-budgets) を参照。
+WASM ビルドには厳しいサイズ予算があります。ブラウザに乗るパスへの依存追加は測定したうえで行ってください。実数値は [サイズ予算](/ja/development/size-budgets) を参照。
 
 ## Bundler 設定
 
@@ -75,7 +75,7 @@ export default defineConfig({
 })
 ```
 
-ブラウザでは pthread worker を有効にする前に COOP / COEP ヘッダを配信してください。`formulon-cell` 側の同じ設定は [バンドラ設定](/ja/cell/bundler)、bundler のよくあるメッセージは [トラブルシュート](/ja/start/troubleshooting) を参照。
+ブラウザでは、pthread worker を有効にする場合は上記の COOP / COEP ヘッダを配信してください。`formulon-cell` 側の同じ設定は [バンドラ設定](/ja/cell/bundler)、bundler のよくあるメッセージは [トラブルシュート](/ja/start/troubleshooting) を参照。
 
 ## 次に読むもの
 

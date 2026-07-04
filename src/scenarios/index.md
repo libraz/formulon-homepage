@@ -39,6 +39,6 @@ Every scenario follows the same `load → mutate → recalc → save` lifecycle 
 
 ## Compatibility gate
 
-Before adopting any scenario, inspect the workbook's formulas and decide how to handle external-service functions. Formulon locally implements **505 / 522** catalogued names; the remaining 17 are either environment-bound (`CELL`, `INFO`) or deliberate unavailable service stubs such as `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE connection functions. Treat those as product decisions: reject the workbook, show a compatibility warning, or route it to an Excel-backed workflow.
+Before adopting any scenario, inspect the workbook's formulas and decide how to handle external-service functions. Formulon has unconditional local implementations for **505 / 522** catalogued names; 2 more (`CELL`, `INFO`) also execute locally but depend on workbook/host state, and the remaining 15 are deliberate unavailable service stubs such as `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE connection functions. Treat those as product decisions: reject the workbook, show a compatibility warning, or route it to an Excel-backed workflow.
 
 For runtime-specific setup, see [Runtimes](/runtimes/). For the engine-side flow, see [Workbook lifecycle](/workbook/lifecycle).

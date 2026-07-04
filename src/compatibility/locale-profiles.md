@@ -10,8 +10,8 @@ A named binding between an Excel build and a locale, plus the captured oracle da
 
 | Profile | Status | Purpose |
 | --- | --- | --- |
-| `win-365-ja_JP` | default | Primary runtime target |
-| `mac-365-ja_JP` | oracle-backed | Comparison and regression tracking |
+| `win-365-ja_JP` | default, oracle-backed | Primary runtime target, verified through variant goldens; primary profile for the separate workbook-level (pivot/print) oracle track |
+| `mac-365-ja_JP` | oracle-backed | Primary checked-in formula-oracle dataset |
 
 English-locale profiles are exposed only once their own oracle coverage exists. The repository tracks captured data per profile; profiles without sufficient data stay private to avoid implying compatibility that has not been verified.
 

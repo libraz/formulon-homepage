@@ -11,6 +11,7 @@ A Python wheel with no Python ABI tag, no platform tag, and no native code. It w
 | API | Purpose |
 | --- | --- |
 | `formulon.eval_formula(formula)` | One-shot formula evaluation |
+| `formulon.merge_function_metadata(base, entry, locale)` | Pure helper: merge host-supplied localized function metadata over the engine catalog |
 | `formulon.library_version()` | Version of the loaded Formulon module |
 | `formulon.version_string()` | Alias for `library_version()` |
 | `ValueKind` | Enum matching C ABI value kinds |
@@ -37,7 +38,7 @@ Common methods:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`, `lambda_text_at`
+- `get_value`, `evaluate_formula_array`, `lambda_text_at`
 - `recalc`, `partial_recalc`, `set_iterative`
 - `save`, `save_ex` (choose the XLSX/XLSB container format)
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
@@ -50,8 +51,8 @@ Common methods:
 The `with` block releases the native handle on exit, including when an exception is raised. Avoid keeping a `Workbook` reference past its `with` block.
 :::
 
-::: warning No ad-hoc evaluation or comment enumeration yet
-Python has no `evaluate_formula_text` / `evaluate_conditional_format` equivalent to the WASM/Native Node/C API 0.9.4 additions, and only exposes single-cell `get_comment` / `set_comment` — there is no sheet-wide comment enumeration call. See [Surface matrix](/api/surfaces) for the full parity picture.
+::: warning Only the whole-array ad-hoc evaluator; no comment enumeration yet
+Python still has no `evaluate_formula_text` / `evaluate_conditional_formula` equivalent to the WASM / Native Node / C API 0.9.4 scalar ad-hoc evaluators, and only exposes single-cell `get_comment` / `set_comment` — there is no sheet-wide comment enumeration call. As of 0.9.5 Python does expose the whole-array evaluator `evaluate_formula_array(sheet, row, col, formula)` — read-only and non-mutating, returning the full spilled `Array` result (as a nested `List[List[Value]]`) rather than reducing to the top-left element — plus the pure `merge_function_metadata` helper. See [Surface matrix](/api/surfaces) for the full parity picture.
 :::
 
 The authoritative Python method list lives in the package type stubs and docstrings.

@@ -44,10 +44,10 @@ Formulon 自身の README と `tools/catalog/status.py` は実装数を **507** 
 | 論理 | 20 | ローカル実装 |
 | テキスト | 50 | ローカル実装 |
 | 日付 / 時刻 | 25 | ローカル実装 |
-| 検索 / 参照 | 39 | 動的配列時代の検索挙動を含むローカル実装 |
+| 検索 / 参照 | 39 | 動的配列対応の検索挙動を含むローカル実装。`IMAGE` と `RTD` は外部サービススタブ |
 | 財務 | 56 | `STOCKHISTORY` は外部サービススタブ |
 | エンジニアリング | 54 | ローカル実装 |
-| 情報 | 19 | `CELL` と `INFO` は環境依存。`IMAGE`、`PY`、`RTD` などは外部サービススタブ |
+| 情報 | 19 | 環境依存の `CELL` と `INFO` を含む。このカテゴリに外部サービススタブはない |
 | データベース | 12 | ローカル実装 |
 | Web | 4 | `ENCODEURL` と `FILTERXML` は実装済み。`WEBSERVICE` と `PY` は外部サービススタブ |
 | キューブ | 7 | 接続関数として名前は認識するが、ライブ OLAP 接続は Formulon の対象外 |
@@ -57,7 +57,7 @@ Formulon 自身の README と `tools/catalog/status.py` は実装数を **507** 
 
 数式レベルの Oracle 検証はセル値を確認します。ピボットテーブルや印刷レイアウトは、挙動が数式の結果ではなくワークブック構造として保存されているため、ワークブック単位の Oracle 検証トラックが別途必要です。
 
-このトラックは、信頼できる PivotTable 自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。pivot suite は `28/28` で closure、`print_basic` / `print_pagination` / `print_fit` / `print_matrix` は `formulon_workbook_oracle_tests` で `35/41` pass です。残る `6` 件は、`PageSetup.Zoom <= 50` で発生する既知の Excel PageBreakPreview COM の quirk による `win-365-ja_JP` scope の divergence skip として記録しています。
+このトラックは、信頼できる PivotTable 自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。pivot suite は `28/28` でクローズ済み、`print_basic` / `print_pagination` / `print_fit` / `print_matrix` は `formulon_workbook_oracle_tests` で `35/41` pass です。残る `6` 件は、`PageSetup.Zoom <= 50` で発生する既知の Excel PageBreakPreview COM の quirk による `win-365-ja_JP` scope の divergence skip として記録しています。
 
 ## 外部サービススタブ
 

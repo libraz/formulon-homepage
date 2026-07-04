@@ -1,13 +1,13 @@
-# C++ Core
+# C++ コア
 
-Core は C++17 で書かれており、小さな依存セットと予測可能な組み込み挙動を重視しています。同じソースがネイティブライブラリ・WebAssembly モジュール・CLI バイナリにコンパイルされます。
+コアは C++17 で書かれており、小さな依存セットと予測可能な組み込み挙動を重視しています。同じソースがネイティブライブラリ・WebAssembly モジュール・CLI バイナリにコンパイルされます。
 
 ::: info 用語: predictable embedding（予測可能な組み込み）
 core をホストアプリにリンクしたときに、ホスト側のビルド設定が Formulon の挙動を変えないようにする方針。exception を使わず、RTTI も持たず、グローバルアロケータや UB に近いショートカットを避けます。狙いは「ホストのビルドフラグで Formulon の挙動が変わらない」こと。
 :::
 
 ::: info 用語: `Expected<T, Error>`
-成功値かエラーコードのどちらかを返す型。exception 投げずに失敗を表現します。`std::expected` / `absl::StatusOr` / Rust の `Result<T, E>` と同じ発想。呼び出し側は結果で分岐し、C ABI 境界を unwinding が跨ぐことはありません。
+成功値かエラーコードのどちらかを返す型。exception を投げずに失敗を表現します。`std::expected` / `absl::StatusOr` / Rust の `Result<T, E>` と同じ発想。呼び出し側は結果で分岐し、C ABI 境界を unwinding が跨ぐことはありません。
 :::
 
 ## 重要な選択

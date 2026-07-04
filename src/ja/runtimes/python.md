@@ -35,7 +35,7 @@ PyPI パッケージはプラットフォーム別の `libformulon` を同梱し
 主な実行時差分は threading です。Python は `wasmtime` 経由で C ABI の WASM ビルドを呼び出すため、`recalc()` は serial です。計算結果の忠実度は他の実行入口と同じです。
 
 ::: warning Python は v0.9.4 の追加分をまだ公開していません
-`evaluateFormulaText` / `evaluateConditionalFormula`、およびコメント列挙（Node アドオンの `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）は v0.9.4 で C API・Node アドオン・WASM に追加されましたが、Python ラッパーにはまだ対応するものがありません。「C ABI の実行入口をそのまま踏襲」というのはバインディングの全体的な設計方針を指しているのであって、メソッド単位の完全な一致を保証するものではありません。また Python の `add_conditional_format` は、Node / C API の `addConditionalFormat` が v0.9.4 で返すようになった新規ルールのインデックスをまだ返しません。
+`evaluateFormulaText` / `evaluateConditionalFormula`、およびコメント列挙（Node アドオンの `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）は v0.9.4 で C API・Node アドオン・WASM に追加されましたが、Python ラッパーにはまだ対応するものがありません。「C ABI の実行入口をそのまま踏襲」というのはバインディングの全体的な設計方針を指しているのであって、メソッド単位の完全な一致を保証するものではありません。なお Python の `add_conditional_format` は、Node アドオンや C API の `addConditionalFormat` が v0.9.4 で返すようになったのと同じ、新規ルールのインデックスを返します。
 :::
 
 <DiagramLayers :layers="[
@@ -47,6 +47,10 @@ PyPI パッケージはプラットフォーム別の `libformulon` を同梱し
   ] },
   { title: '未公開', nodes: [{ label: 'Python ラッパー' }] }
 ]" />
+
+::: tip v0.9.5: Python に配列全体版が追加
+v0.9.5 で Python にも `evaluate_formula_array`（読み込み済みワークブックに対する読み取り専用のアドホック評価で、動的配列 / スピル数式の結果を左上端に縮約せず配列全体として返す）と、ホスト提供のローカライズ済み関数メタデータをエンジンの構造カタログに重ねる純粋ヘルパー `merge_function_metadata` が入りました。一方でスカラー版の `evaluate_formula_text` / `evaluate_conditional_formula` は依然として未対応なので、上記の警告はそのまま有効です。
+:::
 
 ## エラー処理
 

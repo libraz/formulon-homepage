@@ -54,7 +54,7 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### なぜ既定プロファイルが日本語 Excel なのですか？
 
-最初の Oracle カバレッジが `win-365-ja_JP` を中心に作られたため、これが最初の公開プロファイルです。ロケールは実際の表計算挙動に影響します。関数名、区切り記号、日付パース、テキスト書式、照合、エラー表示などが変わり得ます。
+最初にチェックインされた数式 Oracle データは Mac Excel 365 ja-JP で取得されました。`win-365-ja_JP` は実行時の既定プロファイルで、variant golden を通じて検証されています（v0.9.2 で Windows COM ブリッジ経由で追加された、ピボット / 印刷のワークブック単位 Oracle データではプライマリプロファイルです）。ロケールは実際の表計算挙動に影響します。関数名、区切り記号、日付パース、テキスト書式、照合、エラー表示などが変わり得ます。
 
 英語ロケールのプロファイルは、対応する Oracle データが揃うまで公開しません。これはカバレッジ上の不足であり、日本語 Excel が世界中の Excel を代表するという主張ではありません。
 
@@ -133,7 +133,7 @@ C++17 は、このプロジェクトでは保守的なポータビリティ選�
 | CI やシェルから使いたい | GitHub Releases の CLI |
 | AI エージェントにワークブック操作を渡したい | `@libraz/formulon-mcp` |
 
-詳しくは [実行環境を選ぶ](/ja/start/choose-runtime)。
+詳しくは [実行入口を選ぶ](/ja/start/choose-runtime)。
 
 ### Python wheel に Cython / NumPy / pybind11 は必要ですか？
 
@@ -226,11 +226,19 @@ npx -y @libraz/formulon-mcp
 
 ## 最近のリリース
 
+### v0.9.5 で利用者に影響する変更は？
+
+v0.9.5 では、v0.9.4 の読み取り専用アドホック評価に「配列全体を返す」版が加わりました。`evaluateFormulaArray`（Node addon・WASM・C API）と `evaluate_formula_array`（Python）は、動的配列 / スピル数式を評価し、`evaluateFormulaText` のように左上端の 1 要素へ縮約せず、結果の配列全体（`EvalArrayResult`）を返します。読み取り専用・非変更・自己参照の制約は `evaluateFormulaText` と同じです。スカラー版の `evaluateFormulaText` / `evaluateConditionalFormula` は引き続き Node addon・WASM・C API のみで Python にはありませんが、この配列版は v0.9.5 で Python でも使えるようになりました。
+
+あわせて、ホスト提供のローカライズ済み関数メタデータをエンジンの構造カタログに重ねる純粋ヘルパー `mergeFunctionMetadata`（Node）/ `merge_function_metadata`（Python）が加わりました。ロケール上書き → エントリ既定 → エンジン値の優先順で、シグネチャ・説明・ローカライズ名をマージします。`functionMetadata` は遅延ディスパッチ形式（`XLOOKUP`、`SUMIFS` など）やパーサー特殊形式（`LET`、`LAMBDA`）も認識し、上限のない引数個数は `null` / `None` として報告します。
+
+範囲を指す定義名（例: `Sheet1!$A$1:$A$5`）は、暗黙的交差でスカラーへ縮約されず配列として評価されるようになりました。スピルのファントムセルも完全に列挙されます（`cell_count` / `cell_at` の忠実度向上）。
+
 ### v0.9.4 で利用者に影響する変更は？
 
 v0.9.4 では、既存ワークブックに対する読み取り専用の ad-hoc formula evaluation が、C API・Node addon・WASM に追加されました（Python には対応する API はまだありません）。`evaluateFormulaText` と `evaluateConditionalFormula` により、数式をセルへ書き込まずに「この場所で評価したら何を返すか」を確認できます。評価は厳密に読み取り専用で、ワークブックを変更せず依存グラフにも参加しません。配列やスピルの結果は範囲ではなく左上端の 1 要素に縮約されます。この挙動の詳細は [動的配列](/ja/workbook/dynamic-arrays) を参照してください。ワークブック内参照と定義名を解決し、条件付き書式向けの経路では Excel 風の相対参照と predicate の規則を適用します。
 
-また、シート上のコメント列挙（Node addon の `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）、入力規則ドロップダウン表示状態の往復保存、条件付き書式ルール追加（`addConditionalFormat` / `fm_sheet_cf_add_rule`）時の新規 rule index 返却にも対応しました。入力規則の `showDropDown` は OOXML 上では意味が反転しているため、ホスト API 側では扱いやすい `show_dropdown` の意味で公開します。コメント列挙と CF の rule index 返却は C API・Node addon・WASM に入りましたが、Python バインディングにはまだなく、Python の `add_conditional_format` も新規 rule index を返しません。
+また、シート上のコメント列挙（Node addon の `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）、入力規則ドロップダウン表示状態の往復保存、条件付き書式ルール追加（`addConditionalFormat` / `fm_sheet_cf_add_rule`）時の新規 rule index 返却にも対応しました。入力規則の `showDropDown` は OOXML 上では意味が反転しているため、ホスト API 側では扱いやすい `show_dropdown` の意味で公開します。コメント列挙は C API・Node addon・WASM に入りましたが、Python バインディングにはまだありません。なお Python の `add_conditional_format` は、他の実行入口と同様に新規 rule index を返します。
 
 ### v0.9.3 で利用者に影響する変更は？
 

@@ -12,7 +12,7 @@ Formulon と最小限のコマンドランナーをリンクした単一実行�
 - `recalc`: ワークブックを再計算して保存
 - `dump`: ワークブック構造や計算値を確認
 
-ホスト言語との連携コードを書く前に CLI で問題を再現できます。
+CI では意図しないワークブック変更の検知に、開発時にはホスト言語との連携コードを書く前の問題再現に使えます。
 
 ## 例
 
@@ -28,7 +28,7 @@ formulon dump --metadata input.xlsx
 ```
 
 ::: tip --values は再計算する。--formulas は再計算しない
-`dump --values` は表示前に再計算するため、最新結果を見られます。`dump --formulas` と `dump --metadata` は副作用と再計算を避けるためにスキップします。
+`dump --values` は表示前に再計算するため、最新結果を見られます。`dump --formulas` と `dump --metadata` は再計算をスキップするため、安価で副作用がありません。
 :::
 
 ## 出力フォーマットは -o の拡張子で決まる
@@ -78,4 +78,4 @@ git diff --exit-code model.formulas.txt
 
 - [CLI リファレンス](/ja/api/cli) ─ コマンド構文
 - [CI 回帰検査の例](/ja/runtimes/ci-regression) ─ CI gating パターン
-- [CI でワークブック回帰検査](/ja/scenarios/ci-regression) ─ パイプライン例
+- [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ パイプライン例

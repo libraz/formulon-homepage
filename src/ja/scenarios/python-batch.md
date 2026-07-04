@@ -128,4 +128,4 @@ except FormulonError as e:
 
 - [Python API](/ja/api/python) ─ トップレベル API
 - [ワークブックの流れ](/ja/workbook/lifecycle) ─ スクリプトの裏で動く engine フロー
-- [CI でワークブック回帰検査](/ja/scenarios/ci-regression) ─ Python とスナップショットの組み合わせ
+- [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ Python とスナップショットの組み合わせ

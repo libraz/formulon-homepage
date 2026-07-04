@@ -16,8 +16,8 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
       { label: 'Engine', note: 'version / eval / lookup / trace' },
       { label: 'Sessions', note: 'open / list / close / recalc / save / metadata' },
       { label: 'Inspection', note: 'session / layout / regions / analyze' },
-      { label: 'Cells & ranges', note: 'set / get / range / find / replace' },
-      { label: 'Structure', note: 'sheets / defined names / insert-delete / view' },
+      { label: 'Cells & ranges', note: 'set / get / range / set-range / find / replace' },
+      { label: 'Structure', note: 'sheets / defined names / insert-delete / view / dimension' },
       { label: 'Rich data', note: 'merge / comment / hyperlink / validation / cond-format' },
       { label: 'Advanced', note: 'workbook_call / one-shot inspect & update' }
     ]
@@ -58,6 +58,7 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | Tool | What it does |
 | --- | --- |
 | `formulon_set_cells` | Applies mutations to a session. Cells use A1 (`Sheet1!B2`) or 0-based (`sheet` / `row` / `col`). |
+| `formulon_set_range` | Writes a 2D block of values from an anchor cell; each element's JSON type picks the cell type, `{"f":"=…"}` writes a formula, and `null` skips a cell. More compact than `set_cells` for tables. |
 | `formulon_get_cell` | Reads one cell, either from a session or directly from a path. |
 | `formulon_get_range` | Reads an A1 rectangular range from a session. |
 | `formulon_find_cells` | Searches text cell values and / or formula text. |
@@ -70,6 +71,7 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | `formulon_sheet_operation` | Adds, removes, renames, or moves sheets. |
 | `formulon_set_defined_name` | Adds, replaces, or removes workbook-scoped defined names. |
 | `formulon_edit_structure` | Inserts or deletes rows and columns. |
+| `formulon_dimension_operation` | Lists column-width / row-height overrides, or sets width / height, hidden, or outline level. Columns act on an inclusive `[first, last]` span; rows act on a single row index. |
 | `formulon_set_sheet_view` | Sets zoom, frozen panes, or sheet-tab hidden state. |
 
 ## Rich workbook data

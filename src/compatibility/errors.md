@@ -32,6 +32,15 @@ A host failure (bad bytes, missing handle, IO error) means fix the integration; 
 | `#SPILL!` | Dynamic-array spill conflict |
 | `#CALC!` | Engine could not produce a result |
 | `#GETTING_DATA` | Asynchronous external lookup in progress |
+| `#FIELD!` | Invalid rich-data-type field reference |
+| `#BLOCKED!` | Action blocked by workbook or data-type policy |
+| `#CONNECT!` | External data connection failure |
+| `#EXTERNAL!` | External function or dependency error |
+| `#BUSY!` | Operation currently busy (e.g. a real-time-data provider) |
+| `#PYTHON!` | Error raised while evaluating a `PY` cell |
+| `#UNKNOWN!` | Unrecognized or unmapped error code |
+
+This is the full, wired `ErrorCode` set (`src/value.h`'s `kErrorTable`); build any host-side lookup table against all 17 codes, not just the classic ten.
 
 Bindings should preserve these values instead of converting them into host exceptions unless the host API is reporting an API misuse or IO failure.
 

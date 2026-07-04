@@ -35,7 +35,9 @@ The PyPI package does not ship a platform-native `libformulon`. It ships one `py
 The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Result fidelity is the same as other surfaces.
 
 ::: warning Python does not yet expose the v0.9.4 additions
-`evaluateFormulaText`, `evaluateConditionalFormula`, and comment enumeration (`getComments` on the Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) ship in v0.9.4 for the C API, Node addon, and WASM only. The Python wrapper has no equivalent yet — "mirrors the C ABI surface" describes the general shape of the binding, not full one-to-one method parity. Python's `add_conditional_format` also does not yet return the new rule's index the way the Node/C API `addConditionalFormat` does as of v0.9.4.
+`evaluateFormulaText`, `evaluateConditionalFormula`, and comment enumeration (`getComments` on the Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) ship in v0.9.4 for the C API, Node addon, and WASM only. The Python wrapper has no scalar equivalent yet — "mirrors the C ABI surface" describes the general shape of the binding, not full one-to-one method parity. Python's `add_conditional_format` already returns the new rule's index, the same v0.9.4 C-API behavior the Node addon exposes.
+
+As of v0.9.5, Python does expose the whole-array variant `evaluate_formula_array(sheet, row, col, formula)` — a read-only, non-mutating evaluation that returns the entire dynamic-array result rather than reducing to the top-left element — and the pure `merge_function_metadata(base, entry, locale)` helper that layers host-supplied localized function metadata over the engine's structural catalog. The scalar `evaluate_formula_text` / `evaluate_conditional_formula` are still Node addon / WASM / C-API only.
 :::
 
 <DiagramLayers :layers="[

@@ -13,6 +13,7 @@ Python ABI タグ・プラットフォームタグ・ネイティブコードの
 | `formulon.eval_formula(formula)` | 単発の数式評価 |
 | `formulon.library_version()` | ロード済み Formulon モジュールのバージョン |
 | `formulon.version_string()` | `library_version()` の別名 |
+| `formulon.merge_function_metadata(base, entry, locale)` | ホスト提供のローカライズ済み関数メタデータを、エンジンの構造カタログに重ねてマージする純関数 |
 | `ValueKind` | C ABI と一致する enum |
 | `FormulonError` | ホスト側の失敗を表す例外 |
 
@@ -37,7 +38,7 @@ with Workbook.create_default() as wb:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`, `lambda_text_at`
+- `get_value`, `lambda_text_at`, `evaluate_formula_array`（0.9.5 で追加。読み取り専用のアドホック評価で、配列全体を `Value` の 2 次元リストとして返す）
 - `recalc`, `partial_recalc`, `set_iterative`
 - `save`, `save_ex`（XLSX / XLSB のコンテナ形式を選択）
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
@@ -51,7 +52,7 @@ with Workbook.create_default() as wb:
 :::
 
 ::: warning アドホック評価とコメント列挙は未対応
-Python には WASM / Native Node / C API の 0.9.4 で追加された `evaluate_formula_text` / `evaluate_conditional_format` に相当するメソッドがなく、コメントも単一セル向けの `get_comment` / `set_comment` のみです。シート単位でコメントを列挙する API はありません。実行入口ごとの対応状況は [実行入口の一覧](/ja/api/surfaces) を参照してください。
+0.9.5 で配列全体を返すアドホック評価 `evaluate_formula_array` は追加されましたが、Python には WASM / Native Node / C API の 0.9.4 で追加された**スカラー**のアドホック評価 `evaluate_formula_text` / `evaluate_conditional_formula` に相当するメソッドは依然としてなく、コメントも単一セル向けの `get_comment` / `set_comment` のみです。シート単位でコメントを列挙する API はありません。実行入口ごとの対応状況は [実行入口の一覧](/ja/api/surfaces) を参照してください。
 :::
 
 正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。

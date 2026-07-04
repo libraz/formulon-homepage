@@ -44,10 +44,10 @@ Of the 522 catalogued functions, `515` satisfy all six closure checks (`behavior
 | Logical | 20 | Local implementation |
 | Text | 50 | Local implementation |
 | Date & Time | 25 | Local implementation |
-| Lookup & Reference | 39 | Local implementation, including dynamic-array lookup behavior |
+| Lookup & Reference | 39 | Local implementation, including dynamic-array lookup behavior; `IMAGE` and `RTD` are unavailable service stubs |
 | Financial | 56 | Includes `STOCKHISTORY` as an unavailable service stub |
 | Engineering | 54 | Local implementation |
-| Information | 19 | Includes environment-bound `CELL` and `INFO`, plus unavailable service stubs such as `IMAGE`, `PY`, and `RTD` |
+| Information | 19 | Includes environment-bound `CELL` and `INFO`; no unavailable service stubs in this category |
 | Database | 12 | Local implementation |
 | Web | 4 | `ENCODEURL` and `FILTERXML` are implemented; `WEBSERVICE` and `PY` are unavailable service stubs |
 | Cube | 7 | Recognized as unavailable service stubs; live OLAP connections are outside Formulon |

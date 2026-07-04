@@ -9,7 +9,7 @@
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.9.4
+yarn add @libraz/formulon@0.9.5
 ```
 
 ブラウザ、worker、Node サービスで WASM ビルドを使う場合はこのパッケージを使います。ESM 専用で、Node で使う場合は Node 22 以降が必要です。
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.9.4
+python -m pip install formulon==0.9.5
 ```
 
 スクリプト、ノートブック、バッチジョブで使います。wheel には Formulon C ABI の

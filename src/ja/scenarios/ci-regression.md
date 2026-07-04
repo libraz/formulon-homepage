@@ -46,7 +46,8 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install formulon CLI
         run: |
-          curl -L -o formulon "https://github.com/libraz/formulon/releases/latest/download/formulon-cli-linux-x86_64"
+          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.9.5/formulon-0.9.5-linux-x64.tar.gz"
+          tar -xzf formulon.tar.gz --strip-components=1
           chmod +x formulon
           sudo mv formulon /usr/local/bin/
       - name: Snapshot formulas

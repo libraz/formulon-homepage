@@ -9,7 +9,7 @@ Use exact package versions for experiments and internal tooling. Do not float on
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.9.4
+yarn add @libraz/formulon@0.9.5
 ```
 
 Use this for browsers, workers, and Node-based services that should run the WASM build. The package is ESM-only and requires Node 22 or newer when used in Node.
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.9.4
+python -m pip install formulon==0.9.5
 ```
 
 Use this for scripts, notebooks, and batch jobs. The wheel ships a standalone

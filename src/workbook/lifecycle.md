@@ -12,7 +12,7 @@ The in-memory representation of a workbook after parsing — sheets, cells, styl
 
 The file-format layer reads workbook parts, relationships, shared strings, styles, worksheets, defined names, tables, comments, hyperlinks, merges, validations, conditional formats, pivot caches, and supported extension structures. Unparsed but expected parts are kept as passthrough so the file round-trips cleanly.
 
-Data validations include dropdown visibility in current builds. OOXML stores that flag with inverted `showDropDown` semantics; Formulon normalizes it for host APIs and writes the correct package representation back out.
+Data validations now expose the dropdown-visibility flag (`show_dropdown`). OOXML stores that flag with inverted `showDropDown` semantics; Formulon normalizes it for host APIs and writes the correct package representation back out.
 
 Verify the load before using the workbook:
 

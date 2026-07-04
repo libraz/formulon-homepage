@@ -98,7 +98,7 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
 | Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode` |
+| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode` |
 | Serialization | `save`, `saveEx` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
@@ -108,7 +108,11 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 ::: info 0.9.4 で追加
-`evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対して数式テキストを**読み取り専用で（変更せず、依存グラフにも参加させずに）**評価します。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式向け評価ではルールのアンカーから相対参照をずらし、Excel 風の predicate coercion も適用します。配列 / スピルの結果は左上隅の 1 セルに縮約されます — これは Excel の暗黙的な交差やスピルの再現ではなく、意図的な Phase 1 の API 仕様です（[動的配列](/ja/workbook/dynamic-arrays) 参照）。アンカーセル自身を参照する数式は、アドホック評価が依存グラフに参加しないため `#REF!` にはならず、そのセルのキャッシュ済みの値を読み取ります。
+`evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対して数式テキストを**読み取り専用**で（変更せず、依存グラフにも参加させずに）評価します。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式向け評価ではルールのアンカーから相対参照をずらし、Excel 風の predicate coercion も適用します。配列 / スピルの結果は左上隅の 1 セルに縮約されます — これは Excel の暗黙的な交差の再現ではなく、初期 API として意図した仕様（左上隅への縮約）です。配列 / スピル全体を envelope として返す形は、将来のリリースで追加される可能性があります（[動的配列](/ja/workbook/dynamic-arrays) 参照）。アンカーセル自身を参照する数式は、アドホック評価が依存グラフに参加しないため `#REF!` にはならず、そのセルのキャッシュ済みの値を読み取ります。
+:::
+
+::: info 0.9.5 で追加
+`evaluateFormulaArray(sheet, row, col, formula)` は、`evaluateFormulaText` と同じく**読み取り専用**（変更せず、依存グラフにも参加しない）ですが、動的配列 / スピル数式を評価して結果の**配列全体**を `EvalArrayResult`（`rows` × `cols` の `cells` を持つ）として返します。`evaluateFormulaText` が左上隅の 1 セルに縮約するのに対し、こちらは縮約しません。読み取り専用・非変更・自己参照の扱いは `evaluateFormulaText` と同じです。あわせて、`Sheet1!$A$1:$A$5` のような範囲形の定義名が、暗黙的な交差でスカラーに潰れず配列として評価されるようになりました。
 :::
 
 以下の図は、同じワークブックに対する 2 つの経路を対比したものです。

@@ -31,7 +31,14 @@ The tree-walker and bytecode VM can run in parallel for parity checks. That keep
 
 ## Ad-hoc evaluation
 
-On top of the same evaluator, WASM and Native Node (C API) expose read-only ad-hoc formula evaluation — `evaluateFormulaText()` and `evaluateConditionalFormula()` answer "what would this formula return here?" without writing anything into a cell. See [Workbook operations — ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation) for the API shape, the WASM/Native-Node-only scope, and the top-left-scalar-reduction caveat for array/spill results.
+On top of the same evaluator, WASM and Native Node (C API) expose read-only ad-hoc formula evaluation — `evaluateFormulaText()` and `evaluateConditionalFormula()` answer "what would this formula return here?" without writing anything into a cell. See [Workbook operations — ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation) for the API shape, the WASM/Native-Node-only scope, and the top-left-scalar-reduction caveat for array/spill results. As of v0.9.5, `evaluateFormulaArray()` (and Python's `evaluate_formula_array()`) returns the whole Array result instead of that top-left reduction.
+
+## v0.9.5 evaluation updates
+
+v0.9.5 continued the evaluator-parity work:
+
+- Range-shaped defined names (e.g. `Sheet1!$A$1:$A$5`) now evaluate as an `Array` instead of collapsing to a scalar through implicit intersection.
+- Dynamic-array spill enumeration is complete: spill-phantom cells are fully reported, so `cell_count` / `cell_at` reflect every spilled cell.
 
 ## v0.9.3 evaluation updates
 

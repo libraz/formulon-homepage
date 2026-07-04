@@ -34,7 +34,7 @@ Cross-Origin-Embedder-Policy: require-corp
 
 ## Vite が `node:` imports を警告する
 
-WASM package には Node 実行環境向けの分岐が含まれます。ブラウザ向け bundler では `node:module` や `node:worker_threads` の警告が出る場合があります。
+WASM package には Node 実行環境向けの分岐が含まれます。ブラウザ向け bundler では `node:module` や `node:worker_threads` の警告が出る場合があります。Vite では、このパッケージを optimizeDeps から除外し、`node:` imports を external に指定します。
 
 ```ts
 export default defineConfig({

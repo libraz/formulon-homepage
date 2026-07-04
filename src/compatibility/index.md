@@ -13,7 +13,7 @@ Formulon treats compatibility as something you can inspect and reproduce. Use th
 3. Review [Error model](/compatibility/errors) so spreadsheet errors and host failures are handled separately.
 
 ::: info Current status
-Formulon is still pre-1.0 (currently 0.9.4). The function catalog is fully registered: of the **522** recognized names, **505** are unconditionally real local implementations, **2** more (`CELL`, `INFO`) also run locally but are environment-bound — some results depend on workbook or host state — and the remaining **15** are intentional unavailable service stubs. APIs can still change, so pin versions and keep a small workbook fixture set when results matter.
+Formulon is still pre-1.0 (currently 0.9.5). The function catalog is fully registered: of the **522** recognized names, **505** are unconditionally real local implementations, **2** more (`CELL`, `INFO`) also run locally but are environment-bound — some results depend on workbook or host state — and the remaining **15** are intentional unavailable service stubs. APIs can still change, so pin versions and keep a small workbook fixture set when results matter.
 :::
 
 ## Coverage areas

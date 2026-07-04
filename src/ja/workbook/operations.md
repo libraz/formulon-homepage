@@ -98,7 +98,9 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 }
 ```
 
-これは読み取り専用です。ワークブックを変更せず、どこにも値を書き込まず、依存関係グラフにも参加しません — ここで評価しても、後の編集で dirty になるセルは増えません。配列・スピル結果もトップレフトの要素だけに縮約されます。この方法で `=SEQUENCE(3)` を評価すると 3 行のスピルではなく単一の数値が返ります。これは意図的な Phase 1 の API 形状であり、退行ではありません — 実際に `=SEQUENCE(3)` をセルへ書き込めば、通常どおりスピルします。数式を実際にセルへ書き込んだときのスピルの仕組みは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
+これは読み取り専用です。ワークブックを変更せず、どこにも値を書き込まず、依存関係グラフにも参加しません — ここで評価しても、後の編集で dirty になるセルは増えません。配列・スピル結果もトップレフトの要素だけに縮約されます。この方法で `=SEQUENCE(3)` を評価すると 3 行のスピルではなく単一の数値が返ります。これは意図的な API 形状であり、退行ではありません — 実際に `=SEQUENCE(3)` をセルへ書き込めば、通常どおりスピルします。数式を実際にセルへ書き込んだときのスピルの仕組みは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
+
+v0.9.5 では、配列を丸ごと返すアドホック評価が加わりました。`evaluateFormulaArray()`（Native Node・WASM・C API）と `evaluate_formula_array()`（Python）は、`evaluateFormulaText()` のようにトップレフトへ縮約せず、動的配列・スピル数式を評価して Array 全体（`EvalArrayResult` 型）を返します。読み取り専用・非破壊・自己参照に関する注意点は `evaluateFormulaText()` と同じです。スカラーを返す `evaluateFormulaText()` / `evaluateConditionalFormula()` は引き続き Native Node・WASM・C API のみですが、Array を返す `evaluate_formula_array()` は Python でも 0.9.5 から利用できます。
 
 `evaluateConditionalFormula()` も同じ読み取り専用ルールに従いますが、加えてルールのアンカーからの相対参照シフトと、Excel の CF 述語変換(エラー / 空白 / 文字列 / 数値ゼロは `false`、それ以外の数値は `true`)を適用するため、結果はそのセルで実際の条件付き書式ルールが評価したときの値と一致します。
 
@@ -118,7 +120,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 CLI はセルを細かく編集する API ではなく、`eval`、`recalc`、`dump` などの調査・変換コマンドに絞っています。アプリケーションに組み込む場合は、WASM、Native Node、Python のいずれかを選んでください。
 
 ::: tip 実装済み関数を実行時に確認する
-WASM `Module.functionNames()` や MCP の `formulon function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。
+WASM `Module.functionNames()` や MCP の `formulon_function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。
 :::
 
 ## 次に読むもの

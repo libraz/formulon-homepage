@@ -87,9 +87,11 @@ Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_ru
 
 WASM and Native Node additionally expose comment *enumeration* — `getComments(sheet)` (backed by `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`) lists every comment on a sheet, including comments anchored on otherwise-empty cells. Python can read and write a comment at a known `(sheet, row, col)` via `get_comment()` / `set_comment()`, but has no sheet-wide enumeration call — walk the used range and call `get_comment()` per cell if you need a full list from Python.
 
+Host applications that supply their own localized function metadata can merge it over the engine's structural catalog with `mergeFunctionMetadata()` (Node, exported from both `@libraz/formulon` and the native package) / `merge_function_metadata()` (Python), added in v0.9.5. It is a pure helper — precedence runs locale-override, then entry-default, then the engine value — layered over `functionMetadata()`, which now also recognizes lazy-dispatch forms (`XLOOKUP`, `SUMIFS`, …) and parser special forms (`LET`, `LAMBDA`), and reports unbounded arity as `null` / `None`.
+
 ### Ad-hoc formula evaluation
 
-WASM and Native Node (C API) additionally expose read-only ad-hoc formula evaluation — not yet available on Python. `evaluateFormulaText()` and `evaluateConditionalFormula()` answer "what would this formula return here?" without writing the formula into a cell first:
+WASM and Native Node (C API) additionally expose read-only ad-hoc formula evaluation. `evaluateFormulaText()` and `evaluateConditionalFormula()` — Node addon, WASM, and C API only, not on Python — answer "what would this formula return here?" without writing the formula into a cell first:
 
 ```ts
 const result = wb.evaluateFormulaText(/*sheet*/ 0, /*row*/ 0, /*col*/ 0, '=A1+B1')
@@ -99,6 +101,8 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 ```
 
 This is read-only: it does not mutate the workbook, write a value anywhere, or join the dependency graph — nothing here becomes dirty on a later edit. Array/spill results are also reduced to their top-left element: evaluating `=SEQUENCE(3)` this way returns a single number, not a 3-row spill. That is a deliberate Phase 1 API shape, not a regression — a real cell containing `=SEQUENCE(3)` still spills normally. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling works when the formula is actually written into a cell.
+
+Since v0.9.5, `evaluateFormulaArray()` (Node addon, WASM, and C API) — and `evaluate_formula_array()` on Python — answers the same read-only question but returns the *whole* Array result (an `EvalArrayResult`) instead of reducing a dynamic-array / spilled formula to its top-left element. Evaluating `=SEQUENCE(3)` this way yields all three rows. It carries the same read-only, no-mutation, and self-reference caveats as `evaluateFormulaText()`, and is the one ad-hoc evaluation call Python does have — the scalar `evaluateFormulaText()` / `evaluateConditionalFormula()` pair remains Node/WASM/C-API only.
 
 `evaluateConditionalFormula()` follows the same read-only rule, additionally shifting relative references from the rule's anchor and applying Excel's CF-predicate coercion (error / blank / text / numeric-zero are `false`; any other number is `true`), so the result matches what a real CF rule would evaluate to at that cell.
 
@@ -118,7 +122,7 @@ The normal edit path and the ad-hoc path answer different questions — the firs
 The CLI is intentionally narrower. It is a command surface for `eval`, `recalc`, and `dump`, not a fine-grained workbook-editing API. For application embedding, choose WASM, Native Node, or Python.
 
 ::: tip Discovering what is implemented
-Both `Module.functionNames()` (WASM) and `formulon function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs.
+Both `Module.functionNames()` (WASM) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs.
 :::
 
 ## Read next

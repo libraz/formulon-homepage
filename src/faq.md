@@ -54,7 +54,7 @@ That still leaves hard cases: volatile functions, undocumented coercions, locale
 
 ### Why is the default profile Japanese Excel?
 
-The initial oracle coverage was built around `win-365-ja_JP`, so that is the first public profile. Locale affects real spreadsheet behavior: function names, separators, date parsing, text formatting, collation, and error surfaces can differ.
+The first checked-in formula oracle was captured on Mac Excel 365 ja-JP; `win-365-ja_JP` is the runtime default and is verified through variant goldens (and is the primary profile for the separate pivot/print workbook-oracle data added in v0.9.2 via the Windows COM bridge). Locale affects real spreadsheet behavior: function names, separators, date parsing, text formatting, collation, and error surfaces can differ.
 
 English-locale profiles are intentionally not exposed until matching oracle data exists. That is a coverage gap, not a claim that Japanese Excel is globally representative.
 
@@ -226,11 +226,19 @@ The MCP server can still read and write files, so production use should control 
 
 ## Recent Releases
 
+### What changed in v0.9.5 for users?
+
+v0.9.5 adds ad-hoc **array** evaluation. `evaluateFormulaArray` (Node addon, WASM, C API) and `evaluate_formula_array` (Python) evaluate a dynamic-array / spilled formula against a loaded workbook and return the whole Array result (`EvalArrayResult`) instead of reducing to the top-left element the way v0.9.4's `evaluateFormulaText` does. It keeps the same read-only, no-mutation, and self-reference caveats. Note the Python asymmetry: Python now has the whole-array variant and `merge_function_metadata`, but the scalar `evaluate_formula_text` / `evaluate_conditional_formula` remain Node addon / WASM / C-API only.
+
+It also adds a function-metadata provider seam: `mergeFunctionMetadata` (Node) / `merge_function_metadata` (Python) is a pure helper that merges host-supplied localized function metadata (signature / description / localized name) over the engine's structural catalog, with precedence locale-override then entry-default then engine-value. `functionMetadata` now also recognizes lazy-dispatch forms (`XLOOKUP`, `SUMIFS`, …) and parser special forms (`LET`, `LAMBDA`), and reports unbounded arity as `null` / `None`.
+
+Two evaluation fixes: range-shaped defined names (e.g. `Sheet1!$A$1:$A$5`) now evaluate as an Array instead of collapsing to a scalar via implicit intersection, and spill-phantom cells are fully enumerated (`cell_count` / `cell_at` fidelity).
+
 ### What changed in v0.9.4 for users?
 
 v0.9.4 adds read-only ad-hoc formula evaluation on existing workbooks, on the C API, Node addon, and WASM surfaces (Python has no equivalent yet). `evaluateFormulaText` and `evaluateConditionalFormula` let hosts ask "what would this formula return here?" without writing a formula into a cell first. Evaluation is strictly read-only: it does not mutate the workbook or join the dependency graph, and array/spill results are reduced to their top-left element rather than returned as a range — see [Dynamic arrays](/workbook/dynamic-arrays) for what that element selection means in practice. They resolve workbook references and names, and the conditional-format path applies the relative-reference and predicate rules expected by Excel-style CF evaluation.
 
-It also adds comment enumeration (`getComments` on Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) for sheets, round-trips data-validation dropdown visibility with Excel's inverted `showDropDown` OOXML semantics handled for callers, and makes conditional-format rule creation (`addConditionalFormat` / `fm_sheet_cf_add_rule`) return the new rule's index. The comment and CF-index additions land on C API, Node addon, and WASM; the Python binding does not yet expose them, and Python's `add_conditional_format` still does not return the new rule's index.
+It also adds comment enumeration (`getComments` on Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) for sheets, round-trips data-validation dropdown visibility with Excel's inverted `showDropDown` OOXML semantics handled for callers, and makes conditional-format rule creation (`addConditionalFormat` / `fm_sheet_cf_add_rule`) return the new rule's index. Conditional-format rule creation returns the new rule's index on every binding, Python included. Comment enumeration lands on the C API, Node addon, and WASM; the Python binding does not expose it yet.
 
 ### What changed in v0.9.3 for users?
 

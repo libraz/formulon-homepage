@@ -3,7 +3,7 @@
 | Surface | Package | Runtime |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | Browser, worker, Node |
-| Native Node | `packages/npm-native` | Node.js N-API addon from a source checkout |
+| Native Node | `@libraz/formulon-native` | Node.js N-API addon; prebuilt binaries ship for darwin-arm64/linux-x64/linux-arm64 (or build from a source checkout) |
 | Python | `formulon` | py3 wheel using wasmtime |
 | CLI | `formulon-cli-<os>-<arch>` | Standalone binary |
 | C ABI | headers and native library | Custom hosts |
@@ -18,7 +18,7 @@ All surfaces should expose the same calculation core. Differences should be pack
   { title: 'Surfaces', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'no 0.9.4 ad-hoc eval / comment enumeration' },
+      { label: 'Python (formulon)', note: 'no 0.9.4 scalar ad-hoc eval / comment enumeration' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -43,8 +43,8 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
 | `formulon-cell` | reference UI | Public integration-test and example surface, not a complete Excel-compatible UI |
 
-::: warning Python does not yet have the 0.9.4 additions
-`evaluateFormulaText` / `evaluateConditionalFormula` (read-only ad-hoc evaluation) and sheet-wide comment enumeration exist on the C API, Native Node addon, and WASM only. Python's `Workbook` has no equivalent evaluation method, and only exposes singular `get_comment` / `set_comment` — there is no comment-enumeration call like Native Node's `getComments(sheet)` or the C API's `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`. Python's `add_conditional_format` also does not return the new rule index the other three surfaces gained in 0.9.4.
+::: warning Python still trails on the scalar ad-hoc evaluators
+`evaluateFormulaText` / `evaluateConditionalFormula` (read-only *scalar* ad-hoc evaluation) and sheet-wide comment enumeration exist on the C API, Native Node addon, and WASM only. Python's `Workbook` has no equivalent scalar evaluation method, and only exposes singular `get_comment` / `set_comment` — there is no comment-enumeration call like Native Node's `getComments(sheet)` or the C API's `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`. As of 0.9.5 Python does expose the whole-array evaluator `evaluate_formula_array` (returning the full spilled result rather than the top-left element) and the pure `merge_function_metadata` helper, so the remaining gap is the scalar evaluators and comment enumeration. (Conditional-format rule creation does return the new rule index on Python, matching the other surfaces — that 0.9.4 addition is not Python-limited.)
 :::
 
 ## When surfaces disagree

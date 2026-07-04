@@ -59,6 +59,6 @@ parity runner は *自分たちの* 実行入口同士が一致しているこ�
 
 ## 次に読むもの
 
-- [CI でワークブック回帰検査（シナリオ）](/ja/scenarios/ci-regression) ─ end-to-end パイプライン例
+- [CI でワークブックの回帰を検出（シナリオ）](/ja/scenarios/ci-regression) ─ end-to-end パイプライン例
 - [CLI ワークフロー](/ja/runtimes/cli) ─ スナップショットの裏で動くコマンド
 - [Oracle テスト](/ja/compatibility/oracle-testing) ─ 互換性の根拠

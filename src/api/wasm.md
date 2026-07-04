@@ -100,7 +100,7 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
 | Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode` |
+| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode` |
 | Serialization | `save`, `saveEx` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
@@ -110,7 +110,11 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 ::: info Added in 0.9.4
-`evaluateFormulaText` and `evaluateConditionalFormula` evaluate formula text against an existing workbook **without mutating it or joining the dependency graph**. They resolve local and cross-sheet references, defined names, and `ROW()` / `COLUMN()` anchoring; conditional-format evaluation also shifts relative references from the rule anchor and applies Excel-style predicate coercion. An array/spill result is reduced to its top-left element — a deliberate Phase 1 API shape, not Excel implicit intersection (see [Dynamic arrays](/workbook/dynamic-arrays)). A formula that references its own anchor cell reads that cell's cached value rather than raising `#REF!`, since the ad-hoc formula never joins the dependency graph.
+`evaluateFormulaText` and `evaluateConditionalFormula` evaluate formula text against an existing workbook **without mutating it or joining the dependency graph**. They resolve local and cross-sheet references, defined names, and `ROW()` / `COLUMN()` anchoring; conditional-format evaluation also shifts relative references from the rule anchor and applies Excel-style predicate coercion. An array/spill result is reduced to its top-left element — a deliberate initial API shape (top-left reduction), not Excel implicit intersection; returning the full array/spill envelope may be added in a later release (see [Dynamic arrays](/workbook/dynamic-arrays)). A formula that references its own anchor cell reads that cell's cached value rather than raising `#REF!`, since the ad-hoc formula never joins the dependency graph.
+:::
+
+::: info Added in 0.9.5
+`evaluateFormulaArray` is the whole-array companion to `evaluateFormulaText`. It shares the same read-only resolution and never joins the dependency graph, but instead of reducing a dynamic-array / spilled result to its top-left element it returns the entire result as an `EvalArrayResult` (`status`, `rows`, `cols`, and a row-major `cells: Value[][]`; a scalar is reported as a 1×1 array). The same no-mutation and self-reference caveats as `evaluateFormulaText` apply. A range-shaped defined name (e.g. `Sheet1!$A$1:$A$5`) now evaluates as an `Array` rather than collapsing to a scalar through implicit intersection, and spill-phantom cells are fully enumerated so `cellCount` / `cellAt` see every spilled cell. `functionMetadata` now also recognizes lazy-dispatch forms (`XLOOKUP`, `SUMIFS`, …) and parser special forms (`LET`, `LAMBDA`), and reports unbounded arity as `null`.
 :::
 
 The diagram below contrasts the two paths through the same workbook:
@@ -123,6 +127,11 @@ The diagram below contrasts the two paths through the same workbook:
 <DiagramFlow label="Read-only path: evaluateFormulaText (0.9.4)" :steps="[
   { label: 'evaluateFormulaText(sheet, row, col, formula)', note: 'resolves refs, defined names, ROW()/COLUMN() anchoring' },
   { label: 'Scalar EvalResult', note: 'array/spill -> top-left; self-ref -> cached value; no dep-graph join' }
+]" />
+
+<DiagramFlow label="Whole-array path: evaluateFormulaArray (0.9.5)" :steps="[
+  { label: 'evaluateFormulaArray(sheet, row, col, formula)', note: 'same read-only resolution as evaluateFormulaText' },
+  { label: 'EvalArrayResult', note: 'full rows x cols cells[][]; no top-left reduction; no dep-graph join' }
 ]" />
 
 ## Read next

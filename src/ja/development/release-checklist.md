@@ -52,5 +52,5 @@
 ## 次に読むもの
 
 - [テストマトリクス](/ja/development/test-matrix) ─ 各テストターゲットの守備範囲
-- [サイズ予算](/ja/development/size-budgets) ─ WASM の ceiling
+- [サイズ予算](/ja/development/size-budgets) ─ WASM の上限
 - [互換性モデル](/ja/compatibility/model) ─ 互換性説明の根拠

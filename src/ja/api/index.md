@@ -4,7 +4,7 @@
 
 | ページ | 範囲 |
 | --- | --- |
-| [API 一覧](/ja/api/surfaces) | 実行入口ごとの成熟度とパッケージングの違い |
+| [実行入口の一覧](/ja/api/surfaces) | 実行入口ごとの成熟度とパッケージングの違い |
 | [WASM API](/ja/api/wasm) | `@libraz/formulon` module、status envelopes、workbook methods |
 | [Python API](/ja/api/python) | `formulon`, `Workbook`, `Value`, `FormulonError` |
 | [CLI リファレンス](/ja/api/cli) | `eval`, `recalc`, `dump` |
