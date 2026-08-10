@@ -48,7 +48,7 @@
       }
     },
     {
-      "includes": [".vitepress/theme/custom.css"],
+      "includes": [".vitepress/theme/styles/*.css"],
       "linter": {
         "rules": {
           "style": {

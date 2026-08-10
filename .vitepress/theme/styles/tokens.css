@@ -1,0 +1,211 @@
+/* =========================================
+   Formulon Design Tokens
+
+   One palette for the whole site: white paper, cool near-black ink and a
+   single decisive blue accent, mirrored onto a deep navy surface for dark
+   mode. These are the docs-side counterpart of the landing page's `--biz-*`
+   aliases (styles/landing.css) and track the same hues, so crossing the nav
+   bar between the home page and a docs page does not change the accent.
+   ========================================= */
+
+/* --- Mobile Overscroll Fix --- */
+html,
+body {
+  overscroll-behavior: none;
+}
+
+:root {
+  /* Brand ramp — a single blue series built around the landing page's
+     #2563eb. Named by step, not by hue name, so a future re-tint stays
+     honest. */
+  --color-brand-50: #eff5ff;
+  --color-brand-100: #dbe8fe;
+  --color-brand-200: #bfd6fe;
+  --color-brand-300: #93bbfd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1a43b8;
+  --color-brand-800: #173693;
+  --color-brand-900: #142a6e;
+
+  --color-brand: var(--color-brand-600);
+  --color-brand-light: var(--color-brand-500);
+  --color-brand-dark: var(--color-brand-700);
+
+  /* Core surfaces */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f6f8fb;
+  --color-bg-elevated: #ffffff;
+  --color-bg-surface: rgba(255, 255, 255, 0.82);
+
+  /* Text */
+  --color-text-primary: #101828;
+  --color-text-secondary: #344054;
+  --color-text-tertiary: #667085;
+  --color-text-muted: rgba(16, 24, 40, 0.36);
+
+  /* Borders */
+  --color-border-subtle: rgba(16, 24, 40, 0.07);
+  --color-border-default: rgba(16, 24, 40, 0.1);
+  --color-border-strong: rgba(16, 24, 40, 0.18);
+
+  /* Callout accents (light) — mid-tones that stay readable as title text on
+     their own 7% tint. With a blue brand, `info` cannot also be blue: it is
+     pushed to the landing page's teal so tip and info are separable at a
+     glance, and warning/danger sit far enough round the wheel to never read
+     as another helping of the accent. */
+  --cb-tip: #1d4ed8;
+  --cb-info: #0f766e;
+  --cb-warning: #b45309;
+  --cb-danger: #be123c;
+  --cb-note: #475467;
+
+  /* Figure series palette — five hues that stay separable in both themes
+     and against the code-block surface figures sit on:
+     brand blue, teal, amber, violet, rose. `--fx-3` doubles as the default
+     guide/threshold colour, so it stays the warm one. */
+  --fx-1: #2563eb;
+  --fx-2: #0f766e;
+  --fx-3: #b45309;
+  --fx-4: #7c3aed;
+  --fx-5: #be123c;
+
+  /* Typography
+     'IBM Plex Sans JP' is appended to every Latin-first stack so Japanese
+     glyphs (which Outfit / Inter / JetBrains Mono lack) route to it via the
+     font-family fallback chain, giving mixed JA/Latin text an intentional
+     pairing instead of an OS default.
+     --font-reading is the long-form reading face (Inter, self-hosted by
+     VitePress's default theme). */
+  --font-display: "Outfit", "IBM Plex Sans JP", sans-serif;
+  --font-reading: "Inter", "IBM Plex Sans JP", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Sans JP", monospace;
+
+  --vp-font-family-base: var(--font-reading);
+  --vp-font-family-mono: var(--font-mono);
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows — glows track the brand token instead of a frozen rgba() */
+  --shadow-glow: 0 4px 24px -8px color-mix(in srgb, var(--color-brand-500) 20%, transparent);
+  --shadow-glow-strong: 0 12px 42px -12px
+    color-mix(in srgb, var(--color-brand-500) 24%, transparent);
+  --shadow-elevated: 0 12px 38px rgba(16, 24, 40, 0.12);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-default: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* VitePress brand overrides */
+  --vp-c-brand-1: var(--color-brand-700);
+  --vp-c-brand-2: var(--color-brand-500);
+  --vp-c-brand-3: var(--color-brand-400);
+  --vp-c-brand-soft: color-mix(in srgb, var(--color-brand-500) 14%, transparent);
+
+  /* Light surfaces — the same white paper the landing page uses, so the
+     background doesn't snap when navigating between home and the docs. */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f6f8fb;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f6f8fb;
+  --vp-nav-bg-color: rgba(255, 255, 255, 0.85);
+  --vp-sidebar-bg-color: #f6f8fb;
+  --vp-local-nav-bg-color: rgba(255, 255, 255, 0.9);
+
+  --vp-c-text-1: var(--color-text-primary);
+  --vp-c-text-2: var(--color-text-secondary);
+  --vp-c-text-3: var(--color-text-tertiary);
+
+  --vp-c-divider: rgba(16, 24, 40, 0.1);
+  --vp-c-gutter: rgba(16, 24, 40, 0.08);
+
+  /* Opaque code surface: figure plates and dot outlines knock out against
+     it, so it must not be translucent. A step cooler and darker than
+     --vp-c-bg-alt so a code block still reads as inset on a white page. */
+  --vp-code-block-bg: #eff2f7;
+}
+
+.dark {
+  --color-brand: var(--color-brand-400);
+  --color-brand-light: #93bbfd;
+  --color-brand-dark: var(--color-brand-500);
+
+  --color-bg-primary: #0b0f17;
+  --color-bg-secondary: #111827;
+  --color-bg-elevated: #0f172a;
+  --color-bg-surface: rgba(15, 23, 42, 0.82);
+
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #d0d5dd;
+  --color-text-tertiary: #98a2b3;
+  --color-text-muted: rgba(248, 250, 252, 0.34);
+
+  --color-border-subtle: rgba(248, 250, 252, 0.07);
+  --color-border-default: rgba(248, 250, 252, 0.12);
+  --color-border-strong: rgba(248, 250, 252, 0.18);
+
+  /* Callout accents (dark) — brighter tones of the same five hues. */
+  --cb-tip: #60a5fa;
+  --cb-info: #2dd4bf;
+  --cb-warning: #f0b429;
+  --cb-danger: #fb7185;
+  --cb-note: #98a2b3;
+
+  --fx-1: #60a5fa;
+  --fx-2: #2dd4bf;
+  --fx-3: #f0b429;
+  --fx-4: #a78bfa;
+  --fx-5: #fb7185;
+
+  --shadow-glow: 0 0 24px color-mix(in srgb, var(--color-brand-400) 22%, transparent);
+  --shadow-glow-strong: 0 0 48px color-mix(in srgb, var(--color-brand-400) 30%, transparent);
+  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* The dark surface lifts the accent so it stays legible on deep navy. */
+  --vp-c-brand-1: #60a5fa;
+  --vp-c-brand-2: #93bbfd;
+  --vp-c-brand-3: #bfd6fe;
+  --vp-c-brand-soft: color-mix(in srgb, #60a5fa 18%, transparent);
+
+  --vp-c-bg: #0b0f17;
+  --vp-c-bg-alt: #111827;
+  --vp-c-bg-elv: #0f172a;
+  --vp-c-bg-soft: #111827;
+  --vp-nav-bg-color: rgba(11, 15, 23, 0.85);
+  --vp-sidebar-bg-color: #080c13;
+  --vp-local-nav-bg-color: rgba(11, 15, 23, 0.9);
+
+  --vp-c-divider: rgba(248, 250, 252, 0.12);
+  --vp-c-gutter: #000000;
+
+  --vp-code-block-bg: #131c2b;
+  --vp-code-line-highlight-color: color-mix(in srgb, var(--vp-c-brand-1) 10%, transparent);
+}
+
+/* Keep the VitePress body tokens explicit so the embedded cell demo's
+   stylesheet cannot influence the surrounding page background/typography. */
+html body {
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-base);
+  font-size: 16px;
+  line-height: 24px;
+}
