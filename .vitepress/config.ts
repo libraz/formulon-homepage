@@ -1,10 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.9.5'
+const docsVersion = '0.9.7'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -18,14 +19,20 @@ const applyCrossOriginIsolationHeaders = (
   next()
 }
 
+// Rollup cannot statically analyse the Emscripten pthread spawn site, so the
+// options argument is marked with @vite-ignore. The spawn site moved between
+// engine versions: older builds used dist/formulon.js, while newer builds use
+// that file as a thin ESM shim and place the generated module in dist/formulon_core.js.
+// Both filenames are patched so either layout — including the nested copy
+// formulon-cell may carry — is covered.
 const patchFormulonWorkerOptions = () => {
-  const files = [
-    resolve(process.cwd(), 'node_modules/@libraz/formulon/dist/formulon.js'),
-    resolve(
-      process.cwd(),
-      'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon.js'
-    )
+  const distFiles = [
+    'node_modules/@libraz/formulon/dist/formulon.js',
+    'node_modules/@libraz/formulon/dist/formulon_core.js',
+    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon.js',
+    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_core.js'
   ]
+  const files = distFiles.map((file) => resolve(process.cwd(), file))
 
   for (const file of files) {
     if (!existsSync(file)) continue
@@ -360,6 +367,14 @@ export default defineConfig({
   sitemap: { hostname: siteUrl },
 
   vite: {
+    resolve: {
+      // `@` points at the content root, so app-level code (the live-engine
+      // demo components) sits beside the pages that embed it while
+      // .vitepress/theme keeps only theme integration and presentation.
+      alias: {
+        '@': fileURLToPath(new URL('../src', import.meta.url))
+      }
+    },
     plugins: [
       {
         name: 'formulon-cross-origin-isolation',
@@ -407,13 +422,27 @@ export default defineConfig({
   },
 
   head: [
-    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
-    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    // Fonts are self-hosted from src/public/fonts (see scripts/fetch-fonts.mjs);
+    // only the above-the-fold Latin faces are preloaded, never the lazily
+    // matched CJK subsets. Both Outfit weights share one variable-font file.
     [
       'link',
       {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap'
+        rel: 'preload',
+        as: 'font',
+        type: 'font/woff2',
+        href: '/fonts/outfit/latin.woff2',
+        crossorigin: ''
+      }
+    ],
+    [
+      'link',
+      {
+        rel: 'preload',
+        as: 'font',
+        type: 'font/woff2',
+        href: '/fonts/jetbrains-mono/latin.woff2',
+        crossorigin: ''
       }
     ],
     ['script', { type: 'application/ld+json' }, JSON.stringify(softwareApplicationJsonLd)],
