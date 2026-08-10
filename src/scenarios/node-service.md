@@ -44,7 +44,7 @@ At the API boundary, treat workbook recalculation as a deterministic transform:
 
 ## Compatibility gate
 
-Not every Microsoft 365 function can execute inside a Node service. Formulon has unconditional local implementations for **505 / 522** recognized function names (plus `CELL`/`INFO`, which also run locally but are state-dependent). Functions that need external services or live connections, including `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE functions, are recognized but return deterministic unavailable errors.
+Not every Microsoft 365 function can execute inside a Node service. Formulon has **507 real implementations among 522** recognized names, including state-dependent `CELL` and `INFO`. Functions that need external services or live connections, including `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE functions, are recognized but return deterministic unavailable errors.
 
 For user-uploaded workbooks, surface this as a workbook compatibility issue. For internal templates, fail CI when those functions appear in the formula snapshot unless an explicit exception exists.
 
@@ -59,5 +59,5 @@ For user-uploaded workbooks, surface this as a workbook compatibility issue. For
 
 - [Native Node integration](/runtimes/node-native) — native service deployment.
 - [WASM integration](/runtimes/wasm) — portable Node and browser-compatible deployment.
-- [Formula coverage](/compatibility/formula-coverage) — 505 / 522 local implementation and unavailable stubs.
+- [Formula coverage](/compatibility/formula-coverage) — 507 / 522 real implementations and unavailable stubs.
 - [CI workbook regression](/scenarios/ci-regression) — catching upgrade drift before deploy.

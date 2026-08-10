@@ -2,6 +2,8 @@
 
 The WASM package is the broadest Formulon surface. It runs in browsers, web workers, and Node — the same `@libraz/formulon` binary used by the JS API and by `formulon-cell`.
 
+The npm WASM build parses worksheet XML with a DOM parser. It parses one worksheet at a time, so peak parse memory follows the largest worksheet XML part rather than the whole package. The working set must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
+
 ::: warning Hosting matters
 Browser success depends on server headers, worker format, and bundler behavior. Verify the deployed environment, not only local development.
 :::

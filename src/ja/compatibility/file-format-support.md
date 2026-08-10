@@ -10,7 +10,7 @@
 | --- | --- |
 | `.xlsx` 読み込み | workbook、sheets、cells、styles、shared strings、relationships、tables、names、comments、hyperlinks、merges、validations、conditional formatting、pivot structures に対応 |
 | `.xlsx` 書き出し | 上の読み込み行に挙げた構造 ─ workbook、sheets、cells、styles、shared strings、relationships、tables、names、comments、hyperlinks、merges、validations、conditional formatting、pivot structures ─ を、再計算済みワークブック出力の一部としてすべて書き戻す |
-| `.xlsb` 読み込み / 書き出し | セル値、数式（シート間 3-D 参照、`LET` などの future function 名、動的配列の spill 数式を含む）、styles は往復保存の対象。conditional formatting、pivot table、comments、data validation は引き続き OOXML 限定。配列定数リテラルは数値要素のみに限定 |
+| `.xlsb` 読み込み / 書き出し | styles、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力。既存 worksheet tail はそのまま保持 |
 | `.xlsm` のマクロバイト | 保持するが実行しない |
 | 旧形式の `.xls` | 対象外 |
 | chart / drawing の描画 | 対象外 |
@@ -19,21 +19,13 @@
 <DiagramLayers :layers="[
   { title: '形式別サポートの幅', nodes: [
     { label: '.xlsx', note: 'フル対応 ─ 読み込み・書き出し・往復保存' },
-    { label: '.xlsb', note: '部分対応 ─ 値/数式/styles は可、CF/pivot/comments/validation は不可' },
+    { label: '.xlsb', note: 'モデル化したコアと worksheet tail の保持' },
     { label: '.xlsm', note: 'マクロバイトは通過のみ、実行しない' },
     { label: '.xls', note: '対象外' }
   ] }
 ]" />
 
 Formulon は出力ファイル拡張子（CLI の `-o file.xlsb`、バインディングの `saveEx` / `save_ex`）からコンテナ形式を決め、読み込み時は内容をスニッフィングします。そのため `.xlsb` という拡張子で OOXML バイト列を持つファイル（またはその逆）も正しく扱えます。
-
-## 最近の往復保存更新
-
-v0.9.1 と v0.9.2 は共同で、ワークブックのリレーションシップ、共有数式参照の移動、印刷ページ分割メタデータの保持を強化しました。v0.9.1 でページ設定・余白・ヘッダー / フッター・印刷オプション・不透明なプリンター設定の往復保存を導入し、v0.9.2 は残っていたケースを解消し、Oracle 側のページ余白取得も追加しました。この往復保存経路は、現代的な `.xlsx` ワークフローの対応範囲に含まれ続けます。
-
-v0.9.3 では、上の表にある `.xlsb` の主要なプロトコル上のギャップ ─ style records、`LET` などの future function を含む workbook-scope names、シート間 3-D 参照、動的配列の spill 数式 ─ を解消しました。これらの一部は、以前は実際の Excel が開けない `.xlsb` ファイルを生成していました。
-
-v0.9.4 では、入力規則のドロップダウン表示状態（`show_dropdown`）が OOXML 往復保存の対象になりました。Excel はこれを反転した `showDropDown` 属性として保存するため、Formulon はホスト API 上では `show_dropdown` の意味で扱い、読み書き時にファイル形式側の意味へ合わせます。
 
 ## 保持ルール
 

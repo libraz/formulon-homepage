@@ -37,6 +37,10 @@ instance.setTheme('contrast')
 
 `themeChange` fires on the instance's event bus after the attribute updates, so host chrome (a theme switcher, a persisted preference) can react without polling the DOM.
 
+The bundled themes ship inside `@layer fc.theme`, so a host override needs no specificity contest: any rule you write outside a cascade layer already wins over every layered rule the package ships.
+
+<CellTokenCascade />
+
 ::: tip A custom theme name works the same way
 `setTheme('brand')` writes `data-fc-theme="brand"`. There is nothing to register — any string is accepted, and the tokens simply resolve through the normal cascade against whatever rules match that attribute value.
 :::

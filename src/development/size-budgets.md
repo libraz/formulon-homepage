@@ -12,21 +12,10 @@ A per-target byte ceiling for the built artifact. Builds that exceed the ceiling
 
 | Target | Budget |
 | --- | --- |
-| Uncompressed | 2.5 MB target (soft ceiling), 3.0 MB hard ceiling |
-| Brotli | 560 KB target, 600 KB ceiling |
+| Uncompressed | 2.5 MiB soft target, 3.0 MiB hard ceiling |
+| Brotli | 640 KiB soft target, 768 KiB hard ceiling |
 
-The ceiling was raised in v0.9.3 to give deliberate headroom after the OOXML/XLSB/pivot fidelity work legitimately grew the binary. The current build sits at roughly 2.09 MiB uncompressed / 560 KiB Brotli — comfortably under target, with about 1 MB of hard-ceiling headroom left:
-
-<svg viewBox="0 0 600 110" width="100%" role="img" aria-label="WASM uncompressed size gauge: current build about 2.09 MiB, soft ceiling 2.5 MiB, hard ceiling 3.0 MiB">
-  <rect x="1" y="40" width="598" height="28" rx="6" fill="var(--vp-c-bg-soft)" stroke="var(--vp-c-divider)" />
-  <rect x="1" y="40" width="418" height="28" rx="6" fill="var(--vp-c-brand-1)" />
-  <line x1="500" y1="32" x2="500" y2="76" stroke="var(--vp-c-text-2)" stroke-width="2" stroke-dasharray="4 3" />
-  <line x1="597" y1="32" x2="597" y2="76" stroke="var(--vp-c-text-1)" stroke-width="2" />
-  <text x="4" y="26" font-size="12" fill="var(--vp-c-text-3)">0 MiB</text>
-  <text x="500" y="26" text-anchor="middle" font-size="12" fill="var(--vp-c-text-2)">soft 2.5 MiB</text>
-  <text x="596" y="98" text-anchor="end" font-size="12" fill="var(--vp-c-text-1)">hard 3.0 MiB</text>
-  <text x="209" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="var(--vp-c-text-1)">current ~2.09 MiB</text>
-</svg>
+Both uncompressed and Brotli limits are gated equally. Brotli is not a reporting-only metric.
 
 ## What "budgeted" means in practice
 

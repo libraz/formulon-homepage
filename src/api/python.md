@@ -11,6 +11,7 @@ A Python wheel with no Python ABI tag, no platform tag, and no native code. It w
 | API | Purpose |
 | --- | --- |
 | `formulon.eval_formula(formula)` | One-shot formula evaluation |
+| `formulon.error_display_name(error_code)` | Excel display literal for an error ordinal |
 | `formulon.merge_function_metadata(base, entry, locale)` | Pure helper: merge host-supplied localized function metadata over the engine catalog |
 | `formulon.library_version()` | Version of the loaded Formulon module |
 | `formulon.version_string()` | Alias for `library_version()` |
@@ -43,16 +44,17 @@ Common methods:
 - `save`, `save_ex` (choose the XLSX/XLSB container format)
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
 - sheet structure edits, row/column edits, defined names
-- merges, `get_comment`/`set_comment`, hyperlinks, data validations
+- merges, `get_comment`/`set_comment`, `comment_count`, `get_comments`, hyperlinks, data validations
+- `evaluate_cf_formula`, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, `paginate`
 - styles, conditional formats, sheet view/protection
-- pivot cache/table APIs, dependency tracing, spill info, function metadata
+- pivot cache/table APIs (including worksheet-source access and pivot report layout), dependency tracing, spill info, function metadata, DXFs
 
 ::: tip Lifetime is a context manager
 The `with` block releases the native handle on exit, including when an exception is raised. Avoid keeping a `Workbook` reference past its `with` block.
 :::
 
-::: warning Only the whole-array ad-hoc evaluator; no comment enumeration yet
-Python still has no `evaluate_formula_text` / `evaluate_conditional_formula` equivalent to the WASM / Native Node / C API 0.9.4 scalar ad-hoc evaluators, and only exposes single-cell `get_comment` / `set_comment` — there is no sheet-wide comment enumeration call. As of 0.9.5 Python does expose the whole-array evaluator `evaluate_formula_array(sheet, row, col, formula)` — read-only and non-mutating, returning the full spilled `Array` result (as a nested `List[List[Value]]`) rather than reducing to the top-left element — plus the pure `merge_function_metadata` helper. See [Surface matrix](/api/surfaces) for the full parity picture.
+::: info Python evaluator boundary
+Python exposes `evaluate_formula_array(sheet, row, col, formula)` and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)`. It does not expose the general scalar `evaluate_formula_text`; use `evaluate_formula_array` when a full array result is needed. `comment_count(sheet)` and `get_comments(sheet)` enumerate comments, and `paginate(sheet)` returns `PaginationResult(page_count, print_area, horizontal_breaks, vertical_breaks)`.
 :::
 
 The authoritative Python method list lives in the package type stubs and docstrings.
@@ -66,10 +68,10 @@ value = wb.get_value(0, 0, 0)
 if value.kind is ValueKind.NUMBER:
     print(value.number)
 elif value.kind is ValueKind.ERROR:
-    print(value.error_code)  # int ordinal; see /compatibility/errors for the mapping
+    print(formulon.error_display_name(value.error_code))
 ```
 
-Python's `Value` only carries `error_code` — there is no `error_text` field. Map the ordinal to a symbolic error (`#DIV/0!`, `#VALUE!`, …) yourself using the [error model](/compatibility/errors) table.
+Python's `Value` only carries `error_code` — there is no `error_text` field. Call `formulon.error_display_name(value.error_code)` to get the Excel literal (`#DIV/0!`, `#VALUE!`, …).
 
 ## Error handling
 

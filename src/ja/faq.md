@@ -6,7 +6,7 @@
 
 実行時には不要です。Formulon は Excel、COM、Microsoft ランタイムを起動せず、ワークブックの読み込み、数式評価、再計算、保存を Formulon 内で行います。
 
-Excel を使うのは、開発・検証時に *Oracle データ*（実 Excel が返した参照値）を取得するときです。v0.9.2 では Windows Excel ブリッジを使ったピボットテーブルと印刷ページ分割の検証も追加されていますが、これはテスト用の仕組みであり、本番実行時の依存ではありません。
+Excel を使うのは、開発・検証時に *Oracle データ*（実 Excel が返した参照値）を取得するときです。Windows Excel ブリッジによるピボットテーブルと印刷ページ分割の検証もテスト用の仕組みであり、本番実行時の依存ではありません。
 
 ### 既定の互換性プロファイルは？
 
@@ -14,9 +14,9 @@ Excel を使うのは、開発・検証時に *Oracle データ*（実 Excel が
 
 ### Excel 関数は何件使えますか？
 
-Formulon は **522** 件の Excel 関数名を認識します。そのうち **505 / 522** 件が、計算エンジンでローカル評価できる実装済み関数です。
+Formulon は **522** 件の Excel 関数名を認識します。そのうち **507** 件が実装済みで、`CELL` / `INFO` の 2 件は環境依存です。残る 15 件は外部サービススタブです。
 
-残り 17 件は、2 件の環境依存関数（`CELL`、`INFO`）と、15 件の外部サービススタブです。スタブは `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、`TRANSLATE`、`DETECTLANGUAGE`、CUBE 関数群です。これらは名前と引数の形を認識しますが、ローカルで実行できる関数とは扱いません。詳しくは [数式カバレッジ](/ja/compatibility/formula-coverage)。
+外部サービススタブには `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、`TRANSLATE`、`DETECTLANGUAGE`、CUBE 関数群があります。名前と引数の形は認識しますが、ローカルでは実行しません。詳しくは [数式カバレッジ](/ja/compatibility/formula-coverage)。
 
 ### `COPILOT`、`PY`、`STOCKHISTORY`、`WEBSERVICE` は実行できますか？
 
@@ -54,7 +54,7 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### なぜ既定プロファイルが日本語 Excel なのですか？
 
-最初にチェックインされた数式 Oracle データは Mac Excel 365 ja-JP で取得されました。`win-365-ja_JP` は実行時の既定プロファイルで、variant golden を通じて検証されています（v0.9.2 で Windows COM ブリッジ経由で追加された、ピボット / 印刷のワークブック単位 Oracle データではプライマリプロファイルです）。ロケールは実際の表計算挙動に影響します。関数名、区切り記号、日付パース、テキスト書式、照合、エラー表示などが変わり得ます。
+最初にチェックインされた数式 Oracle データは Mac Excel 365 ja-JP で取得されました。`win-365-ja_JP` は実行時の既定プロファイルで、variant golden を通じて検証されています。ピボット / 印刷のワークブック単位 Oracle データでもプライマリプロファイルです。ロケールは実際の表計算挙動に影響します。関数名、区切り記号、日付パース、テキスト書式、照合、エラー表示などが変わり得ます。
 
 英語ロケールのプロファイルは、対応する Oracle データが揃うまで公開しません。これはカバレッジ上の不足であり、日本語 Excel が世界中の Excel を代表するという主張ではありません。
 
@@ -64,7 +64,7 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 公開 API の通常の実行入口は `.xlsx` 形式のバイト列です。WASM、Python、Native Node、CLI、MCP の各実行入口は、基本的に `.xlsx` を読み込み、再計算し、`.xlsx` として保存する流れを提供します。
 
-`.xlsb`（MS-XLSB）も読み書きできます。v0.9.3 以降、スタイル、シート間 3-D 参照、`LET` や新しい関数名を含むワークブック単位の定義名、動的配列のスピル数式が `.xlsb` を往復保存できるようになりました。条件付き書式、ピボットテーブル、コメント、入力規則は引き続き OOXML 専用で、`.xlsb` の配列定数リテラルは数値要素に限られます。CLI と `saveEx` / `save_ex` API は出力先の拡張子から形式を選び（`-o file.xlsb` で MS-XLSB 出力）、入力側は拡張子ではなく内容から形式を判定します。
+`.xlsb`（MS-XLSB）も読み書きできます。モデル化して出力するのはスタイル、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula です。条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship は worksheet tail として保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`fm_workbook_save_xlsb_with_result` が件数を報告します。CLI と `saveEx` / `save_ex` は出力拡張子から形式を選び、入力は内容から判定します。
 
 `.xlsm` / `.xltm` のようなマクロ付き OOXML パッケージは、`vbaProject.bin` をバイト列として保持するテストがあります。ただし、VBA は実行しません。旧 `.xls`（BIFF / Excel 97-2003）は対象外です。
 
@@ -78,13 +78,13 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### ピボットテーブルは対応していますか？
 
-ピボットキャッシュとピボットテーブルの構造保持、ピボット操作、レイアウト取得は実装されており、v0.9.3 以降は C API、Node addon、WASM、Python の各バインディングで同等に使えます。v0.9.2 では、Windows Excel ブリッジによるピボットテーブルのワークブック Oracle 検証も追加されました。
+ピボットキャッシュとピボットテーブルの構造保持、ピボット操作、レイアウト取得、pivot-cache の worksheet-source access は C API、Node addon、WASM、Python で使えます。外部データ接続を再実行してキャッシュを作り直す機能はありません。
 
 一方で、PowerQuery や外部接続を再実行してピボットキャッシュを最新化する用途は対象外です。Excel の「データ更新」機能そのものを置き換えるものではありません。
 
 ### 印刷設定や改ページは保持できますか？
 
-`.xlsx` のページ設定、余白、ヘッダー / フッター、印刷オプション、プリンター設定、改ページ関連のメタデータは往復保存の対象です。v0.9.2 では、印刷ページ分割の Oracle 検証を追加し、余白や Page Break Preview に由来する差分を追跡しやすくしました。
+`.xlsx` のページ設定、余白、ヘッダー / フッター、印刷オプション、プリンター設定、改ページ関連のメタデータは往復保存の対象です。`paginate` API は両端を含む印刷範囲と改ページを解決しますが、最終描画は Excel や別の印刷エンジンで行います。
 
 ただし、Formulon は印刷プレビュー UI や PDF レンダラーではありません。最終的なページ描画は Excel や別のレンダリング層で確認してください。
 
@@ -141,7 +141,7 @@ C++17 は、このプロジェクトでは保守的なポータビリティ選�
 
 ### Native Node は WASM と同じ機能を全部使えますか？
 
-Workbook の形としては同じです。ソースツリーの `packages/npm-native` は、WASM パッケージと同じ 174 個の Workbook instance method と 3 個の static factory（`createDefault` / `createEmpty` / `loadBytes`）を公開し、v0.9.4 で追加された `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` も含みます。WASM 側はホストにガベージコレクタがないため、追加でエンジンインスタンスを解放する `delete()` ライフサイクルメソッドを持ちます。それ以外の result envelope と値の形は同じです。
+Workbook の形は同じです。ソースツリーの `packages/npm-native` は WASM と同じ surface と 3 個の static factory（`createDefault` / `createEmpty` / `loadBytes`）を公開します。Native Node には決定的な `dispose()` と、セル・shared strings・passthrough part・ワークブックメタデータを含む推定値 `memoryUsage()` があり、V8 の external-memory 報告も更新します。GC はフォールバックです。WASM は `delete()` でネイティブハンドルを解放します。
 
 ソースツリー内のパッケージをビルド / stage でき、配置先に platform-specific な `.node` バイナリを置けるなら Native Node を選べます。native thread や `loadBytes` / `save` の heap copy 削減を重視する用途向けです。ブラウザや native addon を置けない Node 配置では WASM を使います。
 
@@ -223,41 +223,6 @@ npx -y @libraz/formulon-mcp
 できません。MCP サーバーは入力を検証し、セッションを `sessionId` で分離します。低レベルの `formulon_workbook_call` も、`formulon-mcp` の `src/sessions.ts` にある allowlist に含まれる `Workbook` メソッドだけを呼び出します。
 
 ただし、MCP はファイルを読み書きするツールです。運用時は、MCP クライアント側の権限、作業ディレクトリ、扱うファイルの範囲を制御してください。
-
-## 最近のリリース
-
-### v0.9.5 で利用者に影響する変更は？
-
-v0.9.5 では、v0.9.4 の読み取り専用アドホック評価に「配列全体を返す」版が加わりました。`evaluateFormulaArray`（Node addon・WASM・C API）と `evaluate_formula_array`（Python）は、動的配列 / スピル数式を評価し、`evaluateFormulaText` のように左上端の 1 要素へ縮約せず、結果の配列全体（`EvalArrayResult`）を返します。読み取り専用・非変更・自己参照の制約は `evaluateFormulaText` と同じです。スカラー版の `evaluateFormulaText` / `evaluateConditionalFormula` は引き続き Node addon・WASM・C API のみで Python にはありませんが、この配列版は v0.9.5 で Python でも使えるようになりました。
-
-あわせて、ホスト提供のローカライズ済み関数メタデータをエンジンの構造カタログに重ねる純粋ヘルパー `mergeFunctionMetadata`（Node）/ `merge_function_metadata`（Python）が加わりました。ロケール上書き → エントリ既定 → エンジン値の優先順で、シグネチャ・説明・ローカライズ名をマージします。`functionMetadata` は遅延ディスパッチ形式（`XLOOKUP`、`SUMIFS` など）やパーサー特殊形式（`LET`、`LAMBDA`）も認識し、上限のない引数個数は `null` / `None` として報告します。
-
-範囲を指す定義名（例: `Sheet1!$A$1:$A$5`）は、暗黙的交差でスカラーへ縮約されず配列として評価されるようになりました。スピルのファントムセルも完全に列挙されます（`cell_count` / `cell_at` の忠実度向上）。
-
-### v0.9.4 で利用者に影響する変更は？
-
-v0.9.4 では、既存ワークブックに対する読み取り専用の ad-hoc formula evaluation が、C API・Node addon・WASM に追加されました（Python には対応する API はまだありません）。`evaluateFormulaText` と `evaluateConditionalFormula` により、数式をセルへ書き込まずに「この場所で評価したら何を返すか」を確認できます。評価は厳密に読み取り専用で、ワークブックを変更せず依存グラフにも参加しません。配列やスピルの結果は範囲ではなく左上端の 1 要素に縮約されます。この挙動の詳細は [動的配列](/ja/workbook/dynamic-arrays) を参照してください。ワークブック内参照と定義名を解決し、条件付き書式向けの経路では Excel 風の相対参照と predicate の規則を適用します。
-
-また、シート上のコメント列挙（Node addon の `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）、入力規則ドロップダウン表示状態の往復保存、条件付き書式ルール追加（`addConditionalFormat` / `fm_sheet_cf_add_rule`）時の新規 rule index 返却にも対応しました。入力規則の `showDropDown` は OOXML 上では意味が反転しているため、ホスト API 側では扱いやすい `show_dropdown` の意味で公開します。コメント列挙は C API・Node addon・WASM に入りましたが、Python バインディングにはまだありません。なお Python の `add_conditional_format` は、他の実行入口と同様に新規 rule index を返します。
-
-### v0.9.3 で利用者に影響する変更は？
-
-v0.9.3 では、実行入口とファイル形式の間に残っていたギャップの大部分を解消しました。
-
-- **バインディング間の完全なパリティ**: C API、Node addon、WASM、Python の全バインディングで、ピボットキャッシュのワークシートソース / レイアウト、シートビューの表示 / 方向フラグ、`save_ex`（XLSX / XLSB を明示的に選択）、シートスコープの定義名、条件付き書式の `ColorScale` / `DataBar` / `IconSet` payload が同等に使えるようになりました。
-- **条件付き書式**が、行全体 / 列全体を指す `sqref` と、x14 データバーオーバーレイ（グラデーション、軸位置、負の値の塗り・枠線）のデコードに対応しました。
-- **XLSB のプロトコルギャップを解消**: スタイル、`LET` や新しい関数名を含むワークブック単位の定義名、シート間 3-D 参照、動的配列のスピル数式が `.xlsb` を往復保存できるようになりました。これらの一部は、以前は実 Excel が開けない `.xlsb` ファイルを生成していました。
-- **OOXML の往復保存忠実性**: `workbookPr` / `bookViews` / `workbookProtection`、`date1904`、テーブルスタイル情報、セルごとのテーマ / インデックス色指定が、実 Excel 由来のワークブックに対する読み込み・変更・保存のサイクルを経ても保持されるようになりました。
-
-現在の形式別の詳細は [ファイル形式サポート一覧](/ja/compatibility/file-format-support) を参照してください。
-
-### v0.9.2 で利用者に影響する変更は？
-
-主な変更は、関数カバレッジを **認識対象 522 件** と **ローカル実装 505 件** に分けて扱うようにしたこと、Windows Excel ブリッジによるピボット・印刷ページ分割のワークブック Oracle 検証を追加したこと、Excel 由来の境界ケース修正を入れたことです。
-
-数式では、数値リテラルの 15 桁有効数字、`ARRAYTOTEXT` のエラー伝播、`PIVOTBY` のレイアウト、`MAP` / `MAKEARRAY`、`FREQUENCY`、`WRAPROWS` / `WRAPCOLS`、`TRIMRANGE`、`PERCENTILE.EXC` の一部境界ケースを修正しています。
-
-ファイル形式では、未知の workbook relationship、共有数式参照、印刷ページ分割メタデータ、余白、Page Break Preview 由来の情報の扱いを強化しています。
 
 ## ライセンス
 

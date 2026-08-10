@@ -36,17 +36,18 @@ OOXML reader / writer は以下を扱います。
 
 ## XLSB
 
-MS-XLSB の読み書きを必要とするワークフローのために、同じ計算モデルを維持したまま使えるバイナリ形式の経路を用意しています。v0.9.3 の時点で、styles（`BrtFmt` / `BrtXF`）、workbook スコープの defined names（future function や `LET` を含む数式も）、cross-sheet 3-D references、dynamic-array のスピル数式（`BrtArrFmla`）はすべて XLSB を往復保存できます — これらの一部は以前、実際の Excel では開けない `.xlsb` を生成していました。array-constant literals は数値要素のみに限定されたままです。文字列 / 真偽値 / エラーの array-constant 要素は認識はされますが decode されず、黙って誤変換されるのではなく明示的なエラーとして表面化します。
+XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、低レベル C API の `fm_workbook_save_xlsb_with_result` が置き換え数を返します。
 
-| XLSB の機能 | v0.9.3 より前 | v0.9.3 以降 |
-| --- | --- | --- |
-| Styles（`BrtFmt` / `BrtXF`） | 制限あり | 往復保存できる |
-| Cross-sheet 3-D references | 制限あり | 往復保存できる |
-| Workbook スコープの names、future function、`LET` | 制限あり | 往復保存できる |
-| Dynamic-array のスピル数式（`BrtArrFmla`） | 制限あり | 往復保存できる |
-| Array-constant literals | 数値要素のみ | 引き続き数値要素のみ |
+| XLSB の機能 | 現在の挙動 |
+| --- | --- |
+| Styles（`BrtFmt` / `BrtXF`） | モデル化して出力 |
+| 行 / 列レイアウト、結合 | モデル化して出力 |
+| `date1904`、view / zoom / frozen panes | モデル化して出力 |
+| 動的配列メタデータと対応する tokenized formula | モデル化して出力 |
+| worksheet tail と relationship | バイト列のまま保持。編集・評価はしない |
+| 非対応数式 | キャッシュ済みリテラルへ置き換える場合があり、件数を報告 |
 
-条件付き書式、pivot table、comment、data validation は引き続き OOXML 専用です — XLSB の reader / writer にはこれらのパートを扱うレコード処理自体がなく、バージョンによらず対象外です。これらの機能を使うワークブックを XLSB で往復保存すると、エラーにはならず機能が黙って失われます。機能を保持したい場合は XLSX のままにしてください。
+worksheet tail の保持から comment や pivot の保存を推測しないでください。これらが重要な場合は、入力ファイルを保持したうえで出力パッケージを確認してください。
 
 保存時のコンテナ形式は明示的です。`saveEx()` / `save_ex()` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。CLI は `-o` パスの拡張子から同じ判断をします（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みはバイト列の中身を見て判定します。`loadBytes()` / `Workbook.load()` はバイト列そのもの（ZIP シグネチャか BIFF12 レコードストリームか）から XLSX / XLSB を判別するため、拡張子が一致していない `.xlsb` ペイロードでも正しく読み込めます。
 

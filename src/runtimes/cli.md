@@ -11,6 +11,7 @@ Common workflows:
 - `eval`: evaluate a formula or expression on a fresh, empty workbook (supports `--json` and `--repeat N`).
 - `recalc`: recalculate a workbook and write updated bytes.
 - `dump`: inspect workbook structure and calculated values.
+- `paginate`: resolve one worksheet's print area and page breaks.
 
 Use the CLI in CI to catch accidental workbook changes and to reproduce issues without writing a host-language integration first.
 
@@ -25,6 +26,7 @@ formulon dump --formulas input.xlsx
 formulon dump --values output.xlsx
 formulon dump --sheets input.xlsx
 formulon dump --metadata input.xlsx
+formulon paginate --sheet 0 input.xlsx
 ```
 
 ::: tip --values recalculates; --formulas does not
@@ -39,7 +41,9 @@ formulon dump --metadata input.xlsx
 formulon recalc model.xlsx -o model.xlsb
 ```
 
-Since v0.9.3, XLSB round-trips styles, workbook-scope defined names (including `LET` and other future-function names), and cross-sheet 3-D references, so this is safe for most workbooks. Conditional formatting, pivot tables, comments, and data validation are still OOXML-only — see [XLSB coverage](/compatibility/file-format-support) before relying on `.xlsb` for a workbook that uses them.
+XLSB models styles, row/column layout, merges, date1904, sheet view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, and drawing/table references and relationships are preserved verbatim; preservation does not make them editable or evaluated. See [XLSB coverage](/compatibility/file-format-support).
+
+`recalc` writes atomically: a failed load, recalc, or save leaves the existing target unchanged.
 
 ## Iterative calculation
 
@@ -50,6 +54,14 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 ```
 
 `--iterative` turns on Excel's default knobs: a maximum of 100 iterations and a 0.001 change threshold per iteration. There is no flag to override those two numbers from the CLI.
+
+## Pagination
+
+```sh
+formulon paginate [--sheet INDEX] <in.xlsx>
+```
+
+`INDEX` defaults to `0` and is zero-based. The output reports `sheet`, `pages`, inclusive zero-based `print_area`, `horizontal_breaks`, and `vertical_breaks`. Exit `0` means success, `64` means usage error, and `1` means an engine or I/O failure.
 
 ## CI usage
 

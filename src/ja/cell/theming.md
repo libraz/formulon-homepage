@@ -37,6 +37,20 @@ instance.setTheme('contrast')
 
 属性の更新後にインスタンスのイベントバスで `themeChange` が発火するため、ホスト側の chrome（テーマスイッチャや設定の永続化）は DOM をポーリングせずに反応できます。
 
+同梱テーマは `@layer fc.theme` の中で宣言されているため、ホスト側の上書きに詳細度の勝負は不要です。カスケードレイヤの外に書いたルールは、パッケージが出荷するレイヤ内のルールすべてに勝ちます。
+
+<CellTokenCascade :labels="{
+  paperNote: '.fc-host:not([data-fc-theme]) ─ 属性が無い場合のデフォルト',
+  attrNote: 'setTheme() が書く data-fc-theme で選択される',
+  hostTag: 'すべての @layer の外',
+  host: '.fc-host かその祖先に書いたホスト側 CSS',
+  resolvedTag: '解決値',
+  resolved: 'グリッドが実際に塗る値',
+  resolvedNote: 'リボンの --fc-tb-accent は --fc-accent にフォールバック',
+  caption: '下の帯ほど強い。レイヤ外のホスト CSS は、セレクタに関係なく同梱テーマのどのルールにも勝つ。',
+  aria: 'formulon-cell のトークン優先順位: @layer fc.theme の同梱テーマファイルをレイヤ外のホスト CSS が上書きし、グリッドが塗る値が決まる図'
+}" />
+
 ::: tip カスタムテーマ名も同じ仕組みで動く
 `setTheme('brand')` は `data-fc-theme="brand"` を書き込みます。登録手続きはありません ─ どんな文字列でも受け付けられ、その属性値にマッチするルールに対して通常のカスケードでトークンが解決されるだけです。
 :::

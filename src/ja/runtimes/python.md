@@ -30,26 +30,28 @@ PyPI パッケージはプラットフォーム別の `libformulon` を同梱し
 
 ## API 範囲
 
-`Workbook` は、npm バインディングが公開する C ABI の実行入口をそのまま踏襲しています。`load -> mutate -> recalc -> save` に加えて、シート / 行列編集、定義名、partial recalc、merge、comment、hyperlink、validation、style、conditional formatting、PivotTables、依存関係 trace、spill 情報、function metadata、sheet view / protection、calc policy、external links を扱えます。
+`Workbook` は、npm バインディングが公開する C ABI の実行入口をそのまま踏襲しています。`load -> mutate -> recalc -> save` に加えて、シート / 行列編集、定義名、partial recalc、merge、comment、hyperlink、validation、style、visual conditional-format payload（`ColorScale`、`DataBar`、`IconSet`）、DXF、pivot report layout、pivot-cache worksheet-source access、PivotTables、依存関係 trace、spill 情報、function metadata、sheet view / protection、calc policy、external links を扱えます。
 
 主な実行時差分は threading です。Python は `wasmtime` 経由で C ABI の WASM ビルドを呼び出すため、`recalc()` は serial です。計算結果の忠実度は他の実行入口と同じです。
 
-::: warning Python は v0.9.4 の追加分をまだ公開していません
-`evaluateFormulaText` / `evaluateConditionalFormula`、およびコメント列挙（Node アドオンの `getComments`、C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）は v0.9.4 で C API・Node アドオン・WASM に追加されましたが、Python ラッパーにはまだ対応するものがありません。「C ABI の実行入口をそのまま踏襲」というのはバインディングの全体的な設計方針を指しているのであって、メソッド単位の完全な一致を保証するものではありません。なお Python の `add_conditional_format` は、Node アドオンや C API の `addConditionalFormat` が v0.9.4 で返すようになったのと同じ、新規ルールのインデックスを返します。
+PyPI の WASM ビルドは worksheet XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、パース時のピークメモリは最大の worksheet XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML で streaming に切り替えます。
+
+::: info Python の評価とワークブック API
+Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` で条件付き書式を評価します。一般的なスカラー `evaluate_formula_text` は公開していません。コメントは `comment_count(sheet)` / `get_comments(sheet)` で列挙でき、`paginate(sheet)` はページ形状を返します。`error_display_name(error_code)` はエラー序数の Excel 表示文字列を返します。
+Python はワークブック機能の大部分を同等に扱いますが、C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。ふりがなテキストの取得・設定と反復進捗コールバックも Python にはありません。ワークブックの文脈で一般的なスカラーを評価する場合は、変更して再計算してください。
 :::
 
 <DiagramLayers :layers="[
-  { title: 'v0.9.4 の追加分', nodes: ['evaluateFormulaText / evaluateConditionalFormula / getComments'] },
+  { title: 'Python のワークブック API', nodes: ['配列評価', 'CF 評価', 'コメント列挙', 'ページ分割'] },
   { title: '公開先', nodes: [
-    { label: 'C API', note: '一次情報源' },
-    { label: 'Node アドオン' },
-    { label: 'WASM' }
+    { label: '共有 C ABI', note: '同じワークブックモデル' },
+    { label: 'Python ラッパー' }
   ] },
-  { title: '未公開', nodes: [{ label: 'Python ラッパー' }] }
+  { title: 'スカラー評価の境界', nodes: [{ label: 'evaluate_formula_text', note: 'Python には未公開' }] }
 ]" />
 
-::: tip v0.9.5: Python に配列全体版が追加
-v0.9.5 で Python にも `evaluate_formula_array`（読み込み済みワークブックに対する読み取り専用のアドホック評価で、動的配列 / スピル数式の結果を左上端に縮約せず配列全体として返す）と、ホスト提供のローカライズ済み関数メタデータをエンジンの構造カタログに重ねる純粋ヘルパー `merge_function_metadata` が入りました。一方でスカラー版の `evaluate_formula_text` / `evaluate_conditional_formula` は依然として未対応なので、上記の警告はそのまま有効です。
+::: tip Python の配列評価
+`evaluate_formula_array` は、読み込み済みワークブックに対する読み取り専用の評価で、動的配列 / スピル数式の結果を配列全体として返します。スカラー版の `evaluate_formula_text` は公開していません。
 :::
 
 ## エラー処理

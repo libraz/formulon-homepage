@@ -31,6 +31,10 @@ The recalculation engine keeps state across edits:
   { title: 'Done', nodes: [{ label: 'Mark clean', note: 'repeat until no dirty cells remain, then reads are valid' }] }
 ]" />
 
+That graph can also be read back. On WASM and Native Node, `precedents(sheet, row, col, depth)` returns the cells an address reads from and `dependents(...)` the cells that read it. Pick a cell in the seeded sheet below and the arrows are drawn from nothing but the addresses those two calls returned. Raise the depth and the chain behind `D1` unwinds a column at a time, back to the literals in column A.
+
+<TraceDemo />
+
 ## Full vs partial recalculation
 
 `recalc()` walks every dirty cell in topological order. `partialRecalc()` — available on WASM, Native Node, and Python — recomputes only the cells inside a specified viewport range (plus their dependents) instead of the whole dirty set. Use it when you know exactly which cells changed — typically a single user edit or a small batch — and want the dependent fan-out only.
@@ -58,9 +62,13 @@ wb.recalc()
 If iterative calculation is **off** and the workbook contains a cycle, the involved cells return `#REF!` / `#NUM!` style Excel errors rather than throwing a host exception. Turn iteration on explicitly when cycles are intentional.
 :::
 
+The panel below solves a two-cell cycle with those same three arguments exposed. Tighten `maxChange` and the solve takes more sweeps to get under it; set an iteration cap below what the tolerance needs and the solve stops early, reporting the run as not converged with its last residual still above the guide line.
+
+<IterativeDemo />
+
 ## Correctness over speed
 
-Formulon runs an unoptimized tree-walker alongside an optimized bytecode VM in tests so the faster path can be checked against the simpler one. Goldens (committed Excel-derived reference values) gate compatibility changes. Speed work that would diverge from the goldens is rejected before it lands.
+Production recalculation uses the tree-walker; release CLI, WASM, and binding binaries do not carry the experimental bytecode compiler, optimizer, or VM. A developer or test build may compile the VM with `FORMULON_BUILD_VM=ON`, but only an explicit `FORMULON_VM_PARITY_CHECK=ON` build runs both evaluators for comparison. Default tests do not double-evaluate. Goldens (committed Excel-derived reference values) gate compatibility changes, and speed work that would diverge from them is rejected.
 
 ## Read next
 

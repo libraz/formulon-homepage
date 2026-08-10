@@ -16,7 +16,7 @@ A thin per-host layer that translates host types (`Uint8Array`, `bytes`, `bytear
 ## Responsibilities
 
 - Convert host buffers to workbook bytes accepted by the C ABI.
-- Manage workbook handles and lifetimes (`delete()` in WASM, context manager in Python, automatic GC tie in Native Node, process lifetime in CLI / MCP).
+- Manage workbook handles and lifetimes (`delete()` in WASM, context manager in Python, `dispose()` plus GC fallback in Native Node, process lifetime in CLI / MCP).
 - Convert spreadsheet values to host values, preserving `ValueKind` so cell errors remain values rather than exceptions.
 - Surface calculation and IO errors without losing spreadsheet error values.
 - Expose the function and structural API documented under [API](/api/) per host.
@@ -39,7 +39,7 @@ If a binding is tempted to special-case a function result or coerce a value diff
 | Binding | Host idioms it handles | What it never touches |
 | --- | --- | --- |
 | WASM | `Uint8Array`, status envelopes, `ValueKind` enum, async module factory | Function semantics, file parsing, calc graph |
-| Native Node | N-API `Buffer`, sync API shape, GC-tied native handles | Function semantics, file parsing, calc graph |
+| Native Node | N-API `Buffer`, sync API shape, `dispose()` and `memoryUsage()` | Function semantics, file parsing, calc graph |
 | Python | `bytes`, context manager, `FormulonError`, `Value.to_python()` | Function semantics, file parsing, calc graph |
 | CLI | `argv`, stdin / stdout / stderr, exit codes | Function semantics, file parsing, calc graph |
 | MCP | JSON inputs / outputs, session map, allowlist dispatch | Function semantics, file parsing, calc graph |

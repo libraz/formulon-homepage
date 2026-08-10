@@ -2,6 +2,8 @@
 
 WASM パッケージは Formulon の実行入口の中で最も適用範囲が広いものです。ブラウザ・Web Worker・Node から、JS API も `formulon-cell` も同じ `@libraz/formulon` バイナリで動かします。
 
+npm の WASM ビルドは worksheet XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、パース時のピークメモリは最大の worksheet XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML で streaming に切り替えます。
+
 ::: warning ホスティングが重要
 ブラウザでの成功はサーバーのヘッダー、Worker 形式、バンドラ挙動に依存します。ローカル開発環境だけでなく、デプロイ先で必ず確認してください。
 :::

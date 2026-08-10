@@ -8,32 +8,26 @@ The 522-function number is the count of Excel function names Formulon recognizes
 
 ## Summary
 
-Formulon currently recognizes **522** Excel function names. **505 / 522** are unconditionally real local engine implementations. The full availability split, which sums to 522, is:
+Formulon recognizes **522** Excel function names: **507 real implementations, including 2 environment-bound (`CELL`, `INFO`), plus 15 unavailable stubs**.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| Fully local implementation | 505 | Evaluated locally with no workbook/host-state dependency, covered by unit and/or oracle tests |
-| Environment-bound | 2 | Also evaluated locally, but some results depend on workbook or host state (`CELL`, `INFO`) |
+| Real implementation | 507 | Evaluated locally; 2 (`CELL`, `INFO`) depend on workbook or host state |
 | Unavailable service stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
 | **Total recognized** | **522** | |
 
 <DiagramLayers :layers="[
   { title: '522 recognized function names', nodes: [
-    { label: '505 fully local', note: 'no workbook/host state needed' },
-    { label: '2 environment-bound', note: 'CELL, INFO — also local, but state-dependent' },
+    { label: '507 real implementations', note: 'includes CELL, INFO' },
     { label: '15 unavailable service stubs', note: 'service/connection dependent' }
   ] }
 ]" />
 
-::: info Why not 507?
-Formulon's own README and `tools/catalog/status.py` report **507** real implementations. That figure is `done - unavailable` (522 − 15) and does not subtract the 2 environment-bound names, so it counts `CELL`/`INFO` twice — once as real, once as environment-bound. This page uses the strict, non-overlapping partition (505 + 2 + 15 = 522) instead.
-:::
-
 This is the honest compatibility claim: Formulon has broad local formula coverage, but it does not embed Microsoft 365 cloud services, a Python cloud runtime, an HTTP client, an OLAP cube connection, an RTD COM provider, or Copilot.
 
-Current local verification is `14342/14342` fast tests passing and `4026/4026` primary formula-oracle cases passing with `166` documented skips. Those skips are explicit divergence, host-service, volatile/environment-bound, or driver-limitation cases; they are not silent unimplemented paths.
+The panel below reads that same registry at runtime — `functionNames()` for the index, `functionMetadata(name, locale)` for arity, availability class, and signature — and tallies the availability classes from the engine rather than from this page, so it answers per function what the tables here answer in aggregate. Its try-it field evaluates a call, which is the shortest way to see what a recognized-but-unavailable name actually returns instead of inferring it from the table below.
 
-Of the 522 catalogued functions, `515` satisfy all six closure checks (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, and `behavior_drift`). The remaining `7` (`FILTERXML`, `ARRAYTOTEXT`, `CONCAT`, `CHAR`, `TRUE`, `GETPIVOTDATA`, `PHONETIC`) are blocked on oracle metadata gaps, not known implementation mismatches.
+<FunctionLookupDemo />
 
 ## Recognized Functions By Category
 

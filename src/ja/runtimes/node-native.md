@@ -13,7 +13,7 @@ Node がネイティブアドオン向けに提供する C ABI。N-API レベル
 - ブラウザの隔離制約を意識せずにネイティブのスケジューラを使いたい
 
 ::: info 実行入口の一致度
-Native Node パッケージは、WASM パッケージと同じ 174 個の Workbook instance method と同じ 3 個の static factory（`createDefault`、`createEmpty`、`loadBytes`）を公開します。v0.9.4 で追加された `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` も含みます。WASM 側だけは `delete()` という lifecycle method を追加で持ちます。これは WASM にはネイティブメモリを回収するホスト側 GC が存在しないためです。それ以外の result envelope と値の形は同一です。Native Node を選ぶ理由は API の広さではなく、運用面（native thread、コピーコストの回避など）です。
+Native Node と WASM は同じ Workbook surface と 3 個の static factory（`createDefault`、`createEmpty`、`loadBytes`）を公開します。Native Node には決定的に解放する `dispose()` と、ネイティブフットプリントの推定値を返す `memoryUsage()` があります。推定値はセル、shared strings、passthrough part、ワークブックメタデータを含み、V8 の external-memory 報告を更新します。GC はフォールバックです。WASM は WASM ヒープ上のネイティブハンドルを `delete()` で解放します。
 :::
 
 ## 提供状況
@@ -47,7 +47,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 }
 ```
 
-ネイティブハンドルは JS オブジェクトの GC にネイティブメモリを紐付ける設計のため、明示的な `delete()` は不要です。利用パターンは WASM と同じです。
+スコープを抜けるときは `dispose()` を呼びます。呼び忘れても JavaScript の GC がハンドルを最終化します。
 
 ## 現在公開している API
 
@@ -55,7 +55,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 | --- | --- |
 | 作成 | `Workbook.createDefault()`, `createEmpty()`, `loadBytes(bytes)` |
 | セル変更 | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula` |
-| 再計算と読み取り | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `save`, `spillInfo`, `precedents`, `dependents` |
+| 再計算と読み取り | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `paginate`, `save`, `spillInfo`, `precedents`, `dependents` |
 | シートと構造 | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, 行 / 列の挿入削除、定義名、テーブル、passthrough parts |
 | workbook data | styles、merges、comments、`getComments`、hyperlinks、validations、conditional formatting、sheet view / layout / protection |
 | PivotTables | pivot cache / pivot table の作成、変更、layout 投影 |
@@ -65,7 +65,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 正確な method 一覧はパッケージの TypeScript declaration を確認してください。Native Node は、配置先に platform-specific binary を置ける Node サービス向けです。ブラウザや native addon なしの Node 配置には WASM を使います。
 
 ::: tip evaluateFormulaText / evaluateConditionalFormula は読み取り専用
-v0.9.4 で追加されたこの 2 つは、ワークブックの状態を変更せず、依存関係グラフにも参加しない形で数式テキストを評価します ── 副作用として再計算が走ることはありません。配列やスピルの結果は左上端の 1 要素に縮約されます。これは意図的な Phase 1 の API 仕様であり、不具合ではありません。スピル範囲が通常どう振る舞うかは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。配列全体が必要なときは、v0.9.5 で追加された `evaluateFormulaArray` を使うと、同じ読み取り専用・非変更・自己参照の制約のもとで結果を左上端に縮約せず `EvalArrayResult` として返します。
+`evaluateFormulaText` と `evaluateConditionalFormula` は、ワークブックを変更せず依存関係グラフにも参加しない読み取り専用評価です。スカラー版で配列やスピルを扱うと左上端へ縮約されるため、全体が必要なら `evaluateFormulaArray` を使います。
 :::
 
 ## 次に読むもの

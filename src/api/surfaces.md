@@ -18,7 +18,7 @@ All surfaces should expose the same calculation core. Differences should be pack
   { title: 'Surfaces', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'no 0.9.4 scalar ad-hoc eval / comment enumeration' },
+      { label: 'Python (formulon)', note: 'array + CF evaluation, comments, pagination' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -36,16 +36,18 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 | Surface | Maturity | Notes |
 | --- | --- | --- |
 | WASM | broadest JS API | Full generated `formulon.d.ts`, browser and Node support |
-| Python | broad workbook API, but trailing WASM/Node on the newest additions | wasmtime-backed wrapper, context-manager workbook lifecycle |
-| CLI | focused tools | `eval`, `recalc`, `dump` |
+| Python | broad workbook API | wasmtime-backed wrapper, context-manager workbook lifecycle |
+| CLI | focused tools | `eval`, `recalc`, `dump`, `paginate` |
 | Native Node | WASM-shaped API | Same Workbook surface as WASM, through a native N-API addon |
 | C ABI | binding contract | Stable low-level contract for packaged surfaces |
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
 | `formulon-cell` | reference UI | Public integration-test and example surface, not a complete Excel-compatible UI |
 
-::: warning Python still trails on the scalar ad-hoc evaluators
-`evaluateFormulaText` / `evaluateConditionalFormula` (read-only *scalar* ad-hoc evaluation) and sheet-wide comment enumeration exist on the C API, Native Node addon, and WASM only. Python's `Workbook` has no equivalent scalar evaluation method, and only exposes singular `get_comment` / `set_comment` — there is no comment-enumeration call like Native Node's `getComments(sheet)` or the C API's `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`. As of 0.9.5 Python does expose the whole-array evaluator `evaluate_formula_array` (returning the full spilled result rather than the top-left element) and the pure `merge_function_metadata` helper, so the remaining gap is the scalar evaluators and comment enumeration. (Conditional-format rule creation does return the new rule index on Python, matching the other surfaces — that 0.9.4 addition is not Python-limited.)
+::: info Python parity boundary
+Python has broad workbook parity, including whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, comment enumeration (`comment_count()` / `get_comments()`), and `paginate()`. Explicit omissions are the general scalar `evaluate_formula_text()`, phonetic text get/set, and the iterative-progress callback; Python does not mirror every C ABI entry point.
 :::
+
+Python also exposes visual conditional-format payloads, DXFs, pivot report layout, and pivot-cache worksheet-source access.
 
 ## When surfaces disagree
 

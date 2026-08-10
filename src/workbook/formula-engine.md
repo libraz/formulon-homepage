@@ -2,8 +2,8 @@
 
 The evaluator is designed to match Excel semantics for scalar values, ranges, arrays, errors, references, and locale-sensitive behavior. The function catalog is registered at startup; bindings expose enough of it to evaluate any registered function.
 
-::: info Glossary: tree-walker vs bytecode VM
-Formulon ships two evaluators. The tree-walker interprets the parsed AST directly; the bytecode VM lowers formulas to a compact instruction stream that runs faster on hot paths. Both must produce the same values — tests run them in parallel so the optimized path stays honest.
+::: info Glossary: tree-walker and experimental bytecode VM
+Release CLI, WASM, and binding binaries use the tree-walker, which interprets the parsed AST directly; they do not carry the experimental bytecode compiler, optimizer, or VM. Developer and test builds may compile that VM when `FORMULON_BUILD_VM=ON`.
 :::
 
 ::: info Glossary: value kind
@@ -15,7 +15,7 @@ The discriminator on every cell or formula result. The kinds are `Blank`, `Numbe
   { label: 'Lexer / parser' },
   { label: 'AST' },
   { label: 'Reference resolver', note: 'names · tables · ranges' },
-  { label: 'Evaluator', note: 'tree-walker + bytecode VM in parity, checked against the function catalog (505/522 local) and the active compatibility profile' },
+  { label: 'Evaluator', note: 'production tree-walker; optional experimental VM in explicit developer/test parity builds' },
   { label: 'Value', note: 'Number · Text · Bool · Error · Array · Ref · Lambda · Blank' }
 ]" />
 
@@ -23,41 +23,17 @@ The discriminator on every cell or formula result. The kinds are `Blank`, `Numbe
 
 The catalog tracks 522 Excel function names across math, statistical, logical, text, date/time, lookup, financial, engineering, information, database, web, cube, and recent (LET / LAMBDA / dynamic array) families. That is the recognition catalog, not a claim that every Microsoft 365 service-backed function is locally implemented.
 
-Currently, **505 / 522** catalog entries have real local engine implementations, 2 are environment-bound (`CELL`, `INFO`), and 15 are deliberate unavailable stubs for features that require external services or live connections. See [Formula coverage](/compatibility/formula-coverage) for the category and availability breakdown.
+The catalog contains **507 real implementations, including 2 environment-bound functions (`CELL`, `INFO`), plus 15 unavailable stubs = 522 recognized names**. See [Formula coverage](/compatibility/formula-coverage) for the category and availability breakdown.
 
 ## Evaluation modes
 
-The tree-walker and bytecode VM can run in parallel for parity checks. That keeps optimization work honest: the faster path must produce the same values as the simpler path, on the same workbook, under the same profile.
+Production evaluation uses the tree-walker. A developer or test build may compile the experimental bytecode VM with `FORMULON_BUILD_VM=ON`; only an explicit `FORMULON_VM_PARITY_CHECK=ON` build runs both evaluators and compares their values. Default tests do not double-evaluate formulas.
 
 ## Ad-hoc evaluation
 
-On top of the same evaluator, WASM and Native Node (C API) expose read-only ad-hoc formula evaluation — `evaluateFormulaText()` and `evaluateConditionalFormula()` answer "what would this formula return here?" without writing anything into a cell. See [Workbook operations — ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation) for the API shape, the WASM/Native-Node-only scope, and the top-left-scalar-reduction caveat for array/spill results. As of v0.9.5, `evaluateFormulaArray()` (and Python's `evaluate_formula_array()`) returns the whole Array result instead of that top-left reduction.
+On top of the same evaluator, WASM and Native Node expose read-only scalar ad-hoc evaluation — `evaluateFormulaText()` and `evaluateConditionalFormula()`. Python exposes `evaluate_formula_array()` for whole-array results and `evaluate_cf_formula()`, but not general scalar `evaluate_formula_text()`.
 
-## v0.9.5 evaluation updates
-
-v0.9.5 continued the evaluator-parity work:
-
-- Range-shaped defined names (e.g. `Sheet1!$A$1:$A$5`) now evaluate as an `Array` instead of collapsing to a scalar through implicit intersection.
-- Dynamic-array spill enumeration is complete: spill-phantom cells are fully reported, so `cell_count` / `cell_at` reflect every spilled cell.
-
-## v0.9.3 evaluation updates
-
-v0.9.3 shipped evaluator-level fixes directly relevant to this page:
-
-- `date1904` is threaded through both the tree-walker and the bytecode VM, so 1900- and 1904-date-system workbooks evaluate consistently across either evaluator.
-- Defined-name resolution now detects circular references instead of hanging or silently returning a stale value.
-- Whole-column and whole-row references (`A:A`, `3:3`) expand against the sheet's used range instead of a fixed cap.
-- Implicit broadcasting between mismatched array shapes follows Excel's actual array-broadcast rule (see [Dynamic arrays](/workbook/dynamic-arrays)).
-- 3-D range tails (`Sheet1:Sheet3!A1:B2`), not just 3-D single-cell references, are resolved correctly.
-
-## v0.9.2 evaluation updates
-
-v0.9.2 made several Excel-parity fixes that can change edge-case results:
-
-- numeric literals are truncated to Excel's 15-significant-digit representation during parsing;
-- `ARRAYTOTEXT` propagates a scalar error argument instead of formatting around it;
-- `FREQUENCY` follows Excel's bin-ordering behavior more closely;
-- `PERCENTILE.EXC` returns `#NUM!` at the upper boundary (`pos == n`) instead of returning the largest sample value.
+Range-shaped defined names evaluate as arrays, spill-phantom cells are enumerated, 1900/1904 date systems are carried through the evaluator, and whole-row/column and 3-D ranges resolve against the workbook model. Array broadcasting follows the function's Excel rules.
 
 ## Error behavior
 

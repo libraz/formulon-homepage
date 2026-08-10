@@ -11,6 +11,7 @@ Formulon と最小限のコマンドランナーをリンクした単一実行�
 - `eval`: 新規の空ワークブック上で式を評価（`--json` / `--repeat N` に対応）
 - `recalc`: ワークブックを再計算して保存
 - `dump`: ワークブック構造や計算値を確認
+- `paginate`: 1 枚のシートの印刷範囲と改ページを解決
 
 CI では意図しないワークブック変更の検知に、開発時にはホスト言語との連携コードを書く前の問題再現に使えます。
 
@@ -25,6 +26,7 @@ formulon dump --formulas input.xlsx
 formulon dump --values output.xlsx
 formulon dump --sheets input.xlsx
 formulon dump --metadata input.xlsx
+formulon paginate --sheet 0 input.xlsx
 ```
 
 ::: tip --values は再計算する。--formulas は再計算しない
@@ -39,7 +41,9 @@ formulon dump --metadata input.xlsx
 formulon recalc model.xlsx -o model.xlsb
 ```
 
-v0.9.3 以降、XLSB はスタイル・ワークブックスコープの定義名（`LET` など future function 名を含む）・シート間の 3-D 参照を往復保存できるため、ほとんどのワークブックで安全に使えます。条件付き書式・pivot table・コメント・入力規則はまだ OOXML 専用です。これらを使うワークブックで `.xlsb` に頼る前に、[XLSB のカバレッジ](/ja/compatibility/file-format-support) を確認してください。
+XLSB はスタイル、行 / 列レイアウト、結合、`date1904`、シート表示 / ズーム / 固定ペイン、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。条件付き書式、入力規則、ハイパーリンク、オートフィルター、印刷設定 / 改ページ、drawing / table の参照とリレーションシップはワークシート末尾としてそのまま保持します。保持されることは編集・評価できることを意味しません。[XLSB のカバレッジ](/ja/compatibility/file-format-support) を確認してください。
+
+`recalc` は一時ファイルへ書き込み、成功時だけ対象を置き換えます。失敗しても既存の対象ファイルは壊れません。
 
 ## 反復計算
 
@@ -50,6 +54,14 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 ```
 
 `--iterative` は Excel の既定値（最大反復回数 100、変化量のしきい値 0.001）を有効にします。CLI からこの 2 つの数値を上書きするフラグはありません。
+
+## ページ分割
+
+```sh
+formulon paginate [--sheet INDEX] <in.xlsx>
+```
+
+`INDEX` の既定値は `0` で 0 始まりです。出力は `sheet`、`pages`、両端を含む 0 始まりの `print_area`、`horizontal_breaks`、`vertical_breaks` を示します。成功は `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。
 
 ## CI での使い方
 

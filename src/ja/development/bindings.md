@@ -16,7 +16,7 @@
 ## 担当すること
 
 - ホストのバッファを C ABI が受け取れるワークブックバイトに変換する。
-- ワークブックハンドルとライフタイムを管理する（WASM の `delete()`、Python の context manager、Native Node の GC 紐付け、CLI / MCP のプロセス寿命）。
+- ワークブックハンドルとライフタイムを管理する（WASM の `delete()`、Python の context manager、Native Node の `dispose()` と GC フォールバック、CLI / MCP のプロセス寿命）。
 - スプレッドシート値をホスト値に変換し、`ValueKind` を保つ（セルエラーが例外ではなく値であり続けるように）。
 - 計算エラーと IO エラーを公開する（スプレッドシート error 値を失わない形で）。
 - 各ホスト用の [API](/ja/api/) を公開する。
@@ -39,7 +39,7 @@
 | バインディング | 扱うホスト慣用 | 触らない領域 |
 | --- | --- | --- |
 | WASM | `Uint8Array`、ステータス envelope、`ValueKind` enum、非同期モジュールファクトリ | 関数意味論・ファイルパース・計算グラフ |
-| Native Node | N-API `Buffer`、同期 API、GC 紐付けハンドル | 関数意味論・ファイルパース・計算グラフ |
+| Native Node | N-API `Buffer`、同期 API、`dispose()` / `memoryUsage()` | 関数意味論・ファイルパース・計算グラフ |
 | Python | `bytes`、context manager、`FormulonError`、`Value.to_python()` | 関数意味論・ファイルパース・計算グラフ |
 | CLI | `argv`、stdin / stdout / stderr、終了コード | 関数意味論・ファイルパース・計算グラフ |
 | MCP | JSON 入出力、セッションマップ、許可リストに基づく呼び出し | 関数意味論・ファイルパース・計算グラフ |

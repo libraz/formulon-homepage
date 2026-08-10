@@ -16,6 +16,9 @@ The cell that owns the dynamic-array formula. Editing or clearing the anchor cha
 - A formula that changes shape dirties dependent cells and recomputes their spill anchors.
 - Collisions — when a spill would overwrite a non-empty cell — return `#SPILL!` rather than silently overwriting data.
 - Dimension mismatches (e.g. mixing a 3-row argument with a 5-row argument under implicit broadcasting) follow Excel's error rules per function family.
+- Bare ranges, arithmetic and comparison operators, and `IF` spill to the shape of their arguments. Blank cells in a bare-range spill become `0`.
+- Scalar functions evaluate range arguments element-wise. Range-returning built-ins use the common spill allocator, so their results follow the same collision and out-of-grid checks.
+- `@` applies implicit intersection and reduces a range or array to the value selected by the formula's anchor.
 
 <DiagramFlow :steps="[
   { label: 'Anchor formula evaluates' },
@@ -38,20 +41,9 @@ Spill behavior is most visible with:
 
 Implicit intersection (`@`) is still supported for backward compatibility with workbooks authored in pre-dynamic-array Excel.
 
-## v0.9.3 array-function updates
+Those formulas can be run below. The upper table comes from `evaluateFormulaArray()`, so the rows × columns printed beside it is the shape the engine computed, not a shape drawn to illustrate the idea; the lower grid is the same formula written into `D2` and recalculated, with the highlighted rectangle read back from `spillInfo()`. Use *Block the spill range* to put a value inside that rectangle: the anchor turns into `#SPILL!` and not one result cell is written — the collision rule above, not a special case built into the demo.
 
-v0.9.3 fixed two behaviors that bear directly on the spill rules above:
-
-- Implicit broadcasting between mismatched array shapes now follows Excel's actual array-broadcast rule, instead of an approximation — this is what "follow Excel's error rules per function family" means above.
-- `INDEX`, `XLOOKUP`, and `INDIRECT` range results now route through the dynamic-array allocator and spill like any other array-producing formula, instead of collapsing to a single scalar.
-
-## v0.9.2 array-function updates
-
-v0.9.2 tightened Excel parity for several array-aware functions:
-
-- `MAP` and `MAKEARRAY` now spill errors in the same shape Excel reports for the covered oracle cases.
-- `WRAPROWS` and `WRAPCOLS` align their output shape and padding behavior with the captured Excel oracle data.
-- `TRIMRANGE` blank handling was adjusted so leading / trailing blank rows and columns match the oracle more closely.
+<SpillDemo />
 
 ## Recalculation interaction
 

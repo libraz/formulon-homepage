@@ -7,6 +7,6 @@
 | [実行入口の一覧](/ja/api/surfaces) | 実行入口ごとの成熟度とパッケージングの違い |
 | [WASM API](/ja/api/wasm) | `@libraz/formulon` module、status envelopes、workbook methods |
 | [Python API](/ja/api/python) | `formulon`, `Workbook`, `Value`, `FormulonError` |
-| [CLI リファレンス](/ja/api/cli) | `eval`, `recalc`, `dump` |
+| [CLI リファレンス](/ja/api/cli) | `eval`, `recalc`, `dump`, `paginate` |
 
 概念的な挙動は先に [ワークブックエンジン](/ja/workbook/) と [互換性](/ja/compatibility/) を読んでください。

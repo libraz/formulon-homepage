@@ -2,8 +2,8 @@
 
 評価器は、スカラー値、範囲、配列、エラー、参照、ロケール依存の挙動を Excel と一致させることを目指しています。Formulon は認識対象の関数名を起動時に登録し、各バインディングはその中で評価できる関数を呼び出せます。
 
-::: info 用語: tree-walker / bytecode VM
-Formulon は 2 つの評価器を持ちます。tree-walker はパース済み AST をそのまま解釈し、bytecode VM は数式をコンパクトな命令列に下げて高速に実行します。両者は同じ結果を返す必要があり、テストでは並走させて差分が出ないか常に検査します。
+::: info 用語: tree-walker と実験的 bytecode VM
+リリース用の CLI・WASM・バインディングバイナリは、パース済み AST を直接解釈する tree-walker を使い、実験的な bytecode compiler・optimizer・VM は含みません。開発・テストビルドでは `FORMULON_BUILD_VM=ON` のときだけ VM をコンパイルできます。
 :::
 
 ::: info 用語: value kind（値の種類）
@@ -15,7 +15,7 @@ Formulon は 2 つの評価器を持ちます。tree-walker はパース済み A
   { label: '字句 / 構文解析' },
   { label: 'AST' },
   { label: '参照解決', note: 'names・tables・ranges' },
-  { label: '評価器', note: 'tree-walker と bytecode VM が parity を保ちつつ実行。関数カタログ（ローカル実装 505/522）と有効な互換性プロファイルを参照する' },
+  { label: '評価器', note: '本番は tree-walker。明示した開発・テストの parity ビルドだけ実験的 VM を使う' },
   { label: 'Value', note: 'Number・Text・Bool・Error・Array・Ref・Lambda・Blank' }
 ]" />
 
@@ -23,41 +23,17 @@ Formulon は 2 つの評価器を持ちます。tree-walker はパース済み A
 
 Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 522 件の Excel 関数名を認識します。これは認識カタログであり、Microsoft 365 の外部サービスに依存する関数まですべてローカル実装済みという意味ではありません。
 
-現在は **505 / 522** 件が実際のローカルエンジン実装、2 件が環境依存（`CELL`、`INFO`）、15 件が外部サービスやライブ接続を必要とするため意図的に用意された未提供スタブです。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
+**507 件の実装（環境依存の `CELL`、`INFO` を含む）と、15 件の未提供スタブで、認識対象は合計 522 件**です。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
 
 ## 評価モード
 
-tree-walker と bytecode VM は並走でき、互いの parity を検査します。同じワークブック・同じプロファイルで両者が一致することが、最適化を進める前提条件です。
+本番の評価は tree-walker で行います。開発・テストビルドでは `FORMULON_BUILD_VM=ON` のときに実験的な bytecode VM をコンパイルできますが、両方を実行して結果を比較するのは `FORMULON_VM_PARITY_CHECK=ON` を明示したビルドだけです。通常のテストは二重評価を行いません。
 
 ## アドホック評価
 
-同じ評価器の上に、WASM と Native Node（C API）は読み取り専用のアドホック数式評価を公開しています。`evaluateFormulaText()` と `evaluateConditionalFormula()` は、セルに何も書き込まずに「この数式をここで評価したら何が返るか」に答えます。API の形状、WASM / Native Node のみという scope、配列・スピル結果をトップレフトのスカラーへ縮約する制約については [ワークブック操作 — アドホック数式評価](/ja/workbook/operations#アドホック数式評価) を参照してください。v0.9.5 では、縮約せずに Array 全体を返す `evaluateFormulaArray()` / `evaluate_formula_array()`（Python を含む）も加わりました。
+同じ評価器の上に、WASM と Native Node は読み取り専用のスカラーアドホック評価 `evaluateFormulaText()` / `evaluateConditionalFormula()` を公開しています。Python は配列全体の `evaluate_formula_array()` と CF 用の `evaluate_cf_formula()` を公開しますが、一般的なスカラー `evaluate_formula_text()` は公開していません。[ワークブック操作 — アドホック数式評価](/ja/workbook/operations#アドホック数式評価) を参照してください。
 
-## v0.9.5 の評価挙動更新
-
-v0.9.5 では、配列に関わる評価の忠実度を高める修正が入りました。
-
-- 範囲を指す defined name（例: `Sheet1!$A$1:$A$5`）は、暗黙の交差でスカラーへ縮約せず、Array として評価されるようになりました。
-- スピルによって生じる phantom セルが完全に列挙されるようになり、`cell_count` / `cell_at` の忠実度が向上しました。
-
-## v0.9.3 の評価挙動更新
-
-v0.9.3 では、このページに直結する評価器レベルの修正が入りました。
-
-- `date1904` が tree-walker と bytecode VM の両方に伝播するようになり、1900 年基準・1904 年基準どちらの日付システムのワークブックも、どちらの評価器でも一貫した結果を返します。
-- defined name の解決が循環参照を検出するようになり、以前のようにハングしたり古い値を黙って返したりしません。
-- 列全体 / 行全体参照（`A:A`、`3:3`）は、固定の上限ではなくシートの used range に対して展開されます。
-- 形状が一致しない配列同士の暗黙のブロードキャストが、Excel の実際の array-broadcast ルールに従うようになりました（[動的配列](/ja/workbook/dynamic-arrays) 参照）。
-- 単一セルの 3-D 参照だけでなく、`Sheet1:Sheet3!A1:B2` のような 3-D range の末尾指定も正しく解決されます。
-
-## v0.9.2 の評価挙動更新
-
-v0.9.2 では、Excel 由来の期待値に合わせるため、いくつかの境界ケースで結果が変わります。
-
-- 数値リテラルは、構文解析時に Excel と同じ 15 桁有効数字の表現へ丸める。
-- `ARRAYTOTEXT` は、スカラーのエラー引数を文字列化せず、そのエラー値を伝播する。
-- `FREQUENCY` は、bin の並びに関する Excel の挙動へ近づけた。
-- `PERCENTILE.EXC` は、上限境界（`pos == n`）で最大値ではなく `#NUM!` を返す。
+範囲形の defined name は Array として評価され、スピルによる phantom cell も列挙されます。`date1904` は評価器へ伝わり、行全体 / 列全体や 3-D range はワークブックモデルに基づいて解決されます。配列の broadcasting は関数ごとの Excel 規則に従います。
 
 ## エラーの扱い
 

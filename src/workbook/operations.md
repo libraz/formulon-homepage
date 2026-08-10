@@ -72,8 +72,8 @@ WASM, Native Node, and Python expose workbook operations such as:
 - defined names,
 - tables,
 - passthrough OOXML parts,
-- pivot table layout projection,
-- conditional formatting read / evaluate / write subset,
+- pivot table report layout and pivot-cache worksheet-source access,
+- conditional formatting read / evaluate / write subset, visual payloads (`ColorScale`, `DataBar`, `IconSet`), and DXFs,
 - sheet view, freeze panes, hidden tabs,
 - sheet protection metadata,
 - row / column layout overrides,
@@ -85,13 +85,40 @@ WASM, Native Node, and Python expose workbook operations such as:
 
 Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_rule`) also returns the new rule's flattened index, which makes host-side UI selection and follow-up edits easier.
 
-WASM and Native Node additionally expose comment *enumeration* — `getComments(sheet)` (backed by `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`) lists every comment on a sheet, including comments anchored on otherwise-empty cells. Python can read and write a comment at a known `(sheet, row, col)` via `get_comment()` / `set_comment()`, but has no sheet-wide enumeration call — walk the used range and call `get_comment()` per cell if you need a full list from Python.
+WASM and Native Node expose comment *enumeration* with `getComments(sheet)`; Python uses `comment_count(sheet)` and `get_comments(sheet)`. Each list includes comments anchored on otherwise-empty cells. `getCommentResult(sheet, row, col)` distinguishes an absent comment from an invalid sheet on the JS surfaces.
 
-Host applications that supply their own localized function metadata can merge it over the engine's structural catalog with `mergeFunctionMetadata()` (Node, exported from both `@libraz/formulon` and the native package) / `merge_function_metadata()` (Python), added in v0.9.5. It is a pure helper — precedence runs locale-override, then entry-default, then the engine value — layered over `functionMetadata()`, which now also recognizes lazy-dispatch forms (`XLOOKUP`, `SUMIFS`, …) and parser special forms (`LET`, `LAMBDA`), and reports unbounded arity as `null` / `None`.
+Host applications can merge localized function metadata with `mergeFunctionMetadata()` (Node) / `merge_function_metadata()` (Python). It is pure and applies locale-override, entry-default, then engine-value precedence.
+
+### Pagination
+
+All binding coordinates and output ranges are zero-based. Print-area coordinates are inclusive.
+
+::: code-group
+
+```ts [WASM]
+const result = wb.paginate(0)
+console.log(result.pageCount, result.printArea, result.horizontalBreaks, result.verticalBreaks)
+```
+
+```ts [Native Node]
+const result = wb.paginate(0)
+console.log(result.pageCount, result.printArea, result.horizontalBreaks, result.verticalBreaks)
+```
+
+```python [Python]
+result = wb.paginate(0)
+print(result.page_count, result.print_area, result.horizontal_breaks, result.vertical_breaks)
+```
+
+```sh [CLI]
+formulon paginate --sheet 0 input.xlsx
+```
+
+:::
 
 ### Ad-hoc formula evaluation
 
-WASM and Native Node (C API) additionally expose read-only ad-hoc formula evaluation. `evaluateFormulaText()` and `evaluateConditionalFormula()` — Node addon, WASM, and C API only, not on Python — answer "what would this formula return here?" without writing the formula into a cell first:
+WASM and Native Node (C API) additionally expose read-only ad-hoc formula evaluation. `evaluateFormulaText()` answers "what would this general scalar formula return here?" without writing it into a cell first. `evaluateConditionalFormula()` evaluates conditional-format predicates. These JavaScript-facing methods are not exposed by Python; Python uses `evaluate_cf_formula()` for conditional-format predicates and `evaluate_formula_array()` for full array results:
 
 ```ts
 const result = wb.evaluateFormulaText(/*sheet*/ 0, /*row*/ 0, /*col*/ 0, '=A1+B1')
@@ -100,9 +127,9 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 }
 ```
 
-This is read-only: it does not mutate the workbook, write a value anywhere, or join the dependency graph — nothing here becomes dirty on a later edit. Array/spill results are also reduced to their top-left element: evaluating `=SEQUENCE(3)` this way returns a single number, not a 3-row spill. That is a deliberate Phase 1 API shape, not a regression — a real cell containing `=SEQUENCE(3)` still spills normally. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling works when the formula is actually written into a cell.
+This is read-only: it does not mutate the workbook, write a value anywhere, or join the dependency graph — nothing here becomes dirty on a later edit. Array/spill results are also reduced to their top-left element: evaluating `=SEQUENCE(3)` this way returns a single number, not a 3-row spill. A real cell containing `=SEQUENCE(3)` still spills normally. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling works when the formula is actually written into a cell.
 
-Since v0.9.5, `evaluateFormulaArray()` (Node addon, WASM, and C API) — and `evaluate_formula_array()` on Python — answers the same read-only question but returns the *whole* Array result (an `EvalArrayResult`) instead of reducing a dynamic-array / spilled formula to its top-left element. Evaluating `=SEQUENCE(3)` this way yields all three rows. It carries the same read-only, no-mutation, and self-reference caveats as `evaluateFormulaText()`, and is the one ad-hoc evaluation call Python does have — the scalar `evaluateFormulaText()` / `evaluateConditionalFormula()` pair remains Node/WASM/C-API only.
+`evaluateFormulaArray()` (Node addon, WASM, and C API) and `evaluate_formula_array()` (Python) return the whole array result instead of reducing a dynamic-array formula to its top-left element. Python also exposes `evaluate_cf_formula()` for conditional-format predicates, but does not expose the general scalar `evaluate_formula_text()`; for a scalar evaluated in workbook context, write the formula to a cell and recalculate.
 
 `evaluateConditionalFormula()` follows the same read-only rule, additionally shifting relative references from the rule's anchor and applying Excel's CF-predicate coercion (error / blank / text / numeric-zero are `false`; any other number is `true`), so the result matches what a real CF rule would evaluate to at that cell.
 

@@ -14,8 +14,8 @@ The in-memory representation of an opened workbook — sheets, cells, styles, de
   { title: 'Host', nodes: ['Host API (JS / Python / CLI / MCP / cell UI)'] },
   { title: 'Boundary', nodes: ['C ABI / binding layer'] },
   { title: 'Core', nodes: ['C++17 workbook model'] },
-  { title: 'Evaluation & IO', nodes: ['Formula parser and evaluator', 'OOXML / XLSB readers and writers'] },
-  { title: 'Verification', nodes: ['Oracle and parity tests'] }
+  { title: 'Evaluation & IO', nodes: ['Formula parser and tree-walker evaluator', 'OOXML / XLSB readers and writers'] },
+  { title: 'Verification', nodes: ['Oracle tests / optional VM parity'] }
 ]" />
 
 ## What lives where
@@ -25,11 +25,13 @@ The in-memory representation of an opened workbook — sheets, cells, styles, de
 | Host API | Language-specific surface (JS / Python / CLI / MCP tools / cell UI) |
 | C ABI / binding | Lifetime management, host value ↔ engine value translation |
 | Workbook model | Sheets, cells, styles, dependency graph, dirty state, profile |
-| Parser / evaluator | Function catalog, tree-walker, bytecode VM, error propagation |
+| Parser / evaluator | Function catalog, production tree-walker, error propagation; optional experimental bytecode VM in developer/test builds |
 | File format layer | OOXML, XLSB readers and writers, passthrough preservation |
 | Oracle / parity tests | Captured Excel values, cross-surface agreement |
 
 The core owns workbook state, formula semantics, file parsing, dependency tracking, and recalculation. Bindings should translate host values and lifetime management without changing calculation behavior.
+
+Release CLI, WASM, and binding binaries use the tree-walker and do not carry the experimental bytecode compiler, optimizer, or VM. Developer and test builds may compile it with `FORMULON_BUILD_VM=ON`; parity comparison is enabled only by an explicit `FORMULON_VM_PARITY_CHECK=ON` build.
 
 ## Why the split
 

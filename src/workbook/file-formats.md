@@ -36,17 +36,18 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path exists for workflows that need MS-XLSB reading and writing while keeping the same calculation model. As of v0.9.3, styles (`BrtFmt`/`BrtXF`), workbook-scope defined names (including future-function and `LET` formulas), cross-sheet 3-D references, and dynamic-array spill formulas (`BrtArrFmla`) all round-trip through XLSB — several of these previously produced `.xlsb` files that real Excel could not open. Array-constant literals remain limited to numeric elements: string, boolean, and error array-constant elements are recognized but not decoded, and are surfaced as an explicit error rather than silently miscoded.
+The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; the low-level `fm_workbook_save_xlsb_with_result` API reports the downgrade count.
 
-| XLSB feature | Before v0.9.3 | v0.9.3+ |
+| XLSB feature | Current behavior |
 | --- | --- | --- |
-| Styles (`BrtFmt` / `BrtXF`) | limited | round-trips |
-| Cross-sheet 3-D references | limited | round-trips |
-| Workbook-scope names, future functions, `LET` | limited | round-trips |
-| Dynamic-array spill formulas (`BrtArrFmla`) | limited | round-trips |
-| Array-constant literals | numeric elements only | still numeric elements only |
+| Styles (`BrtFmt` / `BrtXF`) | modeled and emitted |
+| Row/column layout, merges | modeled and emitted |
+| `date1904`, view/zoom/frozen panes | modeled and emitted |
+| Dynamic-array metadata and supported tokenized formulas | modeled and emitted |
+| Worksheet tails and relationships | preserved verbatim, not editable/evaluated |
+| Unsupported formulas | may downgrade to cached literals; downgrade count is reported |
 
-Conditional formatting, pivot tables, comments, and data validation remain OOXML-only — the XLSB reader/writer does not have record handling for those parts, regardless of version. Round-tripping a workbook that uses them through XLSB drops the feature rather than erroring; keep those workbooks on XLSX if you need the feature preserved.
+Do not infer comment or pivot preservation from this tail-preservation rule. Keep a source workbook and verify the emitted package when those features matter.
 
 Saving is explicit about container format: `saveEx()` / `save_ex()` take a `WorkbookFormat` to choose XLSB over XLSX, and the CLI derives the same choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` detect XLSX vs XLSB from the bytes themselves (ZIP signature vs BIFF12 record stream), not from a file name, so a `.xlsb` payload loads correctly even without a matching extension.
 

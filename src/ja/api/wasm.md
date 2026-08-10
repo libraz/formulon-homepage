@@ -25,6 +25,7 @@ const Module = await createFormulon()
 | `Module.Workbook.createEmpty()` | sheet 0 個のワークブック |
 | `Module.Workbook.loadBytes(bytes)` | メモリ上のワークブックを読み込む（`.xlsx` / `.xlsb` を自動判別） |
 | `Module.versionString()` | エンジンバージョン |
+| `Module.errorDisplayName(errorCode)` | エラー序数の Excel 表示文字列 |
 | `Module.statusString(status)` | status の名前 |
 | `Module.lastErrorMessage()` | 直近の診断メッセージ |
 | `Module.lastErrorContext()` | 直近の診断 context |
@@ -78,7 +79,7 @@ try {
 
 ## コンテナ形式
 
-`save()` は常に OOXML `.xlsx` を書き出します。`saveEx(format)`（0.9.3 で追加）を使うと、書き出すコンテナ形式を明示できます。
+`save()` は常に OOXML `.xlsx` を書き出します。`saveEx(format)` で書き出すコンテナ形式を明示できます。
 
 ```ts
 enum WorkbookFormat {
@@ -97,23 +98,21 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | 分類 | Methods |
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
-| Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode` |
+| Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `setCellPhonetic`, `getCellPhonetic`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
+| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `paginate` |
 | Serialization | `save`, `saveEx` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
 | Structure | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
 | Layout | sheet view, protection, row/column layout, styles, merges |
-| Rich workbook data | comments, hyperlinks, data validations, conditional formats, pivot layout, external links |
+| Rich workbook data | comments (`getCommentResult`), hyperlinks, data validations, conditional formats, pivot layout, external links |
+| Styles | `getFont` / `addFont` の `FontRecord.vertAlign`（`0` baseline、`1` superscript、`2` subscript） |
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
-::: info 0.9.4 で追加
-`evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対して数式テキストを**読み取り専用**で（変更せず、依存グラフにも参加させずに）評価します。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式向け評価ではルールのアンカーから相対参照をずらし、Excel 風の predicate coercion も適用します。配列 / スピルの結果は左上隅の 1 セルに縮約されます — これは Excel の暗黙的な交差の再現ではなく、初期 API として意図した仕様（左上隅への縮約）です。配列 / スピル全体を envelope として返す形は、将来のリリースで追加される可能性があります（[動的配列](/ja/workbook/dynamic-arrays) 参照）。アンカーセル自身を参照する数式は、アドホック評価が依存グラフに参加しないため `#REF!` にはならず、そのセルのキャッシュ済みの値を読み取ります。
-:::
+::: info 読み取り専用のアドホック評価
+`evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対する読み取り専用評価です。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式では相対参照と predicate coercion を適用します。配列 / スピルの結果はスカラー版では左上隅に縮約されます。自己参照は対象セルのキャッシュ値を読み取ります。
 
-::: info 0.9.5 で追加
-`evaluateFormulaArray(sheet, row, col, formula)` は、`evaluateFormulaText` と同じく**読み取り専用**（変更せず、依存グラフにも参加しない）ですが、動的配列 / スピル数式を評価して結果の**配列全体**を `EvalArrayResult`（`rows` × `cols` の `cells` を持つ）として返します。`evaluateFormulaText` が左上隅の 1 セルに縮約するのに対し、こちらは縮約しません。読み取り専用・非変更・自己参照の扱いは `evaluateFormulaText` と同じです。あわせて、`Sheet1!$A$1:$A$5` のような範囲形の定義名が、暗黙的な交差でスカラーに潰れず配列として評価されるようになりました。
-:::
+`evaluateFormulaArray(sheet, row, col, formula)` は配列全体を `EvalArrayResult`（`rows` × `cols` の `cells`）として返します。範囲形の定義名は Array として評価され、スピルの phantom cell も列挙されます。
 
 以下の図は、同じワークブックに対する 2 つの経路を対比したものです。
 
@@ -122,9 +121,14 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
   { label: 'recalc()', note: '依存グラフに参加し、依存先も再計算される' }
 ]" />
 
-<DiagramFlow label="読み取り専用の経路: evaluateFormulaText（0.9.4）" :steps="[
+<DiagramFlow label="読み取り専用の経路: evaluateFormulaText" :steps="[
   { label: 'evaluateFormulaText(sheet, row, col, formula)', note: '参照・定義名・ROW()/COLUMN() のアンカーを解決' },
   { label: 'スカラーの EvalResult', note: '配列/スピルは左上隅に縮約、自己参照はキャッシュ値、依存グラフには参加しない' }
+]" />
+
+<DiagramFlow label="配列全体の経路: evaluateFormulaArray" :steps="[
+  { label: 'evaluateFormulaArray(sheet, row, col, formula)', note: '同じ読み取り専用の解決規則' },
+  { label: 'EvalArrayResult', note: 'rows × cols の cells、依存グラフには参加しない' }
 ]" />
 
 ## 次に読むもの

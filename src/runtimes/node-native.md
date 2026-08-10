@@ -12,8 +12,8 @@ Choose it when:
 - large workbooks make WASM heap copies expensive,
 - you want native scheduler behavior without browser isolation constraints.
 
-::: info Surface parity
-The native package exposes the same 174 Workbook instance methods and the same three static factories (`createDefault`, `createEmpty`, `loadBytes`) as the WASM package, including the v0.9.4 `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` additions. WASM additionally exposes a `delete()` lifecycle method, since it has no host garbage collector to release native memory for it. Result envelopes and value shapes are otherwise byte-identical; the reasons to choose Native Node are operational, not API completeness.
+::: info Surface parity and lifecycle
+Native Node and WASM share the Workbook surface and the three static factories (`createDefault`, `createEmpty`, `loadBytes`). Native Node adds `dispose()` for deterministic release and `memoryUsage()` for an estimated native footprint. The estimate covers cells, shared strings, passthrough parts, and workbook metadata; it refreshes V8 external-memory reporting and returns `0` after disposal. Garbage collection remains a fallback. WASM uses `delete()` because its native handles live in the WASM heap.
 :::
 
 ## Availability
@@ -47,7 +47,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 }
 ```
 
-Native handles do not need an explicit `delete()` call — the addon ties native memory to the JS object's GC. The pattern is otherwise identical to the WASM surface.
+Call `dispose()` when the workbook leaves scope. The addon also finalizes handles through JavaScript garbage collection if callers miss it.
 
 ## API surface
 
@@ -55,7 +55,7 @@ Native handles do not need an explicit `delete()` call — the addon ties native
 | --- | --- |
 | Factories | `Workbook.createDefault()`, `createEmpty()`, `loadBytes(bytes)` |
 | Cell mutation | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula` |
-| Recalc and readback | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `save`, `spillInfo`, `precedents`, `dependents` |
+| Recalc and readback | `getValue`, `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `paginate`, `save`, `spillInfo`, `precedents`, `dependents` |
 | Sheets and structure | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, row/column insert/delete, names, tables, passthrough parts |
 | Rich workbook data | styles, merges, comments, `getComments`, hyperlinks, validations, conditional formatting, sheet view/layout/protection |
 | PivotTables | pivot cache and pivot table creation, mutation, and layout projection |
@@ -64,12 +64,12 @@ Native handles do not need an explicit `delete()` call — the addon ties native
 
 The authoritative method list is the package TypeScript declaration file. Treat Native Node as the performance-oriented Node path when you can ship a platform-specific binary; choose WASM when you need a browser or no native addon.
 
-::: tip evaluateFormulaText / evaluateConditionalFormula are read-only
-Both v0.9.4 additions evaluate formula text against the current workbook state without mutating it or joining the dependency graph — nothing recalculates as a side effect. Array and spill results are reduced to their top-left element; this is a deliberate Phase 1 API shape, not a bug. See [Dynamic arrays](/workbook/dynamic-arrays) for how spill ranges normally work.
+::: tip Ad-hoc evaluation is read-only
+`evaluateFormulaText` and `evaluateConditionalFormula` evaluate against the current workbook without mutating it or joining the dependency graph. Array and spill results from the scalar call are reduced to their top-left element; use `evaluateFormulaArray` for the full result.
 :::
 
-::: tip evaluateFormulaArray returns the whole array (v0.9.5)
-v0.9.5 adds `evaluateFormulaArray(sheet, row, col, formula)`, which returns the entire dynamic-array result (`EvalArrayResult`) instead of reducing to the top-left element. It carries the same read-only, no-mutation, and self-reference caveats as `evaluateFormulaText`. `mergeFunctionMetadata` — a pure helper that layers host-supplied localized function metadata (signature / description / localized name) over the engine's structural `functionMetadata()` catalog, with locale-override then entry-default then engine-value precedence — is also exported here.
+::: tip Memory accounting
+`memoryUsage()` is an estimate rather than an allocation ledger. Calling it after a long run of cell writes refreshes the external-memory hint supplied to V8, so large native workbooks are visible to the runtime's memory policy.
 :::
 
 ## Read next

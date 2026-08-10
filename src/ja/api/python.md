@@ -11,6 +11,7 @@ Python ABI タグ・プラットフォームタグ・ネイティブコードの
 | API | 用途 |
 | --- | --- |
 | `formulon.eval_formula(formula)` | 単発の数式評価 |
+| `formulon.error_display_name(error_code)` | エラー序数を Excel の表示文字列へ変換 |
 | `formulon.library_version()` | ロード済み Formulon モジュールのバージョン |
 | `formulon.version_string()` | `library_version()` の別名 |
 | `formulon.merge_function_metadata(base, entry, locale)` | ホスト提供のローカライズ済み関数メタデータを、エンジンの構造カタログに重ねてマージする純関数 |
@@ -38,21 +39,22 @@ with Workbook.create_default() as wb:
 
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`, `lambda_text_at`, `evaluate_formula_array`（0.9.5 で追加。読み取り専用のアドホック評価で、配列全体を `Value` の 2 次元リストとして返す）
+- `get_value`, `lambda_text_at`, `evaluate_formula_array`
 - `recalc`, `partial_recalc`, `set_iterative`
 - `save`, `save_ex`（XLSX / XLSB のコンテナ形式を選択）
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
 - シート構造編集、行 / 列編集、定義名
-- merges、`get_comment` / `set_comment`、hyperlinks、data validations
+- merges、`get_comment` / `set_comment`、`comment_count` / `get_comments`、hyperlinks、data validations
+- `evaluate_cf_formula`、visual conditional-format payload（`ColorScale`、`DataBar`、`IconSet`）、DXF、`paginate`
 - styles、conditional formats、sheet view / protection
-- pivot cache / table API、依存関係 trace、spill 情報、function metadata
+- pivot cache / table API（worksheet-source access と pivot report layout を含む）、依存関係 trace、spill 情報、function metadata、DXF
 
 ::: tip ライフタイムは context manager
 `with` ブロックを抜けるとネイティブハンドルが解放されます。例外が出ても解放は走るため、`Workbook` 参照を `with` の外で持ち回さないでください。
 :::
 
-::: warning アドホック評価とコメント列挙は未対応
-0.9.5 で配列全体を返すアドホック評価 `evaluate_formula_array` は追加されましたが、Python には WASM / Native Node / C API の 0.9.4 で追加された**スカラー**のアドホック評価 `evaluate_formula_text` / `evaluate_conditional_formula` に相当するメソッドは依然としてなく、コメントも単一セル向けの `get_comment` / `set_comment` のみです。シート単位でコメントを列挙する API はありません。実行入口ごとの対応状況は [実行入口の一覧](/ja/api/surfaces) を参照してください。
+::: info Python の評価境界
+Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` で条件付き書式の述語を評価します。一般的なスカラー `evaluate_formula_text` は公開していません。`comment_count(sheet)` / `get_comments(sheet)` でコメントを列挙でき、`paginate(sheet)` は `page_count`、`print_area`、`horizontal_breaks`、`vertical_breaks` を持つ `PaginationResult` を返します。
 :::
 
 正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。
@@ -66,10 +68,10 @@ value = wb.get_value(0, 0, 0)
 if value.kind is ValueKind.NUMBER:
     print(value.number)
 elif value.kind is ValueKind.ERROR:
-    print(value.error_code)  # int の序数。対応表は /ja/compatibility/errors を参照
+    print(formulon.error_display_name(value.error_code))
 ```
 
-Python の `Value` が持つのは `error_code` だけで、`error_text` というフィールドはありません。序数から `#DIV/0!` や `#VALUE!` のような記号表記への変換は、[エラーモデル](/ja/compatibility/errors) の対応表を使って呼び出し側で行ってください。
+Python の `Value` が持つのは `error_code` だけで、`error_text` というフィールドはありません。`formulon.error_display_name(value.error_code)` で `#DIV/0!` や `#VALUE!` の表示文字列を得られます。
 
 ## エラー処理
 

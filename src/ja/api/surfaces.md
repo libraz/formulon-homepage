@@ -18,7 +18,7 @@
   { title: '実行入口', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'スカラーのアドホック評価・コメント列挙は未対応（0.9.5 で配列全体を返す evaluate_formula_array は対応）' },
+      { label: 'Python (formulon)', note: '配列 / CF 評価、コメント、ページ分割に対応' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -36,16 +36,18 @@
 | 実行入口 | 成熟度 | 補足 |
 | --- | --- | --- |
 | WASM | 最も広い JS API | `formulon.d.ts`、ブラウザ / Node 対応 |
-| Python | 広い workbook API だが、最新の追加機能では WASM / Node に遅れている | wasmtime で動くラッパー、context manager 対応 |
-| CLI | 用途を絞ったツール | `eval` / `recalc` / `dump` |
+| Python | 広い workbook API | wasmtime で動くラッパー、context manager 対応 |
+| CLI | 用途を絞ったツール | `eval` / `recalc` / `dump` / `paginate` |
 | Native Node | WASM 型の API | WASM と同じ Workbook surface を N-API アドオンで公開 |
 | C ABI | 低レベル API 境界 | 各パッケージが呼び出す共通インタフェース |
 | MCP | エージェント向け実行入口 | WASM の上に乗る。許可リストに基づいて呼び出す |
 | `formulon-cell` | 参考 UI | 結合試験と実装例のための公開 UI。Excel 互換の完成 UI ではない |
 
-::: warning Python は 0.9.4 の追加機能にまだ対応していません
-読み取り専用の**スカラー**アドホック評価 `evaluateFormulaText` / `evaluateConditionalFormula` と、シート単位のコメント列挙は C API・Native Node アドオン・WASM だけが持つ機能です。Python の `Workbook` にはこれに相当する評価メソッドがなく、コメントも単一セル向けの `get_comment` / `set_comment` しかありません — Native Node の `getComments(sheet)` や C API の `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` に相当する列挙 API は存在しません。なお 0.9.5 で Python にも、配列全体を返すアドホック評価 `evaluate_formula_array` と、関数メタデータをマージする `merge_function_metadata` が追加されました（スカラーの `evaluate_formula_text` / `evaluate_conditional_formula` は引き続き未対応）。Python の `add_conditional_format` は、他の実行入口と同様に新規ルールのインデックスを返します。
+::: info Python のパリティ境界
+Python は配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、コメント列挙（`comment_count()` / `get_comments()`）、`paginate()` を含む、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()`、ふりがなテキストの取得・設定、反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
 :::
+
+Python は visual conditional-format payload、DXF、pivot report layout、pivot-cache worksheet-source access も公開しています。
 
 ## 実行入口ごとの結果が食い違ったとき
 

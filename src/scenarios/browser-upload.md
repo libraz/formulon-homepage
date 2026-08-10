@@ -47,6 +47,10 @@ export async function recalcUpload(file: File) {
 
 The `try / finally` is the important shape — `wb.delete()` releases WASM heap memory even when the recalc step throws.
 
+The panel below is that function with a file picker and a result table attached. Choosing a workbook reads it with `File.arrayBuffer()`, hands the bytes to `loadBytes()`, lists the recalculated cells, and offers the serialized bytes back as a download. A file that is not a workbook stops at `isValid()` and shows `lastErrorMessage()` — the first row of the error table further down, reached without a server round trip to produce it.
+
+<RecalcDemo />
+
 ## Running the engine off the main thread
 
 Large workbooks can stall UI rendering during recalc. Move the engine into a dedicated worker:

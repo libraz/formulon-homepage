@@ -6,7 +6,7 @@
 
 No at runtime. Formulon does not automate Excel, COM, or a Microsoft runtime when it loads workbooks, evaluates formulas, recalculates, or saves files.
 
-Excel is used during development and verification to capture *oracle data*: reference values returned by the real product. v0.9.2 also added Windows Excel bridge coverage for pivot tables and print pagination, but that is a test track, not a production dependency.
+Excel is used during development and verification to capture *oracle data*: reference values returned by the real product. Windows Excel bridge coverage for pivot tables and print pagination is a test track, not a production dependency.
 
 ### Which compatibility profile is the default?
 
@@ -14,9 +14,9 @@ The default profile is `win-365-ja_JP`, modelled on Excel 365 for Windows with t
 
 ### How many Excel functions can it run?
 
-Formulon recognizes **522** Excel function names. **505 / 522** are real local implementations in the calculation engine.
+Formulon recognizes **522** Excel function names. **507** are real implementations, including 2 environment-bound functions (`CELL`, `INFO`), and 15 are unavailable service stubs.
 
-The remaining 17 are 2 environment-bound functions (`CELL`, `INFO`) and 15 unavailable service / connection stubs: `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, `TRANSLATE`, `DETECTLANGUAGE`, and the CUBE functions. These names are recognized, but they are not local implementations. See [Formula coverage](/compatibility/formula-coverage).
+The unavailable stubs include `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, `TRANSLATE`, `DETECTLANGUAGE`, and the CUBE functions. These names are recognized so failures are deterministic. See [Formula coverage](/compatibility/formula-coverage).
 
 ### Can it execute `COPILOT`, `PY`, `STOCKHISTORY`, or `WEBSERVICE`?
 
@@ -54,7 +54,7 @@ That still leaves hard cases: volatile functions, undocumented coercions, locale
 
 ### Why is the default profile Japanese Excel?
 
-The first checked-in formula oracle was captured on Mac Excel 365 ja-JP; `win-365-ja_JP` is the runtime default and is verified through variant goldens (and is the primary profile for the separate pivot/print workbook-oracle data added in v0.9.2 via the Windows COM bridge). Locale affects real spreadsheet behavior: function names, separators, date parsing, text formatting, collation, and error surfaces can differ.
+The first checked-in formula oracle was captured on Mac Excel 365 ja-JP; `win-365-ja_JP` is the runtime default and is verified through variant goldens. It is also the primary profile for the separate pivot/print workbook-oracle data captured through the Windows COM bridge. Locale affects real spreadsheet behavior: function names, separators, date parsing, text formatting, collation, and error surfaces can differ.
 
 English-locale profiles are intentionally not exposed until matching oracle data exists. That is a coverage gap, not a claim that Japanese Excel is globally representative.
 
@@ -64,7 +64,7 @@ English-locale profiles are intentionally not exposed until matching oracle data
 
 The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, CLI, and MCP surfaces are primarily designed to load `.xlsx`, recalculate, and save `.xlsx`.
 
-`.xlsb` (MS-XLSB) is also read and written. As of v0.9.3, styles, cross-sheet 3-D references, workbook-scope defined names (including `LET` and future-function names), and dynamic-array spill formulas all round-trip through `.xlsb`. Conditional formatting, pivot tables, comments, and data validation are still OOXML-only, and array-constant literals in `.xlsb` are limited to numeric elements. The CLI and `saveEx` / `save_ex` APIs pick the format from the output extension (`-o file.xlsb` writes MS-XLSB) and sniff the input format by content rather than extension.
+`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals, and `fm_workbook_save_xlsb_with_result` reports the downgrade count. The CLI and `saveEx` / `save_ex` APIs pick the format from the output extension and sniff input by content.
 
 Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. Legacy `.xls` / BIFF is out of scope.
 
@@ -78,13 +78,13 @@ No. PowerQuery, DAX, live external connections, Web / OData / OLAP refresh, and 
 
 ### What about pivot tables?
 
-Pivot cache and PivotTable structure preservation, pivot operations, and pivot layout inspection are implemented, with full parity across the C API, Node addon, WASM, and Python bindings since v0.9.3. v0.9.2 added workbook oracle coverage for pivot tables through the Windows Excel bridge.
+Pivot cache and PivotTable structure preservation, pivot operations, layout inspection, and worksheet-source access are available across the C API, Node addon, WASM, and Python bindings. Formulon does not rebuild external data connections.
 
 Formulon is not a replacement for Excel's external-data refresh and pivot-cache rebuild pipeline.
 
 ### Are print settings and page breaks preserved?
 
-`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. v0.9.2 added print pagination oracle coverage and improved tracking for margins and Page Break Preview behavior.
+`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. The `paginate` APIs resolve inclusive print areas and page breaks; rendering still belongs to Excel or another print engine.
 
 Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs to Excel or another rendering layer.
 
@@ -141,7 +141,7 @@ No. The `formulon` wheel is `py3-none-any` and ships `formulon_capi.wasm` plus a
 
 ### Does Native Node expose the full WASM API?
 
-Yes for the Workbook shape. The source-tree Native Node package under `packages/npm-native` exposes the same 174 Workbook instance methods plus the three static factories (`createDefault` / `createEmpty` / `loadBytes`) as the WASM-backed package, including the v0.9.4 `evaluateFormulaText` / `evaluateConditionalFormula` / `getComments` additions. WASM additionally exposes a `delete()` lifecycle method, since it has no host garbage collector to free the underlying engine instance. Result envelopes and value shapes are otherwise the same.
+Yes for the Workbook shape. The source-tree Native Node package under `packages/npm-native` shares the WASM surface and the three static factories (`createDefault` / `createEmpty` / `loadBytes`). It adds `dispose()` for deterministic release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
 
 Choose Native Node when you build or stage the source-tree package and can deploy a platform-specific `.node` binary. It is useful for native threads and fewer heap copies on `loadBytes` / `save`. Choose WASM for browsers or Node deployments that cannot ship native addons.
 
@@ -223,41 +223,6 @@ See [MCP](/mcp/).
 No. The MCP server validates inputs and isolates sessions by `sessionId`. The low-level `formulon_workbook_call` tool only dispatches `Workbook` methods listed in the allowlist in `formulon-mcp`'s `src/sessions.ts`.
 
 The MCP server can still read and write files, so production use should control the client permissions, working directory, and allowed file scope.
-
-## Recent Releases
-
-### What changed in v0.9.5 for users?
-
-v0.9.5 adds ad-hoc **array** evaluation. `evaluateFormulaArray` (Node addon, WASM, C API) and `evaluate_formula_array` (Python) evaluate a dynamic-array / spilled formula against a loaded workbook and return the whole Array result (`EvalArrayResult`) instead of reducing to the top-left element the way v0.9.4's `evaluateFormulaText` does. It keeps the same read-only, no-mutation, and self-reference caveats. Note the Python asymmetry: Python now has the whole-array variant and `merge_function_metadata`, but the scalar `evaluate_formula_text` / `evaluate_conditional_formula` remain Node addon / WASM / C-API only.
-
-It also adds a function-metadata provider seam: `mergeFunctionMetadata` (Node) / `merge_function_metadata` (Python) is a pure helper that merges host-supplied localized function metadata (signature / description / localized name) over the engine's structural catalog, with precedence locale-override then entry-default then engine-value. `functionMetadata` now also recognizes lazy-dispatch forms (`XLOOKUP`, `SUMIFS`, …) and parser special forms (`LET`, `LAMBDA`), and reports unbounded arity as `null` / `None`.
-
-Two evaluation fixes: range-shaped defined names (e.g. `Sheet1!$A$1:$A$5`) now evaluate as an Array instead of collapsing to a scalar via implicit intersection, and spill-phantom cells are fully enumerated (`cell_count` / `cell_at` fidelity).
-
-### What changed in v0.9.4 for users?
-
-v0.9.4 adds read-only ad-hoc formula evaluation on existing workbooks, on the C API, Node addon, and WASM surfaces (Python has no equivalent yet). `evaluateFormulaText` and `evaluateConditionalFormula` let hosts ask "what would this formula return here?" without writing a formula into a cell first. Evaluation is strictly read-only: it does not mutate the workbook or join the dependency graph, and array/spill results are reduced to their top-left element rather than returned as a range — see [Dynamic arrays](/workbook/dynamic-arrays) for what that element selection means in practice. They resolve workbook references and names, and the conditional-format path applies the relative-reference and predicate rules expected by Excel-style CF evaluation.
-
-It also adds comment enumeration (`getComments` on Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) for sheets, round-trips data-validation dropdown visibility with Excel's inverted `showDropDown` OOXML semantics handled for callers, and makes conditional-format rule creation (`addConditionalFormat` / `fm_sheet_cf_add_rule`) return the new rule's index. Conditional-format rule creation returns the new rule's index on every binding, Python included. Comment enumeration lands on the C API, Node addon, and WASM; the Python binding does not expose it yet.
-
-### What changed in v0.9.3 for users?
-
-v0.9.3 closed most of the remaining gaps between surfaces and file formats:
-
-- **Full binding-surface parity** across the C API, Node addon, WASM, and Python: pivot-cache worksheet source/layout, sheet-view display/orientation flags, `save_ex` (explicit XLSX/XLSB selection), sheet-scoped defined names, and conditional-format `ColorScale` / `DataBar` / `IconSet` payloads are now available identically on every binding.
-- **Conditional formatting** gained whole-row/whole-column `sqref` support and x14 data-bar overlay decoding (gradient, axis position, negative fill/border).
-- **XLSB protocol gaps closed**: styles, workbook-scope defined names (including `LET` and future-function names), cross-sheet 3-D references, and dynamic-array spill formulas now round-trip through `.xlsb` — several of these previously produced files real Excel could not open.
-- **OOXML round-trip fidelity**: `workbookPr` / `bookViews` / `workbookProtection`, `date1904`, table style info, and per-cell theme/indexed color specs all survive a load-modify-save cycle on real Excel-authored workbooks.
-
-See the [file format support matrix](/compatibility/file-format-support) for the current per-format detail.
-
-### What changed in v0.9.2 for users?
-
-The main visible changes are the clear split between **522 recognized function names** and **505 local implementations**, workbook oracle coverage for pivot tables and print pagination through the Windows Excel bridge, and several Excel-alignment fixes.
-
-Formula changes include Excel-style 15-significant-digit numeric literal parsing, `ARRAYTOTEXT` scalar error propagation, `PIVOTBY` layout fixes, and fixes around `MAP` / `MAKEARRAY`, `FREQUENCY`, `WRAPROWS` / `WRAPCOLS`, `TRIMRANGE`, and `PERCENTILE.EXC`.
-
-File-format changes include stronger preservation for unknown workbook relationships, shared-formula references, print pagination metadata, margins, and Page Break Preview-derived information.
 
 ## License
 

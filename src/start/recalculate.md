@@ -60,3 +60,9 @@ formulon dump --values output.xlsx
 ```
 
 The engine preserves workbook structure while updating calculated values. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks.
+
+## Run the round trip here
+
+The panel below performs that same sequence in the browser: pick a workbook — or let it generate the sample — and the bytes are parsed with `loadBytes()`, recalculated, listed cell by cell, and serialized back to `.xlsx` bytes you can download. The values in the table are read after `recalc()`, so they are what the engine computed rather than what the file happened to carry.
+
+<RecalcDemo />

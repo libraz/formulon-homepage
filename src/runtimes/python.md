@@ -30,24 +30,24 @@ The PyPI package does not ship a platform-native `libformulon`. It ships one `py
 
 ## API scope
 
-`Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, merges, comments, hyperlinks, validations, styles, conditional formatting, PivotTables, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
+`Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, merges, comments, hyperlinks, validations, styles, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, PivotTables with report layout and pivot-cache worksheet-source access, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
 
 The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Result fidelity is the same as other surfaces.
 
-::: warning Python does not yet expose the v0.9.4 additions
-`evaluateFormulaText`, `evaluateConditionalFormula`, and comment enumeration (`getComments` on the Node addon; `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index` on the C API) ship in v0.9.4 for the C API, Node addon, and WASM only. The Python wrapper has no scalar equivalent yet — "mirrors the C ABI surface" describes the general shape of the binding, not full one-to-one method parity. Python's `add_conditional_format` already returns the new rule's index, the same v0.9.4 C-API behavior the Node addon exposes.
+The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
 
-As of v0.9.5, Python does expose the whole-array variant `evaluate_formula_array(sheet, row, col, formula)` — a read-only, non-mutating evaluation that returns the entire dynamic-array result rather than reducing to the top-left element — and the pure `merge_function_metadata(base, entry, locale)` helper that layers host-supplied localized function metadata over the engine's structural catalog. The scalar `evaluate_formula_text` / `evaluate_conditional_formula` are still Node addon / WASM / C-API only.
+::: info Evaluator and workbook parity
+Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
+Python has broad workbook parity, but does not mirror every C ABI entry point: phonetic text get/set and the iterative-progress callback are also not exposed. Use mutation plus recalc for a general scalar evaluated in workbook context.
 :::
 
 <DiagramLayers :layers="[
-  { title: 'v0.9.4 additions', nodes: ['evaluateFormulaText / evaluateConditionalFormula / getComments'] },
+  { title: 'Python workbook surface', nodes: ['array evaluation', 'CF evaluation', 'comment enumeration', 'pagination'] },
   { title: 'Exposed on', nodes: [
-    { label: 'C API', note: 'source of truth' },
-    { label: 'Node addon' },
-    { label: 'WASM' }
+    { label: 'Shared C ABI', note: 'same workbook model' },
+    { label: 'Python wrapper' }
   ] },
-  { title: 'Not yet exposed on', nodes: [{ label: 'Python wrapper' }] }
+  { title: 'Scalar boundary', nodes: [{ label: 'evaluate_formula_text', note: 'not exposed on Python' }] }
 ]" />
 
 ## Error handling

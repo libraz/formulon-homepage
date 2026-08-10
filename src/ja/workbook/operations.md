@@ -72,8 +72,8 @@ WASM、Native Node、Python の各バインディングは、次のようなワ�
 - defined names
 - tables
 - OOXML parts の passthrough
-- pivot table の layout 投影
-- 条件付き書式の read / evaluate / write subset
+- pivot table の report layout と pivot-cache worksheet-source access
+- 条件付き書式の read / evaluate / write subset、visual payload（`ColorScale`、`DataBar`、`IconSet`）、DXF
 - sheet view、freeze panes、hidden tabs
 - sheet protection の metadata
 - row / column layout の override
@@ -85,11 +85,38 @@ WASM、Native Node、Python の各バインディングは、次のようなワ�
 
 条件付き書式ルールの追加（`addConditionalFormat()` / `fm_sheet_cf_add_rule`）も、新しい rule の flattened index を返すようになったため、ホスト側の UI 選択や後続編集がしやすくなりました。
 
-WASM と Native Node は、さらに comment の *列挙* を公開しています。`getComments(sheet)`（内部は `fm_sheet_get_comment_count` / `fm_sheet_get_comment_at_index`）は、他のセルが空でも comment だけが付いているセルを含め、シート上のすべての comment を一覧できます。Python は既知の `(sheet, row, col)` に対する comment の読み書きを `get_comment()` / `set_comment()` で行えますが、シート全体の列挙 API はありません。Python から一覧が必要な場合は used range を走査してセルごとに `get_comment()` を呼んでください。
+WASM と Native Node は `getComments(sheet)` で comment を列挙できます。Python は `comment_count(sheet)` / `get_comments(sheet)` を使います。どちらも値が空のセルにだけ付いた comment を含みます。JS surface の `getCommentResult(sheet, row, col)` は、comment が無い場合と不正な sheet を区別します。
+
+### ページ分割
+
+すべての座標と出力範囲は 0 始まりで、印刷範囲の両端を含みます。
+
+::: code-group
+
+```ts [WASM]
+const result = wb.paginate(0)
+console.log(result.pageCount, result.printArea, result.horizontalBreaks, result.verticalBreaks)
+```
+
+```ts [Native Node]
+const result = wb.paginate(0)
+console.log(result.pageCount, result.printArea, result.horizontalBreaks, result.verticalBreaks)
+```
+
+```python [Python]
+result = wb.paginate(0)
+print(result.page_count, result.print_area, result.horizontal_breaks, result.vertical_breaks)
+```
+
+```sh [CLI]
+formulon paginate --sheet 0 input.xlsx
+```
+
+:::
 
 ### アドホック数式評価
 
-WASM と Native Node（C API）は、これに加えて読み取り専用のアドホック数式評価を公開しています — Python にはまだありません。`evaluateFormulaText()` と `evaluateConditionalFormula()` は、数式をセルへ書き込む前に「この場所でこの数式を評価したら何を返すか」に答えます。
+WASM と Native Node（C API）は、これに加えて読み取り専用のアドホック数式評価を公開しています。`evaluateFormulaText()` は一般的なスカラー数式をセルへ書き込まずに評価し、`evaluateConditionalFormula()` は条件付き書式の述語を評価します。これらの JavaScript 向けメソッドは Python にはなく、Python では条件付き書式の述語に `evaluate_cf_formula()`、配列全体の結果に `evaluate_formula_array()` を使います。
 
 ```ts
 const result = wb.evaluateFormulaText(/*sheet*/ 0, /*row*/ 0, /*col*/ 0, '=A1+B1')
@@ -98,9 +125,9 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 }
 ```
 
-これは読み取り専用です。ワークブックを変更せず、どこにも値を書き込まず、依存関係グラフにも参加しません — ここで評価しても、後の編集で dirty になるセルは増えません。配列・スピル結果もトップレフトの要素だけに縮約されます。この方法で `=SEQUENCE(3)` を評価すると 3 行のスピルではなく単一の数値が返ります。これは意図的な API 形状であり、退行ではありません — 実際に `=SEQUENCE(3)` をセルへ書き込めば、通常どおりスピルします。数式を実際にセルへ書き込んだときのスピルの仕組みは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
+これは読み取り専用です。ワークブックを変更せず、どこにも値を書き込まず、依存関係グラフにも参加しません — ここで評価しても、後の編集で dirty になるセルは増えません。配列・スピル結果もトップレフトの要素だけに縮約されます。この方法で `=SEQUENCE(3)` を評価すると 3 行のスピルではなく単一の数値が返ります。実際に `=SEQUENCE(3)` をセルへ書き込めば、通常どおりスピルします。数式を実際にセルへ書き込んだときのスピルの仕組みは [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
 
-v0.9.5 では、配列を丸ごと返すアドホック評価が加わりました。`evaluateFormulaArray()`（Native Node・WASM・C API）と `evaluate_formula_array()`（Python）は、`evaluateFormulaText()` のようにトップレフトへ縮約せず、動的配列・スピル数式を評価して Array 全体（`EvalArrayResult` 型）を返します。読み取り専用・非破壊・自己参照に関する注意点は `evaluateFormulaText()` と同じです。スカラーを返す `evaluateFormulaText()` / `evaluateConditionalFormula()` は引き続き Native Node・WASM・C API のみですが、Array を返す `evaluate_formula_array()` は Python でも 0.9.5 から利用できます。
+`evaluateFormulaArray()`（Native Node・WASM・C API）と `evaluate_formula_array()`（Python）は、`evaluateFormulaText()` のようにトップレフトへ縮約せず、Array 全体を返します。Python は条件付き書式の述語に `evaluate_cf_formula()` も公開しますが、一般的なスカラー `evaluate_formula_text()` は公開していません。ワークブックの文脈でスカラーを評価する場合は、セルに数式を書き込んで再計算してください。
 
 `evaluateConditionalFormula()` も同じ読み取り専用ルールに従いますが、加えてルールのアンカーからの相対参照シフトと、Excel の CF 述語変換(エラー / 空白 / 文字列 / 数値ゼロは `false`、それ以外の数値は `true`)を適用するため、結果はそのセルで実際の条件付き書式ルールが評価したときの値と一致します。
 
@@ -117,7 +144,7 @@ v0.9.5 では、配列を丸ごと返すアドホック評価が加わりまし�
   { label: 'スカラー結果', note: '配列・スピル結果はトップレフトの要素に縮約される' }
 ]" label="アドホック経路: evaluateFormulaText、読み取り専用、スカラーのみ" />
 
-CLI はセルを細かく編集する API ではなく、`eval`、`recalc`、`dump` などの調査・変換コマンドに絞っています。アプリケーションに組み込む場合は、WASM、Native Node、Python のいずれかを選んでください。
+CLI はセルを細かく編集する API ではなく、`eval`、`recalc`、`dump`、`paginate` などの調査・変換コマンドに絞っています。アプリケーションに組み込む場合は、WASM、Native Node、Python のいずれかを選んでください。
 
 ::: tip 実装済み関数を実行時に確認する
 WASM `Module.functionNames()` や MCP の `formulon_function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。
