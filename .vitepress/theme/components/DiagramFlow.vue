@@ -2,11 +2,10 @@
 /**
  * DiagramFlow — a linear, box-and-arrow process diagram for markdown content.
  *
- * Renders an ordered sequence of steps as connected boxes: horizontal and
- * wrapping on wide viewports, stacking to a vertical column on narrow ones
- * (or always, via `vertical`). Intended as a drop-in replacement for simple
- * sequential Mermaid `flowchart LR` diagrams (open → parse → edit →
- * recalc → read/save), authored without any raw SVG or diagram syntax.
+ * Renders an ordered sequence of steps as connected boxes: left to right,
+ * wrapping onto further rows when the sequence outgrows the column, and
+ * stacking into a single column on phone-width viewports (or always, via
+ * `vertical`). Authored without any raw SVG or diagram syntax.
  *
  * Usage (arrow-delimited string — closest to how the flow reads in prose):
  *   <DiagramFlow steps="Open workbook bytes → Parse workbook model → Apply edits → Recalculate → Read values or save bytes" />
@@ -18,10 +17,24 @@
  *     { label: 'Compatibility profile' }
  *   ]" />
  *
- * Colors are drawn entirely from VitePress's `--vp-c-*` design tokens, so
- * the diagram tracks light/dark mode automatically with no extra work.
+ * Presentation comes entirely from the `.fx-*` classes in styles/figures.css,
+ * which are built from theme tokens, so the diagram tracks light/dark mode.
  */
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
+import FigureFrame from './FigureFrame.vue'
+import DiagramCanvas from './figures/DiagramCanvas.vue'
+import {
+  boxHeight,
+  CANVAS_MAX,
+  type DiagramBox,
+  type DiagramScene,
+  lineTo,
+  measureContent,
+  NARROW_MAX,
+  PAD_X,
+  RENDER_SCALE,
+  r2
+} from './figures/diagramGeometry'
 
 interface FlowStep {
   label: string
@@ -37,7 +50,7 @@ const props = withDefaults(
      * labels joined with " → ". */
     label?: string
     /** Force a top-to-bottom layout at any viewport width (the default
-     * already wraps to vertical automatically on narrow viewports). */
+     * already stacks to vertical automatically on narrow viewports). */
     vertical?: boolean
   }>(),
   { label: undefined, vertical: false }
@@ -50,131 +63,162 @@ const items = computed<FlowStep[]>(() => {
 })
 
 const ariaLabel = computed(() => props.label ?? items.value.map((s) => s.label).join(' → '))
+
+// --- Geometry ---------------------------------------------------------
+
+const MIN_BOX_W = 66
+const MAX_BOX_W = 136
+/** Horizontal gutter a connector runs through. */
+const ARROW_GAP = 26
+/** Vertical gutter between wrapped rows of the horizontal layout. */
+const ROW_GAP = 28
+/** Left channel the wrap connector descends in when the flow needs two rows. */
+const WRAP_INDENT = 16
+/** Vertical gutter between boxes of the stacked layout. */
+const STACK_GAP = 22
+const STACK_MIN_W = 140
+
+function clamp(value: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, value))
+}
+
+const EMPTY_SCENE: DiagramScene = {
+  width: 1,
+  height: 1,
+  boxes: [],
+  lanes: [],
+  arrows: [],
+  captions: []
+}
+
+/** Left to right, wrapping onto further rows once a row fills the column. */
+const wide = computed<DiagramScene>(() => {
+  const maxContent = MAX_BOX_W - PAD_X * 2
+  const contents = items.value.map((step) => measureContent(step, maxContent))
+  if (contents.length === 0) return EMPTY_SCENE
+  const widths = contents.map(
+    (c) => clamp(c.contentW, MIN_BOX_W - PAD_X * 2, maxContent) + PAD_X * 2
+  )
+  const height = Math.max(...contents.map(boxHeight))
+
+  const rows: number[][] = []
+  let row: number[] = []
+  let rowW = 0
+  contents.forEach((_, i) => {
+    const advance = (row.length > 0 ? ARROW_GAP : 0) + widths[i]
+    if (row.length > 0 && rowW + advance > CANVAS_MAX) {
+      rows.push(row)
+      row = []
+      rowW = 0
+    }
+    rowW += row.length > 0 ? advance : widths[i]
+    row.push(i)
+  })
+  if (row.length > 0) rows.push(row)
+
+  const indent = rows.length > 1 ? WRAP_INDENT : 0
+  const boxes: DiagramBox[] = []
+  const arrows: string[] = []
+  const rowEdges: Array<{ left: number; right: number; cy: number }> = []
+
+  rows.forEach((entries, rowIndex) => {
+    const y = rowIndex * (height + ROW_GAP)
+    let x = indent
+    entries.forEach((i, position) => {
+      boxes[i] = { ...contents[i], x, y, w: widths[i], h: height }
+      if (position > 0) {
+        arrows.push(lineTo(x - ARROW_GAP + 3, y + height / 2, x, y + height / 2))
+      }
+      x += widths[i] + ARROW_GAP
+    })
+    rowEdges.push({
+      left: indent,
+      right: x - ARROW_GAP,
+      cy: y + height / 2
+    })
+  })
+
+  // Wrap connector: out of the last box of a row, down the left channel, into
+  // the first box of the next one.
+  for (let i = 0; i < rowEdges.length - 1; i++) {
+    const from = rowEdges[i]
+    const to = rowEdges[i + 1]
+    const gutterY = r2((from.cy + to.cy) / 2)
+    const channel = r2(WRAP_INDENT / 2)
+    arrows.push(
+      [
+        `M ${r2(from.right + 3)} ${r2(from.cy)}`,
+        `L ${r2(from.right + 9)} ${r2(from.cy)}`,
+        `L ${r2(from.right + 9)} ${gutterY}`,
+        `L ${channel} ${gutterY}`,
+        `L ${channel} ${r2(to.cy)}`,
+        `L ${r2(to.left)} ${r2(to.cy)}`
+      ].join(' ')
+    )
+  }
+
+  return {
+    // The wrap connector steps 9 units past the last box before turning down.
+    width: Math.max(...rowEdges.map((r) => r.right)) + (rows.length > 1 ? 10 : 0),
+    height: rows.length * height + (rows.length - 1) * ROW_GAP,
+    boxes,
+    lanes: [],
+    arrows,
+    captions: []
+  }
+})
+
+/** Single column, top to bottom. */
+const stacked = computed<DiagramScene>(() => {
+  const maxContent = NARROW_MAX - PAD_X * 2
+  const contents = items.value.map((step) => measureContent(step, maxContent))
+  if (contents.length === 0) return EMPTY_SCENE
+  const width =
+    clamp(Math.max(...contents.map((c) => c.contentW)), STACK_MIN_W - PAD_X * 2, maxContent) +
+    PAD_X * 2
+
+  const boxes: DiagramBox[] = []
+  const arrows: string[] = []
+  let y = 0
+  contents.forEach((content, i) => {
+    const h = boxHeight(content)
+    boxes.push({ ...content, x: 0, y, w: width, h })
+    if (i > 0) arrows.push(lineTo(width / 2, y - STACK_GAP + 3, width / 2, y))
+    y += h + STACK_GAP
+  })
+
+  return {
+    width,
+    height: y - STACK_GAP,
+    boxes,
+    lanes: [],
+    arrows,
+    captions: []
+  }
+})
+
+const main = computed(() => (props.vertical ? stacked.value : wide.value))
+/** The wide layout only needs a stacked fallback if it is too wide to shrink. */
+const alt = computed(() =>
+  !props.vertical && wide.value.width > NARROW_MAX ? stacked.value : null
+)
+
+const uid = useId()
+const mainMarker = `${uid}-flow-a`
+const altMarker = `${uid}-flow-b`
 </script>
 
 <template>
-  <ol
-    class="diagram-flow"
-    :class="{ 'diagram-flow--vertical': vertical }"
+  <FigureFrame
+    :view-box="`0 0 ${main.width} ${main.height}`"
+    :width="Math.round(main.width * RENDER_SCALE)"
     :aria-label="ariaLabel"
+    :alt-view-box="alt ? `0 0 ${alt.width} ${alt.height}` : undefined"
+    :alt-width="alt ? Math.round(alt.width * RENDER_SCALE) : undefined"
   >
-    <li v-for="(step, i) in items" :key="i" class="diagram-flow-step">
-      <span class="diagram-flow-label">{{ step.label }}</span>
-      <span v-if="step.note" class="diagram-flow-note">{{ step.note }}</span>
-    </li>
-  </ol>
+    <DiagramCanvas :scene="main" :marker-id="mainMarker" />
+    <template v-if="alt" #alt>
+      <DiagramCanvas :scene="alt" :marker-id="altMarker" />
+    </template>
+  </FigureFrame>
 </template>
-
-<style scoped>
-.diagram-flow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 0;
-  margin: 1.75rem 0;
-  padding: 0;
-  list-style: none;
-}
-
-.diagram-flow-step {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 9em;
-  margin: 0 1.85em 0.85em 0;
-  padding: 11px 16px;
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: var(--vp-c-bg-soft);
-  text-align: center;
-}
-
-/* Reset the global .vp-doc bullet dot added for prose lists — this is a
- * diagram, not a bulleted list. */
-.diagram-flow-step::before {
-  content: none;
-}
-
-.diagram-flow-step:last-child {
-  margin-right: 0;
-}
-
-.diagram-flow-step:not(:last-child)::after {
-  content: "\2192";
-  position: absolute;
-  top: 50%;
-  right: -1.7em;
-  transform: translateY(-50%);
-  color: var(--vp-c-brand-1);
-  font-size: 1.15rem;
-  line-height: 1;
-}
-
-.diagram-flow-label {
-  font-family: var(--vp-font-family-base);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--vp-c-text-1);
-  line-height: 1.35;
-}
-
-.diagram-flow-note {
-  font-family: var(--vp-font-family-mono);
-  font-size: 0.72rem;
-  color: var(--vp-c-text-3);
-  line-height: 1.3;
-}
-
-/* Forced vertical layout */
-.diagram-flow--vertical {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.diagram-flow--vertical .diagram-flow-step {
-  margin: 0 0 1.9em 0;
-  min-width: 0;
-}
-
-.diagram-flow--vertical .diagram-flow-step:last-child {
-  margin-bottom: 0;
-}
-
-.diagram-flow--vertical .diagram-flow-step:not(:last-child)::after {
-  top: auto;
-  right: auto;
-  bottom: -1.65em;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Auto-collapse to vertical on narrow viewports unless the diagram is
- * already forced horizontal via a future prop — there isn't one, so this
- * always applies below the breakpoint. */
-@media (max-width: 640px) {
-  .diagram-flow:not(.diagram-flow--vertical) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .diagram-flow:not(.diagram-flow--vertical) .diagram-flow-step {
-    margin: 0 0 1.9em 0;
-    min-width: 0;
-  }
-
-  .diagram-flow:not(.diagram-flow--vertical) .diagram-flow-step:last-child {
-    margin-bottom: 0;
-  }
-
-  .diagram-flow:not(.diagram-flow--vertical) .diagram-flow-step:not(:last-child)::after {
-    top: auto;
-    right: auto;
-    bottom: -1.65em;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-</style>
