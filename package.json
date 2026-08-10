@@ -12,6 +12,7 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
+    "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "lint": "biome check src .vitepress",
     "lint:fix": "biome check --write src .vitepress",
     "format": "biome format --write src .vitepress"
@@ -26,20 +27,19 @@
   ],
   "author": "libraz <libraz@libraz.net>",
   "license": "Apache-2.0",
-  "volta": {
-    "node": "22.21.1",
-    "yarn": "4.12.0"
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "typescript": "^6.0.3",
     "vitepress": "^1.6.4"
   },
   "dependencies": {
-    "@libraz/formulon": "0.9.5",
+    "@libraz/formulon": "0.9.7",
     "@libraz/formulon-cell": "0.4.0",
     "@libraz/formulon-cell-vue": "0.4.0",
     "vue": "^3.5.39",
     "zustand": "^5.0.14"
+  },
+  "resolutions": {
+    "@libraz/formulon": "0.9.7"
   }
 }

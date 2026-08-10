@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 10
   cacheKey: 10c0
 
 "@algolia/abtesting@npm:1.18.0":
@@ -621,10 +621,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@libraz/formulon@npm:0.9.5":
-  version: 0.9.5
-  resolution: "@libraz/formulon@npm:0.9.5"
-  checksum: 10c0/3fe276474cfbf7c38fabdf262da7cf1a0e3dbfa47f9481cbd26ea61c6455b3056137200796316f6e14bc60274b51d1fa4aeb73f48af82542e295af7d277c1be1
+"@libraz/formulon@npm:0.9.7":
+  version: 0.9.7
+  resolution: "@libraz/formulon@npm:0.9.7"
+  checksum: 10c0/d0aaa15e8c21211bdda103c61e2eadc533cec58430f1de2112f7ceab63093cf23d7ee7e24dacbce926735008825ec5ed1e9e6f9971a03c69474f82b3af76a8a8
   languageName: node
   linkType: hard
 
@@ -1517,7 +1517,7 @@ __metadata:
   resolution: "formulon-homepage@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.5.2"
-    "@libraz/formulon": "npm:0.9.5"
+    "@libraz/formulon": "npm:0.9.7"
     "@libraz/formulon-cell": "npm:0.4.0"
     "@libraz/formulon-cell-vue": "npm:0.4.0"
     typescript: "npm:^6.0.3"

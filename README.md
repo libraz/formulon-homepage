@@ -7,7 +7,7 @@ The stack intentionally matches `go-oidc-provider-homepage`:
 
 - VitePress
 - Biome
-- Node 22 via Volta
+- Node 22 via mise
 - Yarn 4
 - `node-modules` linker
 
