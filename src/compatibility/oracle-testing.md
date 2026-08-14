@@ -10,6 +10,25 @@ A captured set of Excel-produced values for a known workbook, profile, and build
 A case where Formulon deliberately differs from Excel. Each accepted divergence carries a reason (security, deterministic behavior, fixed Excel bug, …) and a last-verified Excel build. Accepted divergences are documented rather than hidden behind generic "Excel-like" claims.
 :::
 
+## Current results
+
+Where the oracle tracks stand today. Each row is what the suite reports on the checked-in goldens, not an aspiration.
+
+| Track | Result | Documented skips / divergences | Golden source |
+| --- | --- | --- | --- |
+| Primary formula oracle | `3942/3942` passing | `140` skips | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
+| Conditional-formatting oracle | `23/23` passing | — | Mac Excel 365 ja-JP |
+| Imported third-party engine corpus (cross-check) | `12510/12510` passing | `168` divergences | Third-party engine, not Excel |
+| Workbook oracle (pivot + print) | Pivot `28/28`, print `35/41` | `6` skips | Historical, reference-only — see below |
+
+**97 oracle categories** are defined and regenerated from Mac Excel 365 ja-JP. Of the `522` catalogued functions, `517` satisfy all six closure conditions (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, `behavior_drift`). Four of the remaining five — `ARRAYTOTEXT`, `FILTERXML`, `GETPIVOTDATA`, `PHONETIC` — fail only `behaviors_declared`, meaning their behavior taxonomy is under-specified rather than unimplemented. The fifth, `JIS`, lost its case coverage when that suite was retired for a Mac Excel bug and has not been re-covered.
+
+Every skip is an explicit divergence, host-service dependency, volatile or environment-bound case, or driver limitation — none is a silent stub. Each carries the Excel build it was last verified against in [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml); the bulk sit at `16.108.1`, with the most recently re-probed cases at `16.111.2`.
+
+::: warning The workbook track is not Microsoft 365 verified
+The pivot and print figures come from the **checked-in historical golden** — Office 2019 or unknown-version files retained as reference-only. The `win-365-ja_JP` target is still `wanted`, and generating the external golden requires a product-verified Windows Microsoft 365 host. Read those two numbers as "passes against the reference capture", not as Microsoft 365 verification.
+:::
+
 ## Why oracle data matters
 
 Spreadsheet behavior includes many undocumented details: rounding edges, how `TEXT()` formats locale-specific digits, how `DATEVALUE()` handles two-digit years, how blank values coerce, how spill collisions interact with merged cells. Committed goldens (`tests/oracle/*/golden`) turn those details into reviewable data and make compatibility regressions visible at PR time rather than after deployment.

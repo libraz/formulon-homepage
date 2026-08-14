@@ -10,6 +10,25 @@ Oracle テストは、実際の Excel から取得した値と Formulon の値�
 Formulon が意図的に Excel と違う挙動をするケースです。理由（セキュリティ、決定論的な挙動、Excel 側の不具合修正など）と、最後に確認した Excel ビルドを記録します。「Excel 風」とぼかさず、明示的に管理します。
 :::
 
+## 現在の結果
+
+各 Oracle トラックの現状です。いずれもチェックイン済みのゴールデンデータに対してスイートが報告している値であり、目標値ではありません。
+
+| トラック | 結果 | 記録済みの skip / divergence | ゴールデンの出所 |
+| --- | --- | --- | --- |
+| 主要な数式 Oracle | `3942/3942` pass | skip `140` 件 | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
+| 条件付き書式 Oracle | `23/23` pass | — | Mac Excel 365 ja-JP |
+| 他エンジン由来コーパス（クロスチェック） | `12510/12510` pass | divergence `168` 件 | 他エンジン。Excel ではない |
+| ワークブック Oracle（ピボット + 印刷） | pivot `28/28`、印刷 `35/41` | skip `6` 件 | 履歴データ（reference-only）。下記参照 |
+
+**97 の Oracle カテゴリ**を定義し、Mac Excel 365 ja-JP から再生成しています。カタログ済みの `522` 関数のうち `517` が6つのクロージャ条件（`behaviors_declared` / `cases_cover_behaviors` / `golden_present` / `divergence_documented` / `not_in_pilot` / `behavior_drift`）をすべて満たします。残り5つのうち4つ（`ARRAYTOTEXT` / `FILTERXML` / `GETPIVOTDATA` / `PHONETIC`）が落ちるのは `behaviors_declared` だけで、未実装ではなく挙動の分類が詰め切れていないという意味です。5つ目の `JIS` は、Mac Excel 側の不具合のためスイートを撤去した際にケースのカバレッジを失い、まだ再カバーしていません。
+
+skip はいずれも明示的な divergence、ホストサービス依存、volatile または環境依存のケース、ドライバの制約のいずれかで、黙って握りつぶしたスタブはありません。それぞれ最後に確認した Excel ビルドを [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) に記録しています。大半は `16.108.1`、再取得が新しいものは `16.111.2` です。
+
+::: warning ワークブックトラックは Microsoft 365 で検証したものではない
+ピボットと印刷の数値は、**チェックイン済みの履歴ゴールデン**に対する結果です。Office 2019 または版不明のファイルを reference-only として保持しているもので、`win-365-ja_JP` の状態は依然として `wanted`、外部ゴールデンの生成には製品版 Windows Microsoft 365 ホストが必要です。この2つの数値は「参照用キャプチャに対して pass している」と読んでください。Microsoft 365 での検証ではありません。
+:::
+
 ## なぜ Oracle データが必要か
 
 スプレッドシートの挙動には、丸め境界、`TEXT()` のロケール固有の桁表現、`DATEVALUE()` の 2 桁年処理、空値の型変換、結合セルとスピル衝突の相互作用など、未文書の細部が多数あります。コミット済みのゴールデンデータ（`tests/oracle/*/golden`）はそれらをレビュー可能な形に固定し、回帰をデプロイ前、つまり PR の時点で検出できるようにします。
