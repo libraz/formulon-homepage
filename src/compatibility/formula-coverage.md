@@ -53,6 +53,8 @@ Formula oracle cases check cell values. Pivot tables and print layout need a wor
 
 That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Pivot suites close at `28/28`. The `print_basic`, `print_pagination`, `print_fit`, and `print_matrix` suites pass `35/41` cases through `formulon_workbook_oracle_tests`; the remaining `6` are documented `win-365-ja_JP` divergence skips for a known Excel PageBreakPreview COM quirk at `PageSetup.Zoom <= 50`.
 
+Both figures are results against the **checked-in historical golden**, which is Office 2019 or unknown-version and retained as reference-only. Re-capturing them on a product-verified Windows Microsoft 365 host is still outstanding, so neither number counts as Microsoft 365 verification — see [Locale Profiles](./locale-profiles.md) for what `wanted` means for this profile.
+
 ## Unavailable service stubs
 
 These names are intentionally recognized so workbooks fail in a predictable, Excel-shaped way instead of producing `#NAME?` from an unknown parser path. They are outside Formulon's local calculation boundary.
