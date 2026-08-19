@@ -75,7 +75,9 @@ const applyFunction = (fn: DemoFunction) => {
   if (!workbook || !spreadsheet) return
   const { mutators, formatCell } = spreadsheetApi
   workbook.setFormula(targetAddr, fn.formula)
-  workbook.recalc()
+  // The instance recalculates and re-reads the sheet into the store; the
+  // workbook's own recalc() only does the former, leaving the grid stale.
+  spreadsheet.recalc()
   mutators.setActive(spreadsheet.store, targetAddr)
   result.value = formatCell(workbook.getValue(targetAddr), lang.value === 'ja' ? 'ja-JP' : 'en-US')
 }
@@ -127,6 +129,11 @@ onMounted(async () => {
       locale: isJa.value ? 'ja' : 'en',
       theme: isDark.value ? 'ink' : 'paper'
     })
+
+    // The panel says the sheet is read-only, so make it so: protection is
+    // enforced in the interaction layer, leaving the function picker's own
+    // writes through the workbook API unaffected.
+    spreadsheet.setSheetProtected(true)
 
     mutators.setActive(spreadsheet.store, targetAddr)
     result.value = formatCell(workbook.getValue(targetAddr), isJa.value ? 'ja-JP' : 'en-US')
