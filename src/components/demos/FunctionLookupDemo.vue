@@ -79,7 +79,6 @@ const copy = computed(() =>
         title: '関数カタログを引く',
         description:
           '一覧も件数も、実行中のエンジンの functionNames() / functionMetadata() から取得しています。ページ側に関数表は持っていません。',
-        run: 'エンジンを読み込んでカタログを開く',
         search: '関数名で検索',
         total: '登録関数',
         matches: '一致',
@@ -102,7 +101,6 @@ const copy = computed(() =>
         title: 'Look up the function catalog',
         description:
           'The index and every count come from the running engine’s functionNames() / functionMetadata(); this page carries no function table of its own.',
-        run: 'Load engine and open the catalog',
         search: 'Search by function name',
         total: 'Registered functions',
         matches: 'matches',
@@ -225,8 +223,8 @@ watch(isJa, () => {
     :description="copy.description"
     :state="state"
     :error="failure"
-    :run-label="copy.run"
     :version="version"
+    :reserve="515"
     @run="start"
     @reset="reset"
   >

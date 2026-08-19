@@ -81,13 +81,13 @@ const copy = computed(() =>
         title: '数式を評価する',
         description:
           '入力した数式をブラウザ内の WASM エンジンがそのまま評価します。単体評価は evalFormula()、ワークブック評価は evaluateFormulaText() を呼び出しています。',
-        run: 'エンジンを読み込んで数式を試す',
         modeStandalone: '単体 (evalFormula)',
         modeWorkbook: 'ワークブック参照 (evaluateFormulaText)',
         formulaLabel: '数式',
         evaluate: '評価',
         presets: 'サンプル',
         seed: `シードデータ — 数式は ${cellAddress(ANCHOR.row, ANCHOR.col)} に入力したものとして評価されます`,
+        seedUnused: 'シードデータ — 単体評価ではこのワークブックは見えません',
         kind: '値の種類',
         value: '結果',
         status: 'ステータス',
@@ -97,13 +97,13 @@ const copy = computed(() =>
         title: 'Evaluate a formula',
         description:
           'The WASM engine in this page evaluates whatever you type. Standalone evaluation calls evalFormula(); workbook evaluation calls evaluateFormulaText() so references resolve.',
-        run: 'Load engine and try a formula',
         modeStandalone: 'Standalone (evalFormula)',
         modeWorkbook: 'With references (evaluateFormulaText)',
         formulaLabel: 'Formula',
         evaluate: 'Evaluate',
         presets: 'Presets',
         seed: `Seed data — the formula is evaluated as if entered at ${cellAddress(ANCHOR.row, ANCHOR.col)}`,
+        seedUnused: 'Seed data — standalone evaluation cannot see this workbook',
         kind: 'Value kind',
         value: 'Result',
         status: 'Status',
@@ -190,32 +190,40 @@ onBeforeUnmount(() => {
     :description="copy.description"
     :state="state"
     :error="failure"
-    :run-label="copy.run"
     :version="version"
+    :reserve="560"
     @run="start"
     @reset="reset"
   >
-    <div class="demo-row demo-row--tabs">
+    <div class="demo-segment" role="tablist">
       <button
         type="button"
-        class="demo-tab"
+        role="tab"
+        class="demo-segment__item"
         :class="{ 'is-active': mode === 'standalone' }"
+        :aria-selected="mode === 'standalone'"
         @click="switchMode('standalone')"
       >
         {{ copy.modeStandalone }}
       </button>
       <button
         type="button"
-        class="demo-tab"
+        role="tab"
+        class="demo-segment__item"
         :class="{ 'is-active': mode === 'workbook' }"
+        :aria-selected="mode === 'workbook'"
         @click="switchMode('workbook')"
       >
         {{ copy.modeWorkbook }}
       </button>
     </div>
 
-    <div v-if="mode === 'workbook'" class="demo-subpanel">
-      <span class="demo-label">{{ copy.seed }}</span>
+    <!-- Shown in both modes: standalone evaluation cannot reach this data, and
+         seeing it sit there unreachable is the difference between the two
+         surfaces. Keeping it mounted also stops the panel from resizing under
+         the reader when the mode changes. -->
+    <div class="demo-subpanel" :class="{ 'is-inactive': mode === 'standalone' }">
+      <span class="demo-label">{{ mode === 'workbook' ? copy.seed : copy.seedUnused }}</span>
       <table class="demo-grid">
         <thead>
           <tr>

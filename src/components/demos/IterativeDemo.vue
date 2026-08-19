@@ -62,7 +62,6 @@ const copy = computed(() =>
         title: '循環参照と反復計算',
         description:
           '互いを参照する 2 つのセルを反復計算で解きます。各スイープの残差は setIterativeProgress() が返した値をそのまま描いています。',
-        run: 'エンジンを読み込んで反復計算する',
         solve: '解く',
         tolerance: '収束判定 (maxChange)',
         cap: '最大反復回数',
@@ -79,7 +78,6 @@ const copy = computed(() =>
         title: 'Circular references and iterative calculation',
         description:
           'Two mutually referencing cells are solved iteratively. The curve is the residual reported by setIterativeProgress() after each sweep, plotted exactly as the engine streamed it.',
-        run: 'Load engine and iterate',
         solve: 'Solve',
         tolerance: 'Convergence tolerance (maxChange)',
         cap: 'Iteration cap',
@@ -236,8 +234,8 @@ onBeforeUnmount(() => {
     :description="copy.description"
     :state="state"
     :error="failure"
-    :run-label="copy.run"
     :version="version"
+    :reserve="515"
     @run="start"
     @reset="reset"
   >

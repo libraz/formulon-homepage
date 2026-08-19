@@ -4,20 +4,25 @@
  *
  * The top panel calls `evaluateFormulaArray()`, which returns the whole
  * `rows x cols` result without touching the workbook, so the spill *shape* is
- * visible before anything is written. The bottom panel writes the same
- * formula into a cell, recalculates, and reads `spillInfo()` back to outline
- * the region the engine actually engaged — including the `#SPILL!` case, where
- * an occupied cell inside the region blocks the whole array.
+ * visible before anything is written. The formula is then written into a real
+ * cell of the embedded sheet and recalculated, and `spillInfo()` reports the
+ * region the engine engaged — including the `#SPILL!` case, where an occupied
+ * cell inside the region blocks the whole array.
+ *
+ * Both halves run against the one workbook the grid is mounted on, so the
+ * preview is provably non-mutating: the sheet next to it does not move.
  */
-import type { Value, Workbook } from '@libraz/formulon'
+import type { Value } from '@libraz/formulon'
+import type { Addr, SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import DemoFrame from './DemoFrame.vue'
+import DemoSheet from './DemoSheet.vue'
 import {
   cellAddress,
-  columnLabel,
   type Engine,
   formatValue,
+  getCellApi,
   getEngine,
   isErrorValue,
   statusText
@@ -37,9 +42,11 @@ const SEED = [
 ] as const
 
 /** Where the committed formula is written (D2). */
-const ANCHOR = { row: 1, col: 3 }
-const GRID_ROWS = 7
-const GRID_COLS = 7
+const ANCHOR: Addr = { sheet: 0, row: 1, col: 3 }
+/** Rectangle blanked before each commit, so a shrinking result never leaves
+ *  cells from the previous one standing. */
+const CLEAR_ROWS = 8
+const CLEAR_COLS = 8
 
 const PRESETS = [
   '=SEQUENCE(3,4)',
@@ -62,29 +69,20 @@ const preview = ref<{ rows: number; cols: number; cells: PreviewCell[][]; status
   null
 )
 
-interface GridCell {
-  text: string
-  isError: boolean
-  inSpill: boolean
-  isAnchor: boolean
-  isBlocker: boolean
-}
-const grid = ref<GridCell[][]>([])
 const region = ref<{ rows: number; cols: number } | null>(null)
 const committed = ref('')
-const blockedCell = ref<{ row: number; col: number } | null>(null)
+const blockedCell = ref<Addr | null>(null)
 
 let engine: Engine | null = null
-let previewWb: Workbook | null = null
-let commitWb: Workbook | null = null
+let instance: SpreadsheetInstance | null = null
+let unsubscribe: (() => void) | null = null
 
 const copy = computed(() =>
   isJa.value
     ? {
         title: 'ダイナミック配列とスピル',
         description:
-          '配列を返す数式を、まず evaluateFormulaArray() でワークブックを書き換えずに形のまま取得し、次に実際のセルへ書き込んで spillInfo() でスピル範囲を確認します。',
-        run: 'エンジンを読み込んでスピルを見る',
+          '配列を返す数式を、まず evaluateFormulaArray() でワークブックを書き換えずに形のまま取得し、次に下のシートの実際のセルへ書き込んで spillInfo() でスピル範囲を確認します。',
         formulaLabel: '配列数式',
         presets: 'サンプル',
         previewTitle: 'プレビュー (書き込みなし)',
@@ -101,8 +99,7 @@ const copy = computed(() =>
     : {
         title: 'Dynamic arrays and spilling',
         description:
-          'An array formula is first read back with evaluateFormulaArray(), which returns the whole shape without mutating the workbook, then written into a real cell so spillInfo() can report the region the engine engaged.',
-        run: 'Load engine and spill an array',
+          'An array formula is first read back with evaluateFormulaArray(), which returns the whole shape without mutating the workbook, then written into a real cell of the sheet below so spillInfo() can report the region the engine engaged.',
         formulaLabel: 'Array formula',
         presets: 'Presets',
         previewTitle: 'Preview (nothing is written)',
@@ -118,11 +115,12 @@ const copy = computed(() =>
       }
 )
 
-const seed = (wb: Workbook) => {
+const seed = (wb: WorkbookHandle) => {
   SEED.forEach((row, r) => {
     row.forEach((cell, c) => {
-      if (typeof cell === 'number') wb.setNumber(0, r, c, cell)
-      else wb.setText(0, r, c, cell)
+      const addr = { sheet: 0, row: r, col: c }
+      if (typeof cell === 'number') wb.setNumber(addr, cell)
+      else wb.setText(addr, cell)
     })
   })
   wb.recalc()
@@ -134,8 +132,8 @@ const toPreviewCell = (value: Value): PreviewCell => ({
 })
 
 const runPreview = () => {
-  if (!engine || !previewWb) return
-  const result = previewWb.evaluateFormulaArray(0, ANCHOR.row, ANCHOR.col, formula.value.trim())
+  if (!engine || !instance) return
+  const result = instance.workbook.evaluateFormulaArray(ANCHOR, formula.value.trim())
   preview.value = {
     rows: result.rows,
     cols: result.cols,
@@ -144,72 +142,87 @@ const runPreview = () => {
   }
 }
 
-const snapshotGrid = () => {
-  if (!engine || !commitWb) return
-  const info = commitWb.spillInfo(0, ANCHOR.row, ANCHOR.col)
-  region.value = info.engaged ? { rows: info.rows, cols: info.cols } : null
-  const inRegion = (row: number, col: number) =>
-    info.engaged &&
-    row >= info.anchorRow &&
-    row < info.anchorRow + info.rows &&
-    col >= info.anchorCol &&
-    col < info.anchorCol + info.cols
-
-  const rows: GridCell[][] = []
-  for (let row = 0; row < GRID_ROWS; row += 1) {
-    const cells: GridCell[] = []
-    for (let col = 0; col < GRID_COLS; col += 1) {
-      const cell = commitWb.getValue(0, row, col)
-      cells.push({
-        text: formatValue(engine, cell.value),
-        isError: isErrorValue(engine, cell.value),
-        inSpill: inRegion(row, col),
-        isAnchor: row === ANCHOR.row && col === ANCHOR.col,
-        isBlocker: blockedCell.value?.row === row && blockedCell.value?.col === col
-      })
-    }
-    rows.push(cells)
-  }
-  grid.value = rows
+/** Selects the engaged region so the grid shows its extent, or just the
+ *  anchor when nothing spilled. */
+const highlightRegion = async (info: { rows: number; cols: number } | null) => {
+  if (!instance) return
+  const cell = await getCellApi()
+  cell.mutators.setActive(instance.store, ANCHOR)
+  if (!info || (info.rows === 1 && info.cols === 1)) return
+  cell.mutators.extendRangeTo(instance.store, {
+    sheet: ANCHOR.sheet,
+    row: ANCHOR.row + info.rows - 1,
+    col: ANCHOR.col + info.cols - 1
+  })
 }
 
-/** Rebuilds the committed workbook from scratch so a previous spill can never
- *  leave phantom cells behind, then writes formula + optional blocker. */
-const commit = () => {
-  if (!engine) return
-  commitWb?.delete()
-  commitWb = engine.module.Workbook.createDefault()
-  seed(commitWb)
-  commitWb.setFormula(0, ANCHOR.row, ANCHOR.col, formula.value.trim())
+/** Blanks the write area, then writes formula + optional blocker. */
+const commit = async () => {
+  if (!instance) return
+  const wb = instance.workbook
+  for (let row = 0; row < CLEAR_ROWS; row += 1) {
+    for (let col = 0; col < CLEAR_COLS; col += 1) {
+      wb.setBlank({ sheet: ANCHOR.sheet, row: ANCHOR.row + row, col: ANCHOR.col + col })
+    }
+  }
+  wb.setFormula(ANCHOR, formula.value.trim())
   const blocker = blockedCell.value
-  if (blocker) commitWb.setText(0, blocker.row, blocker.col, 'x')
-  commitWb.recalc()
+  if (blocker) wb.setText(blocker, 'x')
+  // `instance.recalc()`, not `workbook.recalc()`: the handle only recalculates
+  // the engine, while the instance also re-reads the sheet into the store — so
+  // spilled neighbours appear instead of the anchor alone.
+  instance.recalc()
   committed.value = formula.value.trim()
-  snapshotGrid()
+
+  const info = wb.spillInfo(ANCHOR.sheet, ANCHOR.row, ANCHOR.col)
+  region.value = info ? { rows: info.rows, cols: info.cols } : null
+  await highlightRegion(region.value)
 }
 
 /** The far corner of the engaged region: occupying it is enough to trip
  *  `#SPILL!`, and it is never the anchor itself. */
-const blockTarget = computed(() => {
+const blockTarget = computed<Addr | null>(() => {
   const info = region.value
   if (!info || (info.rows === 1 && info.cols === 1)) return null
-  return { row: ANCHOR.row + info.rows - 1, col: ANCHOR.col + info.cols - 1 }
+  return {
+    sheet: ANCHOR.sheet,
+    row: ANCHOR.row + info.rows - 1,
+    col: ANCHOR.col + info.cols - 1
+  }
 })
 
-const toggleBlock = () => {
+const toggleBlock = async () => {
   blockedCell.value = blockedCell.value ? null : blockTarget.value
-  commit()
+  await commit()
 }
 
-const apply = () => {
+const apply = async () => {
   blockedCell.value = null
   runPreview()
-  commit()
+  await commit()
 }
 
 const usePreset = (preset: string) => {
   formula.value = preset
-  apply()
+  void apply()
+}
+
+/** Re-reads what an edit changed. Editing the source list (A2:B6) changes what
+ *  the array returns, so both the preview and the engaged region move with it —
+ *  but the formula is not re-committed, or every keystroke would fight the
+ *  reader for the selection. */
+const refreshAfterEdit = () => {
+  if (!instance) return
+  runPreview()
+  const info = instance.workbook.spillInfo(ANCHOR.sheet, ANCHOR.row, ANCHOR.col)
+  region.value = info ? { rows: info.rows, cols: info.cols } : null
+}
+
+const onSheetReady = async (mounted: SpreadsheetInstance) => {
+  unsubscribe?.()
+  instance = mounted
+  unsubscribe = mounted.on('cellChange', refreshAfterEdit)
+  await apply()
 }
 
 const start = async () => {
@@ -218,36 +231,31 @@ const start = async () => {
   try {
     engine = await getEngine()
     version.value = engine.module.versionString()
-    previewWb?.delete()
-    previewWb = engine.module.Workbook.createDefault()
-    seed(previewWb)
     state.value = 'ready'
-    apply()
   } catch (error) {
     failure.value = String(error)
     state.value = 'error'
   }
 }
 
-const release = () => {
-  previewWb?.delete()
-  commitWb?.delete()
-  previewWb = null
-  commitWb = null
-}
-
 const reset = () => {
-  release()
+  unsubscribe?.()
+  unsubscribe = null
+  instance = null
   engine = null
   preview.value = null
-  grid.value = []
   region.value = null
   blockedCell.value = null
+  committed.value = ''
   formula.value = PRESETS[0]
   state.value = 'idle'
 }
 
-onBeforeUnmount(release)
+onBeforeUnmount(() => {
+  unsubscribe?.()
+  unsubscribe = null
+  instance = null
+})
 </script>
 
 <template>
@@ -256,15 +264,21 @@ onBeforeUnmount(release)
     :description="copy.description"
     :state="state"
     :error="failure"
-    :run-label="copy.run"
     :version="version"
+    :reserve="810"
     @run="start"
     @reset="reset"
   >
     <label class="demo-field">
       <span class="demo-label">{{ copy.formulaLabel }}</span>
       <span class="demo-field__row">
-        <input v-model="formula" type="text" class="demo-input" spellcheck="false" @keyup.enter="apply" />
+        <input
+          v-model="formula"
+          type="text"
+          class="demo-input"
+          spellcheck="false"
+          @keyup.enter="apply"
+        />
         <button type="button" class="demo-button" @click="apply">{{ copy.commit }}</button>
       </span>
     </label>
@@ -301,31 +315,7 @@ onBeforeUnmount(release)
 
     <div class="demo-subpanel">
       <span class="demo-label">{{ copy.commitTitle }}</span>
-      <table class="demo-grid demo-grid--sheet">
-        <thead>
-          <tr>
-            <th></th>
-            <th v-for="c in GRID_COLS" :key="c">{{ columnLabel(c - 1) }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, r) in grid" :key="r">
-            <th>{{ r + 1 }}</th>
-            <td
-              v-for="(cell, c) in row"
-              :key="c"
-              :class="{
-                'is-spill': cell.inSpill,
-                'is-anchor': cell.isAnchor,
-                'is-blocker': cell.isBlocker,
-                'is-error': cell.isError
-              }"
-            >
-              {{ cell.text }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <DemoSheet :seed="seed" :height="300" @ready="onSheetReady" />
 
       <div class="demo-row">
         <span class="demo-status">

@@ -4,14 +4,19 @@
  *
  * Owns everything every demo repeats: the title/description header, the
  * capability check that keeps a non-isolated browser from spinning forever,
- * the "load the engine" gate that defers the ~2.3 MB wasm fetch until the
- * reader asks for it, the loading/error panels, and the reset button.
+ * the boot that pulls the ~2.3 MB wasm in as the demo approaches the
+ * viewport, the loading/error panels, and the reset button.
+ *
+ * The demo starts itself rather than waiting for a click: a reader scrolling
+ * to it finds a running sheet, not a button. The fetch is still deferred —
+ * `IntersectionObserver` fires it one screen ahead, so a page whose demo is
+ * never reached never pays for the engine.
  *
  * The host component only reports its own state and renders the demo body in
  * the default slot; the frame decides whether that body is shown at all.
  */
 import { useData } from 'vitepress'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { type EngineBlocker, engineBlocker } from './engine'
 
 const props = withDefaults(
@@ -24,20 +29,25 @@ const props = withDefaults(
     state?: 'idle' | 'loading' | 'ready' | 'error'
     /** Localized failure text shown in the `error` state. */
     error?: string
-    /** Localized label for the initial action button. */
-    runLabel?: string
     /** Engine version string, shown in the header badge once loaded. */
     version?: string
     /** Set `false` for demos with nothing meaningful to reset. */
     resettable?: boolean
+    /**
+     * Height in pixels the frame holds open while the engine boots, roughly
+     * what this demo's body will occupy. The demo starts itself as it nears
+     * the viewport, so without a reserved box the page reflows under a reader
+     * who is still scrolling toward it.
+     */
+    reserve?: number
   }>(),
   {
     description: undefined,
     state: 'idle',
     error: undefined,
-    runLabel: undefined,
     version: undefined,
-    resettable: true
+    resettable: true,
+    reserve: 180
   }
 )
 
@@ -49,14 +59,51 @@ const isJa = computed(() => lang.value === 'ja')
 // The capability probe reads `crossOriginIsolated`, so it can only run after
 // hydration; `null` until then, which keeps SSR output and first paint equal.
 const blocker = ref<EngineBlocker | null | undefined>(undefined)
+const root = ref<HTMLElement | null>(null)
+const nearViewport = ref(false)
+let observer: IntersectionObserver | null = null
+
+const stopObserving = () => {
+  observer?.disconnect()
+  observer = null
+}
+
 onMounted(() => {
   blocker.value = engineBlocker()
+  if (blocker.value) return
+  if (typeof IntersectionObserver === 'undefined' || !root.value) {
+    nearViewport.value = true
+    return
+  }
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return
+      stopObserving()
+      nearViewport.value = true
+    },
+    // One screen of lead time: the engine is usually there by the time the
+    // demo is actually read.
+    { rootMargin: '256px 0px' }
+  )
+  observer.observe(root.value)
 })
+
+onBeforeUnmount(stopObserving)
+
+// Also covers the reset path: a host that drops back to `idle` while the demo
+// is still on screen boots again instead of stranding an empty frame.
+watch(
+  [nearViewport, () => props.state, blocker],
+  () => {
+    if (!nearViewport.value || blocker.value || props.state !== 'idle') return
+    emit('run')
+  },
+  { flush: 'post' }
+)
 
 const copy = computed(() =>
   isJa.value
     ? {
-        run: 'エンジンを読み込んで実行',
         loading: 'WASM エンジンを読み込み中…',
         reset: 'リセット',
         retry: 'もう一度試す',
@@ -72,7 +119,6 @@ const copy = computed(() =>
         }
       }
     : {
-        run: 'Load engine and run',
         loading: 'Loading the WASM engine…',
         reset: 'Reset',
         retry: 'Try again',
@@ -93,7 +139,12 @@ const blockedText = computed(() => (blocker.value ? copy.value.blocked[blocker.v
 </script>
 
 <template>
-  <section class="demo-frame" :data-state="state">
+  <section
+    ref="root"
+    class="demo-frame"
+    :data-state="state"
+    :style="{ '--demo-reserve': `${reserve}px` }"
+  >
     <header class="demo-frame__head">
       <h4 class="demo-frame__title">{{ title }}</h4>
       <span v-if="state === 'ready' && version" class="demo-frame__badge">
@@ -107,13 +158,7 @@ const blockedText = computed(() => (blocker.value ? copy.value.blocked[blocker.v
         {{ blockedText }}
       </div>
       <template v-else>
-        <div v-if="state === 'idle'" class="demo-frame__panel">
-          <button type="button" class="demo-frame__run" @click="emit('run')">
-            {{ runLabel || copy.run }}
-          </button>
-        </div>
-
-        <div v-else-if="state === 'loading'" class="demo-frame__panel" role="status">
+        <div v-if="state === 'idle' || state === 'loading'" class="demo-frame__panel" role="status">
           <span class="demo-frame__spinner" aria-hidden="true"></span>
           {{ copy.loading }}
         </div>

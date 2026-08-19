@@ -20,6 +20,9 @@ const FunctionLookupDemo = defineAsyncComponent(
   () => import('@/components/demos/FunctionLookupDemo.vue')
 )
 const IterativeDemo = defineAsyncComponent(() => import('@/components/demos/IterativeDemo.vue'))
+const StructureDemo = defineAsyncComponent(() => import('@/components/demos/StructureDemo.vue'))
+const FormatDemo = defineAsyncComponent(() => import('@/components/demos/FormatDemo.vue'))
+const ErrorsDemo = defineAsyncComponent(() => import('@/components/demos/ErrorsDemo.vue'))
 const DemoFrame = defineAsyncComponent(() => import('@/components/demos/DemoFrame.vue'))
 
 // Bespoke figures: one page each, so they are code-split like the demos.
@@ -42,6 +45,9 @@ export default {
     app.component('RecalcDemo', RecalcDemo)
     app.component('FunctionLookupDemo', FunctionLookupDemo)
     app.component('IterativeDemo', IterativeDemo)
+    app.component('StructureDemo', StructureDemo)
+    app.component('FormatDemo', FormatDemo)
+    app.component('ErrorsDemo', ErrorsDemo)
     app.component('CellTokenCascade', CellTokenCascade)
   }
 } satisfies Theme

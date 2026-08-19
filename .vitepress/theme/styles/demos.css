@@ -9,6 +9,20 @@
    ========================================= */
 
 .demo-frame {
+  /* One type scale for every demo. Four steps, used everywhere: anything that
+     needs a fifth is a sign the panel is doing too much. */
+  --demo-fs-label: 0.66rem;
+  --demo-fs-hint: 0.75rem;
+  --demo-fs-body: 0.82rem;
+  --demo-fs-lead: 0.88rem;
+  /* Monospace runs one notch down: at equal nominal size a mono face reads
+     larger than the surrounding text. */
+  --demo-fs-mono: 0.78rem;
+  /* Height the frame holds while the engine boots, set by the host component
+     from what its body will occupy. Without it the demo pops into place under
+     a reader who is still scrolling towards it. */
+  --demo-reserve: 0px;
+
   margin: 1.75rem 0;
   padding: 1.1rem 1.2rem 0.9rem;
   border: 1px solid var(--vp-c-divider);
@@ -37,7 +51,7 @@
 .demo-frame__badge {
   flex: none;
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--demo-fs-label);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   padding: 0.15rem 0.45rem;
@@ -48,7 +62,7 @@
 
 .demo-frame p.demo-frame__desc {
   margin: 0.5rem 0 0.9rem;
-  font-size: 0.86rem;
+  font-size: var(--demo-fs-lead);
   line-height: 1.65;
   color: var(--color-text-secondary);
 }
@@ -56,11 +70,20 @@
 .demo-frame__panel {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.6rem;
   flex-wrap: wrap;
-  padding: 0.9rem 0;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  min-block-size: var(--demo-reserve);
+  font-size: var(--demo-fs-body);
+  color: var(--color-text-tertiary);
+}
+
+/* The blocked and error panels carry text to read, not a placeholder to wait
+   out, so they keep their intrinsic height and left alignment. */
+.demo-frame__panel--blocked,
+.demo-frame__panel--error {
+  justify-content: flex-start;
+  min-block-size: 0;
 }
 
 .demo-frame__panel--blocked,
@@ -107,18 +130,20 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  min-block-size: var(--demo-reserve);
 }
 
 .demo-frame__actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 .demo-frame p.demo-frame__note {
   margin: 0.9rem 0 0;
   padding-top: 0.65rem;
   border-top: 1px solid var(--vp-c-divider);
-  font-size: 0.72rem;
+  font-size: var(--demo-fs-hint);
   line-height: 1.5;
   color: var(--color-text-tertiary);
 }
@@ -131,6 +156,13 @@
   cursor: pointer;
 }
 
+/* One focus treatment for every control in the frame. Keyboard users get the
+   same ring on a chip, a tab and a link-shaped download button. */
+.demo-frame :is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--vp-c-brand-1) 55%, transparent);
+  outline-offset: 2px;
+}
+
 .demo-frame .demo-frame__run,
 .demo-frame .demo-button {
   display: inline-flex;
@@ -141,7 +173,7 @@
   border-radius: var(--radius-sm);
   background: var(--vp-c-brand-1);
   color: #fff;
-  font-size: 0.8rem;
+  font-size: var(--demo-fs-body);
   font-weight: 500;
   text-decoration: none;
   background-image: none;
@@ -186,7 +218,7 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-tertiary);
-  font-size: 0.72rem;
+  font-size: var(--demo-fs-hint);
 }
 
 .demo-frame .demo-frame__reset:hover {
@@ -205,29 +237,61 @@
   margin: 0;
 }
 
-.demo-row--tabs {
-  gap: 0.35rem;
-  border-bottom: 1px solid var(--vp-c-divider);
-  padding-bottom: 0.55rem;
-}
-
 .demo-row--counts {
   gap: 0.4rem;
 }
 
-.demo-frame .demo-tab {
-  padding: 0.3rem 0.7rem;
+/* Segmented control for the primary "which surface am I looking at" switch.
+   Every segment is `flex: 1 1 0`, so a long Japanese label and a short English
+   one still produce equal thirds instead of a ragged strip. */
+.demo-segment {
+  display: flex;
+  width: 100%;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--color-text-tertiary);
-  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
 }
 
-.demo-frame .demo-tab.is-active {
-  border-color: color-mix(in srgb, var(--vp-c-brand-1) 55%, transparent);
-  background: color-mix(in srgb, var(--vp-c-brand-2) 12%, transparent);
-  color: var(--vp-c-brand-1);
+/* Two short labels do not need the full column: stretching `.xlsx` / `.xlsb`
+   across the panel reads as a stray strip rather than a control. */
+.demo-segment--inline {
+  width: auto;
+  align-self: flex-start;
+}
+
+.demo-frame .demo-segment__item {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.36rem 0.55rem;
+  border: 0;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: var(--demo-fs-hint);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.demo-segment--inline .demo-segment__item {
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+}
+
+.demo-frame .demo-segment__item:hover {
+  color: var(--color-text-primary);
+}
+
+.demo-frame .demo-segment__item.is-active {
+  background: var(--vp-c-bg);
+  border: 1px solid var(--color-border-default);
+  padding: calc(0.36rem - 1px) calc(0.55rem - 1px);
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 
 .demo-frame .demo-chip {
@@ -237,7 +301,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--demo-fs-hint);
 }
 
 .demo-frame .demo-chip:hover {
@@ -269,7 +333,7 @@
 
 .demo-label {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: var(--demo-fs-label);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
@@ -285,13 +349,7 @@
   background: var(--vp-c-bg);
   color: var(--color-text-primary);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-}
-
-.demo-frame .demo-input:focus,
-.demo-frame .demo-select:focus {
-  outline: 2px solid color-mix(in srgb, var(--vp-c-brand-1) 45%, transparent);
-  outline-offset: 1px;
+  font-size: var(--demo-fs-body);
 }
 
 .demo-frame .demo-select {
@@ -300,6 +358,33 @@
 
 .demo-frame .demo-range {
   accent-color: var(--vp-c-brand-1);
+}
+
+/* --- Embedded formulon-cell sheet ------------------------------------ */
+
+.demo-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* The grid sizes itself to this box, so the height comes from the component
+   and the width from the prose column. `62vh` keeps a sheet sized for a
+   desktop reading column from filling a phone screen end to end. */
+.demo-sheet__host {
+  position: relative;
+  width: 100%;
+  height: min(var(--demo-sheet-height, 300px), 62vh);
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--radius-sm);
+  background: var(--vp-c-bg);
+}
+
+/* Held while the mount resolves, so the box reads as "about to hold a sheet"
+   rather than as an empty bordered rectangle. */
+.demo-sheet__host[data-busy="true"] {
+  background: color-mix(in srgb, var(--color-text-primary) 3%, var(--vp-c-bg));
 }
 
 /* --- Panels and readouts --------------------------------------------- */
@@ -314,20 +399,25 @@
   background: color-mix(in srgb, var(--vp-c-bg) 55%, transparent);
 }
 
+/* Context that is on screen but out of reach for the current mode. */
+.demo-subpanel.is-inactive {
+  opacity: 0.5;
+}
+
 .demo-frame p.demo-hint {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: var(--demo-fs-hint);
   line-height: 1.5;
   color: var(--color-text-tertiary);
 }
 
 .demo-frame span.demo-hint {
-  font-size: 0.74rem;
+  font-size: var(--demo-fs-hint);
   color: var(--color-text-tertiary);
 }
 
 .demo-status {
-  font-size: 0.78rem;
+  font-size: var(--demo-fs-body);
   color: var(--color-text-secondary);
 }
 
@@ -337,7 +427,7 @@
 
 .demo-frame .is-formula {
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: var(--demo-fs-mono);
 }
 
 .demo-fnname {
@@ -348,7 +438,7 @@
 
 .demo-badge {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--demo-fs-label);
   padding: 0.12rem 0.4rem;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border-default);
@@ -387,16 +477,24 @@
   border-radius: var(--radius-sm);
 }
 
+/* Readouts line up in columns instead of wrapping into a ragged strip: with
+   values of wildly different width (a byte count next to an address list) a
+   flex row leaves the labels un-alignable. */
 .demo-frame dl.demo-result {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.6rem 1.5rem;
   margin: 0;
+}
+
+/* For the one entry per demo whose value is a sentence rather than a datum. */
+.demo-frame .demo-result > .is-wide {
+  grid-column: 1 / -1;
 }
 
 .demo-frame .demo-result dt {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--demo-fs-label);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-tertiary);
@@ -404,7 +502,7 @@
 
 .demo-frame .demo-result dd {
   margin: 0.15rem 0 0;
-  font-size: 0.88rem;
+  font-size: var(--demo-fs-lead);
   color: var(--color-text-primary);
   overflow-wrap: anywhere;
 }
@@ -428,7 +526,7 @@
   margin: 0;
   border-collapse: collapse;
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: var(--demo-fs-mono);
 }
 
 .demo-frame .demo-grid th,
@@ -438,7 +536,7 @@
   background: none;
   color: var(--color-text-primary);
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: var(--demo-fs-mono);
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
@@ -551,6 +649,100 @@
   height: auto;
 }
 
+/* --- Side-by-side comparisons ---------------------------------------- */
+
+/* Two panels that mean nothing apart: one container written twice, one value
+   read two ways. They collapse to a single column rather than shrinking,
+   because a halved column turns a byte count into a wrapped fragment. */
+.demo-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.6rem;
+}
+
+.demo-split > .demo-subpanel {
+  margin: 0;
+}
+
+/* The header line of a comparison panel: name on the left, verdict right. */
+.demo-panelhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Engine-reported constants laid out as a reference card. */
+/* Wide enough for the longest pairing the engine carries
+   (`#GETTING_DATA` / `GettingData`): an ellipsis in the middle of an
+   identifier a host is meant to copy would defeat the point of listing it. */
+.demo-codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 0.3rem;
+}
+
+.demo-code {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.28rem 0.45rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--demo-fs-mono);
+  color: var(--color-text-primary);
+}
+
+.demo-code__ordinal {
+  flex: none;
+  min-width: 1.2rem;
+  text-align: right;
+  font-size: var(--demo-fs-label);
+  color: var(--color-text-tertiary);
+}
+
+/* The enum member name: what a host-side lookup table keys on, kept next to
+   the ordinal it maps from. */
+.demo-code__name {
+  margin-left: auto;
+  font-size: var(--demo-fs-label);
+  color: var(--color-text-tertiary);
+}
+
+.demo-code.is-active {
+  border-color: color-mix(in srgb, var(--vp-c-brand-1) 55%, transparent);
+  background: color-mix(in srgb, var(--vp-c-brand-2) 10%, transparent);
+}
+
+/* --- Before / after listings ----------------------------------------- */
+
+/* Formula inventories printed either side of a structural edit. The arrow
+   column is the whole point, so it stays put while the two sides wrap. */
+.demo-shift {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: var(--demo-fs-mono);
+}
+
+.demo-shift__addr {
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.demo-shift__formula {
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.demo-shift__formula.is-changed {
+  color: var(--vp-c-brand-1);
+}
+
 /* --- Narrow viewports ------------------------------------------------ */
 
 @media (max-width: 480px) {
@@ -568,5 +760,14 @@
 
   .demo-frame dl.demo-result {
     gap: 0.5rem 1rem;
+  }
+
+  /* A four-way segmented control at phone width would be four ellipses. */
+  .demo-segment {
+    flex-wrap: wrap;
+  }
+
+  .demo-frame .demo-segment__item {
+    flex: 1 1 45%;
   }
 }

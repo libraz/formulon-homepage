@@ -2,23 +2,28 @@
 /**
  * RecalcDemo — an xlsx round trip that never leaves the browser.
  *
- * Bytes in (`Workbook.loadBytes`), recalculate, read the cell table back, and
- * bytes out (`saveEx`). The sample workbook is generated in-memory by the same
- * engine (`createDefault()` + `save()`), so the demo works with no file at
- * hand and no binary fixture shipped with the site.
+ * Bytes in (`Workbook.loadBytes`), recalculate, and bytes out (`save`). The
+ * sample workbook is generated in-memory by the same engine (`createDefault()`
+ * + `save()`), so the demo works with no file at hand and no binary fixture
+ * shipped with the site.
+ *
+ * The result is rendered as a real sheet: the saved bytes are handed to an
+ * embedded formulon-cell grid, so what the reader sees is the workbook the
+ * download button produces, not a transcription of it. Editing that sheet
+ * re-serializes it, which keeps the promise the button makes.
  */
 import type { Workbook } from '@libraz/formulon'
+import type { SpreadsheetInstance } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import DemoFrame from './DemoFrame.vue'
-import { cellAddress, type Engine, formatValue, getEngine, isErrorValue } from './engine'
+import DemoSheet from './DemoSheet.vue'
+import { type Engine, getEngine } from './engine'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-/** Cap on the cell rows listed under the grid; big workbooks stay readable. */
-const MAX_LISTED_CELLS = 30
 
 const state = ref<'idle' | 'loading' | 'ready' | 'error'>('idle')
 const failure = ref('')
@@ -31,17 +36,14 @@ const sheetName = ref('')
 const cellTotal = ref(0)
 const loadError = ref('')
 const downloadUrl = ref('')
-
-interface CellRow {
-  addr: string
-  formula: string
-  value: string
-  isError: boolean
-}
-const rows = ref<CellRow[]>([])
+/** Saved output, handed to the embedded grid so it shows the recalculated
+ *  workbook rather than a second, separately-built copy of it. */
+const outputBytes = ref<Uint8Array | null>(null)
 
 let engine: Engine | null = null
 let sampleBytes: Uint8Array | null = null
+let sheet: SpreadsheetInstance | null = null
+let unsubscribe: (() => void) | null = null
 
 const copy = computed(() =>
   isJa.value
@@ -49,7 +51,6 @@ const copy = computed(() =>
         title: 'xlsx を読み込んで再計算する',
         description:
           'ファイルはどこにもアップロードされません。読み込み・再計算・書き出しはすべてこのページの WASM エンジンが行い、バイト列がブラウザの外に出ることはありません。',
-        run: 'エンジンを読み込む',
         pick: 'xlsx ファイルを選ぶ',
         sample: 'サンプルを生成して読み込む',
         sampleNote: 'サンプルは createDefault() + save() でその場で生成しています。',
@@ -60,19 +61,14 @@ const copy = computed(() =>
         sheet: 'シート',
         cells: 'セル数',
         download: '再計算した xlsx をダウンロード',
-        table: '再計算後のセル',
-        addr: 'セル',
-        formula: '数式',
-        value: '値',
+        table: '再計算後のワークブック',
         working: '処理中…',
-        invalid: '読み込みに失敗しました',
-        more: (n: number) => `ほか ${n} セル`
+        invalid: '読み込みに失敗しました'
       }
     : {
         title: 'Load an xlsx and recalculate it',
         description:
           'Nothing is uploaded. Parsing, recalculation and serialization all happen in this page’s WASM engine, and the bytes never leave your browser.',
-        run: 'Load engine',
         pick: 'Choose an xlsx file',
         sample: 'Generate and load a sample',
         sampleNote: 'The sample is built on the spot with createDefault() + save().',
@@ -83,13 +79,9 @@ const copy = computed(() =>
         sheet: 'Sheet',
         cells: 'Cells',
         download: 'Download the recalculated xlsx',
-        table: 'Cells after recalculation',
-        addr: 'Cell',
-        formula: 'Formula',
-        value: 'Value',
+        table: 'The workbook after recalculation',
         working: 'Working…',
-        invalid: 'The workbook could not be loaded',
-        more: (n: number) => `and ${n} more cells`
+        invalid: 'The workbook could not be loaded'
       }
 )
 
@@ -126,15 +118,35 @@ const revokeDownload = () => {
   downloadUrl.value = ''
 }
 
-/** Loads bytes, recalculates, snapshots the cell table, and serializes the
- *  result back out. Every native handle opened here is released again. */
+const publishDownload = (bytes: Uint8Array) => {
+  revokeDownload()
+  outputSize.value = bytes.byteLength
+  downloadUrl.value = URL.createObjectURL(new Blob([bytes], { type: XLSX_MIME }))
+}
+
+/** Re-serializes the sheet after the reader edits it, so the download and the
+ *  byte count keep describing what is actually on screen. */
+const onSheetEdited = () => {
+  if (!sheet) return
+  const saved = sheet.workbook.save()
+  publishDownload(new Uint8Array(saved))
+}
+
+const onSheetReady = (mounted: SpreadsheetInstance) => {
+  unsubscribe?.()
+  sheet = mounted
+  unsubscribe = mounted.on('cellChange', onSheetEdited)
+}
+
+/** Loads bytes, recalculates, and serializes the result back out. Every native
+ *  handle opened here is released again. */
 const processBytes = (bytes: Uint8Array, label: string) => {
   if (!engine) return
-  const { module, WorkbookFormat } = engine
+  const { module } = engine
   busy.value = true
   loadError.value = ''
   revokeDownload()
-  rows.value = []
+  outputBytes.value = null
   outputSize.value = 0
 
   let wb: Workbook | null = null
@@ -150,30 +162,17 @@ const processBytes = (bytes: Uint8Array, label: string) => {
 
     const name = wb.sheetName(0)
     sheetName.value = name.status.ok ? name.value : ''
-    const total = wb.cellCount(0)
-    cellTotal.value = total
-    const listed: CellRow[] = []
-    for (let i = 0; i < total && listed.length < MAX_LISTED_CELLS; i += 1) {
-      const entry = wb.cellAt(0, i)
-      if (!entry.status.ok || entry.row === undefined || entry.col === undefined) continue
-      listed.push({
-        addr: cellAddress(entry.row, entry.col),
-        formula: entry.formula ?? '',
-        value: formatValue(engine, entry.value),
-        isError: isErrorValue(engine, entry.value)
-      })
-    }
-    rows.value = listed
+    cellTotal.value = wb.cellCount(0)
 
-    const saved = wb.saveEx(WorkbookFormat.Xlsx)
+    const saved = wb.save()
     if (!saved.status.ok || !saved.bytes) {
       loadError.value = module.lastErrorMessage() || copy.value.invalid
       return
     }
     // Copy off the wasm heap: its buffer is shared, and Blob rejects those.
     const out = new Uint8Array(saved.bytes)
-    outputSize.value = out.byteLength
-    downloadUrl.value = URL.createObjectURL(new Blob([out], { type: XLSX_MIME }))
+    outputBytes.value = out
+    publishDownload(out)
   } catch (error) {
     loadError.value = String(error)
   } finally {
@@ -226,9 +225,12 @@ const start = async () => {
 
 const reset = () => {
   revokeDownload()
+  unsubscribe?.()
+  unsubscribe = null
+  sheet = null
   engine = null
   sampleBytes = null
-  rows.value = []
+  outputBytes.value = null
   sourceName.value = ''
   sheetName.value = ''
   loadError.value = ''
@@ -238,7 +240,12 @@ const reset = () => {
   state.value = 'idle'
 }
 
-onBeforeUnmount(revokeDownload)
+onBeforeUnmount(() => {
+  revokeDownload()
+  unsubscribe?.()
+  unsubscribe = null
+  sheet = null
+})
 </script>
 
 <template>
@@ -247,8 +254,8 @@ onBeforeUnmount(revokeDownload)
     :description="copy.description"
     :state="state"
     :error="failure"
-    :run-label="copy.run"
     :version="version"
+    :reserve="720"
     @run="start"
     @reset="reset"
   >
@@ -289,27 +296,9 @@ onBeforeUnmount(revokeDownload)
       </div>
     </dl>
 
-    <div v-if="rows.length" class="demo-subpanel">
+    <div v-if="outputBytes" class="demo-subpanel">
       <span class="demo-label">{{ copy.table }}</span>
-      <table class="demo-grid demo-grid--list">
-        <thead>
-          <tr>
-            <th>{{ copy.addr }}</th>
-            <th>{{ copy.formula }}</th>
-            <th>{{ copy.value }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in rows" :key="row.addr">
-            <th>{{ row.addr }}</th>
-            <td class="is-formula">{{ row.formula || '—' }}</td>
-            <td :class="{ 'is-error': row.isError }">{{ row.value }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="cellTotal > rows.length" class="demo-hint">
-        {{ copy.more(cellTotal - rows.length) }}
-      </p>
+      <DemoSheet :bytes="outputBytes" :height="340" @ready="onSheetReady" />
       <p class="demo-hint">{{ copy.sampleNote }}</p>
     </div>
 

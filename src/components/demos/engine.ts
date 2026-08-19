@@ -24,6 +24,7 @@ export interface Engine {
   module: FormulonModule
   ValueKind: FormulonNamespace['ValueKind']
   WorkbookFormat: FormulonNamespace['WorkbookFormat']
+  ErrorCode: FormulonNamespace['ErrorCode']
 }
 
 /** Catalog-locale ordinals accepted by `Workbook.functionMetadata(name, locale)`. */
@@ -55,7 +56,8 @@ export function getEngine(): Promise<Engine> {
   const pending = import('@libraz/formulon').then(async (ns) => ({
     module: await ns.default(),
     ValueKind: ns.ValueKind,
-    WorkbookFormat: ns.WorkbookFormat
+    WorkbookFormat: ns.WorkbookFormat,
+    ErrorCode: ns.ErrorCode
   }))
   // A failed boot must not poison later attempts, so drop the memo on reject.
   pending.catch(() => {
