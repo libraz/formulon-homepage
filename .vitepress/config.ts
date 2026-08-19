@@ -2,10 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+import { generateLlmsTxt, type LlmsLocale, llmsDevPlugin } from './llms'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.9.7'
+const docsVersion = '0.10.0'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -53,22 +54,62 @@ const patchFormulonWorkerOptions = () => {
 
 patchFormulonWorkerOptions()
 
-const softwareApplicationJsonLd = {
+/** Per-locale structured data and social-card copy. */
+type Locale = 'en' | 'ja'
+
+const softwareApplicationJsonLd = (lang: Locale) => ({
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: 'Formulon',
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'Linux, macOS, Windows, WebAssembly',
+  inLanguage: lang,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   description:
-    'Headless Excel-compatible calculation engine with a C++17 core, exposed through WebAssembly, Native Node, Python, and CLI surfaces.',
-  url: siteUrl,
+    lang === 'ja'
+      ? 'C++17 コアのヘッドレスな Excel 互換計算エンジン。WebAssembly、ネイティブ Node、Python、CLI から利用できます。'
+      : 'Headless Excel-compatible calculation engine with a C++17 core, exposed through WebAssembly, Native Node, Python, and CLI surfaces.',
+  url: lang === 'ja' ? `${siteUrl}/ja/` : siteUrl,
   downloadUrl: githubUrl,
   softwareVersion: docsVersion,
   author: { '@type': 'Person', name: 'libraz' },
   license: 'https://www.apache.org/licenses/LICENSE-2.0',
   keywords:
-    'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
+    lang === 'ja'
+      ? 'Excel, スプレッドシート, 数式エンジン, 計算エンジン, XLSX, XLSB, WebAssembly, Python, C++17'
+      : 'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
+})
+
+const SEO: Record<Locale, { title: string; description: string; keywords: string }> = {
+  en: {
+    title: 'Formulon - Excel-compatible calculation engine',
+    description:
+      'A headless C++17 spreadsheet calculation engine packaged for WebAssembly, Native Node, Python, and CLI workflows.',
+    keywords:
+      'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
+  },
+  ja: {
+    title: 'Formulon - Excel 互換の計算エンジン',
+    description:
+      'ヘッドレスな C++17 スプレッドシート計算エンジン。WebAssembly、ネイティブ Node、Python、CLI 向けにパッケージされています。',
+    keywords:
+      'Excel, スプレッドシート, 数式エンジン, 計算エンジン, XLSX, XLSB, WebAssembly, Python, C++17, Excel 互換'
+  }
+}
+
+/** `ja/start/install.md` -> `/ja/start/install`, `index.md` -> `/` */
+function routeOf(relativePath: string): string {
+  const clean = relativePath.replace(/(^|\/)index\.md$/, '$1').replace(/\.md$/, '')
+  return `/${clean}`.replace(/\/{2,}/g, '/')
+}
+
+const localeOf = (relativePath: string): Locale => (relativePath.startsWith('ja/') ? 'ja' : 'en')
+
+/** The same page in the other language. */
+function alternateRoute(relativePath: string): string {
+  return relativePath.startsWith('ja/')
+    ? routeOf(relativePath.slice(3))
+    : routeOf(`ja/${relativePath}`)
 }
 
 const startSidebar = [
@@ -124,6 +165,7 @@ const runtimesSidebar = [
     items: [
       { text: 'Overview', link: '/api/' },
       { text: 'Package surfaces', link: '/api/surfaces' },
+      { text: 'C API', link: '/api/c' },
       { text: 'WASM API', link: '/api/wasm' },
       { text: 'Python API', link: '/api/python' },
       { text: 'CLI reference', link: '/api/cli' }
@@ -157,6 +199,7 @@ const workbookSidebar = [
       { text: 'Operations', link: '/workbook/operations' },
       { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' },
       { text: 'File formats', link: '/workbook/file-formats' },
+      { text: 'PivotTables', link: '/workbook/pivots' },
       { text: 'Lifecycle', link: '/workbook/lifecycle' }
     ]
   }
@@ -264,6 +307,7 @@ const jaRuntimesSidebar = [
     items: [
       { text: '概要', link: '/ja/api/' },
       { text: 'パッケージと実行入口', link: '/ja/api/surfaces' },
+      { text: 'C API', link: '/ja/api/c' },
       { text: 'WASM API', link: '/ja/api/wasm' },
       { text: 'Python API', link: '/ja/api/python' },
       { text: 'CLI リファレンス', link: '/ja/api/cli' }
@@ -297,6 +341,7 @@ const jaWorkbookSidebar = [
       { text: '操作', link: '/ja/workbook/operations' },
       { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
       { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
+      { text: 'PivotTable', link: '/ja/workbook/pivots' },
       { text: 'ライフサイクル', link: '/ja/workbook/lifecycle' }
     ]
   }
@@ -351,6 +396,52 @@ const jaDevelopmentSidebar = [
   }
 ]
 
+/** Prose for the per-locale llms.txt indexes; the page lists come from the nav/sidebar. */
+const LLMS_LOCALES: LlmsLocale[] = [
+  {
+    key: 'root',
+    prefix: '',
+    title: 'Formulon',
+    summary:
+      'Headless Excel-compatible calculation engine for WebAssembly, native Node, Python, and the CLI. Opens a workbook, recalculates it, and reads the results back — with no spreadsheet application involved.',
+    intro:
+      'Formulon is a C++ core distributed to several runtimes from one implementation, so a\nformula evaluates identically in the browser, in a Node service, in a Python batch job,\nand in CI. It is a calculation engine, not a spreadsheet UI. The links below point to\nthe canonical HTML documentation.',
+    overviewHeading: 'Key pages',
+    homeText: 'Formulon home',
+    alternate: {
+      heading: 'Japanese (日本語)',
+      items: [
+        {
+          text: '日本語版インデックス',
+          link: '/ja/llms.txt',
+          description: 'The same index in Japanese, covering the /ja/ documentation.'
+        }
+      ]
+    }
+  },
+  {
+    key: 'ja',
+    prefix: '/ja',
+    title: 'Formulon',
+    summary:
+      'WebAssembly・ネイティブ Node・Python・CLI に組み込めるヘッドレスな Excel 互換計算エンジン。ワークブックを開き、再計算し、結果を取り出す——表計算アプリを介さずに。',
+    intro:
+      'Formulon は単一の C++ コアを複数のランタイムへ配布する構成で、同じ数式がブラウザでも\nNode サービスでも Python の一括処理でも CI でも同じ結果になる。表計算の UI ではなく\n計算エンジンそのものを提供する。以下は日本語ドキュメントへのリンク一覧。',
+    overviewHeading: '主要ページ',
+    homeText: 'Formulon トップ',
+    alternate: {
+      heading: 'English',
+      items: [
+        {
+          text: 'English index',
+          link: '/llms.txt',
+          description: '英語ドキュメントを対象とした同じ構成のインデックス。'
+        }
+      ]
+    }
+  }
+]
+
 export default defineConfig({
   srcDir: 'src',
   appearance: true,
@@ -366,6 +457,17 @@ export default defineConfig({
 
   sitemap: { hostname: siteUrl },
 
+  buildEnd(siteConfig) {
+    generateLlmsTxt({
+      siteUrl,
+      srcDir: siteConfig.srcDir,
+      outDir: siteConfig.outDir,
+      cleanUrls: siteConfig.cleanUrls,
+      site: siteConfig.site,
+      locales: LLMS_LOCALES
+    })
+  },
+
   vite: {
     resolve: {
       // `@` points at the content root, so app-level code (the live-engine
@@ -376,6 +478,7 @@ export default defineConfig({
       }
     },
     plugins: [
+      llmsDevPlugin({ siteUrl, locales: LLMS_LOCALES }),
       {
         name: 'formulon-cross-origin-isolation',
         configureServer(server) {
@@ -421,6 +524,8 @@ export default defineConfig({
     }
   },
 
+  // Locale-independent only. Everything that differs per page or per language
+  // (canonical, OGP, keywords, JSON-LD) is emitted from transformHead below.
   head: [
     // Fonts are self-hosted from src/public/fonts (see scripts/fetch-fonts.mjs);
     // only the above-the-fold Latin faces are preloaded, never the lazily
@@ -445,29 +550,42 @@ export default defineConfig({
         crossorigin: ''
       }
     ],
-    ['script', { type: 'application/ld+json' }, JSON.stringify(softwareApplicationJsonLd)],
-    [
-      'meta',
-      {
-        name: 'keywords',
-        content:
-          'Excel, spreadsheet, formula engine, calculation engine, XLSX, XLSB, WebAssembly, Python, C++17'
-      }
-    ],
-    ['link', { rel: 'canonical', href: siteUrl }],
     ['meta', { property: 'og:site_name', content: 'Formulon' }],
-    ['meta', { property: 'og:title', content: 'Formulon - Excel-compatible calculation engine' }],
-    [
-      'meta',
-      {
-        property: 'og:description',
-        content:
-          'A headless C++17 spreadsheet calculation engine packaged for WebAssembly, Native Node, Python, and CLI workflows.'
-      }
-    ],
-    ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:url', content: siteUrl }]
+    ['meta', { property: 'og:type', content: 'website' }]
   ],
+
+  transformHead({ pageData, description }) {
+    const lang = localeOf(pageData.relativePath)
+    const seo = SEO[lang]
+    const url = `${siteUrl}${routeOf(pageData.relativePath)}`
+    const altLang: Locale = lang === 'ja' ? 'en' : 'ja'
+    const altUrl = `${siteUrl}${alternateRoute(pageData.relativePath)}`
+    const title = pageData.frontmatter.title || seo.title
+    const desc = description || seo.description
+
+    return [
+      ['link', { rel: 'canonical', href: url }],
+      ['meta', { name: 'keywords', content: seo.keywords }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: desc }],
+      ['meta', { property: 'og:url', content: url }],
+      ['meta', { property: 'og:locale', content: lang }],
+      ['meta', { property: 'og:locale:alternate', content: altLang }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: desc }],
+      ['link', { rel: 'alternate', hreflang: lang, href: url }],
+      ['link', { rel: 'alternate', hreflang: altLang, href: altUrl }],
+      [
+        'link',
+        {
+          rel: 'alternate',
+          hreflang: 'x-default',
+          href: `${siteUrl}${routeOf(pageData.relativePath.replace(/^ja\//, ''))}`
+        }
+      ],
+      ['script', { type: 'application/ld+json' }, JSON.stringify(softwareApplicationJsonLd(lang))]
+    ]
+  },
 
   locales: {
     root: {
@@ -526,7 +644,9 @@ export default defineConfig({
           '/mcp/': mcpSidebar,
           '/cell/': cellSidebar,
           '/compatibility/': compatibilitySidebar,
+          '/compatibility/formula-coverage': startSidebar,
           '/development/': developmentSidebar,
+          '/why': startSidebar,
           '/faq': startSidebar
         },
         socialLinks: [{ icon: 'github', link: githubUrl }],
@@ -594,7 +714,9 @@ export default defineConfig({
           '/ja/mcp/': jaMcpSidebar,
           '/ja/cell/': jaCellSidebar,
           '/ja/compatibility/': jaCompatibilitySidebar,
+          '/ja/compatibility/formula-coverage': jaStartSidebar,
           '/ja/development/': jaDevelopmentSidebar,
+          '/ja/why': jaStartSidebar,
           '/ja/faq': jaStartSidebar
         },
         socialLinks: [{ icon: 'github', link: githubUrl }],
