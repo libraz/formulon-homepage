@@ -53,7 +53,7 @@ Excel errors are values, not host-language exceptions:
 | `#GETTING_DATA` | Asynchronous external lookup in progress |
 
 ::: tip Cell error vs host error
-A formula returning `#DIV/0!` is not an API failure. The host call succeeded; it produced an error *value*. Inspect `value.kind === ValueKind.Error` to handle it. Host-side failures (bad bytes, missing handle, IO error) flow through status envelopes / exceptions / non-zero exits instead.
+A formula returning `#DIV/0!` is not an API failure. The host call succeeded; it produced an error *value*. After confirming a `getValue()` result's `status`, inspect `result.value.kind === ValueKind.Error` to handle it. Host-side failures (bad bytes, missing handle, IO error) flow through status envelopes / exceptions / non-zero exits instead.
 :::
 
 ## Coordinates

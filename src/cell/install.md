@@ -11,6 +11,10 @@ feature coverage is partial, UI/UX does not try to mirror Excel exactly, and UI
 bugs may remain. Install it when you want a workbook-like browser surface around
 the `@libraz/formulon` WASM engine for testing or reference.
 
+::: warning Not an Excel replacement
+Basic workbook workflows are available, but detailed UI compatibility is outside this package's scope. Do not use it as the promised end-user spreadsheet experience for a product that requires Excel-equivalent UI/UX.
+:::
+
 ```sh
 npm install @libraz/formulon-cell zustand
 ```

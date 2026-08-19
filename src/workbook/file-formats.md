@@ -36,7 +36,7 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; the low-level `fm_workbook_save_xlsb_with_result` API reports the downgrade count.
+The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
 
 | XLSB feature | Current behavior |
 | --- | --- | --- |
@@ -49,7 +49,11 @@ The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column 
 
 Do not infer comment or pivot preservation from this tail-preservation rule. Keep a source workbook and verify the emitted package when those features matter.
 
-Saving is explicit about container format: `saveEx()` / `save_ex()` take a `WorkbookFormat` to choose XLSB over XLSX, and the CLI derives the same choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` detect XLSX vs XLSB from the bytes themselves (ZIP signature vs BIFF12 record stream), not from a file name, so a `.xlsb` payload loads correctly even without a matching extension.
+Saving is explicit about container format: `saveAs(format)` / `save_as(fmt)` take a `WorkbookFormat` to choose XLSB over XLSX. `saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` use the same selector and expose partial loss counters, while `readDiagnostics()` / `read_diagnostics()` expose counters captured during load. The CLI derives its output choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` detect XLSX vs XLSB from the bytes themselves (ZIP signature vs BIFF12 record stream), not from a file name, so a `.xlsb` payload loads correctly even without a matching extension.
+
+The panel below writes one workbook into both containers and hands each result straight back to `loadBytes()`, with no file name to go on. The counters are whatever `saveWithDiagnostics()` reported for that write; an all-zero panel means none of the losses above occurred on it, not that the write went unchecked. Load a workbook of your own to see the counters move.
+
+<FormatDemo />
 
 ## What is preserved vs. evaluated
 

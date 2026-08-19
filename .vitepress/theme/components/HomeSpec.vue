@@ -51,7 +51,7 @@ const paths = computed<Path[]>(() =>
           key: 'Agent',
           title: 'AI エージェントから workbook を編集する',
           description:
-            'MCP tools で .xlsx を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
+            'MCP tools で .xlsx / .xlsb を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
           link: '/ja/mcp/'
         }
       ]
@@ -88,7 +88,7 @@ const paths = computed<Path[]>(() =>
           key: 'Agent',
           title: 'Edit workbooks from an AI agent',
           description:
-            'Use MCP tools to open .xlsx files, mutate cells, sheets, names, and layout, then recalculate.',
+            'Use MCP tools to open .xlsx or .xlsb files, mutate cells, sheets, names, and layout, then recalculate.',
           link: '/mcp/'
         }
       ]

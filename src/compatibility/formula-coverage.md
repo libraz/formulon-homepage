@@ -51,9 +51,7 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 
 Formula oracle cases check cell values. Pivot tables and print layout need a workbook-level oracle because their behavior is stored in workbook structures, not just formula results.
 
-That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Pivot suites close at `28/28`. The `print_basic`, `print_pagination`, `print_fit`, and `print_matrix` suites pass `35/41` cases through `formulon_workbook_oracle_tests`; the remaining `6` are documented `win-365-ja_JP` divergence skips for a known Excel PageBreakPreview COM quirk at `PageSetup.Zoom <= 50`.
-
-Both figures are results against the **checked-in historical golden**, which is Office 2019 or unknown-version and retained as reference-only. Re-capturing them on a product-verified Windows Microsoft 365 host is still outstanding, so neither number counts as Microsoft 365 verification — see [Locale Profiles](./locale-profiles.md) for what `wanted` means for this profile.
+That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. The product-verified Windows Microsoft 365 ja-JP workbook oracle reports `66/66` passing with `10` documented skips. Its goldens carry a capture identifier that pins the suites to a single verified Microsoft 365 session.
 
 ## Unavailable service stubs
 

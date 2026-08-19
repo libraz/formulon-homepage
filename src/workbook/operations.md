@@ -45,8 +45,9 @@ wb.recalc()
 Read calculated values back as kind-tagged structs:
 
 ```ts
-const value = wb.getValue(0, 0, 3)
-if (value.kind === ValueKind.Number) console.log(value.number)
+const result = wb.getValue(0, 0, 3)
+if (!result.status.ok) throw new Error(result.status.message)
+if (result.value.kind === ValueKind.Number) console.log(result.value.number)
 ```
 
 ::: warning Setting a formula does not evaluate it
@@ -62,7 +63,11 @@ wb.insertRows(/*sheet*/ 0, /*startRow*/ 5, /*count*/ 2)
 wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 ```
 
-References inside formulas that move with the inserted / deleted range are shifted; references that anchor outside the range are preserved.
+References inside formulas that move with the inserted / deleted range are shifted; references that anchor outside the range are preserved. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place.
+
+The panel below runs these calls against a live sheet. Selecting a cell moves the target row or column with it, and both formula lists are read back out of the workbook either side of the call — so what you see is the formula text the engine holds, including the ones it rewrote and the ones it broke.
+
+<StructureDemo />
 
 ## Layout, styles, and metadata
 
@@ -84,6 +89,24 @@ WASM, Native Node, and Python expose workbook operations such as:
 - dynamic-array spill information.
 
 Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_rule`) also returns the new rule's flattened index, which makes host-side UI selection and follow-up edits easier.
+
+### Tables and AutoFilter
+
+WASM and Python can author worksheet tables. WASM uses `createTable()` / `updateTable()` / `removeTable()`; Python uses `table_create()` / `table_update()` / `table_remove()`. The table's `columns` list must have exactly one name per column in `ref`; when `headerRow` is enabled, the caller still writes those header cells. Partial updates preserve omitted metadata, and an existing table AutoFilter is retargeted by changing only its `ref`. Native Node exposes table enumeration but not table authoring.
+
+Worksheet-level AutoFilter XML is available as an opaque, complete `<autoFilter>` fragment. WASM exposes `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` and Python exposes `get_auto_filter_xml()` / `set_auto_filter_xml()`. Filter criteria, sort state, and extension payloads are preserved verbatim. An empty fragment clears the AutoFilter; a non-empty replacement must be a complete `<autoFilter>` element.
+
+### Conditional-format visuals
+
+DataBar rules expose the complete `x14` extension payload on WASM, Native Node, and Python: `gradient`, `axisPosition` (`0` automatic, `1` middle, `2` none), `negativeFill`, `border`, `negativeBorder`, and `axisColor`. Python's `DataBar` uses the corresponding snake-case field names. These settings survive save and load. Omitted values use the model defaults: gradient fill, automatic axis, the positive fill for negative values, no border, and a black axis.
+
+### Hyperlink ranges
+
+`addHyperlinkRange()` (WASM and Native Node) and `add_hyperlink_range()` (Python) add one hyperlink over the inclusive rectangle from `(row, col)` through `(lastRow, lastCol)` / `(last_row, last_col)`. Read-back hyperlinks include the rectangle end, and both OOXML and XLSB preserve the full span.
+
+### Pivot cache sources
+
+Newly authored PivotTables must set a worksheet source on their cache before saving. Use `pivotCacheSetWorksheetSource(cacheId, { present: true, ref: 'A1:C10', sheet: 'Data' })` on WASM or Native Node, or `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref='A1:C10', sheet='Data'))` in Python. A declared range is enough even when the sheet has no data. Saving a newly created cache without a worksheet source fails; caches loaded from a file already have one.
 
 WASM and Native Node expose comment *enumeration* with `getComments(sheet)`; Python uses `comment_count(sheet)` and `get_comments(sheet)`. Each list includes comments anchored on otherwise-empty cells. `getCommentResult(sheet, row, col)` distinguishes an absent comment from an invalid sheet on the JS surfaces.
 
@@ -138,7 +161,7 @@ The normal edit path and the ad-hoc path answer different questions — the firs
 <DiagramFlow :steps="[
   { label: 'setFormula()' },
   { label: 'recalc()' },
-  { label: 'getValue()', note: 'mutates the model; result stays until the next edit' }
+  { label: 'getValue()', note: 'reads the cached result without mutating the model' }
 ]" label="Normal edit path: setFormula, recalc, getValue" />
 
 <DiagramFlow :steps="[

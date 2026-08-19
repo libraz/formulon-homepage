@@ -5,6 +5,7 @@ Use this section when you know which runtime you are integrating and need exact 
 | Page | Scope |
 | --- | --- |
 | [Surface matrix](/api/surfaces) | Runtime maturity and packaging differences |
+| [C API](/api/c) | Stable C11 ABI, ownership, and custom bindings |
 | [WASM API](/api/wasm) | `@libraz/formulon` module, status envelopes, workbook methods |
 | [Python API](/api/python) | `formulon`, `Workbook`, `Value`, `FormulonError` |
 | [CLI reference](/api/cli) | `eval`, `recalc`, `dump`, `paginate`, and command semantics |

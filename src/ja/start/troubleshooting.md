@@ -37,6 +37,8 @@ Cross-Origin-Embedder-Policy: require-corp
 WASM package には Node 実行環境向けの分岐が含まれます。ブラウザ向け bundler では `node:module` や `node:worker_threads` の警告が出る場合があります。Vite では、このパッケージを optimizeDeps から除外し、`node:` imports を external に指定します。
 
 ```ts
+import { defineConfig } from 'vite'
+
 export default defineConfig({
   optimizeDeps: { exclude: ['@libraz/formulon'] },
   build: {

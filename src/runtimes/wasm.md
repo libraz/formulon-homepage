@@ -38,6 +38,17 @@ const result = Module.evalFormula('=SUM(1,2,3)')
 
 `createFormulon()` is async; in browsers, instantiation pulls the `.wasm` binary and spins up the pthread pool. Keep the `Module` reference long-lived.
 
+## Parallel recalculation
+
+`Workbook.recalc()` remains the serial, caller-thread API. `Workbook.recalcParallel(threadCount)` is synchronous and returns `{ status, stats }` after all workers have joined. A `threadCount` of `0` selects automatic detection capped at 8, `1` keeps evaluation on the caller thread and starts no workers, and `2..8` sets the maximum worker count. Missing, fractional, non-finite, negative, or above-8 values fail with `kInvalidArgument`.
+
+```ts
+const result = workbook.recalcParallel(0)
+if (!result.status.ok) throw new Error(Module.lastErrorMessage())
+```
+
+The browser still needs ES module workers and the COOP / COEP headers described above for a parallel call. `stats` reports the work completed and the workers actually started; the scheduler may use fewer workers than requested.
+
 ## Keep bytes explicit
 
 Pass workbook bytes in and receive workbook bytes out. That keeps the UI layer, upload layer, and persistence layer separate from calculation.
@@ -67,6 +78,8 @@ The WASM build has a strict size budget. Avoid adding dependencies to browser-fa
 For Vite, configure ES module workers:
 
 ```ts
+import { defineConfig } from 'vite'
+
 export default defineConfig({
   worker: { format: 'es' },
   optimizeDeps: { exclude: ['@libraz/formulon'] },

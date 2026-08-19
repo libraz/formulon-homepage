@@ -38,6 +38,17 @@ const result = Module.evalFormula('=SUM(1,2,3)')
 
 `createFormulon()` は非同期です。ブラウザでは `.wasm` の取得と pthread プールの起動を伴うため、`Module` 参照は長寿命にしてください。
 
+## 並列再計算
+
+`Workbook.recalc()` はシリアルに呼び出し側スレッドで実行する API のままです。`Workbook.recalcParallel(threadCount)` は同期 API で、すべての worker が終了したあとに `{ status, stats }` を返します。`threadCount` が `0` の場合は最大 8 の自動検出、`1` の場合は worker を起動せず呼び出し側スレッドだけで実行し、`2..8` の場合は worker 数の上限を指定します。未指定、小数、有限でない値、負数、8 超の値は `kInvalidArgument` で失敗します。
+
+```ts
+const result = workbook.recalcParallel(0)
+if (!result.status.ok) throw new Error(Module.lastErrorMessage())
+```
+
+ブラウザで並列再計算を使う場合も、前述の ES module worker と COOP / COEP ヘッダーが必要です。`stats` には実行した処理と実際に起動した worker 数が入り、要求値より少ない worker 数で完了する場合があります。
+
 ## バイト列を明示的に渡す
 
 ワークブックの入出力はバイト列で行います。UI 層・アップロード層・永続化層と計算層を切り離す設計です。
@@ -67,6 +78,8 @@ WASM ビルドには厳しいサイズ予算があります。ブラウザに乗
 Vite では ES module worker を指定します。
 
 ```ts
+import { defineConfig } from 'vite'
+
 export default defineConfig({
   worker: { format: 'es' },
   optimizeDeps: { exclude: ['@libraz/formulon'] },

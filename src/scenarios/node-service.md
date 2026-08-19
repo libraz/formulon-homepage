@@ -30,7 +30,7 @@ Native Node avoids WASM heap-copy costs and browser isolation concerns, but it n
   label="Decision: if the deployment can build or stage a platform-specific native binary today, choose Native Node for operational throughput; otherwise choose WASM for portability"
 />
 
-Native Node and WASM expose the same Workbook API surface — see [Surface matrix](/api/surfaces) and [Native Node integration](/runtimes/node-native). The choice above is operational (binary staging, deployment portability), not a difference in what either surface can compute.
+Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table, AutoFilter XML, phonetic, or cell-style authoring. The choice above is otherwise operational: binary staging and deployment portability, not a difference in formula evaluation.
 
 ## Service boundary
 

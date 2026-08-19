@@ -45,7 +45,9 @@ WASM の `Workbook` インスタンスは通常の JS オブジェクトでは�
 再計算後は値を直接読み出すか、
 
 ```ts
-const value = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
+const result = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
+if (!result.status.ok) throw new Error(result.status.message)
+const value = result.value
 ```
 
 ワークブック全体をバイト列として書き出せます。

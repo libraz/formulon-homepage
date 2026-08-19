@@ -25,7 +25,7 @@ Read means Formulon can parse the structure. Write means it can emit it. Preserv
   ] }
 ]" />
 
-Formulon picks the container format from the output file extension (`-o file.xlsb` on the CLI, or `saveEx` / `save_ex` in the bindings) and sniffs content on read, so a `.xlsb`-named file with OOXML bytes (or vice versa) is still handled correctly.
+Formulon picks the container format from the output file extension (`-o file.xlsb` on the CLI, or `saveAs` / `save_as` in the bindings) and sniffs content on read, so a `.xlsb`-named file with OOXML bytes (or vice versa) is still handled correctly.
 
 ## Preservation rule
 

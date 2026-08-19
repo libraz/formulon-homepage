@@ -62,9 +62,9 @@ English-locale profiles are intentionally not exposed until matching oracle data
 
 ### Which file formats are supported?
 
-The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, CLI, and MCP surfaces are primarily designed to load `.xlsx`, recalculate, and save `.xlsx`.
+The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, and CLI surfaces primarily use `.xlsx`; the MCP surface opens `.xlsx` or `.xlsb` and selects its output container from the output extension (`.xlsb` writes XLSB, anything else XLSX).
 
-`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals, and `fm_workbook_save_xlsb_with_result` reports the downgrade count. The CLI and `saveEx` / `save_ex` APIs pick the format from the output extension and sniff input by content.
+`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals. `saveWithDiagnostics` / `save_with_diagnostics` report documented write losses. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
 
 Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. Legacy `.xls` / BIFF is out of scope.
 
@@ -210,7 +210,7 @@ Excel is Microsoft's product and trademark. Formulon is an independent Apache-2.
 
 ### What is `formulon-mcp`?
 
-`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides 31 tools for opening `.xlsx` files, inspecting workbook structure, editing cells and sheets, recalculating, and saving. Node.js 22 or newer is required.
+`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides 33 tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, recalculating, and saving. Node.js 22 or newer is required.
 
 ```sh
 npx -y @libraz/formulon-mcp

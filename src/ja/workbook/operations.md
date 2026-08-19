@@ -45,8 +45,9 @@ wb.recalc()
 計算結果は kind 付きの構造体として読み出します。
 
 ```ts
-const value = wb.getValue(0, 0, 3)
-if (value.kind === ValueKind.Number) console.log(value.number)
+const result = wb.getValue(0, 0, 3)
+if (!result.status.ok) throw new Error(result.status.message)
+if (result.value.kind === ValueKind.Number) console.log(result.value.number)
 ```
 
 ::: warning 数式の set は評価しない
@@ -62,7 +63,11 @@ wb.insertRows(/*sheet*/ 0, /*startRow*/ 5, /*count*/ 2)
 wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 ```
 
-挿入 / 削除範囲とともに移動する参照はシフトされ、範囲外にアンカーされた参照はそのまま残ります。
+挿入 / 削除範囲とともに移動する参照はシフトされ、範囲外にアンカーされた参照はそのまま残ります。削除された領域に入ってしまった参照はシフト先がないため、繰り上がってきた別のセルを指すのではなく `#REF!` になります。
+
+下のパネルでは、これらの呼び出しを実際のシートに対して実行できます。セルを選ぶと対象の行 / 列がそれに追随し、数式の一覧は操作の前後にワークブックから読み直しています。書き換えられた数式も、壊れた数式も、エンジンが保持しているテキストそのものです。
+
+<StructureDemo />
 
 ## レイアウト・style・metadata
 
@@ -84,6 +89,24 @@ WASM、Native Node、Python の各バインディングは、次のようなワ�
 - 動的配列のスピル情報
 
 条件付き書式ルールの追加（`addConditionalFormat()` / `fm_sheet_cf_add_rule`）も、新しい rule の flattened index を返すようになったため、ホスト側の UI 選択や後続編集がしやすくなりました。
+
+### Table と AutoFilter
+
+WASM と Python は worksheet table を作成できます。WASM は `createTable()` / `updateTable()` / `removeTable()`、Python は `table_create()` / `table_update()` / `table_remove()` を使います。table の `columns` は `ref` の列幅と一致し、`headerRow` を有効にする場合も呼び出し側が header cell を書き込みます。部分更新では省略した metadata が保持され、既存 table の AutoFilter は `ref` だけを書き換えて追従します。Native Node は table の列挙には対応しますが、table の作成・更新・削除は公開していません。
+
+worksheet 単位の AutoFilter XML は、完全な `<autoFilter>` fragment を opaque な値として扱えます。WASM は `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()`、Python は `get_auto_filter_xml()` / `set_auto_filter_xml()` を公開します。filter 条件、sort 状態、extension payload はそのまま保持されます。空の fragment を渡すと AutoFilter を削除し、空でない値は完全な `<autoFilter>` element である必要があります。
+
+### 条件付き書式の visual payload
+
+DataBar は WASM、Native Node、Python で `x14` extension の全 payload を扱えます。項目は `gradient`、`axisPosition`（`0` は automatic、`1` は middle、`2` は none）、`negativeFill`、`border`、`negativeBorder`、`axisColor` です。Python の `DataBar` では対応する snake_case のフィールド名を使います。これらの設定は save と load をまたいで保持されます。省略時は model の既定値（gradient fill、automatic axis、negative value に positive fill、border なし、黒い axis）を使います。
+
+### hyperlink の範囲
+
+`addHyperlinkRange()`（WASM / Native Node）と `add_hyperlink_range()`（Python）は、`(row, col)` から `(lastRow, lastCol)` / `(last_row, last_col)` までの両端を含む矩形に 1 つの hyperlink を追加します。読み出した hyperlink にも矩形の終点が含まれ、OOXML と XLSB のどちらでも範囲全体を保持します。
+
+### pivot cache の worksheet source
+
+API で新しく作成した PivotTable は、保存前に cache の worksheet source を設定する必要があります。WASM / Native Node では `pivotCacheSetWorksheetSource(cacheId, { present: true, ref: 'A1:C10', sheet: 'Data' })`、Python では `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref='A1:C10', sheet='Data'))` を使います。シートが空でも宣言した範囲があれば十分です。worksheet source のない新規 cache を保存すると失敗します。ファイルから読み込んだ cache には source があるため影響しません。
 
 WASM と Native Node は `getComments(sheet)` で comment を列挙できます。Python は `comment_count(sheet)` / `get_comments(sheet)` を使います。どちらも値が空のセルにだけ付いた comment を含みます。JS surface の `getCommentResult(sheet, row, col)` は、comment が無い場合と不正な sheet を区別します。
 
@@ -136,7 +159,7 @@ if (result.status.ok && result.value.kind === ValueKind.Number) {
 <DiagramFlow :steps="[
   { label: 'setFormula()' },
   { label: 'recalc()' },
-  { label: 'getValue()', note: 'model を変更する。結果は次の編集まで保持される' }
+  { label: 'getValue()', note: 'モデルを変更せず、キャッシュ済みの結果を読む' }
 ]" label="通常の編集経路: setFormula、recalc、getValue" />
 
 <DiagramFlow :steps="[

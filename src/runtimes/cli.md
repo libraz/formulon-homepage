@@ -22,6 +22,7 @@ formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
 formulon recalc input.xlsx -o output.xlsx
+formulon recalc --threads 4 input.xlsx -o output.xlsx
 formulon dump --formulas input.xlsx
 formulon dump --values output.xlsx
 formulon dump --sheets input.xlsx
@@ -32,6 +33,15 @@ formulon paginate --sheet 0 input.xlsx
 ::: tip --values recalculates; --formulas does not
 `dump --values` recalculates the workbook before printing values, so it sees up-to-date results. `dump --formulas` and `dump --metadata` skip recalculation to stay cheap and side-effect-free.
 :::
+
+## End option parsing with `--`
+
+All four commands accept `--` to end option parsing. Put command options before it, then pass exactly one positional formula (`eval`) or input path (`recalc`, `dump`, `paginate`). This also permits a relative path beginning with `-`:
+
+```sh
+formulon dump --sheets -- -input.xlsx
+formulon recalc --quiet -o output.xlsx -- -input.xlsx
+```
 
 ## Output format follows the -o extension
 
@@ -45,6 +55,10 @@ XLSB models styles, row/column layout, merges, date1904, sheet view/zoom/frozen 
 
 `recalc` writes atomically: a failed load, recalc, or save leaves the existing target unchanged.
 
+`recalc` is serial unless `--threads N` is supplied. The parallel SCC scheduler accepts `0` for automatic detection capped at 8, `1` for caller-thread-only execution with no workers, and `2..8` for a worker cap. Values outside `0..8` are rejected. A parallel call may use fewer workers than requested.
+
+The command reports loss diagnostics on stderr for undecoded formulas or defined names, dropped package parts, downgraded formula cells, and omitted modelled features. `--quiet` suppresses only the successful-write status line; it leaves these warnings visible.
+
 ## Iterative calculation
 
 Workbooks with intentional circular references need iterative calculation enabled, or `recalc` converges to whatever the engine's non-iterative circular-reference handling produces:
@@ -53,7 +67,7 @@ Workbooks with intentional circular references need iterative calculation enable
 formulon recalc circular.xlsx -o circular.xlsx --iterative
 ```
 
-`--iterative` turns on Excel's default knobs: a maximum of 100 iterations and a 0.001 change threshold per iteration. There is no flag to override those two numbers from the CLI.
+`--iterative` enables iterative calculation and preserves the workbook's maximum-iteration and convergence-threshold settings. The CLI has no flags to override those two workbook settings; configure them in the workbook before invoking `recalc`.
 
 ## Pagination
 

@@ -17,7 +17,7 @@ Formulon がワークブックバイト列として受け取る、ブラウザ�
 ## 最小実装
 
 ```ts
-import createFormulon, { ValueKind } from '@libraz/formulon'
+import createFormulon from '@libraz/formulon'
 
 const Module = await createFormulon()
 
@@ -32,6 +32,9 @@ export async function recalcUpload(file: File) {
 
     wb.recalc()
     const cell = wb.getValue(0, 0, 0)
+    if (!cell.status.ok) {
+      throw new Error(cell.status.message)
+    }
     const saved = wb.save()
 
     if (!saved.status.ok || saved.bytes === null) {
@@ -47,7 +50,7 @@ export async function recalcUpload(file: File) {
 
 `try / finally` の形が重要です。再計算中に例外が出ても `wb.delete()` が WASM ヒープを解放します。
 
-下のパネルは、この関数にファイル選択と結果表を付けたものです。ワークブックを選ぶと `File.arrayBuffer()` で読み取ったバイト列を `loadBytes()` に渡し、再計算後のセルを一覧して、書き出したバイト列をダウンロードできます。ワークブックとして読めないファイルは `isValid()` で止まり、`lastErrorMessage()` の内容が表示されます。後述のエラー表の 1 行目にあたる挙動を、サーバーへの往復なしにその場で確認できます。
+下のパネルは、この関数にファイル選択と実物のシートを付けたものです。ワークブックを選ぶと `File.arrayBuffer()` で読み取ったバイト列を `loadBytes()` に渡し、再計算後の結果を埋め込みの `formulon-cell` グリッドに表示して、書き出したバイト列をダウンロードできます。ワークブックとして読めないファイルは `isValid()` で止まり、`lastErrorMessage()` の内容が表示されます。後述のエラー表の 1 行目にあたる挙動を、サーバーへの往復なしにその場で確認できます。
 
 <RecalcDemo />
 
@@ -65,9 +68,16 @@ self.onmessage = async (event) => {
   const bytes = new Uint8Array(event.data)
   const wb = Module.Workbook.loadBytes(bytes)
   try {
+    if (!wb.isValid()) {
+      throw new Error(Module.lastErrorMessage())
+    }
     wb.recalc()
     const saved = wb.save()
-    self.postMessage({ ok: true, bytes: saved.bytes }, [saved.bytes!.buffer])
+    if (!saved.status.ok || saved.bytes === null) {
+      self.postMessage({ ok: false, message: saved.status.message })
+      return
+    }
+    self.postMessage({ ok: true, bytes: saved.bytes }, [saved.bytes.buffer])
   } catch (e) {
     self.postMessage({ ok: false, message: (e as Error).message })
   } finally {
@@ -96,7 +106,7 @@ transferable `ArrayBuffer` を使うと、往路・復路ともにコピーが 1
 | 失敗 | 検出箇所 | 対応 |
 | --- | --- | --- |
 | `.xlsx` として不正 | `wb.isValid() === false`、`lastErrorMessage()` | 「対応していない Excel ファイルです」と表示 |
-| セルの Excel エラー | `value.kind === ValueKind.Error` | 行内にエラー値を描画。アップロード自体は成功扱い |
+| セルの Excel エラー | `cell.status.ok === true` かつ `cell.value.kind === ValueKind.Error` | `cell.value.errorCode` を行内に描画。アップロード自体は成功扱い |
 | 保存失敗 | `saved.status.ok === false` | メッセージを出し、元のバイト列を保持 |
 | 簡易エンジンが有効（`formulon-cell` の `WorkbookHandle` を `preferStub: true` でビルドした場合のみ発生） | `isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
 

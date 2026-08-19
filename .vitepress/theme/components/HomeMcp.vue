@@ -12,7 +12,7 @@ const copy = computed(() =>
     ? {
         section: 'Agent interface',
         heading: 'AI エージェントから workbook を直接扱う。',
-        body: 'formulon-mcp は Formulon の計算 core を MCP tools として公開します。エージェントは .xlsx を開き、セルやシートを編集し、再計算して保存できます。',
+        body: 'formulon-mcp は Formulon の計算 core を MCP tools として公開します。エージェントは .xlsx / .xlsb を開き、セルやシートを編集し、再計算して保存できます。',
         primary: { text: 'MCP セットアップ', link: '/ja/mcp/' },
         secondary: { text: 'GitHub', link: 'https://github.com/libraz/formulon-mcp' },
         installLabel: 'Codex config',
@@ -31,7 +31,7 @@ const copy = computed(() =>
     : {
         section: 'Agent interface',
         heading: 'Let AI agents work inside real workbooks.',
-        body: 'formulon-mcp exposes the Formulon calculation core as MCP tools. Agents can open .xlsx files, inspect structure, edit cells and sheets, recalculate, and save the result.',
+        body: 'formulon-mcp exposes the Formulon calculation core as MCP tools. Agents can open .xlsx or .xlsb files, inspect structure, edit cells and sheets, recalculate, and save the result.',
         primary: { text: 'Set up MCP', link: '/mcp/' },
         secondary: { text: 'GitHub', link: 'https://github.com/libraz/formulon-mcp' },
         installLabel: 'Codex config',

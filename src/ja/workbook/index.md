@@ -16,3 +16,4 @@
 - [再計算](/ja/workbook/recalculation) ─ dirty セル・依存関係・iteration・partial recalc
 - [動的配列](/ja/workbook/dynamic-arrays) ─ スピルと shape 依存の再計算
 - [ファイル形式](/ja/workbook/file-formats) ─ OOXML、XLSB、保持境界
+- [PivotTable](/ja/workbook/pivots) ─ cache に基づく集計の作成と確認

@@ -22,6 +22,7 @@ formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
 formulon recalc input.xlsx -o output.xlsx
+formulon recalc --threads 4 input.xlsx -o output.xlsx
 formulon dump --formulas input.xlsx
 formulon dump --values output.xlsx
 formulon dump --sheets input.xlsx
@@ -32,6 +33,15 @@ formulon paginate --sheet 0 input.xlsx
 ::: tip --values は再計算する。--formulas は再計算しない
 `dump --values` は表示前に再計算するため、最新結果を見られます。`dump --formulas` と `dump --metadata` は再計算をスキップするため、安価で副作用がありません。
 :::
+
+## `--` でオプション解析を終える
+
+4 つのコマンドはすべて、`--` でオプション解析を終えられます。コマンドのオプションを `--` より前に置き、その後に位置引数を 1 つだけ渡します。`eval` では数式、`recalc`・`dump`・`paginate` では入力パスを渡します。`-` で始まる相対パスも扱えます。
+
+```sh
+formulon dump --sheets -- -input.xlsx
+formulon recalc --quiet -o output.xlsx -- -input.xlsx
+```
 
 ## 出力フォーマットは -o の拡張子で決まる
 
@@ -45,6 +55,10 @@ XLSB はスタイル、行 / 列レイアウト、結合、`date1904`、シー�
 
 `recalc` は一時ファイルへ書き込み、成功時だけ対象を置き換えます。失敗しても既存の対象ファイルは壊れません。
 
+`--threads N` を指定しない `recalc` は serial です。並列 SCC scheduler は `0` で最大 8 の自動検出、`1` で worker を起動しない呼び出し側スレッドだけの実行、`2..8` で worker 数の上限を指定します。`0..8` の範囲外は拒否され、要求値より少ない worker 数で完了する場合があります。
+
+コマンドは、復元できなかった数式・定義名、削除された package part、formula cell の downgrade、model 化されなかった feature について loss diagnostics を stderr に警告します。`--quiet` が抑制するのは成功時の status 行だけで、これらの警告は表示されます。
+
 ## 反復計算
 
 意図的な循環参照を含むワークブックでは、反復計算を有効にしないと `recalc` はエンジンの非反復循環参照処理がそのまま返す値に収束します。
@@ -53,7 +67,7 @@ XLSB はスタイル、行 / 列レイアウト、結合、`date1904`、シー�
 formulon recalc circular.xlsx -o circular.xlsx --iterative
 ```
 
-`--iterative` は Excel の既定値（最大反復回数 100、変化量のしきい値 0.001）を有効にします。CLI からこの 2 つの数値を上書きするフラグはありません。
+`--iterative` は反復計算を有効にし、ワークブックに設定された最大反復回数と収束しきい値を保持します。CLI にはこの 2 つのワークブック設定を上書きするフラグがないため、`recalc` の前にワークブック側で設定してください。
 
 ## ページ分割
 

@@ -1,6 +1,6 @@
 # インストール
 
-実行場所に合う実行入口を選びます。Formulon 0.9 系のパッケージは pre-1.0 段階です。アプリケーションでは正確なバージョンを固定し、安定版リリースまでは API が増える可能性を前提にしてください。
+実行場所に合う実行入口を選びます。Formulon のパッケージは pre-1.0 段階です。アプリケーションでは正確なバージョンを固定し、安定版リリースまでは API が増える可能性を前提にしてください。
 
 ::: warning バージョンを固定する
 実験や社内ツールでは、正確なパッケージバージョンを指定してください。API とパッケージ構成が安定するまでは、`latest` に追従しないほうが安全です。
@@ -9,7 +9,7 @@
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.9.7
+yarn add @libraz/formulon@0.10.0
 ```
 
 ブラウザ、worker、Node サービスで WASM ビルドを使う場合はこのパッケージを使います。ESM 専用で、Node で使う場合は Node 22 以降が必要です。
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.9.7
+python -m pip install formulon==0.10.0
 ```
 
 スクリプト、ノートブック、バッチジョブで使います。wheel には Formulon C ABI の

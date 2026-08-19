@@ -16,18 +16,16 @@ Formulon が意図的に Excel と違う挙動をするケースです。理由�
 
 | トラック | 結果 | 記録済みの skip / divergence | ゴールデンの出所 |
 | --- | --- | --- | --- |
-| 主要な数式 Oracle | `3942/3942` pass | skip `140` 件 | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
-| 条件付き書式 Oracle | `23/23` pass | — | Mac Excel 365 ja-JP |
+| 主要な数式 Oracle | `4423/4423` pass | skip `125` 件（記録済み） | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
+| 条件付き書式 Oracle | `23/23` pass | — | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
 | 他エンジン由来コーパス（クロスチェック） | `12510/12510` pass | divergence `168` 件 | 他エンジン。Excel ではない |
-| ワークブック Oracle（ピボット + 印刷） | pivot `28/28`、印刷 `35/41` | skip `6` 件 | 履歴データ（reference-only）。下記参照 |
+| ワークブック Oracle（ピボット + 印刷） | `66/66` pass | skip `10` 件（記録済み） | 製品版 Windows Microsoft 365 ja-JP で検証済み（`win-365-ja_JP`） |
 
-**97 の Oracle カテゴリ**を定義し、Mac Excel 365 ja-JP から再生成しています。カタログ済みの `522` 関数のうち `517` が6つのクロージャ条件（`behaviors_declared` / `cases_cover_behaviors` / `golden_present` / `divergence_documented` / `not_in_pilot` / `behavior_drift`）をすべて満たします。残り5つのうち4つ（`ARRAYTOTEXT` / `FILTERXML` / `GETPIVOTDATA` / `PHONETIC`）が落ちるのは `behaviors_declared` だけで、未実装ではなく挙動の分類が詰め切れていないという意味です。5つ目の `JIS` は、Mac Excel 側の不具合のためスイートを撤去した際にケースのカバレッジを失い、まだ再カバーしていません。
+**103 の Oracle カテゴリ**を定義しています。数式と条件付き書式の track は Mac Excel 365 ja-JP、workbook track は Windows Excel 365 ja-JP から再生成します。workbook の golden には capture identifier があり、全 suite を単一の検証済み Microsoft 365 セッションに固定します。
 
-skip はいずれも明示的な divergence、ホストサービス依存、volatile または環境依存のケース、ドライバの制約のいずれかで、黙って握りつぶしたスタブはありません。それぞれ最後に確認した Excel ビルドを [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) に記録しています。大半は `16.108.1`、再取得が新しいものは `16.111.2` です。
+カタログ済みの `522` 関数のうち `518` が6つのクロージャ条件（`behaviors_declared` / `cases_cover_behaviors` / `golden_present` / `divergence_documented` / `not_in_pilot` / `behavior_drift`）をすべて満たします。残る4つ（`ARRAYTOTEXT` / `FILTERXML` / `GETPIVOTDATA` / `PHONETIC`）が満たさないのは `behaviors_declared` だけで、未実装ではなく挙動の分類が不足しています。`JIS` は `DBCS` の alias として宣言され、closure 条件を満たします。Excel はこの ja-JP の数式バー表記を保存・評価の前に書き換えるため、`JIS` を直接指定する Oracle ケースは作れません。closure harness は alias 先の関数に解決して判定します。
 
-::: warning ワークブックトラックは Microsoft 365 で検証したものではない
-ピボットと印刷の数値は、**チェックイン済みの履歴ゴールデン**に対する結果です。Office 2019 または版不明のファイルを reference-only として保持しているもので、`win-365-ja_JP` の状態は依然として `wanted`、外部ゴールデンの生成には製品版 Windows Microsoft 365 ホストが必要です。この2つの数値は「参照用キャプチャに対して pass している」と読んでください。Microsoft 365 での検証ではありません。
-:::
+skip はいずれも明示的な divergence、ホストサービス依存、volatile または環境依存のケース、ドライバの制約のいずれかで、黙って握りつぶしたスタブはありません。それぞれ最後に確認した Excel ビルドを [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) に記録しています。
 
 ## なぜ Oracle データが必要か
 
@@ -56,7 +54,7 @@ skip はいずれも明示的な divergence、ホストサービス依存、vola
 
 各自の Excel 環境で Oracle データ取得フローを実行し、得られたゴールデンデータを提供すると、検証できるロケールが増えていきます。同じワークブックを `win-365-ja_JP`、`mac-365-ja_JP` など複数のプロファイルで取得すれば、エンジンが検証できる範囲も広がります。取得フローは [Oracle データの提供](/ja/development/oracle-contribution) を参照してください。
 
-v0.9.2 では、Windows Excel ブリッジを通じたピボットテーブルと印刷ページ分割のワークブック Oracle 検証を追加しました。主要プロファイルは `win-365-ja_JP` です。Mac と Windows の取得結果は共通の比較器で扱うようになり、プラットフォーム差分を別々のテスト出力として埋もれさせずに確認できます。
+数式と条件付き書式のプライマリプロファイルは `mac-365-ja_JP` です。ワークブックトラックのプライマリプロファイルは、製品版 Windows Microsoft 365 で検証した `win-365-ja_JP` です。
 
 ## 次に読むもの
 

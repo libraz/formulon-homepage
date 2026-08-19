@@ -11,6 +11,10 @@ description: Formulon のブラウザ結合試験向け参考 UI ライブラリ
 可能性もあります。`@libraz/formulon` の WASM エンジンに、検証用・参考用の
 ワークブック風ブラウザ画面を載せたい場合に使います。
 
+::: warning Excel の代替ではありません
+基本的なワークブック操作は使えますが、詳細な UI 互換性はこのパッケージの対象外です。Excel 相当の UI/UX をエンドユーザーへ約束する製品には使わないでください。
+:::
+
 ```sh
 npm install @libraz/formulon-cell zustand
 ```

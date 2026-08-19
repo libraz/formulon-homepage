@@ -30,7 +30,7 @@ Native Node は WASM ヒープコピーのコストやブラウザ隔離要件�
   label="判断図。デプロイ環境が今すぐプラットフォーム別のネイティブバイナリをビルド / stage できるなら運用スループットを優先して Native Node を、できないなら移植性を優先して WASM を選ぶ"
 />
 
-Native Node と WASM は同じ Workbook API を公開しています。詳しくは [パッケージと実行入口](/ja/api/surfaces) と [Native Node 連携](/ja/runtimes/node-native) を参照してください。上の選択はあくまで運用上の違い（バイナリの stage、デプロイの移植性）であり、どちらの実行入口が計算できるかの違いではありません。
+Native Node と WASM は計算処理の流れを共有しますが、Workbook のメソッド構成は同一ではありません。table、AutoFilter XML、ふりがな、cell-style の作成が必要な場合は、選択前に [パッケージと実行入口](/ja/api/surfaces) を確認してください。上の選択は、数式評価の違いではなく、バイナリの stage とデプロイの移植性という運用上の違いです。
 
 ## サービス境界
 

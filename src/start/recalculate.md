@@ -63,6 +63,6 @@ The engine preserves workbook structure while updating calculated values. Use th
 
 ## Run the round trip here
 
-The panel below performs that same sequence in the browser: pick a workbook — or let it generate the sample — and the bytes are parsed with `loadBytes()`, recalculated, listed cell by cell, and serialized back to `.xlsx` bytes you can download. The values in the table are read after `recalc()`, so they are what the engine computed rather than what the file happened to carry.
+The panel below performs that same sequence in the browser: pick a workbook — or let it generate the sample — and the bytes are parsed with `loadBytes()`, recalculated, and serialized back to `.xlsx` bytes you can download. The sheet under the panel is those serialized bytes reopened in an embedded `formulon-cell` grid, so the values on screen are what the engine computed rather than what the file happened to carry.
 
 <RecalcDemo />

@@ -41,7 +41,7 @@ Spill behavior is most visible with:
 
 Implicit intersection (`@`) is still supported for backward compatibility with workbooks authored in pre-dynamic-array Excel.
 
-Those formulas can be run below. The upper table comes from `evaluateFormulaArray()`, so the rows × columns printed beside it is the shape the engine computed, not a shape drawn to illustrate the idea; the lower grid is the same formula written into `D2` and recalculated, with the highlighted rectangle read back from `spillInfo()`. Use *Block the spill range* to put a value inside that rectangle: the anchor turns into `#SPILL!` and not one result cell is written — the collision rule above, not a special case built into the demo.
+Those formulas can be run below. The upper table comes from `evaluateFormulaArray()`, so the rows × columns printed beside it is the shape the engine computed, not a shape drawn to illustrate the idea; the sheet below it is a live `formulon-cell` grid holding the same formula written into `D2` and recalculated, with the selected rectangle read back from `spillInfo()`. Use *Block the spill range* to put a value inside that rectangle: the anchor turns into `#SPILL!` and not one result cell is written — the collision rule above, not a special case built into the demo.
 
 <SpillDemo />
 

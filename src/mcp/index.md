@@ -1,6 +1,6 @@
 # formulon-mcp
 
-`@libraz/formulon-mcp` is a stdio [MCP](https://modelcontextprotocol.io/) server for Formulon. It gives AI agents a controlled way to open `.xlsx` workbooks, inspect structure, edit cells and sheets, recalculate formulas, search and replace text, and save the result — without Excel and without writing a host integration first.
+`@libraz/formulon-mcp` is a stdio [MCP](https://modelcontextprotocol.io/) server for Formulon. It gives AI agents a controlled way to open `.xlsx` or `.xlsb` workbooks, inspect structure, edit cells and sheets, recalculate formulas, search and replace text, and save the result in the format selected by its output extension — without Excel and without writing a host integration first.
 
 Use it when the workbook is the artifact you want the agent to operate on, not just a file to summarize.
 
@@ -19,7 +19,7 @@ The simplest MCP transport. The client launches the server as a child process an
   { label: 'Allowlist dispatch' },
   { label: 'Session table', note: 'sessionId → Workbook' },
   { label: 'Workbook', note: 'via @libraz/formulon' },
-  { label: '*.xlsx' }
+  { label: '*.xlsx / *.xlsb' }
 ]" />
 
 The first two steps run in the host process (whatever runs the MCP client); everything from `formulon-mcp` onward runs in the server's own child process, reachable only over stdio.
@@ -35,7 +35,7 @@ The first two steps run in the host process (whatever runs the MCP client); ever
 
 ## Package
 
-The MCP server is published as `@libraz/formulon-mcp` and depends on the Formulon WASM package. Current releases accept the `@libraz/formulon` 0.9 line and resolve to the latest compatible package through your package manager. It requires **Node.js 22 or newer**.
+The MCP server is published as `@libraz/formulon-mcp` and depends on the Formulon WASM package. It resolves a compatible Formulon package through your package manager. It requires **Node.js 22 or newer**.
 
 ```sh
 npx -y @libraz/formulon-mcp

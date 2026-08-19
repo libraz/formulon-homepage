@@ -11,7 +11,7 @@ Bytecode Alliance がメンテナンスするスタンドアロン WebAssembly �
 :::
 
 ::: info 用語: C ABI
-Formulon のネイティブライブラリが公開するフラットな C 関数インタフェース。各バインディングはこの安定したインタフェースを介してエンジンを呼びます。Python / CLI / WASM のどれも同じ C ABI の上に乗っています。詳しくは [C ABI](/ja/development/bindings)。
+Formulon のネイティブライブラリが公開するフラットな C 関数インタフェース。各バインディングはこの共有インタフェースを介してエンジンを呼びます。Python / CLI / WASM のどれも同じ C ABI の上に乗っています。詳しくは [C ABI](/ja/development/bindings)。
 :::
 
 典型用途:
@@ -32,13 +32,17 @@ PyPI パッケージはプラットフォーム別の `libformulon` を同梱し
 
 `Workbook` は、npm バインディングが公開する C ABI の実行入口をそのまま踏襲しています。`load -> mutate -> recalc -> save` に加えて、シート / 行列編集、定義名、partial recalc、merge、comment、hyperlink、validation、style、visual conditional-format payload（`ColorScale`、`DataBar`、`IconSet`）、DXF、pivot report layout、pivot-cache worksheet-source access、PivotTables、依存関係 trace、spill 情報、function metadata、sheet view / protection、calc policy、external links を扱えます。
 
-主な実行時差分は threading です。Python は `wasmtime` 経由で C ABI の WASM ビルドを呼び出すため、`recalc()` は serial です。計算結果の忠実度は他の実行入口と同じです。
+table は `table_create()` / `table_update()` / `table_remove()` で作成・更新・削除できます。`column_names` は `ref` の列幅と一致し、header cell は呼び出し側が書き込みます。`table_update()` で `None` にした項目は保持され、既存 table の AutoFilter は範囲を変更しても条件と extension を保ちます。worksheet 単位の AutoFilter XML は `get_auto_filter_xml()` / `set_auto_filter_xml()` で完全な opaque `<autoFilter>` fragment として扱え、空文字列で削除できます。`add_hyperlink_range()` は両端を含む矩形に hyperlink を追加し、読み出した `Hyperlink` には `last_row` / `last_col` が入ります。
+
+Python の `DataBar` は `x14` の全制御項目（`gradient`、`axis_position`（`0` は automatic、`1` は middle、`2` は none）、`negative_fill`、`border`、`negative_border`、`axis_color`）を公開します。省略時は model の既定値を使い、save と load をまたいで設定を保持します。API で新しく作成した PivotTable は、保存前に `set_pivot_cache_worksheet_source()` へ `PivotWorksheetSource(ref="A1:C10", sheet="Data")` を渡してください。worksheet source のない新規 cache の保存は失敗します。ファイルから読み込んだ cache には source があるため影響しません。
+
+主な実行時差分は threading です。Python は `wasmtime` 経由で C ABI の WASM ビルドを呼び出すため、`recalc()` は serial です。Python には `recalc_parallel()` / `recalcParallel()` API がありません。並列 scheduler が必要な場合は WASM、Native Node、または CLI の `--threads` を使います。計算結果の忠実度は他の実行入口と同じです。
 
 PyPI の WASM ビルドは worksheet XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、パース時のピークメモリは最大の worksheet XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML で streaming に切り替えます。
 
 ::: info Python の評価とワークブック API
 Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` で条件付き書式を評価します。一般的なスカラー `evaluate_formula_text` は公開していません。コメントは `comment_count(sheet)` / `get_comments(sheet)` で列挙でき、`paginate(sheet)` はページ形状を返します。`error_display_name(error_code)` はエラー序数の Excel 表示文字列を返します。
-Python はワークブック機能の大部分を同等に扱いますが、C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。ふりがなテキストの取得・設定と反復進捗コールバックも Python にはありません。ワークブックの文脈で一般的なスカラーを評価する場合は、変更して再計算してください。
+Python はワークブック機能の大部分を同等に扱いますが、C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。反復進捗コールバックは Python にはありません。ふりがなテキストは `set_phonetic()` / `get_phonetic()` で取得・設定できます。ワークブックの文脈で一般的なスカラーを評価する場合は、変更して再計算してください。
 :::
 
 <DiagramLayers :layers="[

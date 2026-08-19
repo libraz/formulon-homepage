@@ -17,6 +17,7 @@
 | 依存関係グラフ | 数式セル・defined name・table・external link 間の前向き / 後ろ向きエッジ |
 | dirty 集合 | 読み取り前に再評価が必要なセル |
 | 揮発性関数 | `NOW` / `TODAY` / `RAND` / `INDIRECT` / `OFFSET` / `INFO` など、常に dirty 扱いの関数 |
+| ワークブックの時計 | `NOW`、`TODAY`、pivot の相対期間フィルターで共有する任意の local civil time |
 | iterative 設定 | 循環参照を許容するための iteration 有効化・最大回数・収束しきい値 |
 | 動的配列のスピル形状 | アンカーごとの結果 shape。依存セルの再 shape / 無効化に使う |
 | 計算モード | manual / automatic 切替（トグルを公開している実行入口のみ） |
@@ -40,6 +41,25 @@
 ::: info 用語: 揮発性関数 (volatile function)
 引数以外のもの（時刻・乱数・外部参照など）に値が依存する関数。引数が変わらなくても再計算のたびに評価され、依存先のセルを毎回 dirty 集合に引き込みます。
 :::
+
+## 時計に依存する計算の固定
+
+ワークブックに固定した時計がない場合、`NOW()`、`TODAY()`、pivot の相対期間フィルターはホストの時計を読み取ります。読み取りごとに別の時刻になる可能性があり、日付が変わる境界では 1 回の再計算の中でも結果が一致しないことがあります。pin を設定すると、すべてが 1 つの local civil time を共有して再現可能な再計算になります。
+
+WASM では `pinnedNow()`、`setPinnedNow(year, month, day, hour, minute, second)`、`clearPinnedNow()` を使います。Python では対応する `pinned_now()`、`set_pinned_now(...)`、`clear_pinned_now()` を使います。getter は `CivilTime`（`year`、`month`、`day`、`hour`、`minute`、`second`）を返し、ホストの時計を使う状態では `null` / `None` を返します。
+
+```ts
+wb.setPinnedNow(2026, 8, 19, 12, 0, 0)
+wb.recalc()
+const pin = wb.pinnedNow()
+wb.clearPinnedNow()
+```
+
+pin は timestamp ではなく local civil field として保持するため、タイムゾーンの解釈はありません。`setPinnedNow()` は 1900–9999 の範囲外の year、1–12 の範囲外の month、その月に存在しない day、0–23 の範囲外の hour、0–59 の範囲外の minute / second を拒否し、不正な値を別の日付へ繰り上げません。pin の設定・解除ではキャッシュ済みの数式値を再計算しないため、変更後は `recalc()` を呼び出してください。pin はファイル状態ではなくモデル状態です。保存時には記録されず、読み込み直後のワークブックは pin されていないためホストの時計に従います。
+
+## `INDIRECT` と R1C1 参照
+
+`INDIRECT(ref_text, FALSE)` は `ref_text` を R1C1 文字列として解析します。絶対参照は `R5C2` のように書き、相対軸は `R[-1]C` のように数式を置いたセルを基準に解決します。`R` または `C` だけを指定すると現在の行または列を表し、1 軸だけを持つ endpoint はもう一方の軸全体を対象にします（`R5` は `5:5` と同じく 5 行全体です）。`a1` 引数は fallback を追加するのではなく文法を選択するため、`FALSE` に A1 文字列を渡した場合と、`TRUE` に R1C1 文字列を渡した場合は `#REF!` になります。相対 R1C1 文字列を、基準となる数式セルを持たない ad-hoc 評価入口から評価した場合も `#REF!` になります。
 
 ## 反復計算（iterative calculation）
 

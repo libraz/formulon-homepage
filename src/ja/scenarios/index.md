@@ -26,7 +26,7 @@ Formulon を具体的な処理の流れに組み込む例です。シナリオ�
 | [Node サービスで再計算](/ja/scenarios/node-service) | Native Node / WASM | アップロードまたは社内生成したワークブックを API の裏側で再計算 |
 | [Python で一括再計算](/ja/scenarios/python-batch) | Python | ジョブやノートブックで帳票やモデルを再計算 |
 | [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) | CLI | 自動チェックで数式や計算値のずれを検出 |
-| [AI エージェントからワークブックを編集](/ja/mcp/) | MCP | `formulon-mcp` 経由でエージェントが `.xlsx` を開いて編集・再計算・保存 |
+| [AI エージェントからワークブックを編集](/ja/mcp/) | MCP | `formulon-mcp` 経由でエージェントが `.xlsx` または `.xlsb` を開いて編集・再計算・保存 |
 
 ## シナリオ共通の構造
 

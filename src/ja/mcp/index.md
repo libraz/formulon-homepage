@@ -1,6 +1,6 @@
 # formulon-mcp
 
-`@libraz/formulon-mcp` は Formulon 用の stdio [MCP](https://modelcontextprotocol.io/) サーバーです。AI エージェントが `.xlsx` ワークブックを開き、構造を調べ、セルやシートを編集し、式を再計算し、テキストを検索 / 置換し、結果を保存する。Excel もホスト統合コードも不要で、これらを制御された経路で行えます。
+`@libraz/formulon-mcp` は Formulon 用の stdio [MCP](https://modelcontextprotocol.io/) サーバーです。AI エージェントが `.xlsx` または `.xlsb` のワークブックを開き、構造を調べ、セルやシートを編集し、式を再計算し、テキストを検索 / 置換し、出力拡張子に応じた形式で結果を保存できます。Excel もホスト統合コードも不要で、これらを制御された経路で行えます。
 
 ファイルを単に要約させたいのではなく、**ワークブック自体をエージェントに操作させたい場合** に使います。
 
@@ -19,7 +19,7 @@ AI エージェントに構造化されたツール・リソースを与える�
   { label: '許可リストで振り分け' },
   { label: 'セッションテーブル', note: 'sessionId → Workbook' },
   { label: 'Workbook', note: 'via @libraz/formulon' },
-  { label: '*.xlsx' }
+  { label: '*.xlsx / *.xlsb' }
 ]" />
 
 最初の 2 ステップはホストプロセス（MCP クライアントを動かすプロセス）内で完結し、`formulon-mcp` 以降はサーバー自身の子プロセス内で動作します。到達経路は stdio のみです。
@@ -35,7 +35,7 @@ AI エージェントに構造化されたツール・リソースを与える�
 
 ## パッケージ
 
-MCP サーバーは `@libraz/formulon-mcp` として公開されており、Formulon の WASM パッケージに依存します。現在のリリースは `@libraz/formulon` 0.9 系を受け入れ、パッケージマネージャが互換範囲の最新版を解決します。**Node.js 22 以上** が必要です。
+MCP サーバーは `@libraz/formulon-mcp` として公開されており、Formulon の WASM パッケージに依存します。パッケージマネージャが互換範囲の Formulon パッケージを解決します。**Node.js 22 以上** が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

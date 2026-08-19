@@ -3,7 +3,7 @@
 Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ Python 向けラッパーです。公開 wheel は `py3-none-any`。プラットフォームランタイムは `pip` が `wasmtime` の wheel として解決します。
 
 ::: info 用語: py3-none-any wheel
-Python ABI タグ・プラットフォームタグ・ネイティブコードのいずれも持たない wheel。依存が解決できるなら、どの CPython 3 でも動きます。プラットフォーム依存部分は `wasmtime` が担い、`formulon` 自体には含まれません。
+Python ABI タグ・プラットフォームタグ・ネイティブコードのいずれも持たない wheel。互換する `wasmtime` wheel が利用できる CPython 3.9 以降で動作します。プラットフォーム依存部分は `wasmtime` が担い、`formulon` 自体には含まれません。
 :::
 
 ## トップレベル API
@@ -41,7 +41,9 @@ with Workbook.create_default() as wb:
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
 - `get_value`, `lambda_text_at`, `evaluate_formula_array`
 - `recalc`, `partial_recalc`, `set_iterative`
-- `save`, `save_ex`（XLSX / XLSB のコンテナ形式を選択）
+- `pinned_now`, `set_pinned_now`, `clear_pinned_now`
+- `save`, `save_as(fmt)`（XLSX / XLSB のコンテナ形式を選択）
+- `save_with_diagnostics(fmt)`, `read_diagnostics()`
 - `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
 - シート構造編集、行 / 列編集、定義名
 - merges、`get_comment` / `set_comment`、`comment_count` / `get_comments`、hyperlinks、data validations
@@ -58,6 +60,54 @@ Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を
 :::
 
 正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。
+
+## 保存時の診断
+
+`save_with_diagnostics(fmt)` は、保存した `bytes` と writer が検出した損失・延期のカウンターを持つ `SaveDiagnostics` を返します。`read_diagnostics()` は、ワークブックの読み込み時に取得したカウンターを持つ `ReadDiagnostics` を返します。カウンターの対象は一部の損失だけです。すべて 0 であることは、記載された損失が発生しなかったことを示しますが、パッケージをバイト単位で比較したことや、診断イベントが一切なかったことは示しません。
+
+| 結果 | フィールド | 意味 |
+| --- | --- | --- |
+| `SaveDiagnostics` | `downgraded_formula_count` | キャッシュ済みリテラルとして出力された数式セルの数。XLSX では常に 0 です。 |
+|  | `deferred_feature_count` | レコードへ変換されなかったシート機能の数。XLSX では常に 0 です。 |
+|  | `dropped_part_count` | いずれかの writer が破棄した passthrough パートの数。 |
+|  | `dropped_relationship_count` | 対象パートの破棄に伴って破棄された relationship の数。`dropped_part_count` と同じ損失を表す場合があります。 |
+|  | `renumbered_part_count` | writer が割り当てたパート ID で出力された table の数。XLSB では常に 0 です。 |
+| `ReadDiagnostics` | `undecoded_formula_count` | デコードできなかった保存済み数式の数。XLSB のみです。 |
+|  | `undecoded_defined_name_count` | デコードできずにスキップされた defined name の数。XLSB のみです。 |
+|  | `undecoded_part_count` | content type を解決できなかった XLSB パッケージパートの数。 |
+|  | `skipped_feature_count` | 参照が利用できずスキップされた OOXML の presentation-overlay エントリの数。 |
+|  | `unknown_content_type_count` | content type が認識できなかった OOXML workbook パートの数。 |
+
+```python
+from formulon import Workbook, WorkbookFormat
+
+with Workbook.create_default() as wb:
+    saved = wb.save_with_diagnostics(WorkbookFormat.XLSB)
+    print(saved.bytes, saved.downgraded_formula_count)
+    loaded = Workbook.load(saved.bytes)
+    try:
+        print(loaded.read_diagnostics().undecoded_formula_count)
+    finally:
+        loaded.close()
+```
+
+`dropped_part_count` と `dropped_relationship_count` は、1 つのパートを破棄したときにどちらも増える場合があります。失われたオブジェクト数として合計しないでください。
+
+## 時計の固定
+
+ワークブックが pin されていない場合、`NOW()`、`TODAY()`、pivot の相対期間フィルターはホストの時計を読み取ります。これらの結果を 1 回の再計算で一致させる場合や、ホストをまたいで再現する場合は、ワークブックを 1 つの local civil time に固定してください。
+
+```python
+from formulon import Workbook
+
+with Workbook.create_default() as wb:
+    wb.set_pinned_now(2026, 8, 19, 12, 0, 0)
+    print(wb.pinned_now())  # CivilTime(year, month, day, hour, minute, second)
+    wb.recalc()
+    wb.clear_pinned_now()
+```
+
+`pinned_now()` は `CivilTime` オブジェクトを返し、ワークブックがホストの時計に従う場合は `None` を返します。`set_pinned_now()` は `year` 1900–9999、`month` 1–12、月ごとの実在する日、`hour` 0–23、`minute` / `second` 0–59 を検証します。不正な値は正規化せず、`FormulonError` を送出します。値は timestamp ではなく local civil field として保持するため、タイムゾーンの解釈はありません。pin の設定・解除ではキャッシュ済みの数式値を再計算しないため、必要に応じて `recalc()` を明示的に呼び出してください。pin はファイル状態ではなくワークブックのモデル状態です。保存時には記録されず、読み込み直後のワークブックは pin されていません。
 
 ## Values
 

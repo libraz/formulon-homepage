@@ -44,6 +44,10 @@ This is the full, wired `ErrorCode` set (`src/value.h`'s `kErrorTable`); build a
 
 Bindings should preserve these values instead of converting them into host exceptions unless the host API is reporting an API misuse or IO failure.
 
+The panel below reads that set out of the running engine and runs both channels next to each other: a formula whose error comes back as a value on a call that succeeded, and a `loadBytes()` given sixteen bytes of noise, which produces no value at all.
+
+<ErrorsDemo />
+
 ## Host failure paths
 
 | Surface | Host failure path |
@@ -71,7 +75,10 @@ Bindings should preserve these values instead of converting them into host excep
 ## Handling pattern
 
 ```ts
-const value = wb.getValue(0, 0, 0)
+const result = wb.getValue(0, 0, 0)
+if (!result.status.ok) throw new Error(result.status.message)
+
+const value = result.value
 if (value.kind === ValueKind.Error) {
   // cell error — surface to the user, do not throw.
   // value.errorCode is a formulon.ErrorCode ordinal; map it to a

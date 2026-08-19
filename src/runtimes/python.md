@@ -11,7 +11,7 @@ A standalone WebAssembly runtime maintained by the Bytecode Alliance. The Formul
 :::
 
 ::: info Glossary: C ABI
-A flat C function interface exposed by the Formulon native library. Bindings call into it through a stable contract; the Python wrapper, the CLI, and the WASM build all sit on top of the same C ABI. See [C ABI](/development/bindings).
+A flat C function interface exposed by the Formulon native library. Bindings call into it through a shared contract; the Python wrapper, the CLI, and the WASM build all sit on top of the same C ABI. See [C ABI](/development/bindings).
 :::
 
 Typical use cases:
@@ -32,13 +32,17 @@ The PyPI package does not ship a platform-native `libformulon`. It ships one `py
 
 `Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, merges, comments, hyperlinks, validations, styles, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, PivotTables with report layout and pivot-cache worksheet-source access, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
 
-The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Result fidelity is the same as other surfaces.
+Tables can be authored with `table_create()`, `table_update()`, and `table_remove()`. `column_names` must match the width of `ref`, and the caller still writes the header cells. `table_update()` preserves fields passed as `None`; an existing table AutoFilter keeps its criteria and extensions when its range is retargeted. Worksheet-level AutoFilter XML is available through `get_auto_filter_xml()` / `set_auto_filter_xml()` as a complete opaque `<autoFilter>` fragment; an empty string clears it. `add_hyperlink_range()` adds a hyperlink over an inclusive rectangle, and read-back `Hyperlink` values include `last_row` and `last_col`.
+
+Python's `DataBar` exposes the full `x14` controls: `gradient`, `axis_position` (`0` automatic, `1` middle, `2` none), `negative_fill`, `border`, `negative_border`, and `axis_color`. Omitted values use the model defaults and the settings survive save and load. For a newly authored PivotTable, set `PivotWorksheetSource(ref="A1:C10", sheet="Data")` with `set_pivot_cache_worksheet_source()` before saving; a new cache without a worksheet source fails to save, while caches loaded from a file already have one.
+
+The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Python exposes no `recalc_parallel()` or `recalcParallel()` API; use the WASM or native Node binding, or the CLI's `--threads`, when the parallel scheduler is required. Result fidelity is the same as other surfaces.
 
 The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
 
 ::: info Evaluator and workbook parity
 Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
-Python has broad workbook parity, but does not mirror every C ABI entry point: phonetic text get/set and the iterative-progress callback are also not exposed. Use mutation plus recalc for a general scalar evaluated in workbook context.
+Python has broad workbook parity, but does not mirror every C ABI entry point: the iterative-progress callback is not exposed. It does expose phonetic text through `set_phonetic()` and `get_phonetic()`. Use mutation plus recalc for a general scalar evaluated in workbook context.
 :::
 
 <DiagramLayers :layers="[

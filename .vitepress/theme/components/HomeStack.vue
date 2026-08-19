@@ -44,7 +44,7 @@ const copy = computed(() =>
             cells: [
               {
                 name: '@libraz/formulon-mcp',
-                meta: 'stdio MCP サーバー · 31 ツール',
+                meta: 'stdio MCP サーバー · 33 ツール',
                 link: '/ja/mcp/'
               },
               {
@@ -110,7 +110,7 @@ const copy = computed(() =>
             cells: [
               {
                 name: '@libraz/formulon-mcp',
-                meta: 'stdio MCP server · 31 tools',
+                meta: 'stdio MCP server · 33 tools',
                 link: '/mcp/'
               },
               {

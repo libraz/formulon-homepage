@@ -54,14 +54,16 @@ stdio MCP サーバーはクライアントの子プロセスとして動きま�
 
 例として:
 
-- PivotTable / PivotCache の読み取り
-- style / merge / comment / hyperlink / validation の読み書き
+- PivotTable / PivotCache（cache source、report layout / filter を含む）
+- worksheet table と AutoFilter
+- style、differential format、merge、comment、hyperlink、validation の読み書き
 - 条件付き書式の評価
+- シートの表示フラグ、ページレイアウトビュー、ふりがな、ページネーション
 - 依存関係グラフ照会（`precedents`、`dependents`）
 - 関数メタデータと名前ヘルパ
-- spill 情報
+- spill 情報とワークブック時計の固定
 
-許可リストにないメソッド（広すぎるエンジン API を含む）は拒否されます。サーバーの更新時に許可リストは見直されます。
+ワークブックの lifecycle メソッド、raw save メソッド（`save`、`saveAs`、`saveWithDiagnostics`）、callback を取る `setIterativeProgress` は意図的に許可していません。セッションの保存は `formulon_save_session` を経由し、セッションの記録と保存診断を維持します。その他の許可リスト外メソッドも拒否されます。
 
 ## セッションの分離
 

@@ -51,9 +51,7 @@ Formulon は **522** 件の Excel 関数名を認識します。**507 件の実�
 
 数式レベルの Oracle 検証はセル値を確認します。ピボットテーブルや印刷レイアウトは、挙動が数式の結果ではなくワークブック構造として保存されているため、ワークブック単位の Oracle 検証トラックが別途必要です。
 
-このトラックは、信頼できる PivotTable 自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。pivot suite は `28/28` でクローズ済み、`print_basic` / `print_pagination` / `print_fit` / `print_matrix` は `formulon_workbook_oracle_tests` で `35/41` pass です。残る `6` 件は、`PageSetup.Zoom <= 50` で発生する既知の Excel PageBreakPreview COM の quirk による `win-365-ja_JP` scope の divergence skip として記録しています。
-
-どちらの数値も、**チェックイン済みの履歴 golden** に対する結果です。この golden は Office 2019 または版不明のもので、reference-only として保持しています。製品版 Windows Microsoft 365 ホストでの再取得は未了のため、いずれの数値も Microsoft 365 での検証には当たりません。このプロファイルの `wanted` が何を意味するかは[ロケールプロファイル](./locale-profiles.md)を参照してください。
+このトラックは、信頼できる PivotTable 自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。製品版 Windows Microsoft 365 ja-JP で検証したワークブック Oracle は、`66/66` pass、`10` 件の記録済み skip です。golden には capture identifier があり、全 suite を単一の検証済み Microsoft 365 セッションに固定します。
 
 ## 外部サービススタブ
 

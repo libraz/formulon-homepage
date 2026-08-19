@@ -26,7 +26,7 @@ After the one-formula quick start, test one representative workbook as early as 
 | [Node service recalculation](/scenarios/node-service) | Native Node / WASM | Recalculate uploaded or internally generated workbooks behind an API |
 | [Python batch recalculation](/scenarios/python-batch) | Python | Recalculate reports or models in jobs and notebooks |
 | [CI workbook regression](/scenarios/ci-regression) | CLI | Detect formula and value drift in automated checks |
-| [Agent workbook editing](/mcp/) | MCP | Let AI agents open, edit, recalculate, and save `.xlsx` through `formulon-mcp` |
+| [Agent workbook editing](/mcp/) | MCP | Let AI agents open, edit, recalculate, and save `.xlsx` or `.xlsb` through `formulon-mcp` |
 
 ## What the scenarios share
 

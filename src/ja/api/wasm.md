@@ -60,7 +60,7 @@ enum ValueKind {
 }
 ```
 
-`getValue()`、`evalFormula()`、`evaluateFormulaText()`、`evaluateConditionalFormula()` は、`kind` で payload が分かれた `Value` を返します。数値は `value.number`、真偽値は `value.boolean`（`0` または `1`）、テキストは `value.text`、エラーは `value.errorCode`（`formulon::ErrorCode` の序数）で読み取ります。`errorText` というフィールドは存在しません（各コードの意味は [エラーモデル](/ja/compatibility/errors) を参照）。`Array` / `Ref` / `Lambda` は現時点で `Value` に追加の payload を持たず、これらのフィールドは将来の拡張のために C ABI 側で予約されているだけです。ラムダの数式テキストを読むには、ワークブックの `getLambdaText(sheet, row, col)` を別途呼び出します。
+`getValue()` は `CellResult`（`{ status, value }`）を返します。一方、`evalFormula()`、`evaluateFormulaText()`、`evaluateConditionalFormula()` は同じ `status` / `value` を持つ `EvalResult` envelope を返します。いずれも `value` フィールドは `kind` で payload が分かれる `Value` です。数値は `value.number`、真偽値は `value.boolean`（`0` または `1`）、テキストは `value.text`、エラーは `value.errorCode`（`formulon::ErrorCode` の序数）で読み取ります。`errorText` というフィールドは存在しません（各コードの意味は [エラーモデル](/ja/compatibility/errors) を参照）。`Array` / `Ref` / `Lambda` は現時点で `Value` に追加の payload を持たず、これらのフィールドは将来の拡張のために C ABI 側で予約されているだけです。ラムダの数式テキストを読むには、ワークブックの `getLambdaText(sheet, row, col)` を別途呼び出します。
 
 ## ワークブックのライフサイクル
 
@@ -79,7 +79,7 @@ try {
 
 ## コンテナ形式
 
-`save()` は常に OOXML `.xlsx` を書き出します。`saveEx(format)` で書き出すコンテナ形式を明示できます。
+`save()` は常に OOXML `.xlsx` を書き出します。`saveAs(format)` で書き出すコンテナ形式を明示できます。
 
 ```ts
 enum WorkbookFormat {
@@ -88,10 +88,38 @@ enum WorkbookFormat {
   Xlsb = 2
 }
 
-const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
+const result = wb.saveAs(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 ```
 
 `loadBytes(bytes)` はフラグなしでどちらのコンテナも受け付けます。ファイル名ではなく、パッケージのバイト列そのものから `.xlsb` / `.xlsx` を判別するため、同じ呼び出しでどちらも扱えます。各コンテナが何を往復保存できるかは [ファイル形式サポート](/ja/compatibility/file-format-support) を参照してください。
+
+`saveWithDiagnostics(format)` は保存したバイト列と、writer が検出した損失・延期のカウンターを返します。`readDiagnostics()` はワークブックの読み込み時に取得したカウンターを返します。カウンターの対象は一部の損失だけです。すべて 0 であることは、記載された損失が発生しなかったことを示しますが、パッケージをバイト単位で比較したことや、診断イベントが一切なかったことは示しません。
+
+| 結果 | フィールド | 意味 |
+| --- | --- | --- |
+| `saveWithDiagnostics` | `downgradedFormulaCount` | キャッシュ済みリテラルとして出力された数式セルの数。XLSX では常に 0 です。 |
+|  | `deferredFeatureCount` | レコードへ変換されなかったシート機能の数。XLSX では常に 0 です。 |
+|  | `droppedPartCount` | いずれかの writer が破棄した passthrough パートの数。 |
+|  | `droppedRelationshipCount` | 対象パートの破棄に伴って破棄された relationship の数。`droppedPartCount` と同じ損失を表す場合があります。 |
+|  | `renumberedPartCount` | writer が割り当てたパート ID で出力された table の数。XLSB では常に 0 です。 |
+| `readDiagnostics` | `undecodedFormulaCount` | デコードできなかった保存済み数式の数。XLSB のみです。 |
+|  | `undecodedDefinedNameCount` | デコードできずにスキップされた defined name の数。XLSB のみです。 |
+|  | `undecodedPartCount` | content type を解決できなかった XLSB パッケージパートの数。 |
+|  | `skippedFeatureCount` | 参照が利用できずスキップされた OOXML の presentation-overlay エントリの数。 |
+|  | `unknownContentTypeCount` | content type が認識できなかった OOXML workbook パートの数。 |
+
+## 固定する時計
+
+ワークブックが pin されていない場合、`NOW()`、`TODAY()`、pivot の相対期間フィルターはホストの時計を読み取ります。これらの結果を 1 回の再計算で一致させる場合や、ホストをまたいで再現する場合は、ワークブックを 1 つの local civil time に固定してください。
+
+```ts
+wb.setPinnedNow(2026, 8, 19, 12, 0, 0)
+const pin = wb.pinnedNow() // { year, month, day, hour, minute, second }
+wb.recalc()
+wb.clearPinnedNow()
+```
+
+`pinnedNow()` は `CivilTime` オブジェクトを返し、ワークブックがホストの時計に従う場合は `null` を返します。`setPinnedNow()` は `year` 1900–9999、`month` 1–12、月ごとの実在する日、`hour` 0–23、`minute` / `second` 0–59 を検証します。不正な値は正規化せず、失敗した `Status` を返します。値は timestamp ではなく local civil field として保持するため、タイムゾーンの解釈はありません。pin の設定・解除ではキャッシュ済みの数式値を再計算しないため、必要に応じて `recalc()` を明示的に呼び出してください。pin はファイル状態ではなくワークブックのモデル状態です。保存時には記録されず、読み込み直後のワークブックは pin されていません。
 
 ## 主な workbook methods
 
@@ -99,8 +127,8 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
 | Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `setCellPhonetic`, `getCellPhonetic`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `paginate` |
-| Serialization | `save`, `saveEx` |
+| Calculation | `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `pinnedNow`, `setPinnedNow`, `clearPinnedNow`, `paginate` |
+| Serialization | `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
 | Structure | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
@@ -109,10 +137,14 @@ const result = wb.saveEx(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 | Styles | `getFont` / `addFont` の `FontRecord.vertAlign`（`0` baseline、`1` superscript、`2` subscript） |
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
+`recalcParallel(threadCount)` は同期的に実行され、`{ status, stats }` を返します。`0` は最大 8 worker の自動検出、`1` は呼び出し元スレッド、`2..8` は worker 数の上限を選択します。引数なし、整数でない値、有限でない値、負の値、8 超は `kInvalidArgument` で失敗します。
+
 ::: info 読み取り専用のアドホック評価
 `evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対する読み取り専用評価です。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式では相対参照と predicate coercion を適用します。配列 / スピルの結果はスカラー版では左上隅に縮約されます。自己参照は対象セルのキャッシュ値を読み取ります。
 
 `evaluateFormulaArray(sheet, row, col, formula)` は配列全体を `EvalArrayResult`（`rows` × `cols` の `cells`）として返します。範囲形の定義名は Array として評価され、スピルの phantom cell も列挙されます。
+
+`INDIRECT(ref_text, FALSE)` は R1C1 文法を選択します。絶対参照は `R5C2` のように書き、相対軸は `R[-1]C` のように数式を置いたセルを基準に解決します。`R` または `C` だけを指定すると現在の行または列を表し、1 軸だけを持つ endpoint はもう一方の軸全体を対象にします（`R5` は `5:5` と同じく 5 行全体です）。`a1` 引数は fallback を追加するのではなく文法を選択するため、`FALSE` に A1 文字列を渡した場合と、`TRUE` に R1C1 文字列を渡した場合は `#REF!` になります。相対 R1C1 参照を、基準となる数式セルを持たない ad-hoc 評価入口から評価した場合も `#REF!` になります。
 
 以下の図は、同じワークブックに対する 2 つの経路を対比したものです。
 

@@ -54,14 +54,16 @@ Every tool's inputs are validated against a JSON schema before reaching the engi
 
 Examples of allowlisted methods include:
 
-- PivotTable / PivotCache reads,
-- style / merge / comment / hyperlink / validation accessors,
+- PivotTables and PivotCaches, including cache sources and report layout / filters,
+- worksheet tables and their AutoFilter,
+- styles, differential formats, merges, comments, hyperlinks, and validations,
 - conditional formatting evaluation,
+- sheet display flags, page-layout view, phonetic guides, and pagination,
 - dependency graph queries (`precedents`, `dependents`),
 - function metadata and name helpers,
-- spill information.
+- spill information, and the workbook clock pin.
 
-Methods not on the allowlist — including any future engine method considered too broad — are rejected. The allowlist is reviewed when the server is updated.
+The server deliberately withholds workbook lifecycle methods, raw save methods (`save`, `saveAs`, `saveWithDiagnostics`), and the callback-based `setIterativeProgress`. Session saves go through `formulon_save_session`, which keeps session bookkeeping and returns save diagnostics. Other methods not on the allowlist are rejected.
 
 ## Session isolation
 

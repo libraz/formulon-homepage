@@ -62,9 +62,9 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### 読み書きできるファイル形式は？
 
-公開 API の通常の実行入口は `.xlsx` 形式のバイト列です。WASM、Python、Native Node、CLI、MCP の各実行入口は、基本的に `.xlsx` を読み込み、再計算し、`.xlsx` として保存する流れを提供します。
+公開 API の通常の実行入口は `.xlsx` 形式のバイト列です。WASM、Python、Native Node、CLI は主に `.xlsx` を扱います。MCP は `.xlsx` または `.xlsb` を開き、出力拡張子に応じて出力コンテナ形式を選びます（`.xlsb` は XLSB、それ以外は XLSX です）。
 
-`.xlsb`（MS-XLSB）も読み書きできます。モデル化して出力するのはスタイル、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula です。条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship は worksheet tail として保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`fm_workbook_save_xlsb_with_result` が件数を報告します。CLI と `saveEx` / `save_ex` は出力拡張子から形式を選び、入力は内容から判定します。
+`.xlsb`（MS-XLSB）も読み書きできます。モデル化して出力するのはスタイル、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula です。条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship は worksheet tail として保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があります。`saveWithDiagnostics` / `save_with_diagnostics` は、ドキュメント化された書き込み時の損失を報告します。CLI は出力拡張子から形式を選び、`saveAs` / `save_as` は形式を明示します。入力は内容から判定します。
 
 `.xlsm` / `.xltm` のようなマクロ付き OOXML パッケージは、`vbaProject.bin` をバイト列として保持するテストがあります。ただし、VBA は実行しません。旧 `.xls`（BIFF / Excel 97-2003）は対象外です。
 
@@ -210,7 +210,7 @@ Excel は Microsoft の製品および商標です。Formulon は独立した Ap
 
 ### `formulon-mcp` とは？
 
-`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` を開き、構造を調べ、セルやシートを編集し、再計算して保存するための 31 個のツールを提供します。Node.js 22 以上が必要です。
+`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` または `.xlsb` を開き、構造を調べ、セルやシートを編集し、再計算して保存するための 33 個のツールを提供します。Node.js 22 以上が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

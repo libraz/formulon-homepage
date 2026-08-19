@@ -19,6 +19,7 @@ The recalculation engine keeps state across edits:
 | Dependency graph | Forward / reverse edges between formula cells, defined names, tables, and external links |
 | Dirty set | Cells whose value must be recomputed before reads are valid |
 | Volatile functions | Functions like `NOW`, `TODAY`, `RAND`, `INDIRECT`, `OFFSET`, `INFO` that are always treated as dirty |
+| Workbook clock | An optional local civil-time reading shared by `NOW`, `TODAY`, and pivot relative-period filters |
 | Iterative settings | Iteration enabled / disabled, max iterations, max change for cyclic models |
 | Dynamic-array spill shapes | Per-anchor result shapes so dependents can be re-shaped or invalidated correctly |
 | Calc mode | Manual or automatic recalculation for hosts that expose the toggle |
@@ -42,6 +43,25 @@ That graph can also be read back. On WASM and Native Node, `precedents(sheet, ro
 ::: info Glossary: volatile function
 A function whose value depends on something other than its arguments (clock, randomness, external lookup) and so must be re-evaluated on every recalc, even when no input has changed. Volatiles drag their dependents into the dirty set every time.
 :::
+
+## Pinning clock-dependent calculations
+
+When a workbook has no pinned clock, `NOW()`, `TODAY()`, and pivot relative-period filters read the host clock. Each read can observe a different instant, including across a midnight boundary. A pin gives all of them one local civil-time reading for a reproducible recalculation.
+
+WASM exposes `pinnedNow()`, `setPinnedNow(year, month, day, hour, minute, second)`, and `clearPinnedNow()`. Python exposes the matching `pinned_now()`, `set_pinned_now(...)`, and `clear_pinned_now()` methods. The getter returns a `CivilTime` object (`year`, `month`, `day`, `hour`, `minute`, `second`) or `null` / `None` when the host clock is active.
+
+```ts
+wb.setPinnedNow(2026, 8, 19, 12, 0, 0)
+wb.recalc()
+const pin = wb.pinnedNow()
+wb.clearPinnedNow()
+```
+
+The pin uses local civil fields rather than a timestamp, so it has no residual timezone interpretation. `setPinnedNow()` rejects a year outside 1900–9999, a month outside 1–12, an invalid day for that month, an hour outside 0–23, or a minute / second outside 0–59; it does not roll invalid fields into another date. Setting or clearing the pin does not recompute cached formula values, so call `recalc()` after changing it. The pin is model state, not file state: saving does not record it and a reloaded workbook follows the host clock until pinned again.
+
+## `INDIRECT` and R1C1 references
+
+`INDIRECT(ref_text, FALSE)` parses `ref_text` as R1C1 text. Absolute references use forms such as `R5C2`; relative axes use forms such as `R[-1]C`, resolved from the cell containing the formula. A bare `R` or `C` means the current row or column, and an endpoint naming only one axis is unbounded along the other (`R5` is the whole of row 5, just as `5:5` is). The `a1` argument selects a grammar rather than adding a fallback: A1 text with `FALSE`, and R1C1 text with `TRUE`, return `#REF!`. Relative R1C1 text also returns `#REF!` when an ad-hoc evaluation entry point has no formula cell to use as its anchor.
 
 ## Iterative calculation
 

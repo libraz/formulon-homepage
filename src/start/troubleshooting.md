@@ -37,6 +37,8 @@ Check the headers in the actual deployed environment. A local dev server passing
 The WASM package contains a Node branch for Node runtime support. Browser bundlers may warn about `node:module` or `node:worker_threads`. In Vite, exclude the package from optimizeDeps and mark `node:` imports external.
 
 ```ts
+import { defineConfig } from 'vite'
+
 export default defineConfig({
   optimizeDeps: { exclude: ['@libraz/formulon'] },
   build: {

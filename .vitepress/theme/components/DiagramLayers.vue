@@ -12,7 +12,7 @@
  * Usage:
  *   <DiagramLayers :layers="[
  *     { title: 'L4', nodes: ['AI agents', 'Browser apps'] },
- *     { title: 'L3', nodes: [{ label: '@libraz/formulon-mcp', note: 'stdio · 31 tools' }] },
+ *     { title: 'L3', nodes: [{ label: '@libraz/formulon-mcp', note: 'stdio · 33 tools' }] },
  *     { title: 'L1', nodes: ['C++17 calculation core'] }
  *   ]" />
  *

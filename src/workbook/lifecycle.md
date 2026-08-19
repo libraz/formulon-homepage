@@ -45,7 +45,9 @@ When edits have been applied, calling `recalc()` (or `partialRecalc()` for incre
 After recalculation, the host can either read calculated values directly:
 
 ```ts
-const value = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
+const result = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
+if (!result.status.ok) throw new Error(result.status.message)
+const value = result.value
 ```
 
 …or save the entire workbook back to bytes:

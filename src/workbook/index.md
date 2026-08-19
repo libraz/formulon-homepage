@@ -16,3 +16,4 @@ Runtimes describe *how* you invoke Formulon; the workbook section describes *wha
 - [Recalculation](/workbook/recalculation) — dirty cells, dependencies, iterative settings, partial recalc.
 - [Dynamic arrays](/workbook/dynamic-arrays) — spill behavior and shape-sensitive recalculation.
 - [File formats](/workbook/file-formats) — OOXML, XLSB, and preservation boundaries.
+- [PivotTables](/workbook/pivots) — build and inspect cache-backed summaries.

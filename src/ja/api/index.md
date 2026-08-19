@@ -5,6 +5,7 @@
 | ページ | 範囲 |
 | --- | --- |
 | [実行入口の一覧](/ja/api/surfaces) | 実行入口ごとの成熟度とパッケージングの違い |
+| [C API](/ja/api/c) | stable C11 ABI、所有権、独自バインディング |
 | [WASM API](/ja/api/wasm) | `@libraz/formulon` module、status envelopes、workbook methods |
 | [Python API](/ja/api/python) | `formulon`, `Workbook`, `Value`, `FormulonError` |
 | [CLI リファレンス](/ja/api/cli) | `eval`, `recalc`, `dump`, `paginate` |

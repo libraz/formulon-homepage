@@ -36,7 +36,7 @@ OOXML reader / writer は以下を扱います。
 
 ## XLSB
 
-XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、低レベル C API の `fm_workbook_save_xlsb_with_result` が置き換え数を返します。
+XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`saveWithDiagnostics(WorkbookFormat.Xlsb)` の `downgradedFormulaCount`（Python では `save_with_diagnostics(WorkbookFormat.XLSB)` の `downgraded_formula_count`）で件数を確認できます。
 
 | XLSB の機能 | 現在の挙動 |
 | --- | --- |
@@ -49,7 +49,11 @@ XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`d
 
 worksheet tail の保持から comment や pivot の保存を推測しないでください。これらが重要な場合は、入力ファイルを保持したうえで出力パッケージを確認してください。
 
-保存時のコンテナ形式は明示的です。`saveEx()` / `save_ex()` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。CLI は `-o` パスの拡張子から同じ判断をします（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みはバイト列の中身を見て判定します。`loadBytes()` / `Workbook.load()` はバイト列そのもの（ZIP シグネチャか BIFF12 レコードストリームか）から XLSX / XLSB を判別するため、拡張子が一致していない `.xlsb` ペイロードでも正しく読み込めます。
+保存時のコンテナ形式は明示的です。`saveAs(format)` / `save_as(fmt)` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。`saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` も同じ形式指定を使い、パッケージ損失の一部を対象とするカウンターを返します。`readDiagnostics()` / `read_diagnostics()` では読み込み時に取得したカウンターを確認できます。CLI は `-o` パスの拡張子から出力形式を判断します（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みはバイト列の中身を見て判定します。`loadBytes()` / `Workbook.load()` はバイト列そのもの（ZIP シグネチャか BIFF12 レコードストリームか）から XLSX / XLSB を判別するため、拡張子が一致していない `.xlsb` ペイロードでも正しく読み込めます。
+
+下のパネルでは、1 つのワークブックを両方のコンテナに書き出し、生成したバイト列をファイル名なしでそのまま `loadBytes()` に戻しています。カウンターはその書き出しについて `saveWithDiagnostics()` が返した値そのままです。すべて 0 のパネルは「上に挙げた損失が起きなかった」という意味であり、確認していないという意味ではありません。手元のワークブックを読み込ませると、カウンターが動く様子も確認できます。
+
+<FormatDemo />
 
 ## 保持と評価の対応
 

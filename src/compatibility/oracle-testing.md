@@ -16,18 +16,16 @@ Where the oracle tracks stand today. Each row is what the suite reports on the c
 
 | Track | Result | Documented skips / divergences | Golden source |
 | --- | --- | --- | --- |
-| Primary formula oracle | `3942/3942` passing | `140` skips | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
-| Conditional-formatting oracle | `23/23` passing | — | Mac Excel 365 ja-JP |
+| Primary formula oracle | `4423/4423` passing | `125` documented skips | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
+| Conditional-formatting oracle | `23/23` passing | — | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
 | Imported third-party engine corpus (cross-check) | `12510/12510` passing | `168` divergences | Third-party engine, not Excel |
-| Workbook oracle (pivot + print) | Pivot `28/28`, print `35/41` | `6` skips | Historical, reference-only — see below |
+| Workbook oracle (pivot + print) | `66/66` passing | `10` documented skips | Product-verified Windows Microsoft 365 ja-JP (`win-365-ja_JP`) |
 
-**97 oracle categories** are defined and regenerated from Mac Excel 365 ja-JP. Of the `522` catalogued functions, `517` satisfy all six closure conditions (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, `behavior_drift`). Four of the remaining five — `ARRAYTOTEXT`, `FILTERXML`, `GETPIVOTDATA`, `PHONETIC` — fail only `behaviors_declared`, meaning their behavior taxonomy is under-specified rather than unimplemented. The fifth, `JIS`, lost its case coverage when that suite was retired for a Mac Excel bug and has not been re-covered.
+**103 oracle categories** are defined. The formula and conditional-formatting tracks regenerate from Mac Excel 365 ja-JP; the workbook track regenerates from Windows Excel 365 ja-JP. Workbook goldens carry a capture identifier that pins every suite to a single verified Microsoft 365 session.
 
-Every skip is an explicit divergence, host-service dependency, volatile or environment-bound case, or driver limitation — none is a silent stub. Each carries the Excel build it was last verified against in [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml); the bulk sit at `16.108.1`, with the most recently re-probed cases at `16.111.2`.
+Of the `522` catalogued functions, `518` satisfy all six closure conditions (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, `behavior_drift`). The remaining four — `ARRAYTOTEXT`, `FILTERXML`, `GETPIVOTDATA`, `PHONETIC` — fail only `behaviors_declared`; their behavior taxonomy is under-specified rather than unimplemented. `JIS` closes as a declared alias of `DBCS`: Excel rewrites that ja-JP formula-bar spelling before it stores or evaluates a formula, so no oracle case can name it, and the closure harness resolves the alias to the function it defers to.
 
-::: warning The workbook track is not Microsoft 365 verified
-The pivot and print figures come from the **checked-in historical golden** — Office 2019 or unknown-version files retained as reference-only. The `win-365-ja_JP` target is still `wanted`, and generating the external golden requires a product-verified Windows Microsoft 365 host. Read those two numbers as "passes against the reference capture", not as Microsoft 365 verification.
-:::
+Every skip is an explicit divergence, host-service dependency, volatile or environment-bound case, or driver limitation — none is a silent stub. Each carries the Excel build it was last verified against in [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml).
 
 ## Why oracle data matters
 
@@ -56,7 +54,7 @@ A failure usually falls into one of four buckets:
 
 Locale coverage grows when contributors run the oracle capture flow on their own Excel installations and donate the resulting goldens. The same workbook can be captured on `win-365-ja_JP`, `mac-365-ja_JP`, and other profiles, expanding what the engine can validate against. See [Oracle contribution](/development/oracle-contribution) for the capture flow.
 
-v0.9.2 added workbook-oracle coverage for pivot tables and print pagination through the Windows Excel bridge, with `win-365-ja_JP` as the primary profile. Mac and Windows captures now share a comparator, which makes cross-platform differences easier to review instead of hiding them as unrelated test output.
+The formula and conditional-formatting tracks use `mac-365-ja_JP` as their primary profile. The workbook track uses the product-verified Windows Microsoft 365 `win-365-ja_JP` profile.
 
 ## Read next
 

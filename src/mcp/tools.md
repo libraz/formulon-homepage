@@ -1,13 +1,13 @@
 # Tools
 
-This page lists every MCP tool exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
+This page lists all 33 MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
 
 ::: info A1 vs zero-based
 Unless A1 notation is used, sheet / row / column indices are zero-based to match the Formulon API. Both styles are accepted on tools that take addresses.
 :::
 
 ::: warning Only bounded, single-sheet ranges
-The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`). It rejects whole-row/column references (`A:A`, `1:1` — the pattern requires both a column letter and a row digit) and cross-sheet 3-D ranges (`Sheet1:Sheet3!A1:B2`), even though the Formulon engine itself supports 3-D references since v0.9.3. Build the bounded range you need from the sheet's used range (`formulon_inspect_layout`) instead of a whole-row/column shorthand.
+The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`). It rejects whole-row/column references (`A:A`, `1:1` — the pattern requires both a column letter and a row digit) and cross-sheet 3-D ranges (`Sheet1:Sheet3!A1:B2`). The Formulon core supports 3-D references, but the `formulon-mcp` A1 parser rejects them. Build the bounded range you need from the sheet's used range (`formulon_inspect_layout`) instead of a whole-row/column shorthand.
 :::
 
 <DiagramLayers :layers="[
@@ -28,8 +28,8 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 
 | Tool | What it does |
 | --- | --- |
-| `formulon_version` | Returns the loaded Formulon engine version. |
-| `formulon_eval_formula` | Evaluates one Excel formula in a throwaway workbook. |
+| `formulon_version` | Returns the loaded Formulon engine version and the MCP server version. |
+| `formulon_eval_formula` | Evaluates one Excel formula in a throwaway workbook, or read-only against an open session when given `sessionId`. |
 | `formulon_function_lookup` | Lists registered functions and resolves metadata or localized names. |
 | `formulon_trace` | Reads precedents, dependents, or spill info for a cell. |
 
@@ -37,18 +37,18 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 
 | Tool | What it does |
 | --- | --- |
-| `formulon_open_workbook` | Loads an `.xlsx` path into a new session, or creates a default workbook. |
+| `formulon_open_workbook` | Loads an `.xlsx` or `.xlsb` path into a new session, or creates a default workbook. A loaded session's `loadLosses` reports anything the reader could not decode. |
 | `formulon_list_sessions` | Lists open workbook sessions. |
 | `formulon_close_workbook` | Releases a session. |
 | `formulon_recalc_session` | Triggers a recalculation on an open session. |
-| `formulon_save_session` | Writes a session to disk (`outputPath` → session's last saved path → its original source path) and returns the byte count written. |
+| `formulon_save_session` | Writes a session to disk (`outputPath` → session's last saved path → its original source path), selects XLSB for `.xlsb` output paths and XLSX otherwise, and returns `bytes`, the selected `format`, and any writer `losses` (dropped or downgraded content). |
 | `formulon_session_metadata` | Reads function names or external links from the session. |
 
 ## Inspection
 
 | Tool | What it does |
 | --- | --- |
-| `formulon_inspect_session` | Returns sheets, defined names, tables, and optionally sparse cell entries. |
+| `formulon_inspect_session` | Returns sheets, defined names (including `localSheetId` when sheet-local), tables, and optionally sparse cell entries. |
 | `formulon_inspect_layout` | Per-sheet layout: used ranges, merges, row / column overrides, protection, cells, calculated values, formulas, optional style details, and sheet view (zoom, frozen panes, hidden state). |
 | `formulon_detect_regions` | Detects table-like regions, label-value pairs, and totals with rule-based confidence and evidence. |
 | `formulon_analyze_workbook` | Classifies workbook shape (invoice, list, report, schedule, form, …) with deterministic evidence. |
@@ -69,7 +69,7 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | Tool | What it does |
 | --- | --- |
 | `formulon_sheet_operation` | Adds, removes, renames, or moves sheets. |
-| `formulon_set_defined_name` | Adds, replaces, or removes workbook-scoped defined names. |
+| `formulon_set_defined_name` | Adds, replaces, or removes defined names. Omit `sheet` for workbook scope; pass it for a sheet-local name. `_xlnm.Print_Area` and `_xlnm.Print_Titles` must be sheet-local for Excel to apply them. |
 | `formulon_edit_structure` | Inserts or deletes rows and columns. |
 | `formulon_dimension_operation` | Lists column-width / row-height overrides, or sets width / height, hidden, or outline level. Columns act on an inclusive `[first, last]` span; rows act on a single row index. |
 | `formulon_set_sheet_view` | Sets zoom, frozen panes, or sheet-tab hidden state. |
@@ -80,7 +80,7 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | --- | --- |
 | `formulon_merge_operation` | Lists, adds, removes, or clears merged ranges. |
 | `formulon_comment_operation` | Gets, sets, or removes cell comments. |
-| `formulon_hyperlink_operation` | Lists, adds, removes, or clears hyperlinks. |
+| `formulon_hyperlink_operation` | Lists, adds, removes, or clears hyperlinks. An add can cover the inclusive rectangle through `lastRow` / `lastCol`; use `location` with an empty `target` for an in-workbook link. |
 | `formulon_validation_operation` | Lists, adds, removes, or clears data validations. |
 | `formulon_conditional_format_operation` | Lists, adds, removes, clears, or evaluates conditional formats. |
 
@@ -90,10 +90,12 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | --- | --- |
 | `formulon_workbook_call` | Allowlisted low-level access to the Formulon `Workbook` API. |
 | `formulon_inspect_workbook` | One-shot summary from path. |
-| `formulon_update_workbook` | One-shot load / create, mutate, recalculate, save. |
+| `formulon_update_workbook` | One-shot load / create, mutate, recalculate, save; returns the selected `format` and any writer `losses` alongside `bytes`. |
 
 ::: warning `workbook_call` is allowlisted, not arbitrary
-`formulon_workbook_call` only dispatches methods on the server's allowlist (see [Security model](/mcp/security)). Calls to non-allowlisted methods are rejected. The tool exists for advanced access — PivotTables, PivotCaches, styles, dependency graph queries, function metadata, spill info — that the higher-level tools do not cover yet.
+`formulon_workbook_call` only dispatches methods on the server's allowlist (see [Security model](/mcp/security)). Calls to non-allowlisted methods are rejected. The tool exists for advanced access — PivotTables and PivotCaches, worksheet tables and AutoFilter, styles and differential formats, sheet display and page-layout view, phonetic guides, pagination, dependency graph queries, function metadata, spill info, and the workbook clock pin — that the higher-level tools do not cover yet.
+
+`setPinnedNow` changes in-memory model state only; saving does not persist the pin. See [recalculation](/workbook/recalculation) for its effect on time-dependent formulas. A PivotCache created through the API also needs `pivotCacheSetWorksheetSource` before saving; see [PivotTables](/workbook/pivots).
 :::
 
 ## Read next

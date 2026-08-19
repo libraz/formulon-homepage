@@ -9,8 +9,8 @@ description: formulon-cell is a reference UI library for Formulon browser integr
 
 It is not a complete spreadsheet product. It does not cover every workbook feature, does not try to match Excel UI/UX exactly, and may still contain UI bugs. Use it as a reference implementation and integration-test harness for the engine.
 
-::: warning β (beta) — not for production
-`formulon-cell` is built primarily as a demonstration host for the `@libraz/formulon` engine. The UI surface is still evolving; pin a version range you can upgrade on purpose, and do not treat it as a production-ready spreadsheet component.
+::: warning Scope: integration-test UI, not an Excel replacement
+`formulon-cell` exists to exercise `@libraz/formulon` in a real browser. Its basic workbook workflows — selection, editing, formula entry, recalculation, and file handling — are usable. Its scope is still much smaller than Excel's: detailed control behaviour, dialogs, keyboard interaction, accessibility, and other UI/UX are not guaranteed to match Excel, and UI defects remain possible. Do not present it to end users as an Excel substitute or rely on it as a complete spreadsheet product.
 :::
 
 The package includes desktop-spreadsheet-style chrome around the engine — a canvas-rendered grid, formula bar, status bar, sheet tabs, selection, keyboard editing, context menus, runtime i18n, theme tokens, and optional authoring dialogs. If your application only needs calculation, workbook loading, or headless regression checks, start with the Formulon runtime docs instead.

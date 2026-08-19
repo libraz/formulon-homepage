@@ -37,7 +37,7 @@ formulon eval [--json] [--repeat N] <formula>
 
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
-formulon eval --json '=1/0'         # → {"kind":"error","code":"#DIV/0!", ...}
+formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
 ```
 
 セル単位エラーは stdout、exit 0。使い方エラーは 64、エンジン / I/O 失敗は 1 です。
@@ -45,24 +45,34 @@ formulon eval --json '=1/0'         # → {"kind":"error","code":"#DIV/0!", ...}
 ## `recalc`
 
 ```sh
-formulon recalc [--iterative] [--quiet] <in.xlsx> -o <out.xlsx>
+formulon recalc [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
 ```
 
 ワークブックをロードして再計算し、新しいワークブックを書き出します。
 
 | フラグ | 効果 |
 | --- | --- |
-| `--iterative` | 意図的な循環参照のために反復計算を有効化 |
-| `--quiet` | 進捗 / ステータス出力を抑制 |
+| `--iterative` | 意図的な循環参照のために反復計算を有効化し、ワークブックの最大反復回数と収束しきい値を保持 |
+| `--threads N` | 並列 scheduler を使う。`0` は最大 8 worker を自動検出し、`1` は呼び出しスレッドで実行し、`2..8` は worker 数の上限を指定 |
+| `--quiet` | 成功時のステータス出力を抑制。診断 warning は表示 |
 
-出力コンテナ形式は `-o` の拡張子で決まります。`.xlsb` なら MS-XLSB を、それ以外（拡張子なしを含む）は OOXML `.xlsx` を書き出します。入力ファイルの形式はファイル名ではなくバイト列から自動判別されるため、使用例が `<in.xlsx>` と書いていても `<in>` は実際には `.xlsb` でも構いません。
+出力コンテナ形式は `-o` の拡張子で決まります。`.xlsb` なら MS-XLSB を、それ以外（拡張子なしを含む）は OOXML `.xlsx` を書き出します。入力ファイルの形式はファイル名ではなくバイト列から自動判別されます。再計算は既定では直列で実行し、`--threads N` を指定すると並列 scheduler を使います。
 
 `recalc` は一時ファイルへ書き込み、成功時だけ対象を置き換えます。再計算や保存に失敗しても既存の対象ファイルは壊れません。
+
+`recalc` は読み込み時と保存時に検出した損失カウンターのうち、0 ではないものを stderr の warning として出力します。読み込んだコンテナに応じて、次の見出しを使います。
+
+| 警告行 | カウンター |
+| --- | --- |
+| `warning: XLSB read diagnostics` | `undecoded_formula_count`、`undecoded_defined_name_count`、`undecoded_part_count` |
+| `warning: OOXML read diagnostics` | `skipped_feature_count`、`unknown_content_type_count` |
+
+保存時の警告は、書き出したコンテナに応じて `XLSB write diagnostics` または `OOXML write diagnostics` と表示され、`downgraded_formula_count`、`deferred_feature_count`、`dropped_part_count`、`dropped_relationship_count`、`renumbered_part_count` を含みます。0 のカウンターは出力されません。`dropped_part_count` と `dropped_relationship_count` は同じ損失を表す場合があるため、合計しないでください。これらはパッケージ損失の一部だけを対象とする警告で、コマンドが成功した場合の終了コードは変わりません。`--quiet` で抑制されるのは成功時のステータス行だけで、診断 warning は表示されます。
 
 ## `dump`
 
 ```sh
-formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx>
+formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
 ```
 
 | モード | 出力 |
@@ -77,7 +87,7 @@ formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx>
 ## `paginate`
 
 ```sh
-formulon paginate [--sheet INDEX] <in.xlsx>
+formulon paginate [--sheet INDEX] <in.xlsx-or-xlsb>
 ```
 
 指定したシートの印刷範囲、自動改ページ、物理ページ数を解決します。`INDEX` の既定値は `0` で、シート番号と出力座標はすべて 0 始まりです。印刷範囲は両端を含みます。成功は終了コード `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。

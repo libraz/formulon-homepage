@@ -19,7 +19,7 @@ Repeat the middle three steps — mutate, recalculate, read — as many times as
 }
 ```
 
-To create a fresh workbook instead of loading one, omit `path`. The server then returns a session backed by a default workbook with `Sheet1`.
+To create a fresh workbook instead of loading one, omit `path`. The server then returns a session backed by a default workbook with `Sheet1`. For a loaded file, inspect `session.loadLosses` in the response before treating the input as a complete round trip: it reports content the reader could not decode.
 
 ## Mutate cells
 
@@ -93,7 +93,7 @@ through `formulon_recalc_session` before reading dependent values.
 }
 ```
 
-`formulon_save_session` always writes to disk; it never returns file content inline. The destination resolves through a fallback chain:
+`formulon_save_session` always writes to disk; it never returns file content inline. A `.xlsb` destination uses the XLSB container; every other extension uses XLSX. The write goes through a sibling temporary file and atomic rename. The destination resolves through a fallback chain:
 
 <DiagramFlow :steps="[
   { label: 'outputPath argument', note: 'explicit, if provided' },
@@ -102,7 +102,7 @@ through `formulon_recalc_session` before reading dependent values.
   { label: 'Error', note: 'none of the above are set' }
 ]" />
 
-The response's `bytes` field is a **byte count** (a number), not the file's contents.
+The response's `bytes` field is a **byte count** (a number), not the file's contents. It also reports the selected container `format` and, when the writer dropped or downgraded content, `losses`. Review `losses` before treating the round trip as lossless. `formulon_update_workbook` returns the same save fields.
 
 ::: warning Omitting `outputPath` overwrites the original file
 If the session was opened from an existing `path` and you call `formulon_save_session` without `outputPath`, the server silently overwrites that source file — there is no dry-run or confirmation step. A session created fresh (no `path` at open time) has no `sourcePath` to fall back to, so an omitted `outputPath` fails with `outputPath is required for a new workbook session` instead of guessing. Pass an explicit `outputPath` whenever you want to avoid touching the original file.

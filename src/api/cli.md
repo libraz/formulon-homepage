@@ -37,7 +37,7 @@ Evaluates a single formula on a fresh empty workbook. The formula may be passed 
 
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
-formulon eval --json '=1/0'         # → {"kind":"error","code":"#DIV/0!", ...}
+formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
 ```
 
 Cell-level Excel errors print to stdout and return exit code 0. Usage errors return 64. Engine and I/O failures return 1.
@@ -45,24 +45,34 @@ Cell-level Excel errors print to stdout and return exit code 0. Usage errors ret
 ## `recalc`
 
 ```sh
-formulon recalc [--iterative] [--quiet] <in.xlsx> -o <out.xlsx>
+formulon recalc [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
 ```
 
 Loads a workbook, recalculates, and writes a new workbook.
 
 | Flag | Effect |
 | --- | --- |
-| `--iterative` | Enable iterative calculation for intentional cycles |
-| `--quiet` | Suppress progress / status output |
+| `--iterative` | Enable iterative calculation for intentional cycles while preserving the workbook's maximum-iteration and convergence-threshold settings |
+| `--threads N` | Opt into the parallel scheduler: `0` auto-detects up to 8 workers, `1` stays on the caller thread, and `2..8` sets the worker cap |
+| `--quiet` | Suppress the success status output; diagnostics warnings remain visible |
 
-The output container format is chosen from `-o`'s extension: `.xlsb` writes MS-XLSB, any other extension (or none) writes OOXML `.xlsx`. The input file's format is auto-detected from its bytes, not its extension, so `<in>` may itself be `.xlsb` even though the usage string says `<in.xlsx>`.
+The output container format is chosen from `-o`'s extension: `.xlsb` writes MS-XLSB, any other extension (or none) writes OOXML `.xlsx`. The input file's format is auto-detected from its bytes, not its extension. Recalculation is serial by default; `--threads N` opts into the parallel scheduler.
 
 The write is atomic: Formulon writes a temporary file and replaces the target only after recalculation and serialization succeed. A failed recalc never destroys the existing target.
+
+`recalc` writes non-zero load and save loss counters to stderr as warnings. The load warning is labelled by the container read:
+
+| Warning line | Counters |
+| --- | --- |
+| `warning: XLSB read diagnostics` | `undecoded_formula_count`, `undecoded_defined_name_count`, `undecoded_part_count` |
+| `warning: OOXML read diagnostics` | `skipped_feature_count`, `unknown_content_type_count` |
+
+The save warning is labelled by the container written (`XLSB write diagnostics` or `OOXML write diagnostics`) and may include `downgraded_formula_count`, `deferred_feature_count`, `dropped_part_count`, `dropped_relationship_count`, and `renumbered_part_count`. Only non-zero counters are printed. `dropped_part_count` and `dropped_relationship_count` can describe the same loss, so they must not be added together. These warnings report partial package-loss coverage and do not change a successful command's exit code. `--quiet` suppresses only the success status line; diagnostics warnings remain visible.
 
 ## `dump`
 
 ```sh
-formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx>
+formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
 ```
 
 | Mode | Output |
@@ -77,7 +87,7 @@ Like `recalc`, the input format is content-sniffed rather than restricted to `.x
 ## `paginate`
 
 ```sh
-formulon paginate [--sheet INDEX] <in.xlsx>
+formulon paginate [--sheet INDEX] <in.xlsx-or-xlsb>
 ```
 
 Resolves the selected worksheet's print area, automatic page breaks, and physical page count. `INDEX` defaults to `0`; both sheet indexes and output coordinates are zero-based. Print-area coordinates are inclusive. The output is line-oriented:

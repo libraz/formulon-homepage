@@ -44,6 +44,10 @@
 
 バインディングはこれらをホスト言語の例外に変換せず、値として保持してください（API 誤用・入出力失敗を報告する場合を除く）。
 
+下のパネルは、この一覧を実行中のエンジンから読み出したうえで、2 つの経路を並べて実行します。片方は呼び出しが成功したまま値としてエラーが返る数式、もう片方は 16 バイトのノイズを渡した `loadBytes()` で、こちらは値そのものが返りません。
+
+<ErrorsDemo />
+
 ## ホスト側の失敗経路
 
 | 実行入口 | ホスト側の失敗経路 |
@@ -71,7 +75,10 @@
 ## 処理パターン
 
 ```ts
-const value = wb.getValue(0, 0, 0)
+const result = wb.getValue(0, 0, 0)
+if (!result.status.ok) throw new Error(result.status.message)
+
+const value = result.value
 if (value.kind === ValueKind.Error) {
   // セルエラー ─ ユーザーに表示するだけで throw しない。
   // value.errorCode は formulon.ErrorCode の序数。表示文字列
