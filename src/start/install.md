@@ -9,7 +9,7 @@ Use exact package versions for experiments and internal tooling. Do not float on
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.10.0
+yarn add @libraz/formulon@0.11.1
 ```
 
 Use this for browsers, workers, and Node-based services that should run the WASM build. The package is ESM-only and requires Node 22 or newer when used in Node.
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.10.0
+python -m pip install formulon==0.11.1
 ```
 
 Use this for scripts, notebooks, and batch jobs. The wheel ships a standalone
@@ -40,6 +40,14 @@ formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon recalc input.xlsx -o output.xlsx
 ```
+
+## formulon-cell
+
+```sh
+yarn add @libraz/formulon-cell@0.6.0 @libraz/formulon-cell-vue@0.6.0
+```
+
+Install `@libraz/formulon-cell-vue` when using the Vue adapter. The core package is shared by the framework adapters.
 
 ## From source
 

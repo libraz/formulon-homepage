@@ -62,6 +62,18 @@ wb.pivot_data_field_add(0, pivot, PivotDataFieldSpec(
 
 All workbook coordinates are zero-based, so the pivot anchor `(0, 4)` is `E1`. The cache source is required before saving a newly authored pivot. A cache without it would produce a package Excel offers to repair, so `save()` fails instead.
 
+### Address a cache item by index
+
+Use `pivotFieldAddItemAt()` / `pivot_field_add_item_at()` when a manual filter must bind to a cache shared-item index. This is the form that can express the blank member: an empty label passed to `pivotFieldAddItem()` is text matching and cannot identify the blank item. The index is the same zero-based space as the OOXML pivot item `x` attribute. An index that does not resolve yet is accepted and filters nothing, so populate the cache before evaluating the pivot when the item must match records.
+
+```ts [WASM / Native Node]
+wb.pivotFieldAddItemAt(0, pivot.index, /*fieldIdx*/ 0, /*cacheIndex*/ 2, false)
+```
+
+```python [Python]
+wb.pivot_field_add_item_at(0, pivot, 0, 2, False)  # field_idx=0, cache_index=2
+```
+
 ## Inspect the projected result
 
 `pivotLayout()` / `pivot_layout()` returns the projected rectangle and cells. It is the programmatic view of the pivot result; save the workbook when the output needs to be opened in Excel.
@@ -89,7 +101,7 @@ Use `pivotSetLayout()` / `set_pivot_report_layout()` for compact, tabular, or ou
 - A new cache is not automatically populated from its declared worksheet range. Add its fields and records explicitly.
 - The source range is metadata required for a valid saved workbook; it does not schedule a cache refresh.
 - External connections and PivotCache recalculation are outside Formulon's local calculation model.
-- Existing PivotTables can be read, updated, projected, and preserved. Keep source-workbook compatibility checks in place when files contain features outside the documented model.
+- Existing PivotTables can be read, updated, projected, and preserved. XLSB `pivotCacheDefinition`, `pivotCacheRecords`, and pivot-table parts are evaluated when their record encoding is supported; an unmeasured encoding is skipped rather than guessed. Keep source-workbook compatibility checks in place when files contain features outside the documented model.
 
 ## Read next
 

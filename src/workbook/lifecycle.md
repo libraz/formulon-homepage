@@ -10,9 +10,11 @@ The in-memory representation of a workbook after parsing — sheets, cells, styl
 
 ## Open
 
-The file-format layer reads workbook parts, relationships, shared strings, styles, worksheets, defined names, tables, comments, hyperlinks, merges, validations, conditional formats, pivot caches, and supported extension structures. Unparsed but expected parts are kept as passthrough so the file round-trips cleanly.
+The file-format layer reads workbook parts, relationships, shared strings, styles, worksheets, defined names, tables, comments, hyperlinks, merges, validations, conditional formats, pivot caches, external-link tables, and supported extension structures. Unparsed but expected parts are kept as passthrough so the file round-trips cleanly.
 
 Data validations now expose the dropdown-visibility flag (`show_dropdown`). OOXML stores that flag with inverted `showDropDown` semantics; Formulon normalizes it for host APIs and writes the correct package representation back out.
+
+Loaded XLSB pivot cache definitions, cache records, and pivot-table parts enter the same model used by the OOXML reader when their record encoding is supported, so `recalc()` can evaluate the pivot instead of dropping it. Phonetic annotations retain the UTF-16 span of each `<rPh>` run, and external-link tables retain the supporting-book index used by formulas such as `[1]Sheet1!A1`. Those external references resolve from cached values; they are not refreshed by the lifecycle.
 
 Verify the load before using the workbook:
 

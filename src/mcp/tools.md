@@ -1,6 +1,6 @@
 # Tools
 
-This page lists all 33 MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
+This page lists all 37 MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
 
 ::: info A1 vs zero-based
 Unless A1 notation is used, sheet / row / column indices are zero-based to match the Formulon API. Both styles are accepted on tools that take addresses.
@@ -73,6 +73,10 @@ The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`)
 | `formulon_edit_structure` | Inserts or deletes rows and columns. |
 | `formulon_dimension_operation` | Lists column-width / row-height overrides, or sets width / height, hidden, or outline level. Columns act on an inclusive `[first, last]` span; rows act on a single row index. |
 | `formulon_set_sheet_view` | Sets zoom, frozen panes, or sheet-tab hidden state. |
+| `formulon_default_font` | Reads the workbook default font, or replaces it in place. Unstyled cells resolve through font slot `0`. |
+| `formulon_build_document` | Lays out a titled document from named blocks, resolving cells, formats, ruling, widths, merges, and print area in one operation. |
+| `formulon_style_range` | Applies font, fill, border, number-format, and alignment deltas over an A1 range. |
+| `formulon_print_settings` | Reads or sets page setup, margins, print options, header/footer, print area/titles, and manual page breaks. |
 
 ## Rich workbook data
 

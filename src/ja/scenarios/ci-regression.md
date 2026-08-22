@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install formulon CLI
         run: |
-          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.10.0/formulon-0.10.0-linux-x64.tar.gz"
+          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.11.1/formulon-0.11.1-linux-x64.tar.gz"
           tar -xzf formulon.tar.gz --strip-components=1
           chmod +x formulon
           sudo mv formulon /usr/local/bin/

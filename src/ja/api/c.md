@@ -60,6 +60,14 @@ save API は失敗時に output pointer と length を初期値へ戻し、`fm_b
 
 1 つの workbook handle は、同時には 1 つの外部 caller thread が所有します。同じ handle を並行して read、mutation、recalc してはいけません。`fm_workbook_recalc_parallel()` は 1 回の呼び出しの内部で worker thread を作る場合がありますが、別々の API 呼び出しを安全にはしません。別々の handle は並行して使えます。
 
+## Workbook API additions
+
+C ABI では、各 binding に合わせた次の操作を直接呼び出せます。`fm_workbook_get_iterative()` は `enabled`、`max_iterations`、`max_change` を読み出します。`fm_workbook_set_iterative()` は iteration 上限を `32767` に制限し、getter は制限後の値を返します。`fm_sheet_set_visibility()` は `FM_SHEET_VISIBLE`、`FM_SHEET_HIDDEN`、`FM_SHEET_VERY_HIDDEN` を受け取り、`fm_sheet_get_view()` は従来の `tab_hidden` と正規の 3 状態 `visibility` を返します。
+
+typed worksheet print setter は page setup、余白、print options、header / footer、print area、print titles、手動の行 / 列改ページを扱います（`fm_sheet_set_page_setup`、`fm_sheet_set_page_margins`、`fm_sheet_set_print_options`、`fm_sheet_set_header_footer`、`fm_sheet_set_print_area`、`fm_sheet_set_print_titles`、`fm_sheet_add_row_break`、`fm_sheet_add_col_break`）。raw XML setter は保存前に well-formed でサイズ制限内の fragment かを検証します。`fm_sheet_set_range_xf_index()` は style XF index を両端を含む矩形へ適用し、style 付き blank cell を materialize します。
+
+`fm_workbook_pivot_field_add_item_at()` は cache の shared-item index で手動 filter item を指定します。blank pivot member を表現できる形式であり、label 形式の `fm_workbook_pivot_field_add_item()` に空文字列を渡しても指定できません。external-link reader は `[1]Sheet1!A1` のような index 形式を cached link value へ解決します。`[Book1.xlsx]Sheet1!A1` のような path 形式は未対応です。
+
 ## 次に読むもの
 
 - [ワークブック操作](/ja/workbook/operations) ─ 座標モデル、編集、レイアウト、metadata

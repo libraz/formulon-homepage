@@ -69,6 +69,8 @@ The panel below runs these calls against a live sheet. Selecting a cell moves th
 
 <StructureDemo />
 
+Structural edits do not move coordinates held only in unmodeled payloads, including retained `extLst` records, x14 DataBar extensions, sparklines, and slicer anchors. They also produce no diagnostic for those unchanged coordinates. Check such workbook features in Excel after a structural edit.
+
 ## Layout, styles, and metadata
 
 WASM, Native Node, and Python expose workbook operations such as:
@@ -79,7 +81,7 @@ WASM, Native Node, and Python expose workbook operations such as:
 - passthrough OOXML parts,
 - pivot table report layout and pivot-cache worksheet-source access,
 - conditional formatting read / evaluate / write subset, visual payloads (`ColorScale`, `DataBar`, `IconSet`), and DXFs,
-- sheet view, freeze panes, hidden tabs,
+- sheet view, freeze panes, and three-state tab visibility,
 - sheet protection metadata,
 - row / column layout overrides,
 - styles, number formats, fonts, fills, borders,
@@ -90,11 +92,31 @@ WASM, Native Node, and Python expose workbook operations such as:
 
 Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_rule`) also returns the new rule's flattened index, which makes host-side UI selection and follow-up edits easier.
 
+A newly created workbook starts with Excel's minimum style table: font, border, and cell-style index `0`, plus fill index `0` (`none`) and `1` (`gray125`). The first `addFont()` or `addBorder()` therefore returns `1`, and the first `addFill()` returns `2`. Always use the returned index instead of assuming a new style table starts empty.
+
+`setDefaultFont()` replaces font slot `0`, which every unstyled cell uses. `setFont()` replaces any existing font slot in place. `FontRecord.scheme` preserves its theme-font link on load and save.
+
+Phonetic guides can be read and written as an ordered set of UTF-16 text spans with `getCellPhoneticRuns()` / `setCellPhoneticRuns()`. `getCellPhoneticProperties()` / `setCellPhoneticProperties()` separately control the ruby font, kana form, and alignment. Writing a cell value clears both its readings and its properties.
+
 ### Tables and AutoFilter
 
 WASM and Python can author worksheet tables. WASM uses `createTable()` / `updateTable()` / `removeTable()`; Python uses `table_create()` / `table_update()` / `table_remove()`. The table's `columns` list must have exactly one name per column in `ref`; when `headerRow` is enabled, the caller still writes those header cells. Partial updates preserve omitted metadata, and an existing table AutoFilter is retargeted by changing only its `ref`. Native Node exposes table enumeration but not table authoring.
 
 Worksheet-level AutoFilter XML is available as an opaque, complete `<autoFilter>` fragment. WASM exposes `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` and Python exposes `get_auto_filter_xml()` / `set_auto_filter_xml()`. Filter criteria, sort state, and extension payloads are preserved verbatim. An empty fragment clears the AutoFilter; a non-empty replacement must be a complete `<autoFilter>` element.
+
+Row and column insert/delete operations move an AutoFilter's `ref` rectangle with the cells it filters and remove the AutoFilter if an edit consumes its entire range. Filter-column criteria offsets are not remapped, so an edit inside the filtered range can leave criteria attached to the old column positions.
+
+Sheet visibility is a three-state value. WASM and Native Node use `SheetVisibility.Visible`, `Hidden`, and `VeryHidden` with `setSheetVisibility(sheet, visibility)`; Python uses `set_sheet_visibility(sheet, visibility)`. `getSheetView()` / `get_sheet_view()` returns the authoritative `visibility` alongside the legacy two-state `tabHidden`. `setSheetTabHidden(true)` does not demote an already very-hidden sheet; use the three-state setter to make that transition explicit.
+
+### Author worksheet print settings
+
+WASM and Native Node expose typed setters for page setup, margins, print options, header/footer, print area, print titles, and manual row/column breaks (`setSheetPageSetup()`, `setSheetPageMargins()`, `setSheetPrintOptions()`, `setSheetHeaderFooter()`, `setSheetPrintArea()`, `setSheetPrintTitles()`, `addSheetRowBreak()`, and `addSheetColBreak()`). Python exposes the corresponding `set_page_setup()`, `set_page_margins()`, `set_print_options()`, `set_header_footer()`, `set_print_area()`, `set_print_titles()`, `add_row_break()`, and `add_col_break()` methods. Raw XML setters remain available for unmodeled fields, and malformed fragments are rejected. Header/footer section strings use Excel's decoded syntax; write a literal ampersand as `&&`.
+
+`setRangeXfIndex()` (WASM / Native Node) and `set_range_xf_index()` (Python) apply a cell-style XF index across an inclusive rectangle in one call. Missing cells are materialized as styled blanks, which is useful for ruling an empty report area.
+
+### Data-validation defaults
+
+When `addValidation()` / `add_validation()` omits `allowBlank`, it defaults to `false` on WASM and Native Node, matching Python. Set `allowBlank: true` (or `allow_blank=True`) when empty cells should be accepted. `showDropDown` (Python: `show_dropdown`) remains the one boolean option whose OOXML meaning is inverted; the host-facing field is normalized.
 
 ### Conditional-format visuals
 

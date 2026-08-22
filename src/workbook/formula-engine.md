@@ -35,6 +35,18 @@ On top of the same evaluator, WASM and Native Node expose read-only scalar ad-ho
 
 Range-shaped defined names evaluate as arrays, spill-phantom cells are enumerated, 1900/1904 date systems are carried through the evaluator, and whole-row/column and 3-D ranges resolve against the workbook model. Array broadcasting follows the function's Excel rules.
 
+### Indexed cross-workbook references
+
+External-link references use the index stored in the workbook's external-link table: `[1]Sheet1!A1`, `[1]Sheet1!A1:B2`, `[2]!Name`, and quoted sheet names such as `'[1]My Sheet'!A1` resolve against the cached values in that link part. A path-spelled reference such as `[Book1.xlsx]Sheet1!A1` remains unsupported because it has no link-table index to bind. The XLSB reader also decodes the supporting-book table, so an external sheet index is bound to the named supporting book rather than assumed to be this workbook. External references are evaluated from their cached values; they are not refreshed or written to XLSB on save.
+
+### Formula edge cases
+
+The evaluator follows the current Excel-compatible behavior for several easily confused text and blank states:
+
+- `TRIM` collapses a run of trimmable spaces but preserves the character that started the run; an ideographic space (U+3000) is not rewritten as U+0020.
+- `ISOMITTED` returns `TRUE` for an empty argument slot, including a leading, middle, or trailing omission in a `LAMBDA` call.
+- A zero-length string is text, not a blank cell. `CELL("type", ...)` returns `"l"` for it, wildcard `COUNTIF(range, "*")` includes it, and `COUNTIF(range, "=")` uses the blank-cell probe that it does not satisfy.
+
 ## Error behavior
 
 Excel errors are values, not host-language exceptions:

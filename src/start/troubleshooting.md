@@ -63,6 +63,12 @@ if (!wb.isValid()) {
 
 Excel errors are values. `#DIV/0!`, `#VALUE!`, and `#NAME?` do not mean the host API failed. Inspect the value kind and error payload.
 
+The CLI follows the same rule for malformed `eval` syntax: `formulon eval '=SUM('` prints `#NAME?` to stdout and exits `0`. Check stdout when a script must reject malformed formula text; a non-zero exit is reserved for usage, IO, or engine failures.
+
+## A validation unexpectedly rejects blank cells
+
+`allowBlank` defaults to `false` when omitted on WASM and Native Node, matching Python. Set `allowBlank: true` (or Python's `allow_blank=True`) when the validation should accept an empty cell.
+
 ## Python cannot load the WASM runtime
 
 Install the published wheel so pip can resolve a compatible `wasmtime` wheel, or

@@ -1,6 +1,6 @@
 # Native Node Integration
 
-The Native Node package in `packages/npm-native` is a Node.js [N-API](https://nodejs.org/api/n-api.html) addon. It exposes the shared calculation and workbook methods of the WASM package while running as a native binary, so it avoids both the WASM heap-copy overhead and the browser-only cross-origin isolation requirements. The binding method sets are not identical: table authoring, AutoFilter XML, phonetics, and cell-style authoring remain WASM-only.
+The Native Node package in `packages/npm-native` is a Node.js [N-API](https://nodejs.org/api/n-api.html) addon. It exposes the shared calculation and workbook methods of the WASM package while running as a native binary, so it avoids both the WASM heap-copy overhead and the browser-only cross-origin isolation requirements. The binding method sets are not identical: table authoring, AutoFilter XML, and cell-style authoring remain WASM-only.
 
 ::: info Glossary: N-API
 A C ABI Node provides for native addons. Modules built against N-API run on any Node version that ships the same API level, so the same prebuilt `.node` binary works across multiple Node minor versions.
@@ -13,7 +13,7 @@ Choose it when:
 - you want native scheduler behavior without browser isolation constraints.
 
 ::: info Surface parity and lifecycle
-Native Node and WASM share the common Workbook methods and the three static factories (`createDefault`, `createEmpty`, `loadBytes`). The following nine methods are WASM-only: `createTable`, `updateTable`, `removeTable`, `getSheetAutoFilterXml`, `setSheetAutoFilterXml`, `getCellPhonetic`, `setCellPhonetic`, `addCellStyleXf`, and `setCellStyle`. Native Node adds `dispose()` for deterministic release and `memoryUsage()` for an estimated native footprint. The estimate covers cells, shared strings, passthrough parts, and workbook metadata; it refreshes V8 external-memory reporting and returns `0` after disposal. Garbage collection remains a fallback. WASM uses `delete()` because its native handles live in the WASM heap.
+Native Node and WASM share the common Workbook methods and the three static factories (`createDefault`, `createEmpty`, `loadBytes`). The following seven methods are WASM-only: `createTable`, `updateTable`, `removeTable`, `getSheetAutoFilterXml`, `setSheetAutoFilterXml`, `addCellStyleXf`, and `setCellStyle`. Native Node adds `dispose()` for deterministic release and `memoryUsage()` for an estimated native footprint. The estimate covers cells, shared strings, passthrough parts, and workbook metadata; it refreshes V8 external-memory reporting and returns `0` after disposal. Garbage collection remains a fallback. WASM uses `delete()` because its native handles live in the WASM heap.
 :::
 
 ## Availability
@@ -55,15 +55,17 @@ Call `dispose()` when the workbook leaves scope. The addon also finalizes handle
 | --- | --- |
 | Factories | `Workbook.createDefault()`, `createEmpty()`, `loadBytes(bytes)` |
 | Cell mutation | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula` |
-| Recalc and readback | `getValue`, `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `paginate`, `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics`, `spillInfo`, `precedents`, `dependents` |
+| Recalc and readback | `getValue`, `recalc`, `recalcParallel`, `partialRecalc`, `setIterative`, `getIterative`, `evaluateFormulaText`, `evaluateConditionalFormula`, `evaluateFormulaArray`, `paginate`, `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics`, `spillInfo`, `precedents`, `dependents` |
 | Sheets and structure | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, row/column insert/delete, names, table enumeration (`tableCount`, `tableAt`), passthrough parts |
-| Rich workbook data | styles (except cell-style authoring), merges, comments, `getComments`, hyperlinks, validations, conditional formatting, sheet view/layout/protection |
-| PivotTables | pivot cache and pivot table creation, mutation, and layout projection |
-| WASM-only methods | `createTable`, `updateTable`, `removeTable`, `getSheetAutoFilterXml`, `setSheetAutoFilterXml`, `getCellPhonetic`, `setCellPhonetic`, `addCellStyleXf`, `setCellStyle` |
+| Rich workbook data | styles (except cell-style authoring), phonetic guides and properties, merges, comments, `getComments`, hyperlinks, validations, conditional formatting, sheet view/layout/protection, three-state visibility, typed print settings, range XF assignment |
+| PivotTables | pivot cache and pivot table creation, cache-index item filters, mutation, and layout projection |
+| WASM-only methods | `createTable`, `updateTable`, `removeTable`, `getSheetAutoFilterXml`, `setSheetAutoFilterXml`, `addCellStyleXf`, `setCellStyle` |
 | Policy and catalog | calc mode, Excel profile id, function metadata, localized names, external links |
 | Top-level | `evalFormula`, `version`, `lastErrorMessage`, `lastErrorContext`, `statusString`, `mergeFunctionMetadata` |
 
 The authoritative method list is the package TypeScript declaration file. Treat Native Node as the performance-oriented Node path when you can ship a platform-specific binary; choose WASM when you need a browser, phonetic or AutoFilter XML access, table or cell-style authoring, or no native addon.
+
+Native Node now shares WASM's iterative-settings read-back, three-state sheet visibility, print-setting authoring, `setRangeXfIndex()`, and `pivotFieldAddItemAt()` methods. `getIterative()` reports the stored `maxIterations` after the common `32767` cap. `SheetVisibility.VeryHidden` is distinct from `Hidden`; `pivotFieldAddItemAt()` addresses a cache shared-item index so the blank pivot member can be filtered.
 
 `getValue` returns a `CellResult` (`{ status, value }`); its `value` field is the cached `Value`. Top-level `evalFormula` and workbook `evaluateFormulaText` return `EvalResult` envelopes with the same `status` / `value` shape.
 

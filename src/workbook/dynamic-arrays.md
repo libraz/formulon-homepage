@@ -19,6 +19,7 @@ The cell that owns the dynamic-array formula. Editing or clearing the anchor cha
 - Bare ranges, arithmetic and comparison operators, and `IF` spill to the shape of their arguments. Blank cells in a bare-range spill become `0`.
 - Scalar functions evaluate range arguments element-wise. Range-returning built-ins use the common spill allocator, so their results follow the same collision and out-of-grid checks.
 - `@` applies implicit intersection and reduces a range or array to the value selected by the formula's anchor.
+- The spill operator `#` can use an anchor computed by `OFFSET`, `INDIRECT`, `CHOOSE`, `IF`, a parenthesised reference, or a `LET`-bound name. An anchor that resolves to more than one cell returns `#REF!` instead of being silently narrowed to its top-left cell.
 
 <DiagramFlow :steps="[
   { label: 'Anchor formula evaluates' },
@@ -44,6 +45,12 @@ Implicit intersection (`@`) is still supported for backward compatibility with w
 Those formulas can be run below. The upper table comes from `evaluateFormulaArray()`, so the rows × columns printed beside it is the shape the engine computed, not a shape drawn to illustrate the idea; the sheet below it is a live `formulon-cell` grid holding the same formula written into `D2` and recalculated, with the selected rectangle read back from `spillInfo()`. Use *Block the spill range* to put a value inside that rectangle: the anchor turns into `#SPILL!` and not one result cell is written — the collision rule above, not a special case built into the demo.
 
 <SpillDemo />
+
+::: tip A short way to explore the demo
+Start with `=SEQUENCE(3,4)` and note the preview shape. Write it to the sheet, then block its far corner to observe that the anchor becomes `#SPILL!` without partially writing a result. Clear the blocker, switch to `=FILTER(A2:B6,B2:B6>4)`, and edit a source value in columns A or B. The preview changes immediately; the committed formula keeps its own spill range until it is recalculated.
+:::
+
+Computed anchors are evaluated by the tree-walker. The bytecode spill-reference opcode has no pool entry for an anchor produced at runtime, so the release artifacts use the tree-walker path for these formulas.
 
 ## Recalculation interaction
 

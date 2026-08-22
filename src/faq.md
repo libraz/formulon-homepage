@@ -66,6 +66,8 @@ The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, and 
 
 `.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals. `saveWithDiagnostics` / `save_with_diagnostics` report documented write losses. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
 
+XLSB pivot cache definitions, cache records, and PivotTable parts are evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. External-link formulas use the index-spelled forms bound to the package link table, such as `[1]Sheet1!A1`; path-spelled `[Book1.xlsx]Sheet1!A1` references remain unsupported. Phonetic annotations preserve the span of each run.
+
 Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. Legacy `.xls` / BIFF is out of scope.
 
 ### Does it execute VBA?
@@ -78,13 +80,13 @@ No. PowerQuery, DAX, live external connections, Web / OData / OLAP refresh, and 
 
 ### What about pivot tables?
 
-Pivot cache and PivotTable structure preservation, pivot operations, layout inspection, and worksheet-source access are available across the C API, Node addon, WASM, and Python bindings. Formulon does not rebuild external data connections.
+Pivot cache and PivotTable structure preservation, pivot operations, layout inspection, worksheet-source access, and cache-index item filtering are available across the C API, Node addon, WASM, and Python bindings. XLSB pivots are evaluated when the record encoding is supported. Formulon does not rebuild external data connections.
 
 Formulon is not a replacement for Excel's external-data refresh and pivot-cache rebuild pipeline.
 
 ### Are print settings and page breaks preserved?
 
-`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. The `paginate` APIs resolve inclusive print areas and page breaks; rendering still belongs to Excel or another print engine.
+`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. WASM, Native Node, Python, and the C ABI can author the modeled print settings through typed setters as well as read them back. The `paginate` APIs resolve inclusive print areas and page breaks; rendering still belongs to Excel or another print engine.
 
 Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs to Excel or another rendering layer.
 
@@ -141,7 +143,7 @@ No. The `formulon` wheel is `py3-none-any` and ships `formulon_capi.wasm` plus a
 
 ### Does Native Node expose the full WASM API?
 
-Yes for the Workbook shape. The source-tree Native Node package under `packages/npm-native` shares the WASM surface and the three static factories (`createDefault` / `createEmpty` / `loadBytes`). It adds `dispose()` for deterministic release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
+Yes for the shared Workbook shape. The source-tree Native Node package under `packages/npm-native` shares the WASM surface and the three static factories (`createDefault` / `createEmpty` / `loadBytes`), including phonetic guides, iterative read-back, three-state visibility, print-setting authoring, range XF assignment, and cache-index pivot items. It adds `dispose()` for deterministic release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Table authoring, AutoFilter XML, and cell-style authoring remain WASM-only. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
 
 Choose Native Node when you build or stage the source-tree package and can deploy a platform-specific `.node` binary. It is useful for native threads and fewer heap copies on `loadBytes` / `save`. Choose WASM for browsers or Node deployments that cannot ship native addons.
 
@@ -210,7 +212,7 @@ Excel is Microsoft's product and trademark. Formulon is an independent Apache-2.
 
 ### What is `formulon-mcp`?
 
-`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides 33 tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, recalculating, and saving. Node.js 22 or newer is required.
+`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides 37 tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, building and styling documents, configuring printing, recalculating, and saving. Node.js 22 or newer is required.
 
 ```sh
 npx -y @libraz/formulon-mcp

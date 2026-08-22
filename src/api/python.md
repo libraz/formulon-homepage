@@ -40,7 +40,7 @@ Common methods:
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
 - `get_value`, `evaluate_formula_array`, `lambda_text_at`
-- `recalc`, `partial_recalc`, `set_iterative`
+- `recalc`, `partial_recalc`, `set_iterative`, `get_iterative`
 - `pinned_now`, `set_pinned_now`, `clear_pinned_now`
 - `save`, `save_as(fmt)` (choose the XLSX/XLSB container format)
 - `save_with_diagnostics(fmt)`, `read_diagnostics()`
@@ -48,8 +48,9 @@ Common methods:
 - sheet structure edits, row/column edits, defined names
 - merges, `get_comment`/`set_comment`, `comment_count`, `get_comments`, hyperlinks, data validations
 - `evaluate_cf_formula`, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, `paginate`
-- styles, conditional formats, sheet view/protection
-- pivot cache/table APIs (including worksheet-source access and pivot report layout), dependency tracing, spill info, function metadata, DXFs
+- styles, `set_range_xf_index`, conditional formats, sheet view/protection and three-state visibility
+- typed print settings (`set_page_setup`, `set_page_margins`, `set_print_options`, `set_header_footer`, print area/titles, and row/column breaks)
+- pivot cache/table APIs (including worksheet-source access, cache-index item filters, and pivot report layout), dependency tracing, spill info, function metadata, DXFs
 
 ::: tip Lifetime is a context manager
 The `with` block releases the native handle on exit, including when an exception is raised. Avoid keeping a `Workbook` reference past its `with` block.
@@ -58,6 +59,10 @@ The `with` block releases the native handle on exit, including when an exception
 ::: info Python evaluator boundary
 Python exposes `evaluate_formula_array(sheet, row, col, formula)` and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)`. It does not expose the general scalar `evaluate_formula_text`; use `evaluate_formula_array` when a full array result is needed. `comment_count(sheet)` and `get_comments(sheet)` enumerate comments, and `paginate(sheet)` returns `PaginationResult(page_count, print_area, horizontal_breaks, vertical_breaks)`.
 :::
+
+`get_iterative()` reads `{ enabled, max_iterations, max_change }` after `set_iterative()`. The engine caps `max_iterations` at `32767` and reports the capped value. `set_sheet_visibility()` accepts `SheetVisibility.VISIBLE`, `HIDDEN`, or `VERY_HIDDEN`, and `get_sheet_view()` returns the resolved three-state value in addition to `tab_hidden`. `pivot_field_add_item_at()` addresses a manual-filter item by cache shared-item index, including the blank member; an empty label passed to `pivot_field_add_item()` cannot do that.
+
+Worksheet print settings are authored with `set_page_setup()`, `set_page_margins()`, `set_print_options()`, `set_header_footer()`, `set_print_area()`, `set_print_titles()`, `add_row_break()`, and `add_col_break()`. `set_range_xf_index()` applies one style XF index over an inclusive rectangle and materializes missing cells as styled blanks. A `DataValidationInput` with omitted `allow_blank` defaults to `False`; pass `allow_blank=True` to accept empty cells.
 
 The authoritative Python method list lives in the package type stubs and docstrings.
 

@@ -62,6 +62,18 @@ wb.pivot_data_field_add(0, pivot, PivotDataFieldSpec(
 
 ワークブックの座標はすべて 0 始まりです。そのため pivot anchor の `(0, 4)` は `E1` です。新規 pivot を保存するには cache source の設定が必要です。設定なしでは Excel が修復を提案するパッケージになるため、`save()` は失敗します。
 
+### cache item を index で指定する
+
+手動 filter を cache の shared-item index に結び付ける場合は、`pivotFieldAddItemAt()` / `pivot_field_add_item_at()` を使います。blank member を指定できるのはこの形式です。`pivotFieldAddItem()` に空の label を渡しても文字列との比較になるため、blank item は指定できません。index は OOXML の pivot item `x` 属性と同じ 0 始まりの空間です。まだ解決できない index も受け付けますが、その item は何も filter しません。評価前に cache を構築しておくと、意図した item に一致します。
+
+```ts [WASM / Native Node]
+wb.pivotFieldAddItemAt(0, pivot.index, /*fieldIdx*/ 0, /*cacheIndex*/ 2, false)
+```
+
+```python [Python]
+wb.pivot_field_add_item_at(0, pivot, 0, 2, False)  # field_idx=0、cache_index=2
+```
+
 ## 投影結果を調べる
 
 `pivotLayout()` / `pivot_layout()` は、投影した矩形とセルを返します。これは pivot 結果をプログラムから見る方法です。Excel で開く出力が必要な場合は workbook を保存してください。
@@ -89,7 +101,7 @@ for cell in layout.cells:
 - 新規 cache は、宣言した worksheet range から自動でデータを取り込みません。field と record を明示的に追加します。
 - source range は有効な workbook を保存するための metadata であり、cache refresh を予約するものではありません。
 - 外部 connection と PivotCache の再計算は、Formulon のローカル計算モデルの対象外です。
-- 既存の PivotTable は読み取り・変更・投影・保持できます。文書化された model の外にある機能を含むファイルでは、source workbook に対する互換性検査を続けてください。
+- 既存の PivotTable は読み取り・変更・投影・保持できます。XLSB の `pivotCacheDefinition`、`pivotCacheRecords`、pivot table パートは、record encoding が対応済みであれば評価します。未計測の encoding は推測せずスキップします。文書化された model の外にある機能を含むファイルでは、source workbook に対する互換性検査を続けてください。
 
 ## 次に読むもの
 

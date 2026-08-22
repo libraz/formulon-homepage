@@ -40,7 +40,7 @@ with Workbook.create_default() as wb:
 - `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
 - `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
 - `get_value`, `lambda_text_at`, `evaluate_formula_array`
-- `recalc`, `partial_recalc`, `set_iterative`
+- `recalc`, `partial_recalc`, `set_iterative`, `get_iterative`
 - `pinned_now`, `set_pinned_now`, `clear_pinned_now`
 - `save`, `save_as(fmt)`（XLSX / XLSB のコンテナ形式を選択）
 - `save_with_diagnostics(fmt)`, `read_diagnostics()`
@@ -48,8 +48,9 @@ with Workbook.create_default() as wb:
 - シート構造編集、行 / 列編集、定義名
 - merges、`get_comment` / `set_comment`、`comment_count` / `get_comments`、hyperlinks、data validations
 - `evaluate_cf_formula`、visual conditional-format payload（`ColorScale`、`DataBar`、`IconSet`）、DXF、`paginate`
-- styles、conditional formats、sheet view / protection
-- pivot cache / table API（worksheet-source access と pivot report layout を含む）、依存関係 trace、spill 情報、function metadata、DXF
+- styles、`set_range_xf_index`、conditional formats、sheet view / protection、3 状態 visibility
+- typed print settings（`set_page_setup`、`set_page_margins`、`set_print_options`、`set_header_footer`、print area / titles、行 / 列改ページ）
+- pivot cache / table API（worksheet-source access、cache-index item filter、pivot report layout を含む）、依存関係 trace、spill 情報、function metadata、DXF
 
 ::: tip ライフタイムは context manager
 `with` ブロックを抜けるとネイティブハンドルが解放されます。例外が出ても解放は走るため、`Workbook` 参照を `with` の外で持ち回さないでください。
@@ -58,6 +59,10 @@ with Workbook.create_default() as wb:
 ::: info Python の評価境界
 Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` で条件付き書式の述語を評価します。一般的なスカラー `evaluate_formula_text` は公開していません。`comment_count(sheet)` / `get_comments(sheet)` でコメントを列挙でき、`paginate(sheet)` は `page_count`、`print_area`、`horizontal_breaks`、`vertical_breaks` を持つ `PaginationResult` を返します。
 :::
+
+`get_iterative()` は `set_iterative()` 後の `{ enabled, max_iterations, max_change }` を返します。Engine は `max_iterations` を `32767` までに制限し、制限後の値を報告します。`set_sheet_visibility()` は `SheetVisibility.VISIBLE`、`HIDDEN`、`VERY_HIDDEN` を受け取り、`get_sheet_view()` は `tab_hidden` に加えて解決済みの 3 状態を返します。`pivot_field_add_item_at()` は cache の shared-item index で手動 filter item を指定でき、blank member も表現できます。`pivot_field_add_item()` に空の label を渡す方法では blank を指定できません。
+
+worksheet の印刷設定は `set_page_setup()`、`set_page_margins()`、`set_print_options()`、`set_header_footer()`、`set_print_area()`、`set_print_titles()`、`add_row_break()`、`add_col_break()` で作成します。`set_range_xf_index()` は cell-style XF index を両端を含む矩形へ適用し、存在しないセルを style 付き blank として materialize します。`DataValidationInput` の `allow_blank` を省略した既定値は `False` です。空セルを許可する場合は `allow_blank=True` を指定してください。
 
 正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。
 

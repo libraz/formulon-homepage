@@ -127,17 +127,29 @@ wb.clearPinnedNow()
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
 | Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `setCellPhonetic`, `getCellPhonetic`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `pinnedNow`, `setPinnedNow`, `clearPinnedNow`, `paginate` |
+| Calculation | `recalc`、`recalcParallel`、`partialRecalc`、`evaluateFormulaText`、`evaluateFormulaArray`、`evaluateConditionalFormula`、`setIterative`、`getIterative`、`setIterativeProgress`、`calcMode`、`setCalcMode`、`pinnedNow`、`setPinnedNow`、`clearPinnedNow`、`paginate` |
 | Serialization | `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
 | Structure | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
-| Layout | sheet view, protection, row/column layout, styles, merges |
-| Rich workbook data | comments (`getCommentResult`), hyperlinks, data validations, conditional formats, pivot layout, external links |
+| Layout | sheet view と 3 状態 visibility、protection、row/column layout、styles、merges、typed print settings |
+| Rich workbook data | comments（`getCommentResult`）、hyperlinks、data validations、conditional formats、pivot layout と cache-item filter、external links |
 | Styles | `getFont` / `addFont` の `FontRecord.vertAlign`（`0` baseline、`1` superscript、`2` subscript） |
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 `recalcParallel(threadCount)` は同期的に実行され、`{ status, stats }` を返します。`0` は最大 8 worker の自動検出、`1` は呼び出し元スレッド、`2..8` は worker 数の上限を選択します。引数なし、整数でない値、有限でない値、負の値、8 超は `kInvalidArgument` で失敗します。
+
+`setIterative(enabled, maxIterations, maxChange)` で反復計算の設定を保存し、`getIterative()` で `{ status, enabled, maxIterations, maxChange }` として読み戻します。`maxIterations` は `32767` を上限とし、getter は上限適用後の値を返します。
+
+`SheetVisibility` は `Visible = 0`、`Hidden = 1`、`VeryHidden = 2` の 3 状態です。`setSheetVisibility(sheet, visibility)` は tab state 全体を設定し、`getSheetView(sheet).view.visibility` で hidden と very-hidden を区別できます。従来の `tabHidden` はどちらの hidden state でも `1` です。very-hidden を hidden へ降格する場合は `setSheetVisibility()` を使います。`setSheetTabHidden(true)` だけでは降格しません。
+
+worksheet の印刷設定は `setSheetPageSetup()`、`setSheetPageMargins()`、`setSheetPrintOptions()`、`setSheetHeaderFooter()`、`setSheetPrintArea()`、`setSheetPrintTitles()`、`addSheetRowBreak()`、`addSheetColBreak()` で作成できます。モデル化していない fragment には raw XML setter を使えますが、保存前に入力を検証します。header / footer は decoded な Excel section string を受け取り、文字どおりの ampersand は `&&` と書きます。
+
+`setRangeXfIndex(sheet, firstRow, firstCol, lastRow, lastCol, xfIndex)` は cell-style XF index を両端を含む矩形へ適用し、存在しないセルを style 付き blank として作成します。
+
+`pivotFieldAddItemAt(sheet, pivotIdx, fieldIdx, cacheIndex, visible)` は、結び付いた cache field の shared-item index で手動 filter item を指定します。blank pivot member を指定できる唯一の形式です。`pivotFieldAddItem()` に空の name を渡す方法は文字列比較なので blank には一致しません。まだ解決できない index は受け付けますが、何も filter しません。
+
+data validation の入力で `allowBlank` を省略すると既定値は `false` です。空セルを許可する場合は `allowBlank: true` を指定してください。`showDropDown` は引き続き OOXML の意味が反転する例外です。
 
 ::: info 読み取り専用のアドホック評価
 `evaluateFormulaText` と `evaluateConditionalFormula` は、既存ワークブックに対する読み取り専用評価です。ローカル参照、シート跨ぎ参照、定義名、`ROW()` / `COLUMN()` のアンカーを解決し、条件付き書式では相対参照と predicate coercion を適用します。配列 / スピルの結果はスカラー版では左上隅に縮約されます。自己参照は対象セルのキャッシュ値を読み取ります。

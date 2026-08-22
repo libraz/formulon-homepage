@@ -69,6 +69,8 @@ wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 
 <StructureDemo />
 
+構造編集では、保持している `extLst`、x14 DataBar 拡張、sparkline、slicer anchor など、未モデル化 payload 内だけにある座標は移動しません。その座標について診断も出ません。こうした機能を含むワークブックは、構造編集後に Excel で確認してください。
+
 ## レイアウト・style・metadata
 
 WASM、Native Node、Python の各バインディングは、次のようなワークブック操作を公開します。表面上の名前付けはホスト言語に合わせていますが、処理は同じ C ABI を通ります。
@@ -79,7 +81,7 @@ WASM、Native Node、Python の各バインディングは、次のようなワ�
 - OOXML parts の passthrough
 - pivot table の report layout と pivot-cache worksheet-source access
 - 条件付き書式の read / evaluate / write subset、visual payload（`ColorScale`、`DataBar`、`IconSet`）、DXF
-- sheet view、freeze panes、hidden tabs
+- sheet view、freeze panes、3 状態の tab visibility
 - sheet protection の metadata
 - row / column layout の override
 - styles、number formats、fonts、fills、borders
@@ -90,11 +92,31 @@ WASM、Native Node、Python の各バインディングは、次のようなワ�
 
 条件付き書式ルールの追加（`addConditionalFormat()` / `fm_sheet_cf_add_rule`）も、新しい rule の flattened index を返すようになったため、ホスト側の UI 選択や後続編集がしやすくなりました。
 
+新規ワークブックは Excel が持つ最小の style table から始まります。font、border、cell-style の index `0` と、fill の index `0`（`none`）、`1`（`gray125`）が最初から存在します。そのため、最初の `addFont()` / `addBorder()` は `1`、最初の `addFill()` は `2` を返します。style table が空だと仮定せず、返り値の index を使ってください。
+
+`setDefaultFont()` は、書式未設定セルが使うフォントスロット `0` を置き換えます。`setFont()` は既存の任意のフォントスロットをその場で置き換えます。`FontRecord.scheme` はテーマフォントへのリンクをロードと保存で保持します。
+
+ふりがなは `getCellPhoneticRuns()` / `setCellPhoneticRuns()` で UTF-16 のテキスト範囲として順序付きで取得・設定できます。`getCellPhoneticProperties()` / `setCellPhoneticProperties()` は、ルビのフォント、かなの形式、配置を読みと表示内容から独立して扱います。セルの値を書き換えると、読みとプロパティの両方が消えます。
+
 ### Table と AutoFilter
 
 WASM と Python は worksheet table を作成できます。WASM は `createTable()` / `updateTable()` / `removeTable()`、Python は `table_create()` / `table_update()` / `table_remove()` を使います。table の `columns` は `ref` の列幅と一致し、`headerRow` を有効にする場合も呼び出し側が header cell を書き込みます。部分更新では省略した metadata が保持され、既存 table の AutoFilter は `ref` だけを書き換えて追従します。Native Node は table の列挙には対応しますが、table の作成・更新・削除は公開していません。
 
 worksheet 単位の AutoFilter XML は、完全な `<autoFilter>` fragment を opaque な値として扱えます。WASM は `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()`、Python は `get_auto_filter_xml()` / `set_auto_filter_xml()` を公開します。filter 条件、sort 状態、extension payload はそのまま保持されます。空の fragment を渡すと AutoFilter を削除し、空でない値は完全な `<autoFilter>` element である必要があります。
+
+行・列の挿入 / 削除では、AutoFilter の `ref` 矩形も対象データと一緒に移動します。編集で範囲全体が消費された場合は AutoFilter を削除します。`filterColumn` の criteria offset は組み替えないため、filter 範囲内で列を編集すると criteria が以前の列位置に残る場合があります。
+
+sheet visibility は 3 状態です。WASM / Native Node は `SheetVisibility.Visible`、`Hidden`、`VeryHidden` と `setSheetVisibility(sheet, visibility)`、Python は `set_sheet_visibility(sheet, visibility)` を使います。`getSheetView()` / `get_sheet_view()` は、従来の 2 状態 `tabHidden` とともに正規の `visibility` を返します。すでに very-hidden の sheet に `setSheetTabHidden(true)` を呼んでも hidden へ降格しません。3 状態 setter で明示してください。
+
+### worksheet の印刷設定を作成する
+
+WASM と Native Node は、page setup、余白、print options、header / footer、print area、print titles、手動の行 / 列改ページを typed setter（`setSheetPageSetup()`、`setSheetPageMargins()`、`setSheetPrintOptions()`、`setSheetHeaderFooter()`、`setSheetPrintArea()`、`setSheetPrintTitles()`、`addSheetRowBreak()`、`addSheetColBreak()`）で設定できます。Python は対応する `set_page_setup()`、`set_page_margins()`、`set_print_options()`、`set_header_footer()`、`set_print_area()`、`set_print_titles()`、`add_row_break()`、`add_col_break()` を公開します。モデル化していない項目には raw XML setter も使えますが、不正な fragment は拒否します。header / footer の section 文字列は Excel の decoded syntax を受け取り、文字どおりの ampersand は `&&` と書きます。
+
+`setRangeXfIndex()`（WASM / Native Node）と `set_range_xf_index()`（Python）は、cell-style XF index を両端を含む矩形へ 1 回で適用します。存在しないセルは style 付きの blank として materialize されるため、空の帳票領域にも罫線を設定できます。
+
+### data validation の既定値
+
+`addValidation()` / `add_validation()` で `allowBlank` を省略すると、WASM と Native Node は Python と同じく `false` を使います。空セルを許可する場合は `allowBlank: true`（Python は `allow_blank=True`）を明示してください。`showDropDown`（Python は `show_dropdown`）だけは OOXML の意味が反転する boolean オプションで、ホスト向けの値は正規化されています。
 
 ### 条件付き書式の visual payload
 

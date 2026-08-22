@@ -10,9 +10,11 @@
 
 ## 開く
 
-ファイル形式層が workbook parts、relationships、shared strings、styles、worksheets、defined names、tables、comments、hyperlinks、merges、validations、conditional formatting、pivot cache、その他拡張パートを読み込みます。意味解釈しないパートは保持対象として扱い、保存時に欠落しないようにします。
+ファイル形式層が workbook parts、relationships、shared strings、styles、worksheets、defined names、tables、comments、hyperlinks、merges、validations、conditional formatting、pivot cache、external-link table、その他拡張パートを読み込みます。意味解釈しないパートは保持対象として扱い、保存時に欠落しないようにします。
 
 入力規則はドロップダウン表示状態のフラグ（`show_dropdown`）を公開します。OOXML では `showDropDown` の意味が反転して保存されるため、Formulon はホスト API 向けに扱いやすい意味へ正規化し、保存時に正しい package 表現へ戻します。
+
+対応済みの XLSB record encoding では、pivot cache definition、cache record、pivot table の各パートを OOXML reader と同じモデルへ読み込み、`recalc()` で pivot を評価します。ふりがな注釈は各 `<rPh>` run の UTF-16 span を保持します。また external-link table の supporting-book index も保持するため、`[1]Sheet1!A1` のような数式を対応する cached value へ解決できます。外部参照のデータ更新はこの流れでは行いません。
 
 ロード後は必ず妥当性を確認します。
 

@@ -36,6 +36,10 @@ table は `table_create()` / `table_update()` / `table_remove()` で作成・更
 
 Python の `DataBar` は `x14` の全制御項目（`gradient`、`axis_position`（`0` は automatic、`1` は middle、`2` は none）、`negative_fill`、`border`、`negative_border`、`axis_color`）を公開します。省略時は model の既定値を使い、save と load をまたいで設定を保持します。API で新しく作成した PivotTable は、保存前に `set_pivot_cache_worksheet_source()` へ `PivotWorksheetSource(ref="A1:C10", sheet="Data")` を渡してください。worksheet source のない新規 cache の保存は失敗します。ファイルから読み込んだ cache には source があるため影響しません。
 
+Python は worksheet の presentation metadata も作成できます。`set_sheet_visibility()` に `SheetVisibility.VISIBLE`、`HIDDEN`、`VERY_HIDDEN` を渡し、`get_sheet_view()` で解決済みの 3 状態 `visibility` を読み出します。typed print settings には `set_page_setup()`、`set_page_margins()`、`set_print_options()`、`set_header_footer()`、`set_print_area()`、`set_print_titles()`、`add_row_break()`、`add_col_break()` を使います。`set_range_xf_index()` は cell-style XF index を両端を含む矩形へ適用し、存在しないセルを style 付き blank として materialize します。`pivot_field_add_item_at()` は cache shared-item index で blank pivot member を含む item を指定できます。label 形式に空文字列を渡す方法では指定できません。
+
+data validation の入力で `allow_blank` を省略した場合、Python の既定値は `False` です。空セルを許可する場合は `allow_blank=True` を指定してください。行 / 列の構造編集では AutoFilter の `ref` 範囲はセルとともに移動しますが、範囲内の criteria offset は組み替えません。
+
 主な実行時差分は threading です。Python は `wasmtime` 経由で C ABI の WASM ビルドを呼び出すため、`recalc()` は serial です。Python には `recalc_parallel()` / `recalcParallel()` API がありません。並列 scheduler が必要な場合は WASM、Native Node、または CLI の `--threads` を使います。計算結果の忠実度は他の実行入口と同じです。
 
 PyPI の WASM ビルドは worksheet XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、パース時のピークメモリは最大の worksheet XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML で streaming に切り替えます。

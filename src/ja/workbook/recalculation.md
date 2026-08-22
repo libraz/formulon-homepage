@@ -76,6 +76,8 @@ wb.recalc()
 
 `setIterativeProgress()` は、循環部分グラフを 1 回 Gauss-Seidel で走査するたびに呼ばれる callback を登録します。iteration 回数の上限を渡す引数ではありません — それは `setIterative()` の第 2・第 3 引数です。この callback は WASM と Native Node のみで使えます。Python の `set_iterative()` は同じ 3 引数を受け取りますが、1 走査ごとの progress callback はバインドされていません(ネイティブ関数ポインタが必要で、Python ホスト側では合成できないため)。
 
+WASM と Native Node では `getIterative()`、Python では `get_iterative()` で、`{ status, enabled, maxIterations, maxChange }`（Python は対応する snake_case）を読み出せます。`maxIterations` を設定すると値は `32767` までに制限され、getter は制限後の値を返します。読み込んだ workbook の `iterateCount` がそれを超えている場合も同じ上限が適用されます。ホスト UI に実際に使われる値を表示するときは、設定後に読み戻してください。
+
 ::: warning iteration 無効時の循環は error
 iteration が無効な状態で循環が存在する場合、該当セルは `#REF!` / `#NUM!` などの Excel error 値を返します。ホスト側の例外にはなりません。循環参照を意図する場合は必ず iteration を有効にしてください。
 :::

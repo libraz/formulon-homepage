@@ -35,6 +35,18 @@ Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検�
 
 範囲形の defined name は Array として評価され、スピルによる phantom cell も列挙されます。`date1904` は評価器へ伝わり、行全体 / 列全体や 3-D range はワークブックモデルに基づいて解決されます。配列の broadcasting は関数ごとの Excel 規則に従います。
 
+### index で書かれた外部ワークブック参照
+
+外部 link table に保存された index を使う参照は、`[1]Sheet1!A1`、`[1]Sheet1!A1:B2`、`[2]!Name`、`'[1]My Sheet'!A1` のように書くと、その link part の cached value に対して解決されます。`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた形式は、結び付ける link-table index がないため未対応です。XLSB reader は supporting-book table もデコードするので、外部 sheet index はこの workbook と決め打ちせず、指定された supporting book に結び付きます。外部参照は cached value を評価するだけで、外部データを更新したり XLSB 保存時に書き戻したりはしません。
+
+### 数式の境界ケース
+
+混同しやすい text と blank の状態も、現在の Excel 互換挙動に合わせます。
+
+- `TRIM` は連続する trim 対象の空白を 1 文字へまとめますが、先頭の run を構成していた文字を保持します。全角スペース（U+3000）を U+0020 へ書き換えません。
+- `ISOMITTED` は `LAMBDA` 呼び出しの空の引数 slot を `TRUE` と判定します。先頭・途中・末尾の omission が対象です。
+- 長さ 0 の文字列は blank cell ではなく text です。`CELL("type", ...)` は `"l"` を返し、ワイルドカード条件 `COUNTIF(range, "*")` はこれを含めます。一方、`COUNTIF(range, "=")` の blank-cell probe はこの値を満たしません。
+
 ## エラーの扱い
 
 Excel error はホスト言語の例外ではなく **値** として扱います。

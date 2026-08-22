@@ -26,9 +26,14 @@ The OOXML reader/writer handles:
 - conditional formatting,
 - pivot tables and pivot caches,
 - external links,
+- phonetic (furigana) annotations, including per-run UTF-16 spans and their `phoneticPr` rendering properties,
 - protection metadata,
 - sheet views, freeze panes, hidden tabs,
 - per-row / per-column overrides.
+
+Worksheet print settings are editable through typed setters for page setup, margins, print options, print area, print titles, header/footer, and manual row/column breaks. Raw XML setters remain available for modeled gaps, and malformed fragments are rejected before they are stored. External-link formulas use the index-spelled forms bound to the package's external-link table; path-spelled `[Book1.xlsx]Sheet1!A1` references are not resolved.
+
+Phonetic runs and rendering properties round-trip through XLSX and XLSB. Font theme `scheme` values also round-trip, so a theme-linked Normal font remains linked after save.
 
 ::: tip Caching behavior
 On load, formula cells keep both the formula text and the cached value found in the file. After `recalc()`, the cached values are replaced with the engine's computed values; on save, the file contains coherent formula / value pairs.
@@ -36,7 +41,7 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
+The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. XLSB pivot cache definitions, cache records, and pivot-table parts are decoded into the pivot model and evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
 
 | XLSB feature | Current behavior |
 | --- | --- | --- |
@@ -44,6 +49,7 @@ The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column 
 | Row/column layout, merges | modeled and emitted |
 | `date1904`, view/zoom/frozen panes | modeled and emitted |
 | Dynamic-array metadata and supported tokenized formulas | modeled and emitted |
+| Pivot cache and PivotTable parts | evaluated when the record encoding is supported; unmeasured encodings are skipped |
 | Worksheet tails and relationships | preserved verbatim, not editable/evaluated |
 | Unsupported formulas | may downgrade to cached literals; downgrade count is reported |
 

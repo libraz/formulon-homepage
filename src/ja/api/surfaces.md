@@ -38,20 +38,20 @@
 | WASM | 最も広い JS API | `formulon.d.ts`、ブラウザ / Node 対応 |
 | Python | 広い workbook API | wasmtime で動くラッパー、context manager 対応 |
 | CLI | 用途を絞ったツール | `eval` / `recalc` / `dump` / `paginate` |
-| Native Node | 共有計算 API | 共有 Workbook メソッドを N-API アドオンで公開。table 作成、AutoFilter XML、ふりがな、cell-style 作成は WASM のみ |
+| Native Node | 共有計算 API | 共有 Workbook メソッドを N-API アドオンで公開。ふりがな、反復設定の read-back、3 状態 visibility、印刷設定、range XF、cache-index pivot item も対応。table 作成、AutoFilter XML、cell-style 作成は WASM のみ |
 | C ABI | 低レベル API 境界 | 各パッケージが呼び出す共通インタフェース |
 | MCP | エージェント向け実行入口 | WASM の上に乗る。許可リストに基づいて呼び出す |
 | `formulon-cell` | 参考 UI | 結合試験と実装例のための公開 UI。Excel 互換の完成 UI ではない |
 
 ::: info Python のパリティ境界
-Python は配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、ふりがなテキストの取得・設定、コメント列挙（`comment_count()` / `get_comments()`）、`paginate()` を含む、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()` と反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
+Python は配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、ふりがなテキストの取得・設定、コメント列挙（`comment_count()` / `get_comments()`）、`paginate()`、反復設定の read-back、3 状態 sheet visibility、typed print settings、range XF、cache-index pivot item を含む、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()` と反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
 :::
 
-Python は visual conditional-format payload、DXF、pivot report layout、pivot-cache worksheet-source access も公開しています。
+Python は visual conditional-format payload、DXF、pivot report layout、pivot-cache worksheet-source access も公開し、data validation の `allow_blank` 省略時は `False` を使います。
 
 ## 実行入口ごとの結果が食い違ったとき
 
-同じワークブック・同じプロファイルで 2 つの実行入口が異なる値を返したら、不具合か、文書化された互換性差分として扱います。`make parity-test` の整合性テストは、共有の検証用ワークブックを利用可能な全チャネルで評価し、*未ビルド* と *不一致* を分けて報告します。Native Node と WASM の共有計算メソッドは同じ result envelope と値の意味を持ちますが、binding 境界のメソッド構成は異なります。Native Node にはネイティブのライフサイクル補助があり、table、AutoFilter XML、ふりがな、cell-style 作成は WASM にのみあります。その他の違いは native thread、コピーコスト、WASM メモリ上限などの運用面です。
+同じワークブック・同じプロファイルで 2 つの実行入口が異なる値を返したら、不具合か、文書化された互換性差分として扱います。`make parity-test` の整合性テストは、共有の検証用ワークブックを利用可能な全チャネルで評価し、*未ビルド* と *不一致* を分けて報告します。Native Node と WASM の共有計算メソッドは同じ result envelope と値の意味を持ち、残るメソッド差分は上記の WASM 限定 authoring 群だけです。その他の違いは native thread、コピーコスト、WASM メモリ上限などの運用面です。
 
 ## 次に読むもの
 

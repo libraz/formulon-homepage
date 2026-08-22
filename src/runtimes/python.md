@@ -36,13 +36,17 @@ Tables can be authored with `table_create()`, `table_update()`, and `table_remov
 
 Python's `DataBar` exposes the full `x14` controls: `gradient`, `axis_position` (`0` automatic, `1` middle, `2` none), `negative_fill`, `border`, `negative_border`, and `axis_color`. Omitted values use the model defaults and the settings survive save and load. For a newly authored PivotTable, set `PivotWorksheetSource(ref="A1:C10", sheet="Data")` with `set_pivot_cache_worksheet_source()` before saving; a new cache without a worksheet source fails to save, while caches loaded from a file already have one.
 
+Python can author worksheet presentation metadata as well as read it back. Use `set_sheet_visibility()` with `SheetVisibility.VISIBLE`, `HIDDEN`, or `VERY_HIDDEN`; `get_sheet_view()` returns the resolved three-state `visibility`. Use `set_page_setup()`, `set_page_margins()`, `set_print_options()`, `set_header_footer()`, `set_print_area()`, `set_print_titles()`, `add_row_break()`, and `add_col_break()` for typed print settings. `set_range_xf_index()` applies one cell-style XF index across an inclusive rectangle and materializes missing cells as styled blanks. `pivot_field_add_item_at()` addresses a cache shared-item index, including the blank pivot member; a label-based empty string cannot identify it.
+
+When a data-validation input omits `allow_blank`, Python uses `False`. Pass `allow_blank=True` to allow empty cells. Row/column structural edits move an AutoFilter's `ref` range with its cells, but criteria offsets inside the range are not remapped.
+
 The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Python exposes no `recalc_parallel()` or `recalcParallel()` API; use the WASM or native Node binding, or the CLI's `--threads`, when the parallel scheduler is required. Result fidelity is the same as other surfaces.
 
 The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
 
 ::: info Evaluator and workbook parity
 Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
-Python has broad workbook parity, but does not mirror every C ABI entry point: the iterative-progress callback is not exposed. It does expose phonetic text through `set_phonetic()` and `get_phonetic()`. Use mutation plus recalc for a general scalar evaluated in workbook context.
+Python has broad workbook parity, but does not mirror every C ABI entry point: the iterative-progress callback is not exposed. It exposes phonetic text through `set_phonetic()` and `get_phonetic()`, plus span-preserving `set_phonetic_runs()` / `get_phonetic_runs()` and `set_phonetic_properties()` / `get_phonetic_properties()` for the guide's rendering settings. Use mutation plus recalc for a general scalar evaluated in workbook context.
 :::
 
 <DiagramLayers :layers="[

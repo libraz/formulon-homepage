@@ -60,6 +60,14 @@ Cell-level Excel errors such as `#DIV/0!` are values (`FM_VAL_ERROR`), not faile
 
 A workbook handle belongs to one external caller thread at a time. Do not concurrently read, mutate, or recalculate the same handle. `fm_workbook_recalc_parallel()` may create internal worker threads for one call, but it does not make independent calls on that handle safe. Separate handles can be driven concurrently.
 
+## Workbook additions
+
+The C ABI exposes the new binding-parity operations directly. `fm_workbook_get_iterative()` reads `enabled`, `max_iterations`, and `max_change`; `fm_workbook_set_iterative()` clamps the iteration cap to `32767` and the getter reports the clamped value. `fm_sheet_set_visibility()` accepts `FM_SHEET_VISIBLE`, `FM_SHEET_HIDDEN`, or `FM_SHEET_VERY_HIDDEN`, while `fm_sheet_get_view()` reports both the legacy `tab_hidden` flag and the authoritative three-state `visibility`.
+
+Typed worksheet print setters cover page setup, margins, print options, header/footer, print area, print titles, and manual row/column breaks (`fm_sheet_set_page_setup`, `fm_sheet_set_page_margins`, `fm_sheet_set_print_options`, `fm_sheet_set_header_footer`, `fm_sheet_set_print_area`, `fm_sheet_set_print_titles`, `fm_sheet_add_row_break`, and `fm_sheet_add_col_break`). Raw XML setters validate well-formed, bounded fragments before storing them. `fm_sheet_set_range_xf_index()` applies one style XF index over an inclusive rectangle and materializes styled blank cells.
+
+`fm_workbook_pivot_field_add_item_at()` addresses a manual-filter item by its cache shared-item index. It is the form that can express a blank pivot member; the label-based `fm_workbook_pivot_field_add_item()` cannot identify that member with an empty string. The external-link reader resolves index-spelled references such as `[1]Sheet1!A1` from cached link values; path-spelled `[Book1.xlsx]Sheet1!A1` references remain unsupported.
+
 ## Where to go next
 
 - [Workbook operations](/workbook/operations) — coordinate model, edits, layout, and metadata.

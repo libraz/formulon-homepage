@@ -26,9 +26,12 @@ OOXML reader / writer は以下を扱います。
 - conditional formatting
 - pivot tables / pivot caches
 - external links
+- ふりがな注釈（run ごとの UTF-16 span と `phoneticPr` の表示プロパティを含む）
 - protection metadata
 - sheet view、freeze panes、hidden tabs
 - 行・列単位の上書き設定
+
+worksheet の印刷設定は、page setup、余白、print options、print area、print titles、header / footer、手動の行 / 列改ページを typed setter で編集できます。モデル化していない部分には raw XML setter も使えますが、不正な fragment は保存前に拒否します。external-link 数式は package の external-link table に結び付いた index 形式を解決し、`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた参照は解決しません。
 
 ::: tip キャッシュ値の扱い
 読み込み時、数式セルは数式テキストとファイル内のキャッシュ値の両方を保持します。`recalc()` 後、キャッシュ値はエンジンの計算結果で置き換わり、保存時に「数式と値が整合した」ファイルが書き出されます。
@@ -36,7 +39,7 @@ OOXML reader / writer は以下を扱います。
 
 ## XLSB
 
-XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`saveWithDiagnostics(WorkbookFormat.Xlsb)` の `downgradedFormulaCount`（Python では `save_with_diagnostics(WorkbookFormat.XLSB)` の `downgraded_formula_count`）で件数を確認できます。
+XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。XLSB の pivot cache definition、cache record、pivot table パートは、record encoding が対応済みであれば pivot model へデコードして評価します。未計測の encoding は推測せずスキップします。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`saveWithDiagnostics(WorkbookFormat.Xlsb)` の `downgradedFormulaCount`（Python では `save_with_diagnostics(WorkbookFormat.XLSB)` の `downgraded_formula_count`）で件数を確認できます。
 
 | XLSB の機能 | 現在の挙動 |
 | --- | --- |
@@ -44,6 +47,7 @@ XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`d
 | 行 / 列レイアウト、結合 | モデル化して出力 |
 | `date1904`、view / zoom / frozen panes | モデル化して出力 |
 | 動的配列メタデータと対応する tokenized formula | モデル化して出力 |
+| Pivot cache / PivotTable パート | 対応する record encoding は評価。未計測の encoding はスキップ |
 | worksheet tail と relationship | バイト列のまま保持。編集・評価はしない |
 | 非対応数式 | キャッシュ済みリテラルへ置き換える場合があり、件数を報告 |
 

@@ -38,9 +38,10 @@ Evaluates a single formula on a fresh empty workbook. The formula may be passed 
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
 formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
+formulon eval '=SUM('               # → #NAME?; stdout, exit 0
 ```
 
-Cell-level Excel errors print to stdout and return exit code 0. Usage errors return 64. Engine and I/O failures return 1.
+Cell-level Excel errors print to stdout and return exit code 0. Malformed eval syntax follows the same rule: it produces the Excel `#NAME?` error value on stdout and exits 0, so scripts must inspect the printed value rather than use the exit code to detect a formula typo. Usage errors return 64. Engine and I/O failures return 1.
 
 ## `recalc`
 

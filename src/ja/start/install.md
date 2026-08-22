@@ -9,7 +9,7 @@
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.10.0
+yarn add @libraz/formulon@0.11.1
 ```
 
 ブラウザ、worker、Node サービスで WASM ビルドを使う場合はこのパッケージを使います。ESM 専用で、Node で使う場合は Node 22 以降が必要です。
@@ -24,7 +24,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.10.0
+python -m pip install formulon==0.11.1
 ```
 
 スクリプト、ノートブック、バッチジョブで使います。wheel には Formulon C ABI の
@@ -40,6 +40,14 @@ formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon recalc input.xlsx -o output.xlsx
 ```
+
+## formulon-cell
+
+```sh
+yarn add @libraz/formulon-cell@0.6.0 @libraz/formulon-cell-vue@0.6.0
+```
+
+Vue アダプターを使う場合は `@libraz/formulon-cell-vue` を追加します。フレームワーク用アダプターは共通のコアパッケージを使います。
 
 ## ソースから
 

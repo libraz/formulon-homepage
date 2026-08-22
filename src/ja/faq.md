@@ -66,6 +66,8 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 `.xlsb`（MS-XLSB）も読み書きできます。モデル化して出力するのはスタイル、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula です。条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship は worksheet tail として保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があります。`saveWithDiagnostics` / `save_with_diagnostics` は、ドキュメント化された書き込み時の損失を報告します。CLI は出力拡張子から形式を選び、`saveAs` / `save_as` は形式を明示します。入力は内容から判定します。
 
+XLSB の pivot cache definition、cache record、PivotTable パートは、record encoding が対応済みであれば評価します。未計測の encoding は推測せずスキップします。external-link 数式は package の link table に結び付いた `[1]Sheet1!A1` のような index 形式を使います。`[Book1.xlsx]Sheet1!A1` のような path 形式は未対応です。ふりがな注釈は各 run の span を保持します。
+
 `.xlsm` / `.xltm` のようなマクロ付き OOXML パッケージは、`vbaProject.bin` をバイト列として保持するテストがあります。ただし、VBA は実行しません。旧 `.xls`（BIFF / Excel 97-2003）は対象外です。
 
 ### VBA は実行しますか？
@@ -78,13 +80,13 @@ Formulon は別の場所を狙っています。デスクトップアプリを�
 
 ### ピボットテーブルは対応していますか？
 
-ピボットキャッシュとピボットテーブルの構造保持、ピボット操作、レイアウト取得、pivot-cache の worksheet-source access は C API、Node addon、WASM、Python で使えます。外部データ接続を再実行してキャッシュを作り直す機能はありません。
+ピボットキャッシュとピボットテーブルの構造保持、ピボット操作、レイアウト取得、pivot-cache の worksheet-source access、cache-index item filter は C API、Node addon、WASM、Python で使えます。XLSB の pivot は record encoding が対応済みの場合に評価します。外部データ接続を再実行してキャッシュを作り直す機能はありません。
 
 一方で、PowerQuery や外部接続を再実行してピボットキャッシュを最新化する用途は対象外です。Excel の「データ更新」機能そのものを置き換えるものではありません。
 
 ### 印刷設定や改ページは保持できますか？
 
-`.xlsx` のページ設定、余白、ヘッダー / フッター、印刷オプション、プリンター設定、改ページ関連のメタデータは往復保存の対象です。`paginate` API は両端を含む印刷範囲と改ページを解決しますが、最終描画は Excel や別の印刷エンジンで行います。
+`.xlsx` のページ設定、余白、ヘッダー / フッター、印刷オプション、プリンター設定、改ページ関連のメタデータは往復保存の対象です。WASM、Native Node、Python、C ABI はモデル化した印刷設定を typed setter で作成し、読み戻すこともできます。`paginate` API は両端を含む印刷範囲と改ページを解決しますが、最終描画は Excel や別の印刷エンジンで行います。
 
 ただし、Formulon は印刷プレビュー UI や PDF レンダラーではありません。最終的なページ描画は Excel や別のレンダリング層で確認してください。
 
@@ -141,7 +143,7 @@ C++17 は、このプロジェクトでは保守的なポータビリティ選�
 
 ### Native Node は WASM と同じ機能を全部使えますか？
 
-Workbook の形は同じです。ソースツリーの `packages/npm-native` は WASM と同じ surface と 3 個の static factory（`createDefault` / `createEmpty` / `loadBytes`）を公開します。Native Node には決定的な `dispose()` と、セル・shared strings・passthrough part・ワークブックメタデータを含む推定値 `memoryUsage()` があり、V8 の external-memory 報告も更新します。GC はフォールバックです。WASM は `delete()` でネイティブハンドルを解放します。
+共有する Workbook の形は同じです。ソースツリーの `packages/npm-native` は WASM と同じ surface と 3 個の static factory（`createDefault` / `createEmpty` / `loadBytes`）を公開し、反復設定の read-back、3 状態 visibility、印刷設定、range XF、cache-index pivot item も共有します。Native Node には決定的な `dispose()` と、セル・shared strings・passthrough part・ワークブックメタデータを含む推定値 `memoryUsage()` があり、V8 の external-memory 報告も更新します。table 作成、AutoFilter XML、ふりがな、cell-style 作成は WASM のみです。GC はフォールバックです。WASM は `delete()` でネイティブハンドルを解放します。
 
 ソースツリー内のパッケージをビルド / stage でき、配置先に platform-specific な `.node` バイナリを置けるなら Native Node を選べます。native thread や `loadBytes` / `save` の heap copy 削減を重視する用途向けです。ブラウザや native addon を置けない Node 配置では WASM を使います。
 
@@ -210,7 +212,7 @@ Excel は Microsoft の製品および商標です。Formulon は独立した Ap
 
 ### `formulon-mcp` とは？
 
-`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` または `.xlsb` を開き、構造を調べ、セルやシートを編集し、再計算して保存するための 33 個のツールを提供します。Node.js 22 以上が必要です。
+`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` または `.xlsb` を開き、構造を調べ、セルやシートを編集し、文書を組み立てて装飾し、印刷設定を扱い、再計算して保存するための 37 個のツールを提供します。Node.js 22 以上が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

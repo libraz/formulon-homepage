@@ -38,9 +38,10 @@ formulon eval [--json] [--repeat N] <formula>
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
 formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
+formulon eval '=SUM('               # → #NAME?（stdout、exit 0）
 ```
 
-セル単位エラーは stdout、exit 0。使い方エラーは 64、エンジン / I/O 失敗は 1 です。
+セル単位エラーは stdout、exit 0 です。`eval` の構文が不正な場合も同じで、Excel の `#NAME?` エラー値を stdout に出力して 0 で終了します。数式の typo を終了コードで検出せず、出力値を確認してください。使い方エラーは 64、エンジン / I/O 失敗は 1 です。
 
 ## `recalc`
 

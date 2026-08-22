@@ -38,20 +38,20 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 | WASM | broadest JS API | Full generated `formulon.d.ts`, browser and Node support |
 | Python | broad workbook API | wasmtime-backed wrapper, context-manager workbook lifecycle |
 | CLI | focused tools | `eval`, `recalc`, `dump`, `paginate` |
-| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon; table authoring, AutoFilter XML, phonetics, and cell-style authoring remain WASM-only |
+| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; table authoring, AutoFilter XML, and cell-style authoring remain WASM-only |
 | C ABI | binding contract | Stable low-level contract for packaged surfaces |
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
 | `formulon-cell` | reference UI | Public integration-test and example surface, not a complete Excel-compatible UI |
 
 ::: info Python parity boundary
-Python has broad workbook parity, including whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), and `paginate()`. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.
+Python has broad workbook parity, including whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), `paginate()`, iterative-settings read-back, three-state sheet visibility, typed print-setting authoring, range XF assignment, and cache-index pivot items. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.
 :::
 
-Python also exposes visual conditional-format payloads, DXFs, pivot report layout, and pivot-cache worksheet-source access.
+Python also exposes visual conditional-format payloads, DXFs, pivot report layout, pivot-cache worksheet-source access, and the same `allow_blank=False` default for omitted data-validation input.
 
 ## When surfaces disagree
 
-If two surfaces produce different values for the same workbook and the same profile, treat it as a bug or a documented compatibility gap. The parity runner under `make parity-test` exercises shared fixtures across available channels and reports both *missing* and *mismatched* results. Shared calculation methods use the same result envelopes and value semantics across Native Node and WASM, while their method sets differ at the binding boundary; Native Node adds native lifecycle helpers, and WASM retains the table, AutoFilter XML, phonetic, and cell-style authoring methods. Other differences are operational, such as native threads, copy costs, and the WASM memory ceiling.
+If two surfaces produce different values for the same workbook and the same profile, treat it as a bug or a documented compatibility gap. The parity runner under `make parity-test` exercises shared fixtures across available channels and reports both *missing* and *mismatched* results. Shared calculation methods use the same result envelopes and value semantics across Native Node and WASM; the remaining method differences are the explicit WASM-only authoring groups listed above. Other differences are operational, such as native threads, copy costs, and the WASM memory ceiling.
 
 ## Read next
 

@@ -1,6 +1,6 @@
 # ツール一覧
 
-`formulon-mcp` が公開する 33 個の全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間がツール群全体を一望したいときに使えます。
+`formulon-mcp` が公開する 37 個の全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間がツール群全体を一望したいときに使えます。
 
 ::: info A1 と 0-based の併用
 A1 表記を使う場合を除き、sheet / row / column インデックスは Formulon API と同じ 0-based です。アドレスを取るツールは両方の形式を受け付けます。
@@ -73,6 +73,10 @@ A1 パーサーが受け付けるのは、単一シート内の矩形範囲（`S
 | `formulon_edit_structure` | 行・列の挿入 / 削除。 |
 | `formulon_dimension_operation` | 列幅・行高の override を一覧、または width / height、hidden、outline level を設定。列は境界を含む `[first, last]` の範囲、行は単一の行インデックスに作用。 |
 | `formulon_set_sheet_view` | zoom、freeze pane、タブの hidden 状態を設定。 |
+| `formulon_default_font` | ワークブックの既定フォントを取得または置換します。書式未設定セルはフォントスロット `0` を使います。 |
+| `formulon_build_document` | 名前付きブロックから見出し・表・集計を配置し、セル、書式、罫線、幅、結合、印刷範囲をまとめて決定します。 |
+| `formulon_style_range` | A1 範囲にフォント、塗りつぶし、罫線、表示形式、配置の差分を適用します。 |
+| `formulon_print_settings` | ページ設定、余白、印刷オプション、ヘッダー/フッター、印刷範囲・タイトル、手動改ページを取得または設定します。 |
 
 ## リッチデータ
 

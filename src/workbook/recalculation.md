@@ -78,6 +78,8 @@ wb.recalc()
 
 `setIterativeProgress()` registers a callback that fires after every Gauss-Seidel sweep over the cyclic subgraph; it does not take iteration-limit arguments — those are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only: Python's `set_iterative()` takes the same three arguments, but the per-sweep progress callback is not bound (it would need a native function pointer that the Python host cannot synthesize).
 
+`getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes the same read-back as `get_iterative()`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
+
 ::: warning Cycles outside iteration are still errors
 If iterative calculation is **off** and the workbook contains a cycle, the involved cells return `#REF!` / `#NUM!` style Excel errors rather than throwing a host exception. Turn iteration on explicitly when cycles are intentional.
 :::

@@ -63,6 +63,12 @@ if (!wb.isValid()) {
 
 Excel エラーは値です。`#DIV/0!`、`#VALUE!`、`#NAME?` はホスト API の失敗ではありません。
 
+CLI も同じ規則です。不正な `eval` 構文（`formulon eval '=SUM('`）は `#NAME?` を stdout に出力して終了コード `0` を返します。数式テキストの不正を検出する場合は stdout を確認してください。非 0 終了は使い方、I/O、エンジンの失敗に使われます。
+
+## 入力規則が空セルを拒否する
+
+WASM と Native Node で `allowBlank` を省略した場合の既定値は、Python と同じ `false` です。空セルを許可する入力規則では `allowBlank: true`（Python は `allow_blank=True`）を明示してください。
+
 ## Python が WASM runtime を読み込めない
 
 公開 wheel を install して pip に互換性のある `wasmtime` wheel を解決させるか、

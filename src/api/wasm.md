@@ -128,18 +128,32 @@ wb.clearPinnedNow()
 | Group | Methods |
 | --- | --- |
 | Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
-| Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `setCellPhonetic`, `getCellPhonetic`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
-| Calculation | `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `pinnedNow`, `setPinnedNow`, `clearPinnedNow`, `paginate` |
+| Cells | `setNumber`, `setBool`, `setText`, `setBlank`, `setFormula`, `setCellPhonetic`, `getCellPhonetic`, `setCellPhoneticRuns`, `getCellPhoneticRuns`, `setCellPhoneticProperties`, `getCellPhoneticProperties`, `getValue`, `cellCount`, `cellAt`, `getLambdaText` |
+| Calculation | `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `getIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `pinnedNow`, `setPinnedNow`, `clearPinnedNow`, `paginate` |
 | Serialization | `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics` |
 | Profiles | `excelProfileId`, `setExcelProfileId` |
 | Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
 | Structure | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
-| Layout | sheet view, protection, row/column layout, styles, merges |
-| Rich workbook data | comments (`getCommentResult`), hyperlinks, data validations, conditional formats, pivot layout, external links |
-| Styles | `getFont` / `addFont` expose `FontRecord.vertAlign` (`0` baseline, `1` superscript, `2` subscript) |
+| Layout | sheet view and three-state visibility, protection, row/column layout, styles, merges, typed print settings |
+| Rich workbook data | comments (`getCommentResult`), hyperlinks, data validations, conditional formats, pivot layout and cache-item filters, external links |
+| Styles | `getFont` / `addFont`, `setFont`, and `setDefaultFont`; `FontRecord.vertAlign` is `0` baseline, `1` superscript, `2` subscript, and `scheme` preserves the theme font link |
+
+`setCellPhoneticRuns()` accepts an ordered, non-overlapping UTF-16 partition of the annotated cell text. `setCellPhoneticProperties()` changes its font, kana form, and alignment independently of those readings; writing a cell value clears both the runs and their properties.
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 `recalcParallel(threadCount)` is synchronous and returns `{ status, stats }`. A count of `0` selects automatic detection capped at 8 workers, `1` stays on the caller thread, and `2..8` sets the worker upper bound; missing, fractional, non-finite, negative, or above-8 values fail with `kInvalidArgument`.
+
+`setIterative(enabled, maxIterations, maxChange)` stores iterative-calculation settings. `getIterative()` reads them back as `{ status, enabled, maxIterations, maxChange }`; `maxIterations` is capped at `32767`, and the getter reports that capped value.
+
+`SheetVisibility` has `Visible = 0`, `Hidden = 1`, and `VeryHidden = 2`. `setSheetVisibility(sheet, visibility)` writes the whole tab state, while `getSheetView(sheet).view.visibility` distinguishes the two hidden states. The legacy `tabHidden` flag remains `1` for both hidden states. `setSheetTabHidden(true)` does not demote a very-hidden sheet; use `setSheetVisibility()` for that transition.
+
+Worksheet print settings are authored with `setSheetPageSetup()`, `setSheetPageMargins()`, `setSheetPrintOptions()`, `setSheetHeaderFooter()`, `setSheetPrintArea()`, `setSheetPrintTitles()`, `addSheetRowBreak()`, and `addSheetColBreak()`; raw XML setters are available for unmodeled fragments and validate input before storing it. Header/footer inputs use decoded Excel section strings, so a literal ampersand is written as `&&`.
+
+`setRangeXfIndex(sheet, firstRow, firstCol, lastRow, lastCol, xfIndex)` applies one cell-style XF index across an inclusive rectangle and materializes missing cells as styled blanks.
+
+`pivotFieldAddItemAt(sheet, pivotIdx, fieldIdx, cacheIndex, visible)` addresses a manual-filter item by its bound cache field's shared-item index. It is the only form that can identify a blank pivot member; an empty name passed to `pivotFieldAddItem()` is text matching and cannot do so. An unresolved index is accepted but filters nothing.
+
+Data-validation input defaults `allowBlank` to `false` when omitted. Pass `allowBlank: true` to allow empty cells; `showDropDown` remains the OOXML-inverted exception.
 
 `evaluateFormulaText` and `evaluateConditionalFormula` evaluate formula text against an existing workbook **without mutating it or joining the dependency graph**. They resolve local and cross-sheet references, defined names, and `ROW()` / `COLUMN()` anchoring; conditional-format evaluation also shifts relative references from the rule anchor and applies Excel-style predicate coercion. An array/spill result from the scalar call is reduced to its top-left element (not Excel implicit intersection). A formula that references its own anchor cell reads that cell's cached value rather than raising `#REF!`.
 

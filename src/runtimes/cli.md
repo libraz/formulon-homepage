@@ -15,6 +15,8 @@ Common workflows:
 
 Use the CLI in CI to catch accidental workbook changes and to reproduce issues without writing a host-language integration first.
 
+`eval` treats malformed formula syntax as a cell-level result: it prints `#NAME?` to stdout and exits `0`. Check the output when a shell script must reject a typo; the exit code distinguishes host/usage failures, not this Excel error value.
+
 ## Examples
 
 ```sh
