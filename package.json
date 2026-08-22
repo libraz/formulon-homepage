@@ -33,13 +33,13 @@
     "vitepress": "^1.6.4"
   },
   "dependencies": {
-    "@libraz/formulon": "0.10.0",
-    "@libraz/formulon-cell": "0.5.1",
-    "@libraz/formulon-cell-vue": "0.5.1",
+    "@libraz/formulon": "0.11.1",
+    "@libraz/formulon-cell": "0.6.0",
+    "@libraz/formulon-cell-vue": "0.6.0",
     "vue": "^3.5.41",
     "zustand": "^5.0.15"
   },
   "resolutions": {
-    "@libraz/formulon": "0.10.0"
+    "@libraz/formulon": "0.11.1"
   }
 }

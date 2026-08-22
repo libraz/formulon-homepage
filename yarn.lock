@@ -564,32 +564,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell-vue@npm:0.5.1":
-  version: 0.5.1
-  resolution: "@libraz/formulon-cell-vue@npm:0.5.1"
+"@libraz/formulon-cell-vue@npm:0.6.0":
+  version: 0.6.0
+  resolution: "@libraz/formulon-cell-vue@npm:0.6.0"
   dependencies:
-    "@libraz/formulon-cell": "npm:^0.5.1"
+    "@libraz/formulon-cell": "npm:^0.6.0"
   peerDependencies:
     vue: ^3.3
-  checksum: 10c0/cb9e19e440a79846353c976c11fa840704ad77cf8446663597cfc895419412ddc46b95f2f276a6e5da18257914a2a8231d0fd2b67877b1d19b35529b53b1cec8
+  checksum: 10c0/639f4b6cdf7b1c19e9e9adf119819ab0be0de8cb19b5fa24103aa2ba6fcedd20d59913a0bf10768923bf74851066526b76f2feeffa4d7bbfd9058d9d5c6c8fde
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell@npm:0.5.1, @libraz/formulon-cell@npm:^0.5.1":
-  version: 0.5.1
-  resolution: "@libraz/formulon-cell@npm:0.5.1"
+"@libraz/formulon-cell@npm:0.6.0, @libraz/formulon-cell@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "@libraz/formulon-cell@npm:0.6.0"
   dependencies:
-    "@libraz/formulon": "npm:0.10.0"
+    "@libraz/formulon": "npm:0.11.1"
   peerDependencies:
     zustand: ^5
-  checksum: 10c0/0faa5c60e64aeed270c8ccf2107bd8e80286170a035b9b86f2a8cd77c0a03df2dddaa245732ad5e8cca896ee0610ec75800e363aa7b4583d73d4a096c4782f65
+  checksum: 10c0/5d138976b57582e5722806f9cea017ad6188ad84aee46cd9553838208b08d70d538e56a1866c8e3e5aa6cc348a0c59fea74b1e68d477592082900091aac26dbb
   languageName: node
   linkType: hard
 
-"@libraz/formulon@npm:0.10.0":
-  version: 0.10.0
-  resolution: "@libraz/formulon@npm:0.10.0"
-  checksum: 10c0/a4a7741ecdf0cd86e543a0bbcc461056d0a50e79c0e7757ab2456ae379a51c6077320e151b5a10e1d11eb7a5ebaa92f5c253f03e8feeabe0c566689f5fd03c46
+"@libraz/formulon@npm:0.11.1":
+  version: 0.11.1
+  resolution: "@libraz/formulon@npm:0.11.1"
+  checksum: 10c0/8427483d72265e87fad2033104f66156444dd134408105f71a19f682623961609fd33c79603db477fe5f1220ed2e60dcfbb9c3365f24146956f8ff286856cf43
   languageName: node
   linkType: hard
 
@@ -1521,9 +1521,9 @@ __metadata:
   resolution: "formulon-homepage@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.5.9"
-    "@libraz/formulon": "npm:0.10.0"
-    "@libraz/formulon-cell": "npm:0.5.1"
-    "@libraz/formulon-cell-vue": "npm:0.5.1"
+    "@libraz/formulon": "npm:0.11.1"
+    "@libraz/formulon-cell": "npm:0.6.0"
+    "@libraz/formulon-cell-vue": "npm:0.6.0"
     typescript: "npm:^7.0.2"
     vitepress: "npm:^1.6.4"
     vue: "npm:^3.5.41"
