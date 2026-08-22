@@ -12,8 +12,8 @@ const copy = computed(() =>
   isJa.value
     ? {
         masthead: 'Formulon',
-        volume: '0.10',
-        issue: 'v0.10.0 · 2026 / 08',
+        volume: '0.11.1',
+        issue: 'v0.11.1 · 2026 / 08',
         eyebrow: 'Workbook calculation platform',
         claimParts: [
           { text: 'Excel ワークブックを ' },
@@ -26,9 +26,9 @@ const copy = computed(() =>
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモ UI を試す', link: '/ja/cell/demo' },
         stats: [
-          { value: 'v0.10.0', label: '最新リリース' },
+          { value: 'v0.11.1', label: '最新リリース' },
           { value: '507 / 522', label: 'ローカル実装 / 認識対象' },
-          { value: '33', label: 'MCP ツール' }
+          { value: '37', label: 'MCP ツール' }
         ] as Stat[],
         coverageNote:
           '残り 15 件は Copilot、クラウド Python、画像取得、株価取得、CUBE 接続など外部サービス依存です。',
@@ -47,8 +47,8 @@ const copy = computed(() =>
       }
     : {
         masthead: 'Formulon',
-        volume: '0.10',
-        issue: 'v0.10.0 · 2026 / 08',
+        volume: '0.11.1',
+        issue: 'v0.11.1 · 2026 / 08',
         eyebrow: 'Headless Spreadsheet Engine',
         claimParts: [
           { text: 'A workbook calculation platform for ' },
@@ -61,9 +61,9 @@ const copy = computed(() =>
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the demo UI', link: '/cell/demo' },
         stats: [
-          { value: 'v0.10.0', label: 'Latest release' },
+          { value: 'v0.11.1', label: 'Latest release' },
           { value: '507 / 522', label: 'Local / recognized functions' },
-          { value: '33', label: 'MCP tools' }
+          { value: '37', label: 'MCP tools' }
         ] as Stat[],
         coverageNote:
           'The remaining 15 require external services such as Copilot, cloud Python, image fetch, market data, or CUBE connections.',

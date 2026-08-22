@@ -6,7 +6,7 @@ import { generateLlmsTxt, type LlmsLocale, llmsDevPlugin } from './llms'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.10.0'
+const docsVersion = '0.11.1'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
