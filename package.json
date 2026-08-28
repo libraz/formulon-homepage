@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Documentation site for Formulon",
   "type": "module",
+  "packageManager": "yarn@4.18.0",
   "homepage": "https://formulon.libraz.net",
   "repository": {
     "type": "git",
