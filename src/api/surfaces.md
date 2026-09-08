@@ -3,7 +3,7 @@
 | Surface | Package | Runtime |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | Browser, worker, Node |
-| Native Node | `@libraz/formulon-native` | Node.js N-API addon; prebuilt binaries ship for darwin-arm64/linux-x64/linux-arm64 (or build from a source checkout) |
+| Native Node | `@libraz/formulon-native` | Node.js N-API addon. Not published to npm — build from a source checkout; that build produces darwin-arm64 / linux-x64 / linux-arm64 binaries. See [Native Node](/runtimes/node-native) |
 | Python | `formulon` | py3 wheel using wasmtime |
 | CLI | `formulon-cli-<os>-<arch>` | Standalone binary |
 | C ABI | headers and native library | Custom hosts |

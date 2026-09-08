@@ -3,7 +3,7 @@
 | 実行入口 | パッケージ | 実行環境 |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | ブラウザ、worker、Node |
-| Native Node | `@libraz/formulon-native` | Node.js N-API アドオン。darwin-arm64 / linux-x64 / linux-arm64 向けのビルド済みバイナリを同梱（ソース checkout からのビルドも可） |
+| Native Node | `@libraz/formulon-native` | Node.js N-API アドオン。npm には未公開で、ソース checkout からビルドします（ビルドで darwin-arm64 / linux-x64 / linux-arm64 のバイナリが生成されます）。[Native Node](/ja/runtimes/node-native) を参照 |
 | Python | `formulon` | wasmtime を使う py3 wheel |
 | CLI | `formulon-cli-<os>-<arch>` | 単体バイナリ |
 | C ABI | ヘッダとネイティブライブラリ | 独自ホスト向け |
