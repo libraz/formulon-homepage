@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useData } from 'vitepress'
 import { computed } from 'vue'
+import { MCP_TOOL_COUNT } from '@/data/facts'
 
 type Cell = {
   name: string
@@ -44,7 +45,7 @@ const copy = computed(() =>
             cells: [
               {
                 name: '@libraz/formulon-mcp',
-                meta: 'stdio MCP サーバー · 33 ツール',
+                meta: `stdio MCP サーバー · ${MCP_TOOL_COUNT} ツール`,
                 link: '/ja/mcp/'
               },
               {
@@ -110,7 +111,7 @@ const copy = computed(() =>
             cells: [
               {
                 name: '@libraz/formulon-mcp',
-                meta: 'stdio MCP server · 33 tools',
+                meta: `stdio MCP server · ${MCP_TOOL_COUNT} tools`,
                 link: '/mcp/'
               },
               {

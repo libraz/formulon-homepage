@@ -1,3 +1,7 @@
+<script setup>
+import { MCP_TOOL_COUNT } from '@/data/facts'
+</script>
+
 # FAQ
 
 ## エンジンと互換性
@@ -212,7 +216,7 @@ Excel は Microsoft の製品および商標です。Formulon は独立した Ap
 
 ### `formulon-mcp` とは？
 
-`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` または `.xlsb` を開き、構造を調べ、セルやシートを編集し、文書を組み立てて装飾し、印刷設定を扱い、再計算して保存するための 37 個のツールを提供します。Node.js 22 以上が必要です。
+`@libraz/formulon-mcp` は、Formulon のワークブック操作 API を stdio MCP サーバーとして公開するパッケージです。AI エージェントが `.xlsx` または `.xlsb` を開き、構造を調べ、セルやシートを編集し、文書を組み立てて装飾し、印刷設定を扱い、再計算して保存するための {{ MCP_TOOL_COUNT }} 個のツールを提供します。Node.js 22 以上が必要です。
 
 ```sh
 npx -y @libraz/formulon-mcp

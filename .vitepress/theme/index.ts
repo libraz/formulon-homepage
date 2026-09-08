@@ -4,6 +4,7 @@ import { defineAsyncComponent } from 'vue'
 import CellFullDemo from './components/CellFullDemo.vue'
 import DiagramFlow from './components/DiagramFlow.vue'
 import DiagramLayers from './components/DiagramLayers.vue'
+import SizeBudgetTable from './components/SizeBudgetTable.vue'
 import SvgEmail from './components/SvgEmail.vue'
 import Layout from './Layout.vue'
 import '@libraz/formulon-cell/styles.css'
@@ -38,6 +39,7 @@ export default {
     app.component('SvgEmail', SvgEmail)
     app.component('DiagramFlow', DiagramFlow)
     app.component('DiagramLayers', DiagramLayers)
+    app.component('SizeBudgetTable', SizeBudgetTable)
     app.component('DemoFrame', DemoFrame)
     app.component('FormulaEvalDemo', FormulaEvalDemo)
     app.component('SpillDemo', SpillDemo)

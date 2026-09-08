@@ -1,6 +1,10 @@
+<script setup>
+import { MCP_TOOL_COUNT } from '@/data/facts'
+</script>
+
 # Tools
 
-This page lists all 37 MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
+This page lists all {{ MCP_TOOL_COUNT }} MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
 
 ::: info A1 vs zero-based
 Unless A1 notation is used, sheet / row / column indices are zero-based to match the Formulon API. Both styles are accepted on tools that take addresses.

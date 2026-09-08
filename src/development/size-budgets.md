@@ -10,10 +10,13 @@ A per-target byte ceiling for the built artifact. Builds that exceed the ceiling
 *Uncompressed* is what the WASM file weighs on disk. *Brotli* is what a properly configured CDN serves to browsers. Brotli is the user-visible number; uncompressed bounds what the engine needs to keep loadable on hosts that cannot serve Brotli.
 :::
 
-| Target | Budget |
-| --- | --- |
-| Uncompressed | 2.5 MiB soft target, 3.0 MiB hard ceiling |
-| Brotli | 640 KiB soft target, 768 KiB hard ceiling |
+<SizeBudgetTable
+  target="Target"
+  budget="Budget"
+  uncompressed="Uncompressed"
+  brotli="Brotli"
+  pattern="{soft} soft target, {hard} hard ceiling"
+/>
 
 Both uncompressed and Brotli limits are gated equally. Brotli is not a reporting-only metric.
 

@@ -1,6 +1,10 @@
+<script setup>
+import { MCP_TOOL_COUNT } from '@/data/facts'
+</script>
+
 # ツール一覧
 
-`formulon-mcp` が公開する 37 個の全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間がツール群全体を一望したいときに使えます。
+`formulon-mcp` が公開する {{ MCP_TOOL_COUNT }} 個の全ツールを、目的別にまとめます。モデルが MCP のツール検出で受け取る説明と内容が一致するため、人間がツール群全体を一望したいときに使えます。
 
 ::: info A1 と 0-based の併用
 A1 表記を使う場合を除き、sheet / row / column インデックスは Formulon API と同じ 0-based です。アドレスを取るツールは両方の形式を受け付けます。

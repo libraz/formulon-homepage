@@ -1,3 +1,7 @@
+<script setup>
+import { MCP_TOOL_COUNT } from '@/data/facts'
+</script>
+
 # FAQ
 
 ## Engine and Compatibility
@@ -212,7 +216,7 @@ Excel is Microsoft's product and trademark. Formulon is an independent Apache-2.
 
 ### What is `formulon-mcp`?
 
-`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides 37 tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, building and styling documents, configuring printing, recalculating, and saving. Node.js 22 or newer is required.
+`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides {{ MCP_TOOL_COUNT }} tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, building and styling documents, configuring printing, recalculating, and saving. Node.js 22 or newer is required.
 
 ```sh
 npx -y @libraz/formulon-mcp

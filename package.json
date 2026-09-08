@@ -11,8 +11,9 @@
   },
   "scripts": {
     "dev": "vitepress dev",
-    "build": "vitepress build",
+    "build": "node scripts/check-facts.mjs && vitepress build",
     "preview": "vitepress preview",
+    "check:facts": "node scripts/check-facts.mjs",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "lint": "biome check src .vitepress",
     "lint:fix": "biome check --write src .vitepress",

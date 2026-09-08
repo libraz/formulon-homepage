@@ -1,0 +1,9 @@
+{
+  "$comment": "Single source for numbers that appear on more than one page. Edited by hand; verified against the artefacts they describe by scripts/check-facts.mjs, which runs from `yarn build`. JSON rather than TypeScript so the check script can read it without a TS loader.",
+  "mcpToolCount": 37,
+  "wasmSizeBudget": {
+    "$comment": "Mirrors the defaults in the core repo's tools/bench/wasm_size_report.sh.",
+    "uncompressed": { "softBytes": 2883584, "hardBytes": 3145728 },
+    "brotli": { "softBytes": 753664, "hardBytes": 786432 }
+  }
+}
