@@ -48,7 +48,15 @@ const patchFormulonWorkerOptions = () => {
         'new Worker(new URL("formulon.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
         'new Worker(new URL("formulon.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
       )
-    if (after !== before) writeFileSync(file, after)
+    // In the shim layout the pthread worker must boot the generated module
+    // itself: bundled through the side-effect-free shim, the worker is empty.
+    const patched = file.endsWith('formulon_core.js')
+      ? after.replaceAll(
+          'new Worker(new URL("formulon.js",import.meta.url)',
+          'new Worker(new URL("formulon_core.js",import.meta.url)'
+        )
+      : after
+    if (patched !== before) writeFileSync(file, patched)
   }
 }
 
