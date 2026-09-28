@@ -16,6 +16,7 @@ node_modules
 # AI
 .claude
 .codex
+.serena
 *.claude.md
 *.codex.md
 claude.md
