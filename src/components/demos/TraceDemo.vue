@@ -167,6 +167,7 @@ const trace = async () => {
 const onSheetReady = async (mounted: SpreadsheetInstance) => {
   unsubscribe?.()
   instance = mounted
+  version.value = mounted.workbook.version
   const cell = await getCellApi()
   cell.mutators.setActive(mounted.store, ENTRY)
   selected.value = ENTRY

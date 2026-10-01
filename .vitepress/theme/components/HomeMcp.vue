@@ -11,21 +11,21 @@ const copy = computed(() =>
   isJa.value
     ? {
         section: 'Agent interface',
-        heading: 'AI エージェントから workbook を直接扱う。',
-        body: 'formulon-mcp は Formulon の計算 core を MCP tools として公開します。エージェントは .xlsx / .xlsb を開き、セルやシートを編集し、再計算して保存できます。',
+        heading: 'AI エージェントからワークブックを扱う。',
+        body: 'formulon-mcp は Formulon の計算エンジンを MCP ツールとして公開します。エージェントは .xlsx / .xlsb を開き、セルやシートを編集し、再計算して保存できます。',
         primary: { text: 'MCP セットアップ', link: '/ja/mcp/' },
         secondary: { text: 'GitHub', link: 'https://github.com/libraz/formulon-mcp' },
-        installLabel: 'Codex config',
+        installLabel: 'Codex の設定',
         install: [
           '[mcp_servers.formulon]',
           'command = "npx"',
           'args = ["-y", "@libraz/formulon-mcp"]'
         ],
         groups: [
-          { label: 'Formula', value: 'eval, lookup, trace' },
-          { label: 'Workbook', value: 'open, inspect, recalc, save' },
-          { label: 'Edit', value: 'cells, sheets, names, ranges' },
-          { label: 'Layout', value: 'merges, comments, validation' }
+          { label: '数式', value: '評価、関数検索、追跡' },
+          { label: 'ワークブック', value: '開く、調べる、再計算、保存' },
+          { label: '編集', value: 'セル、シート、定義名、範囲' },
+          { label: 'レイアウト', value: '結合、コメント、入力規則' }
         ] as ToolGroup[]
       }
     : {
@@ -65,7 +65,7 @@ const copy = computed(() =>
         </div>
       </div>
       <div class="fln-mcp-panel">
-        <div class="fln-mcp-terminal" aria-label="formulon-mcp setup snippet">
+        <div class="fln-mcp-terminal" :aria-label="isJa ? 'formulon-mcp の設定例' : 'formulon-mcp setup snippet'">
           <div class="fln-mcp-terminal-bar">
             <span>{{ copy.installLabel }}</span>
             <code>@libraz/formulon-mcp</code>

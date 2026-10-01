@@ -178,35 +178,6 @@
   color: var(--biz-ink);
 }
 
-.fln-claim em {
-  font-style: normal;
-  font-weight: 600;
-  color: var(--biz-ink);
-  background-image: linear-gradient(
-    transparent 65%,
-    color-mix(in srgb, var(--biz-accent) 30%, transparent) 65%
-  );
-  background-repeat: no-repeat;
-  padding: 0 2px;
-}
-
-.fln-claim code {
-  font-family: inherit;
-  font-style: normal;
-  font-weight: 600;
-  font-size: 1em;
-  background: transparent;
-  border: 0;
-  padding: 0 2px;
-  color: var(--biz-ink);
-  background-image: linear-gradient(
-    transparent 65%,
-    color-mix(in srgb, var(--biz-accent) 30%, transparent) 65%
-  );
-  background-repeat: no-repeat;
-  white-space: nowrap;
-}
-
 .fln-sub {
   margin: 24px 0 0;
   max-width: 56ch;
@@ -1755,13 +1726,6 @@ a.fln-stack-chip:hover {
   color: var(--biz-ink-soft);
 }
 
-.fln-claim em,
-.fln-claim code {
-  color: var(--biz-ink);
-  background-image: none;
-  padding: 0;
-}
-
 .fln-sub {
   max-width: 62ch;
   color: var(--biz-muted);
@@ -2145,25 +2109,29 @@ a.fln-stack-chip:hover {
 }
 
 .cell-full-demo__overlay {
+  margin: 0;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: grid;
-  place-items: center;
-  padding: 18px;
-  background: rgba(8, 10, 12, 0.62);
+  display: block;
+  padding: 0;
+  background: var(--demo-bg);
 }
 
 .cell-full-demo__window {
-  width: min(1680px, 100%);
-  height: min(980px, 100%);
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-rows: 44px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid var(--demo-line);
-  border-radius: 4px;
+  border: 0;
+  border-radius: 0;
   background: var(--demo-bg);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38);
 }
 
 .cell-full-demo__bar {
@@ -2348,5 +2316,59 @@ a.fln-stack-chip:hover {
   .fln-result-meta {
     grid-column: 1 / -1;
     text-align: left;
+  }
+}
+
+.cell-full-demo__overlay:not([open]) {
+  display: none;
+}
+
+.cell-full-demo__overlay::backdrop {
+  background: rgba(8, 10, 12, 0.62);
+}
+
+.cell-full-demo__content {
+  position: relative;
+  min-height: 0;
+}
+
+.cell-full-demo__notice {
+  position: absolute;
+  inset: 0 auto auto 0;
+  padding: 12px;
+  z-index: 1;
+  color: var(--demo-fg);
+  background: var(--demo-bg);
+}
+
+.cell-full-demo__window-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cell-full-demo__overlay > .fc-overlay-portal,
+.cell-full-demo__window > .fc-overlay-portal {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cell-full-demo__overlay > .fc-overlay-portal > *,
+.cell-full-demo__window > .fc-overlay-portal > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 960px) {
+  .cell-full-demo__sheet .fc-tb__ribbon-shell {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .cell-full-demo__sheet .fc-tb__ribbon-tabs,
+  .cell-full-demo__sheet .fc-tb__ribbon:not([hidden]) {
+    min-width: 1100px;
   }
 }

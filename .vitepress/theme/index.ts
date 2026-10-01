@@ -8,6 +8,7 @@ import SizeBudgetTable from './components/SizeBudgetTable.vue'
 import SvgEmail from './components/SvgEmail.vue'
 import Layout from './Layout.vue'
 import '@libraz/formulon-cell/styles.css'
+import '@libraz/formulon-cell/styles/toolbar.css'
 import './custom.css'
 
 // The live-engine demos are code-split: a page that embeds none of them must
@@ -24,6 +25,7 @@ const IterativeDemo = defineAsyncComponent(() => import('@/components/demos/Iter
 const StructureDemo = defineAsyncComponent(() => import('@/components/demos/StructureDemo.vue'))
 const FormatDemo = defineAsyncComponent(() => import('@/components/demos/FormatDemo.vue'))
 const ErrorsDemo = defineAsyncComponent(() => import('@/components/demos/ErrorsDemo.vue'))
+const CellEmbedDemo = defineAsyncComponent(() => import('@/components/demos/CellEmbedDemo.vue'))
 const DemoFrame = defineAsyncComponent(() => import('@/components/demos/DemoFrame.vue'))
 
 // Bespoke figures: one page each, so they are code-split like the demos.
@@ -50,6 +52,7 @@ export default {
     app.component('StructureDemo', StructureDemo)
     app.component('FormatDemo', FormatDemo)
     app.component('ErrorsDemo', ErrorsDemo)
+    app.component('CellEmbedDemo', CellEmbedDemo)
     app.component('CellTokenCascade', CellTokenCascade)
   }
 } satisfies Theme

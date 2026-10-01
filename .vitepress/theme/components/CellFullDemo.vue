@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { RibbonTab, SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
+import type { SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -7,7 +7,13 @@ const { lang, isDark } = useData()
 const isJa = computed(() => lang.value === 'ja')
 const open = ref(false)
 const instance = ref<SpreadsheetInstance | null>(null)
-const activeTab = ref<RibbonTab>('home')
+const dialogHost = ref<HTMLDialogElement | null>(null)
+const windowHost = ref<HTMLDivElement | null>(null)
+const failure = ref('')
+const busy = ref(false)
+const fullscreen = ref(false)
+let token = 0
+let returnFocus: HTMLElement | null = null
 const sheetHost = ref<HTMLDivElement | null>(null)
 
 let spreadsheet: SpreadsheetInstance | null = null
@@ -68,60 +74,116 @@ const seedSheet = (wb: WorkbookHandle) => {
 const copy = computed(() =>
   isJa.value
     ? {
-        title: 'Formulon UI/UX フルデモ',
-        body: '同梱している formulon-cell をそのまま埋め込んでいます。これは Formulon エンジン本体の入口ではなく、ブラウザ版 Formulon を spreadsheet workflow から体験・検証するためのデモ UI/UX です。',
+        title: 'formulon-cell フルデモ',
+        body: 'formulon-cell を埋め込んだ表計算デモです。リボン、セル編集、数式入力を試せます。',
         open: 'フルデモを開く',
         close: 'フルデモを閉じる',
-        label: 'formulon-cell'
+        label: 'formulon-cell',
+        expand: '全画面表示',
+        shrink: '全画面を終了'
       }
     : {
-        title: 'Formulon UI/UX full demo',
-        body: 'This embeds @libraz/formulon-cell directly. It is not the primary entry point for the Formulon engine; it is demo UI/UX for inspecting the browser build through spreadsheet workflows.',
+        title: 'formulon-cell full demo',
+        body: 'A spreadsheet demo embedded with formulon-cell. Try the ribbon, cell editing, and formula entry.',
         open: 'Open full demo',
         close: 'Close full demo',
-        label: 'formulon-cell'
+        label: 'formulon-cell',
+        expand: 'Enter fullscreen',
+        shrink: 'Exit fullscreen'
       }
 )
 
-const openDemo = () => {
+const openDemo = async () => {
+  if (open.value) return
+  returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
   open.value = true
+  await nextTick()
+  if (!open.value) return
+  dialogHost.value?.showModal()
   document.documentElement.classList.add('cell-demo-overlay-open')
+  document.addEventListener('fullscreenchange', syncFullscreen)
   void mountDemo()
 }
 
+const toggleFullscreen = async () => {
+  const surface = windowHost.value
+  if (!surface) return
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+    else await surface.requestFullscreen()
+    fullscreen.value = document.fullscreenElement === surface
+  } catch (error) {
+    failure.value = String(error)
+  }
+}
+
+const syncFullscreen = () => {
+  fullscreen.value = Boolean(windowHost.value && document.fullscreenElement === windowHost.value)
+}
+
+const onDialogEscape = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return
+  const find = dialogHost.value?.querySelector<HTMLElement>('.fc-find')
+  if (find?.getClientRects().length) {
+    event.preventDefault()
+    spreadsheet?.closeFindReplace()
+  }
+}
+
 const closeDemo = () => {
+  if (!open.value) return
+  token += 1
+  if (document.fullscreenElement && document.fullscreenElement === windowHost.value) {
+    void document.exitFullscreen().catch(() => {})
+  }
+  document.removeEventListener('fullscreenchange', syncFullscreen)
+  fullscreen.value = false
+  dialogHost.value?.close()
   open.value = false
   spreadsheet?.dispose()
   spreadsheet = null
   instance.value = null
   document.documentElement.classList.remove('cell-demo-overlay-open')
+  returnFocus?.focus()
 }
 
 const mountDemo = async () => {
-  await nextTick()
-  const sheetEl = sheetHost.value
-  if (!open.value || !sheetEl) return
-  cellApi ??= await import('@libraz/formulon-cell')
-
-  spreadsheet?.dispose()
-  // Single-call mount: the ribbon toolbar is built inside the host and shares
-  // the grid's theme, so one setTheme() re-themes both surfaces.
-  spreadsheet = await cellApi.Spreadsheet.mount(sheetEl, {
-    theme: isDark.value ? 'ink' : 'paper',
-    locale: isJa.value ? 'ja' : 'en',
-    seed: seedSheet,
-    toolbar: {
-      lang: isJa.value ? 'ja' : 'en',
-      activeTab: activeTab.value,
-      dynamicDropdowns: true,
-      onTabChange
+  const mine = ++token
+  busy.value = true
+  failure.value = ''
+  try {
+    await nextTick()
+    const sheetEl = sheetHost.value
+    const root = dialogHost.value
+    if (!open.value || !sheetEl || !root || mine !== token) return
+    cellApi ??= await import('@libraz/formulon-cell')
+    if (!open.value || mine !== token) return
+    spreadsheet?.dispose()
+    spreadsheet = null
+    instance.value = null
+    const mounted = await cellApi.Spreadsheet.mount(sheetEl, {
+      ui: { profile: 'excel365', theme: isDark.value ? 'ink' : 'paper' },
+      locale: isJa.value ? 'ja' : 'en',
+      overlays: {
+        root: () => {
+          const surface = windowHost.value
+          return surface && document.fullscreenElement === surface ? surface : root
+        }
+      },
+      seed: seedSheet
+    })
+    if (!open.value || mine !== token) {
+      mounted.dispose()
+      return
     }
-  })
-  instance.value = spreadsheet
-}
-
-const onTabChange = (tab: RibbonTab) => {
-  activeTab.value = tab
+    mounted.on('changeBatch', () => mounted.recalc())
+    spreadsheet = mounted
+    instance.value = mounted
+  } catch (error) {
+    if (mine === token) failure.value = String(error)
+  } finally {
+    if (mine === token) busy.value = false
+  }
 }
 
 watch(isDark, (dark) => {
@@ -130,15 +192,14 @@ watch(isDark, (dark) => {
 
 watch(isJa, (ja) => {
   spreadsheet?.i18n.setLocale(ja ? 'ja' : 'en')
-  if (open.value) void mountDemo()
-})
-
-watch(activeTab, (tab) => {
-  const tb = spreadsheet?.toolbar
-  if (tb && tb.getActiveTab() !== tab) tb.setActiveTab(tab)
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreen)
+  if (document.fullscreenElement && document.fullscreenElement === windowHost.value) {
+    void document.exitFullscreen().catch(() => {})
+  }
+  token += 1
   spreadsheet?.dispose()
   document.documentElement.classList.remove('cell-demo-overlay-open')
 })
@@ -156,26 +217,35 @@ onBeforeUnmount(() => {
     </div>
 
     <Teleport to="body">
-      <div
+      <dialog
         v-if="open"
+        ref="dialogHost"
         class="cell-full-demo__overlay"
-        role="dialog"
-        aria-modal="true"
         :aria-label="copy.title"
         @click.self="closeDemo"
+        @keydown.capture="onDialogEscape"
+        @cancel.prevent="closeDemo"
+        @close="closeDemo"
       >
-        <div class="cell-full-demo__window">
+        <div ref="windowHost" class="cell-full-demo__window">
           <header class="cell-full-demo__bar">
-            <strong>{{ copy.label }}</strong>
-            <button type="button" class="cell-full-demo__close" :aria-label="copy.close" @click="closeDemo">
+            <strong><a :href="isJa ? '/ja/cell/' : '/cell/'">{{ copy.label }}</a></strong>
+            <div class="cell-full-demo__window-actions">
+              <button type="button" @click="toggleFullscreen">{{ fullscreen ? copy.shrink : copy.expand }}</button>
+            <button type="button" class="cell-full-demo__close" autofocus :aria-label="copy.close" @click="closeDemo">
               <span aria-hidden="true">×</span>
             </button>
+            </div>
           </header>
           <ClientOnly>
-            <div ref="sheetHost" class="cell-full-demo__sheet"></div>
+            <div class="cell-full-demo__content">
+              <p v-if="busy" role="status" class="cell-full-demo__notice">{{ isJa ? 'シートを読み込み中…' : 'Loading workbook…' }}</p>
+              <p v-if="failure" role="alert" class="cell-full-demo__notice">{{ failure }}</p>
+              <div ref="sheetHost" class="cell-full-demo__sheet"></div>
+            </div>
           </ClientOnly>
         </div>
-      </div>
+      </dialog>
     </Teleport>
   </section>
 </template>

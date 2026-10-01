@@ -39,6 +39,7 @@ const host = ref<HTMLElement | null>(null)
 
 let workbook: WorkbookHandleType | null = null
 let spreadsheet: SpreadsheetInstance | null = null
+let disposed = false
 
 const copy = computed(() =>
   isJa.value
@@ -48,10 +49,10 @@ const copy = computed(() =>
         body: '下のシートは @libraz/formulon を読み込んだ formulon-cell の実デモです。関数を選ぶと F2 の式を書き換え、WASM エンジンで再計算します。',
         badge: 'WASM',
         readonly: '表示専用',
-        readonlyNote: 'シートは読み取り専用です。編集は関数ピッカーから反映されます。',
+        readonlyNote: 'シートは読み取り専用です。関数ボタンを選ぶと数式が切り替わります。',
         result: 'F2 の結果',
         formula: '現在の式',
-        open: 'UI デモの位置づけ',
+        open: 'formulon-cell のドキュメント',
         full: 'フルデモを見る'
       }
     : {
@@ -63,7 +64,7 @@ const copy = computed(() =>
         readonlyNote: 'The sheet is read-only. Changes are applied through the function picker.',
         result: 'F2 result',
         formula: 'Current formula',
-        open: 'Why this UI exists',
+        open: 'formulon-cell documentation',
         full: 'Open full demo'
       }
 )
@@ -74,6 +75,7 @@ const applyFunction = (fn: DemoFunction) => {
   activeFunction.value = fn
   if (!workbook || !spreadsheet) return
   const { mutators, formatCell } = spreadsheetApi
+  workbook.setText({ sheet: 0, row: 1, col: 4 }, fn.name)
   workbook.setFormula(targetAddr, fn.formula)
   // The instance recalculates and re-reads the sheet into the store; the
   // workbook's own recalc() only does the former, leaving the grid stale.
@@ -116,30 +118,47 @@ const seedWorkbook = (wb: WorkbookHandleType) => {
 
 onMounted(async () => {
   if (!host.value) return
-
+  let wb: WorkbookHandleType | null = null
   try {
     spreadsheetApi = await import('@libraz/formulon-cell')
+    if (disposed) return
     const { Spreadsheet, WorkbookHandle, mutators, formatCell, isUsingStub } = spreadsheetApi
-    workbook = await WorkbookHandle.createDefault()
-    seedWorkbook(workbook)
+    wb = await WorkbookHandle.createDefault()
+    if (disposed) {
+      wb.dispose()
+      return
+    }
+    seedWorkbook(wb)
 
-    spreadsheet = await Spreadsheet.mount(host.value, {
-      workbook,
-      features: spreadsheetApi.presets.minimal(),
+    const mounted = await Spreadsheet.mount(host.value, {
+      workbook: wb,
+      ui: {
+        profile: 'embedded',
+        features: { formulaBar: true },
+        advancedFeatures: { wheel: false }
+      },
+      policy: spreadsheetApi.viewerPolicy(),
+      viewport: { range: { sheet: 0, r0: 0, c0: 0, r1: 7, c1: 5 } },
+      contextMenu: { mode: 'disabled' },
       locale: isJa.value ? 'ja' : 'en',
       theme: isDark.value ? 'ink' : 'paper'
     })
 
-    // The panel says the sheet is read-only, so make it so: protection is
-    // enforced in the interaction layer, leaving the function picker's own
-    // writes through the workbook API unaffected.
-    spreadsheet.setSheetProtected(true)
-
+    if (disposed) {
+      mounted.dispose()
+      wb.dispose()
+      return
+    }
+    spreadsheet = mounted
+    workbook = wb
     mutators.setActive(spreadsheet.store, targetAddr)
     result.value = formatCell(workbook.getValue(targetAddr), isJa.value ? 'ja-JP' : 'en-US')
     engine.value = workbook.isStub || isUsingStub() ? 'stub' : `formulon ${workbook.version}`
     status.value = workbook.isStub || isUsingStub() ? 'fallback' : 'ready'
   } catch (error) {
+    wb?.dispose()
+    workbook = null
+    if (disposed) return
     console.error('[formulon-cell demo]', error)
     engine.value = 'unavailable'
     status.value = 'error'
@@ -147,8 +166,10 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   spreadsheet?.dispose()
   spreadsheet = null
+  workbook?.dispose()
   workbook = null
 })
 
@@ -190,7 +211,7 @@ watch(isJa, async (ja) => {
           </div>
         </header>
 
-        <div class="fln-function-strip" aria-label="Function picker">
+        <div class="fln-function-strip" :aria-label="isJa ? '関数の選択' : 'Function picker'">
           <button
             v-for="fn in functions"
             :key="fn.name"
@@ -203,8 +224,12 @@ watch(isJa, async (ja) => {
           </button>
         </div>
 
+        <p>
+          {{ isJa ? '表計算 UI：' : 'Spreadsheet UI:' }}
+          <a :href="isJa ? '/ja/cell/' : '/cell/'">formulon-cell</a>
+        </p>
         <div class="fln-demo-sheet-wrap">
-          <div class="fln-demo-sheet" ref="host" aria-hidden="true"></div>
+          <div class="fln-demo-sheet" ref="host"></div>
         </div>
 
         <footer class="fln-demo-result">

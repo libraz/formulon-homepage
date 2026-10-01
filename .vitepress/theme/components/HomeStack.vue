@@ -26,7 +26,7 @@ const copy = computed(() =>
   isJa.value
     ? {
         section: 'Ecosystem',
-        heading: 'パッケージ構成と関係性',
+        heading: 'パッケージの構成',
         body: 'L1 が C++17 計算エンジン、L2 が言語ごとのインターフェイスパッケージ、L3 が用途別アプリパッケージ、L4 が利用側のアプリやエージェントです。',
         layers: <Layer[]>[
           {
@@ -35,7 +35,7 @@ const copy = computed(() =>
             caption: '利用側',
             cells: [
               { name: 'AI エージェント', meta: 'Claude Code · Codex · Claude Desktop' },
-              { name: 'ブラウザアプリ', meta: 'React / Vue / 素のフロントエンド' }
+              { name: 'ブラウザアプリ', meta: 'React / Vue / フレームワークなしのフロントエンド' }
             ]
           },
           {
@@ -75,6 +75,11 @@ const copy = computed(() =>
                 name: 'formulon (CLI)',
                 meta: 'GitHub Releases バイナリ · CI / シェル',
                 link: '/ja/runtimes/cli'
+              },
+              {
+                name: 'Native Node',
+                meta: 'ソースからビルドする Node.js ネイティブアドオン',
+                link: '/ja/runtimes/node-native'
               }
             ]
           },
@@ -93,7 +98,7 @@ const copy = computed(() =>
     : {
         section: 'Ecosystem',
         heading: 'How the packages relate',
-        body: 'L1 is the C++17 calculation core (formulon). L2 is per-language interface packages — @libraz/formulon on npm, formulon on PyPI, plus the CLI binary. L3 is app-facing packages. L4 is the consumer.',
+        body: 'L1 is the C++17 calculation core (formulon). L2 provides the WASM, Python, Native Node, and CLI interfaces. L3 contains packages for applications and agents. L4 is the consumer.',
         layers: <Layer[]>[
           {
             kind: 'pair',
@@ -141,6 +146,11 @@ const copy = computed(() =>
                 name: 'formulon (CLI)',
                 meta: 'GitHub Releases binary · CI and shell',
                 link: '/runtimes/cli'
+              },
+              {
+                name: 'Native Node',
+                meta: 'Source-built Node.js native addon',
+                link: '/runtimes/node-native'
               }
             ]
           },

@@ -11,7 +11,7 @@ const isJa = computed(() => lang.value === 'ja')
 const heading = computed(() => (isJa.value ? '用途から始める' : 'Start from the job.'))
 const subheading = computed(() =>
   isJa.value
-    ? 'Formulon はライブラリ紹介だけでは判断しづらい領域です。最初に「どこでワークブックを扱うか」を選ぶと、必要な実行環境、API、互換性確認に進めます。'
+    ? 'ワークブックをどこで扱うかに応じて、実行環境を選んでください。各ガイドで、必要な API と互換性の確認方法を説明します。'
     : 'Formulon is easiest to evaluate from the place where the workbook runs. Pick the deployment first, then move into the runtime, API, and compatibility details that matter for that path.'
 )
 const sectionLabel = computed(() => (isJa.value ? 'Operations' : 'Operations'))
@@ -23,7 +23,7 @@ const paths = computed<Path[]>(() =>
           key: 'Desk',
           title: 'ブラウザでワークブックを開く',
           description:
-            'WASM でファイルアップロード、数式編集、再計算プレビューを処理します。Office 不要のクライアント計算。',
+            'WASM でファイルの読み込み、数式編集、再計算を処理します。Office を使わず、ブラウザ内で計算できます。',
           link: '/ja/scenarios/browser-upload'
         },
         {
@@ -36,22 +36,21 @@ const paths = computed<Path[]>(() =>
         {
           key: 'Batch',
           title: 'Python で一括再計算する',
-          description:
-            '帳票生成や ETL でスプレッドシートの計算ロジックをサーバー側へ移し、定型業務を自動化します。',
+          description: '帳票生成や ETL、定期実行の処理でワークブックを一括再計算します。',
           link: '/ja/scenarios/python-batch'
         },
         {
           key: 'Pipeline',
-          title: 'CI でワークブックの回帰を検出する',
+          title: 'CI で計算結果の変化を検出する',
           description:
-            '基準ワークブックと Excel 由来の期待値で、計算結果のずれを継続的に検出します。',
+            'コミット済みの数式・値のスナップショットと比較し、計算結果の変化を検出します。',
           link: '/ja/scenarios/ci-regression'
         },
         {
           key: 'Agent',
-          title: 'AI エージェントから workbook を編集する',
+          title: 'AI エージェントからワークブックを編集する',
           description:
-            'MCP tools で .xlsx / .xlsb を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
+            'MCP ツールで .xlsx / .xlsb を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
           link: '/ja/mcp/'
         }
       ]
@@ -60,7 +59,7 @@ const paths = computed<Path[]>(() =>
           key: 'Desk',
           title: 'Upload workbook in a browser',
           description:
-            'WASM handles file upload, formula edits, and preview recalculation — client-side, with no Office runtime.',
+            'WASM loads workbook files, edits formulas, and recalculates in the browser without an Office runtime.',
           link: '/scenarios/browser-upload'
         },
         {
@@ -74,14 +73,14 @@ const paths = computed<Path[]>(() =>
           key: 'Batch',
           title: 'Batch recalculation from Python',
           description:
-            'Move spreadsheet logic into report generation, ETL pipelines, and scheduled recalc jobs.',
+            'Recalculate workbooks in report generation, ETL pipelines, and scheduled jobs.',
           link: '/scenarios/python-batch'
         },
         {
           key: 'Pipeline',
           title: 'Workbook regression in CI',
           description:
-            'Detect calculation drift continuously with golden workbooks and Excel-derived oracle profiles.',
+            'Detect calculation changes by comparing checked-in formula and value snapshots.',
           link: '/scenarios/ci-regression'
         },
         {
@@ -99,12 +98,12 @@ const capabilities = computed<Capability[]>(() =>
     ? [
         {
           key: 'MCP',
-          value: 'AI エージェント向け workbook 操作 tools',
+          value: 'AI エージェント向けのワークブック操作ツール',
           link: '/ja/mcp/'
         },
         {
           key: 'Runtime',
-          value: 'WebAssembly / Python / CLI が 1 つの C++17 エンジンを共有',
+          value: 'WASM / Python / Native Node / CLI が同じ C++17 エンジンを使用',
           link: '/ja/runtimes/'
         },
         {
@@ -126,7 +125,7 @@ const capabilities = computed<Capability[]>(() =>
         },
         {
           key: 'Runtime',
-          value: 'WASM, Python, and CLI share one C++17 core',
+          value: 'WASM, Python, Native Node, and CLI share one C++17 core',
           link: '/runtimes/'
         },
         {

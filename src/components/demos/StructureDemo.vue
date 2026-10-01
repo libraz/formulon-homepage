@@ -238,6 +238,7 @@ const restore = () => {
 const onSheetReady = (mounted: SpreadsheetInstance) => {
   unsubscribe?.()
   instance = mounted
+  version.value = mounted.workbook.version
   unsupported.value = !mounted.workbook.capabilities.insertDeleteRowsCols
   after.value = inventory(mounted.workbook)
   const stopSelection = mounted.on('selectionChange', (event) => {

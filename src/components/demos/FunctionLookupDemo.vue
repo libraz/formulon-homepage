@@ -13,6 +13,7 @@ import { useData } from 'vitepress'
 import { computed, ref, watch } from 'vue'
 import DemoFrame from './DemoFrame.vue'
 import {
+  checkedList,
   type Engine,
   formatValue,
   getCellApi,
@@ -184,7 +185,7 @@ const start = async () => {
     descriptions = cell.FUNCTION_DESCRIPTIONS
 
     catalog = await getFunctionCatalog()
-    const list = Array.from(catalog.functionNames())
+    const list = Array.from(checkedList(catalog.functionNames()))
     names.value = list
     availability.value = list.map(
       (name) =>

@@ -18,7 +18,14 @@ import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import DemoFrame from './DemoFrame.vue'
 import DemoSheet from './DemoSheet.vue'
-import { cellAddress, type Engine, formatValue, getEngine, statusText } from './engine'
+import {
+  cellAddress,
+  type Engine,
+  formatValue,
+  getEngine,
+  numberResult,
+  statusText
+} from './engine'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -187,7 +194,7 @@ const writeAndReload = (wb: Workbook, container: Container): Written | null => {
     if (reloaded.isValid()) {
       const name = reloaded.sheetName(0)
       sheet = name.status.ok ? name.value : ''
-      cells = reloaded.cellCount(0)
+      cells = numberResult(reloaded.cellCount(0))
       probe = formatValue(engine, reloaded.getValue(0, PROBE.row, PROBE.col).value)
     } else {
       loadError.value = module.lastErrorMessage() || copy.value.invalid

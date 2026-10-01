@@ -40,6 +40,8 @@ const props = withDefaults(
      * who is still scrolling toward it.
      */
     reserve?: number
+    /** Only needed for an explicitly threaded engine build. */
+    requiresIsolation?: boolean
   }>(),
   {
     description: undefined,
@@ -47,7 +49,8 @@ const props = withDefaults(
     error: undefined,
     version: undefined,
     resettable: true,
-    reserve: 180
+    reserve: 180,
+    requiresIsolation: undefined
   }
 )
 
@@ -69,7 +72,7 @@ const stopObserving = () => {
 }
 
 onMounted(() => {
-  blocker.value = engineBlocker()
+  blocker.value = engineBlocker(props.requiresIsolation)
   if (blocker.value) return
   if (typeof IntersectionObserver === 'undefined' || !root.value) {
     nearViewport.value = true
@@ -109,11 +112,13 @@ const copy = computed(() =>
         retry: 'もう一度試す',
         failed: 'エンジンの実行に失敗しました。',
         note: '本物の Formulon エンジン (WASM) がこのページ内で動作します。データは送信されません。',
+        releaseNote:
+          'ドキュメントは 0.12.0 を対象としています。デモの実行バージョンは上に表示します。',
         badge: 'live engine',
         blocked: {
           wasm: 'このブラウザは WebAssembly に対応していないため、デモを実行できません。',
           'shared-memory':
-            'SharedArrayBuffer が利用できないため、デモを実行できません。Formulon の WASM ビルドはスレッド共有メモリを前提としています。',
+            'SharedArrayBuffer が利用できないため、デモを実行できません。このデモが使うスレッド対応エンジンには共有メモリが必要です。',
           isolation:
             'このページはクロスオリジン分離 (COOP: same-origin / COEP: require-corp) されていないため、スレッド対応の WASM を起動できません。formulon.libraz.net で直接開くと実行できます。'
         }
@@ -124,11 +129,12 @@ const copy = computed(() =>
         retry: 'Try again',
         failed: 'The engine failed to run.',
         note: 'Powered by the real Formulon engine (WASM) — it runs entirely in your browser, nothing is uploaded.',
+        releaseNote: 'The documentation targets 0.12.0. The demo’s runtime version is shown above.',
         badge: 'live engine',
         blocked: {
           wasm: 'This browser has no WebAssembly support, so the demo cannot run.',
           'shared-memory':
-            'SharedArrayBuffer is unavailable, so the demo cannot run. The Formulon WASM build requires threaded shared memory.',
+            'SharedArrayBuffer is unavailable, so the demo cannot run. This demo’s threaded engine requires shared memory.',
           isolation:
             'This page is not cross-origin isolated (COOP: same-origin / COEP: require-corp), so the threaded WASM build cannot start. Open it directly on formulon.libraz.net to run the demo.'
         }
@@ -182,5 +188,6 @@ const blockedText = computed(() => (blocker.value ? copy.value.blocked[blocker.v
     </ClientOnly>
 
     <p class="demo-frame__note">{{ copy.note }}</p>
+    <p v-if="version && version !== '0.12.0'" class="demo-frame__note">{{ copy.releaseNote }}</p>
   </section>
 </template>

@@ -1,34 +1,30 @@
 <script setup lang="ts">
 import { useData } from 'vitepress'
 import { computed } from 'vue'
+import { MCP_TOOL_COUNT } from '@/data/facts'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
 
-type Part = { text: string; mono?: boolean }
 type Stat = { value: string; label: string }
 
 const copy = computed(() =>
   isJa.value
     ? {
         masthead: 'Formulon',
-        volume: '0.11.1',
-        issue: 'v0.11.1 · 2026 / 08',
+        volume: '0.12.0',
+        issue: 'v0.12.0 · 2026 / 09',
         eyebrow: 'Workbook calculation platform',
-        claimParts: [
-          { text: 'Excel ワークブックを ' },
-          { text: 'アプリ・自動化・AI エージェント', mono: true },
-          { text: ' から扱う計算基盤。' }
-        ] as Part[],
-        sub: 'Formulon は 1 つの C++17 計算エンジンを WebAssembly、Python、CLI、MCP から使えるようにし、Excel をインストールせずに .xlsx / .xlsb の読み込み、式評価、再計算、書き戻しを扱います。',
+        claim: 'アプリや自動化、AI エージェントから Excel ワークブックを計算するエンジン',
+        sub: 'Formulon は同じ C++17 計算エンジンを WebAssembly、Python、Native Node、CLI、MCP から使えます。Excel をインストールせずに .xlsx / .xlsb を読み込み、数式を評価・再計算して保存できます。',
         primary: { text: 'クイックスタート', link: '/ja/start/install' },
         secondary: { text: 'MCP で使う', link: '/ja/mcp/' },
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモ UI を試す', link: '/ja/cell/demo' },
         stats: [
-          { value: 'v0.11.1', label: '最新リリース' },
-          { value: '507 / 522', label: 'ローカル実装 / 認識対象' },
-          { value: '37', label: 'MCP ツール' }
+          { value: 'v0.12.0', label: 'ドキュメント対象' },
+          { value: '508 / 523', label: 'ローカル実装 / 認識対象' },
+          { value: String(MCP_TOOL_COUNT), label: 'MCP ツール' }
         ] as Stat[],
         coverageNote:
           '残り 15 件は Copilot、クラウド Python、画像取得、株価取得、CUBE 接続など外部サービス依存です。',
@@ -47,23 +43,19 @@ const copy = computed(() =>
       }
     : {
         masthead: 'Formulon',
-        volume: '0.11.1',
-        issue: 'v0.11.1 · 2026 / 08',
+        volume: '0.12.0',
+        issue: 'v0.12.0 · 2026 / 09',
         eyebrow: 'Headless Spreadsheet Engine',
-        claimParts: [
-          { text: 'A workbook calculation platform for ' },
-          { text: 'apps, automation, and AI agents', mono: true },
-          { text: '.' }
-        ] as Part[],
-        sub: 'Formulon ships one C++17 calculation core across WASM, Python, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
+        claim: 'A workbook calculation platform for apps, automation, and AI agents.',
+        sub: 'Formulon ships one C++17 calculation core across WASM, Python, Native Node, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
         primary: { text: 'Quick Start', link: '/start/install' },
         secondary: { text: 'Use from MCP', link: '/mcp/' },
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the demo UI', link: '/cell/demo' },
         stats: [
-          { value: 'v0.11.1', label: 'Latest release' },
-          { value: '507 / 522', label: 'Local / recognized functions' },
-          { value: '37', label: 'MCP tools' }
+          { value: 'v0.12.0', label: 'Documentation target' },
+          { value: '508 / 523', label: 'Local / recognized functions' },
+          { value: String(MCP_TOOL_COUNT), label: 'MCP tools' }
         ] as Stat[],
         coverageNote:
           'The remaining 15 require external services such as Copilot, cloud Python, image fetch, market data, or CUBE connections.',
@@ -91,12 +83,7 @@ const flowLabel = (i: number) => String(i + 1).padStart(2, '0')
       <div class="fln-hero-copy">
         <p class="fln-eyebrow">{{ copy.eyebrow }}</p>
         <h1 id="fln-wordmark" class="fln-wordmark">Formulon</h1>
-        <p class="fln-claim">
-          <template v-for="(p, j) in copy.claimParts" :key="j"
-            ><em v-if="p.mono">{{ p.text }}</em
-            ><template v-else>{{ p.text }}</template></template
-          >
-        </p>
+        <p class="fln-claim">{{ copy.claim }}</p>
         <p class="fln-sub">{{ copy.sub }}</p>
         <div class="fln-actions">
           <a :href="copy.primary.link" class="fln-cta fln-cta-primary"
@@ -110,7 +97,7 @@ const flowLabel = (i: number) => String(i + 1).padStart(2, '0')
         </div>
       </div>
 
-      <aside class="fln-workbench" aria-label="Workbook recalculation preview">
+      <aside class="fln-workbench" :aria-label="isJa ? 'ワークブックの再計算例' : 'Workbook recalculation preview'">
         <header class="fln-workbench-bar">
           <span class="fln-marks" aria-hidden="true"
             ><span></span><span></span><span></span
@@ -123,7 +110,7 @@ const flowLabel = (i: number) => String(i + 1).padStart(2, '0')
             ><b>{{ flowLabel(i) }}</b>{{ step }}</span
           >
         </div>
-        <div class="fln-sheet" role="table" aria-label="Spreadsheet sample">
+        <div class="fln-sheet" role="table" :aria-label="isJa ? '表計算の例' : 'Spreadsheet sample'">
           <div v-for="(row, r) in copy.cells" :key="r" class="fln-sheet-row" role="row">
             <span
               v-for="(cell, c) in row"

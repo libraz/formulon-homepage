@@ -1,8 +1,8 @@
 /**
  * Shared access to the real Formulon WASM engine for the embedded doc demos.
  *
- * Every demo on a page goes through `getEngine()`, so one page loads one
- * ~2.3 MB wasm binary and one pthread pool no matter how many demos it hosts.
+ * Raw-engine demos share `getEngine()`. The grid package manages its own
+ * engine, which may be older than the documentation's release target.
  * The import is dynamic on purpose: `@libraz/formulon` pulls in the Emscripten
  * glue, and `@libraz/formulon-cell` touches `document` at module scope, so
  * neither may be evaluated during the SSR pass or on initial page load.
@@ -11,6 +11,7 @@
  * a JS fake would be a lie about the product.
  */
 import type { FormulonModule, Status, Value, Workbook } from '@libraz/formulon'
+import enginePackage from '@libraz/formulon/package.json'
 
 type FormulonNamespace = typeof import('@libraz/formulon')
 type CellNamespace = typeof import('@libraz/formulon-cell')
@@ -39,15 +40,31 @@ let catalogPromise: Promise<Workbook> | null = null
 
 /**
  * Reports the first hard blocker for running the engine, or `null` when the
- * context can run it. The engine is built `-pthread` against a shared
- * `WebAssembly.Memory`, so cross-origin isolation is a requirement, not an
- * optimisation: there is no single-threaded fallback build.
+ * context can run it. The 0.12 default entry only needs WebAssembly.
  */
-export function engineBlocker(): EngineBlocker | null {
+export function engineBlocker(requiresIsolation = defaultRequiresIsolation): EngineBlocker | null {
   if (typeof WebAssembly === 'undefined') return 'wasm'
+  if (!requiresIsolation) return null
   if (typeof SharedArrayBuffer === 'undefined') return 'shared-memory'
   if (!globalThis.crossOriginIsolated) return 'isolation'
   return null
+}
+
+// The default entry stopped requiring shared memory at 0.12.
+const [engineMajor, engineMinor] = enginePackage.version.split('.').map(Number)
+const defaultRequiresIsolation = engineMajor === 0 && engineMinor < 12
+
+/** Reads numeric accessors from either the published or prepared API. */
+export function numberResult(result: number | { status: Status; value: number }): number {
+  if (typeof result === 'number') return result
+  if (!result.status.ok) throw new Error(result.status.message)
+  return result.value
+}
+
+/** Lists retain their array shape; the prepared API adds a call status. */
+export function checkedList<T>(result: readonly T[] & { status?: Status }): readonly T[] {
+  if (result.status && !result.status.ok) throw new Error(result.status.message)
+  return result
 }
 
 /** Loads (once per page) and returns the real WASM engine. */

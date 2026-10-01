@@ -18,7 +18,7 @@ import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import DemoFrame from './DemoFrame.vue'
 import DemoSheet from './DemoSheet.vue'
-import { type Engine, getEngine } from './engine'
+import { type Engine, getEngine, numberResult } from './engine'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -162,7 +162,7 @@ const processBytes = (bytes: Uint8Array, label: string) => {
 
     const name = wb.sheetName(0)
     sheetName.value = name.status.ok ? name.value : ''
-    cellTotal.value = wb.cellCount(0)
+    cellTotal.value = numberResult(wb.cellCount(0))
 
     const saved = wb.save()
     if (!saved.status.ok || !saved.bytes) {

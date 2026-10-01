@@ -387,6 +387,102 @@
   background: color-mix(in srgb, var(--color-text-primary) 3%, var(--vp-c-bg));
 }
 
+/* --- Embedded cell scenarios ---------------------------------------- */
+
+.cell-embed-demo__host {
+  position: relative;
+  width: 100%;
+  height: min(var(--cell-embed-height, 190px), 62vh);
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--radius-sm);
+  background: var(--vp-c-bg);
+}
+
+.cell-embed-demo__host[data-busy="true"] {
+  background: color-mix(in srgb, var(--color-text-primary) 3%, var(--vp-c-bg));
+}
+
+.cell-embed-demo__control-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cell-embed-demo__events {
+  max-height: 8rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.45rem 0.65rem 0.45rem 1.6rem;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+.cell-embed-demo__events li {
+  padding: 0.12rem 0;
+}
+
+.cell-embed-demo__dialog {
+  position: relative;
+  width: min(54rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  height: fit-content;
+  max-height: calc(100vh - 1.5rem);
+  padding: 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: var(--radius-md);
+  background: var(--vp-c-bg);
+  color: var(--color-text-primary);
+}
+
+/* The package keeps one portal under the explicit dialog root. Keep that
+   static portal out of the dialog's height calculation; its menus and dialogs
+   opt back into pointer events below. */
+.cell-embed-demo__dialog > .fc-overlay-portal {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  height: 0;
+  pointer-events: none;
+}
+
+.cell-embed-demo__dialog > .fc-overlay-portal > * {
+  pointer-events: auto;
+}
+
+.cell-embed-demo__dialog::backdrop {
+  background: color-mix(in srgb, var(--vp-c-bg) 76%, #000 24%);
+}
+
+.cell-embed-demo__dialog-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  padding: 1rem;
+}
+
+.cell-embed-demo__dialog .cell-embed-demo__host {
+  flex: 0 0 auto;
+  height: min(190px, 42vh);
+  min-height: 0;
+  max-height: none;
+}
+
+.cell-embed-demo__dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cell-embed-demo__dialog-actions {
+  justify-content: flex-start;
+}
+
 /* --- Panels and readouts --------------------------------------------- */
 
 .demo-subpanel {
@@ -770,4 +866,24 @@
   .demo-frame .demo-segment__item {
     flex: 1 1 45%;
   }
+}
+
+.cell-embed-demo__host .fc-tb__ribbon-shell {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.cell-embed-demo__host .fc-tb__ribbon-tabs,
+.cell-embed-demo__host .fc-tb__ribbon:not([hidden]) {
+  min-width: 1100px;
+}
+
+.cell-embed-demo__host .fc-host__statusbar {
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.cell-embed-demo__host .fc-host__statusbar > * {
+  flex-shrink: 0;
 }
