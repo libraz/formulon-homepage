@@ -18,6 +18,8 @@ import createFormulon from '@libraz/formulon'
 const Module = await createFormulon()
 ```
 
+`@libraz/formulon` is the single-threaded entry point. It uses ordinary memory and loads in a browser without cross-origin isolation. Import `@libraz/formulon/threads` when `recalcParallel` must use workers; that entry uses the companion `@libraz/formulon/formulon_threads.wasm` binary and requires cross-origin isolation in browsers. Both entries expose this API and the same declaration file.
+
 Important module methods:
 
 | API | Purpose |
@@ -47,6 +49,12 @@ interface Status {
 
 Excel cell errors are returned as `ValueKind.Error`. They are not failed `Status` values.
 
+Numeric accessors such as `sheetCount()`, every `*Count()` method, and `calcMode()` return `NumberResult` objects with `{ status, value }`. String accessors such as `sheetName()`, `excelProfileId()`, `localizeFunctionName()`, and `canonicalizeFunctionName()` return `StringResult` objects with the same shape. Check `status.ok` before using `value`; a zero count or empty string can also be the failure default.
+
+List getters return `ListResult<T>`, which is the result array itself with a `.status` property. Read items as `result[0]`; there is no `items` or `value` envelope. `spillInfo()` returns a `SpillInfo` object whose `status` must be checked before its region fields are used.
+
+Conditional-format data exposes the rule direction and icon-set floor directly. `dataBar.direction` uses `0` for context, `1` for left-to-right, and `2` for right-to-left; `iconSet.floor` is the lower-bound `CfValueObjectInput` (optional when adding a rule and returned for every icon-set rule read back). Resolved data-bar matches report the same direction in `CfMatch.barDirection`.
+
 ## Value kinds
 
 ```ts
@@ -70,8 +78,10 @@ enum ValueKind {
 const wb = Module.Workbook.loadBytes(bytes)
 try {
   if (!wb.isValid()) throw new Error(Module.lastErrorMessage())
-  wb.recalc()
+  const recalculated = wb.recalc()
+  if (!recalculated.ok) throw new Error(recalculated.message)
   const saved = wb.save()
+  if (!saved.status.ok || saved.bytes === null) throw new Error(saved.status.message)
 } finally {
   wb.delete()
 }
@@ -115,13 +125,19 @@ const result = wb.saveAs(WorkbookFormat.Xlsb) // SaveResult { status, bytes }
 `NOW()`, `TODAY()`, and pivot relative-period filters read the host clock when the workbook is unpinned. Pin the workbook to one local civil-time reading when those results must agree within a recalculation or be reproducible across hosts:
 
 ```ts
-wb.setPinnedNow(2026, 8, 19, 12, 0, 0)
-const pin = wb.pinnedNow() // { year, month, day, hour, minute, second }
-wb.recalc()
-wb.clearPinnedNow()
+const check = (status: Status) => {
+  if (!status.ok) throw new Error(`${status.message}: ${status.context}`)
+}
+
+check(wb.setPinnedNow(2026, 8, 19, 12, 0, 0))
+const pin = wb.pinnedNow()
+if (!pin.status.ok) throw new Error(pin.status.message)
+const now = pin.now // CivilTime | null
+check(wb.recalc())
+check(wb.clearPinnedNow())
 ```
 
-`pinnedNow()` returns a `CivilTime` object or `null` when the workbook follows the host clock. `setPinnedNow()` validates `year` 1900–9999, the real day range for `month` 1–12, `hour` 0–23, and `minute` / `second` 0–59; invalid fields return a failed `Status` rather than being normalised. The values are local civil fields, not a timestamp, so they have no timezone interpretation. Setting or clearing the pin does not recalculate cached formula values; call `recalc()` explicitly. The pin is workbook model state, not file state: saving does not record it, and a reloaded workbook is unpinned.
+`pinnedNow()` returns `{ status, now }`. `now` is a `CivilTime` object when the workbook is pinned, or `null` when it follows the host clock or the call fails. `setPinnedNow()` validates `year` 1900–9999, the real day range for `month` 1–12, `hour` 0–23, and `minute` / `second` 0–59; invalid fields return a failed `Status` rather than being normalised. The values are local civil fields, not a timestamp, so they have no timezone interpretation. Setting or clearing the pin does not recalculate cached formula values; call `recalc()` explicitly. The pin is workbook model state, not file state: saving does not record it, and a reloaded workbook is unpinned.
 
 ## Main workbook methods
 
@@ -137,11 +153,11 @@ wb.clearPinnedNow()
 | Layout | sheet view and three-state visibility, protection, row/column layout, styles, merges, typed print settings |
 | Rich workbook data | comments (`getCommentResult`), hyperlinks, data validations, conditional formats, pivot layout and cache-item filters, external links |
 | Styles | `getFont` / `addFont`, `setFont`, and `setDefaultFont`; `FontRecord.vertAlign` is `0` baseline, `1` superscript, `2` subscript, and `scheme` preserves the theme font link |
-
-`setCellPhoneticRuns()` accepts an ordered, non-overlapping UTF-16 partition of the annotated cell text. `setCellPhoneticProperties()` changes its font, kana form, and alignment independently of those readings; writing a cell value clears both the runs and their properties.
 | Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
-`recalcParallel(threadCount)` is synchronous and returns `{ status, stats }`. A count of `0` selects automatic detection capped at 8 workers, `1` stays on the caller thread, and `2..8` sets the worker upper bound; missing, fractional, non-finite, negative, or above-8 values fail with `kInvalidArgument`.
+`setCellPhoneticRuns()` accepts an ordered, non-overlapping UTF-16 partition of the annotated cell text. `setCellPhoneticProperties()` changes its font, kana form, and alignment independently of those readings; writing a cell value clears both the runs and their properties.
+
+`recalcParallel(threadCount)` is synchronous and returns `{ status, stats }`. The default `@libraz/formulon` entry evaluates this call serially and reports `stats.workerThreadsStarted === 0`. The `@libraz/formulon/threads` entry starts workers: a count of `0` selects automatic detection capped at 8 workers, `1` stays on the caller thread, and `2..8` sets the worker upper bound. Missing, fractional, non-finite, negative, or above-8 values fail with `kInvalidArgument`.
 
 `setIterative(enabled, maxIterations, maxChange)` stores iterative-calculation settings. `getIterative()` reads them back as `{ status, enabled, maxIterations, maxChange }`; `maxIterations` is capped at `32767`, and the getter reports that capped value.
 
@@ -161,7 +177,7 @@ Data-validation input defaults `allowBlank` to `false` when omitted. Pass `allow
 
 `INDIRECT(ref_text, FALSE)` selects the R1C1 grammar. Absolute references use forms such as `R5C2`; relative axes use forms such as `R[-1]C`, resolved from the cell containing the formula. A bare `R` or `C` means the current row or column, and an endpoint naming only one axis is unbounded along the other (`R5` is the whole of row 5, just as `5:5` is). The `a1` argument selects a grammar rather than adding a fallback: A1 text with `FALSE`, and R1C1 text with `TRUE`, return `#REF!`. A relative R1C1 reference also returns `#REF!` when evaluated through an ad-hoc entry point that has no formula cell to anchor it.
 
-The diagram below contrasts the two paths through the same workbook:
+The diagram below contrasts three paths through the same workbook:
 
 <DiagramFlow label="Mutate path: setFormula then recalc" :steps="[
   { label: 'setFormula(sheet, row, col, formula)' },

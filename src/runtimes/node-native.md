@@ -38,12 +38,19 @@ import { Workbook, ValueKind, evalFormula } from './packages/npm-native/dist/ind
 console.log(evalFormula('=SUM(1,2,3)'))
 
 const wb = Workbook.createDefault()
-wb.setFormula(0, 0, 0, '=1+2')
-wb.recalc()
+try {
+  const set = wb.setFormula(0, 0, 0, '=1+2')
+  if (!set.ok) throw new Error(`${set.message}: ${set.context}`)
+  const recalculated = wb.recalc()
+  if (!recalculated.ok) throw new Error(`${recalculated.message}: ${recalculated.context}`)
 
-const result = wb.getValue(0, 0, 0)
-if (result.status.ok && result.value.kind === ValueKind.Number) {
-  console.log(result.value.number)
+  const result = wb.getValue(0, 0, 0)
+  if (!result.status.ok) throw new Error(`${result.status.message}: ${result.status.context}`)
+  if (result.value.kind === ValueKind.Number) {
+    console.log(result.value.number)
+  }
+} finally {
+  wb.dispose()
 }
 ```
 
@@ -63,7 +70,7 @@ Call `dispose()` when the workbook leaves scope. The addon also finalizes handle
 | Policy and catalog | calc mode, Excel profile id, function metadata, localized names, external links |
 | Top-level | `evalFormula`, `version`, `lastErrorMessage`, `lastErrorContext`, `statusString`, `mergeFunctionMetadata` |
 
-The authoritative method list is the package TypeScript declaration file. Treat Native Node as the performance-oriented Node path when you can ship a platform-specific binary; choose WASM when you need a browser, phonetic or AutoFilter XML access, table or cell-style authoring, or no native addon.
+The authoritative method list is the package TypeScript declaration file. Treat Native Node as the performance-oriented Node path when you can ship a platform-specific binary; choose WASM when you need a browser, AutoFilter XML access, table or cell-style authoring, or no native addon.
 
 Native Node now shares WASM's iterative-settings read-back, three-state sheet visibility, print-setting authoring, `setRangeXfIndex()`, and `pivotFieldAddItemAt()` methods. `getIterative()` reports the stored `maxIterations` after the common `32767` cap. `SheetVisibility.VeryHidden` is distinct from `Hidden`; `pivotFieldAddItemAt()` addresses a cache shared-item index so the blank pivot member can be filtered.
 

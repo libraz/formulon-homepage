@@ -18,19 +18,19 @@
   ] }
 ]" />
 
-ホスト失敗（不正なバイト列・ハンドル失効・IO エラー）は統合コード側を直す必要があり、セルエラーはインラインに表示してそのまま処理を続けます。
+ホスト側のエラー（不正なバイト列・ハンドル失効・入出力エラー）は、ホスト側のエラー経路で処理・報告します。必要に応じて再試行や統合コードの修正を行います。セルエラーはデータなので、インラインに表示して処理を続けます。
 
 | Error | 意味 |
 | --- | --- |
 | `#DIV/0!` | 0 除算 |
 | `#VALUE!` | 型または値の不一致 |
-| `#REF!` | 無効な参照（削除されたシート、壊れた range） |
+| `#REF!` | 無効な参照（削除されたシート、壊れた範囲） |
 | `#NAME?` | 未知の名前または関数 |
 | `#NUM!` | 数値オーバーフロー / 不正な数値 domain |
 | `#N/A` | 値が利用できない |
 | `#NULL!` | 範囲交差が空 |
 | `#SPILL!` | 動的配列の spill 衝突 |
-| `#CALC!` | engine が結果を返せない |
+| `#CALC!` | エンジンが結果を返せない |
 | `#GETTING_DATA` | 外部参照の取得中 |
 | `#FIELD!` | リッチデータ型のフィールド参照が無効 |
 | `#BLOCKED!` | ワークブックまたはデータ型ポリシーにより操作がブロックされた |
@@ -40,7 +40,7 @@
 | `#PYTHON!` | `PY` セルの評価中に発生したエラー |
 | `#UNKNOWN!` | 認識できない、または対応付けのないエラーコード |
 
-これが結線済みの `ErrorCode` の全体です（`src/value.h` の `kErrorTable`）。ホスト側で対応表を作る場合は、古典的な 10 種だけでなく 17 種すべてを対象にしてください。
+これが `ErrorCode` の全 17 種です（`src/value.h` の `kErrorTable`）。各バインディングの表示ヘルパーが全種類を扱います。入力ワークブックから保持された名前も含まれるため、`#PYTHON!` は Formulon が Python を実行することを意味せず、`#GETTING_DATA` もネットワークへ接続することを意味しません。
 
 バインディングはこれらをホスト言語の例外に変換せず、値として保持してください（API 誤用・入出力失敗を報告する場合を除く）。
 
@@ -56,7 +56,7 @@
 | Python | `FormulonError` |
 | CLI | 非ゼロ終了コード + stderr 診断 |
 | C ABI | 非ゼロ `fm_status_t` + `fm_last_error_message()` / `fm_last_error_context()` |
-| MCP | 構造化 payload を持つ MCP エラー応答 |
+| MCP | 構造化データを含む MCP エラー応答 |
 | Native Node | 返却 envelope の `status.ok === false` |
 
 ## C ABI の値種別
@@ -68,37 +68,49 @@
 | `FM_VAL_BOOL` | 真偽値 |
 | `FM_VAL_TEXT` | UTF-8 のワークブック所有テキストビュー |
 | `FM_VAL_ERROR` | Excel エラーコードの序数 |
-| `FM_VAL_ARRAY` | 予約済み payload |
-| `FM_VAL_REF` | 予約済み payload |
-| `FM_VAL_LAMBDA` | 予約済み payload |
+| `FM_VAL_ARRAY` | 予約済みペイロード |
+| `FM_VAL_REF` | 予約済みペイロード |
+| `FM_VAL_LAMBDA` | 予約済みペイロード |
 
 ## 処理パターン
 
-```ts
+::: code-group
+
+```ts [WASM]
 const result = wb.getValue(0, 0, 0)
 if (!result.status.ok) throw new Error(result.status.message)
 
 const value = result.value
 if (value.kind === ValueKind.Error) {
   // セルエラー ─ ユーザーに表示するだけで throw しない。
-  // value.errorCode は formulon.ErrorCode の序数。表示文字列
-  // （例: "#DIV/0!"）への変換は自前の対応表で行う。
-  showInline(value.errorCode)
+  showInline(Module.errorDisplayName(value.errorCode))
 } else if (value.kind === ValueKind.Number) {
   consume(value.number)
 }
 ```
 
-```python
+```ts [Native Node]
+import { errorDisplayName, ValueKind } from '@libraz/formulon-native'
+
+const result = wb.getValue(0, 0, 0)
+if (!result.status.ok) throw new Error(result.status.message)
+const value = result.value
+if (value.kind === ValueKind.Error) showInline(errorDisplayName(value.errorCode))
+```
+
+```python [Python]
+from formulon import ValueKind, error_display_name
+
 v = wb.get_value(0, 0, 0)
 if v.kind is ValueKind.ERROR:
-    # v.error_code は int の ErrorCode 序数。変換は自前で行う。
-    show_inline(v.error_code)
+    show_inline(error_display_name(v.error_code))
 elif v.kind is ValueKind.NUMBER:
     consume(v.number)
 ```
 
+:::
+
 ## 次に読むもの
 
-- [数式エンジン](/ja/workbook/formula-engine) ─ error の伝播
+- [数式エンジン](/ja/workbook/formula-engine) ─ エラーの伝播
 - [トラブルシュート](/ja/start/troubleshooting) ─ よくあるホスト失敗

@@ -18,7 +18,7 @@ The default profile is `win-365-ja_JP`, modelled on Excel 365 for Windows with t
 
 ### How many Excel functions can it run?
 
-Formulon recognizes **522** Excel function names. **507** are real implementations, including 2 environment-bound functions (`CELL`, `INFO`), and 15 are unavailable service stubs.
+Formulon recognizes **523** Excel function names. **508** are real implementations, including 2 environment-bound functions (`CELL`, `INFO`), and 15 are unavailable service stubs.
 
 The unavailable stubs include `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, `TRANSLATE`, `DETECTLANGUAGE`, and the CUBE functions. These names are recognized so failures are deterministic. See [Formula coverage](/compatibility/formula-coverage).
 
@@ -40,13 +40,13 @@ For business-critical workbooks, pin the Formulon version and profile, and keep 
 
 ### Is this trying to clone all of Excel?
 
-No. Formulon is a headless calculation and workbook-processing engine. It intentionally does not clone Excel's desktop UI, chart renderer, VBA runtime, PowerQuery engine, external-data refresh pipeline, or legacy `.xls` stack.
+No. Formulon is a headless calculation and workbook-processing engine. It intentionally does not clone Excel's desktop UI, chart renderer, VBA runtime, Power Query engine, external-data refresh pipeline, or legacy `.xls` stack.
 
 The goal is narrower: load modern workbook files, evaluate local spreadsheet formulas, preserve workbook structures where practical, and expose the same core through WASM, Python, CLI, Native Node, and MCP.
 
 ### Why not just use Excel, LibreOffice, HyperFormula, or a cloud spreadsheet API?
 
-Use those when they fit. Excel is the right answer when you need the real application, VBA, PowerQuery, live connections, or final visual review. LibreOffice is a broad office suite and can be a good batch conversion tool. HyperFormula is useful when you want an embeddable formula engine without full `.xlsx` workbook round-trip semantics. Cloud spreadsheet APIs are useful when the workbook already lives in that product.
+Use those when they fit. Excel is the right answer when you need the real application, VBA, Power Query, live connections, or final visual review. LibreOffice is a broad office suite and can be a good batch conversion tool. HyperFormula is useful when you want an embeddable formula engine without full `.xlsx` workbook round-trip semantics. Cloud spreadsheet APIs are useful when the workbook already lives in that product.
 
 Formulon exists for a different slot: applications that need local, embeddable `.xlsx` calculation and workbook mutation without automating a desktop app or sending workbook data to a hosted spreadsheet service.
 
@@ -66,7 +66,7 @@ English-locale profiles are intentionally not exposed until matching oracle data
 
 ### Which file formats are supported?
 
-The normal public API path is `.xlsx` bytes. The WASM, Python, Native Node, and CLI surfaces primarily use `.xlsx`; the MCP surface opens `.xlsx` or `.xlsb` and selects its output container from the output extension (`.xlsb` writes XLSB, anything else XLSX).
+WASM, Python, Native Node, CLI, and MCP can load `.xlsx` and `.xlsb`. Loaders detect the format from the file contents. Use `saveAs` / `save_as` to select the output format explicitly. CLI selects XLSB for a `.xlsb` output extension and XLSX otherwise. MCP accepts only `.xlsx` or `.xlsb` output paths and selects the corresponding format.
 
 `.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals. `saveWithDiagnostics` / `save_with_diagnostics` report documented write losses. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
 
@@ -78,9 +78,9 @@ Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving
 
 No. VBA projects can be preserved through a read / write round-trip, but macros are never executed. Workbooks that rely on macro-side state may differ from Excel.
 
-### Does it support PowerQuery, DAX, or live external connections?
+### Does it support Power Query, DAX, or live external connections?
 
-No. PowerQuery, DAX, live external connections, Web / OData / OLAP refresh, and similar data-refresh systems are outside Formulon. Refresh data upstream, then pass the resulting `.xlsx` to Formulon.
+No. Power Query, DAX, live external connections, Web / OData / OLAP refresh, and similar data-refresh systems are outside Formulon. Refresh data upstream, then pass the resulting `.xlsx` to Formulon.
 
 ### What about pivot tables?
 
@@ -98,13 +98,13 @@ Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs
 
 The Formulon engine is headless. Grid rendering and interactive spreadsheet UI are not part of the core engine.
 
-[`@libraz/formulon-cell`](/cell/) and its framework wrappers are public reference UI libraries for browser integration testing. They are useful examples of wiring the engine to a workbook-like surface, but they are not complete Excel-compatible UI products: feature coverage is partial, UI/UX intentionally does not mirror Excel exactly, and UI bugs may remain.
+[`@libraz/formulon-cell`](/cell/) is a browser spreadsheet UI kit with React and Vue adapters. See its guides for [embedding](/cell/embedding), [options](/cell/options), and [modals](/cell/modals).
 
 ### Can I safely run arbitrary `.xlsx` files from users?
 
-Do not treat arbitrary spreadsheet files as harmless. Formulon does not execute VBA, PowerQuery, external connections, or HTTP-backed formula functions, which removes several common execution paths. It still parses complex ZIP/XML workbook data and may read or write files depending on the surface you use.
+Do not treat arbitrary spreadsheet files as harmless. Formulon does not execute VBA, Power Query, external connections, or HTTP-backed formula functions, which removes several common execution paths. It still parses complex ZIP/XML workbook data and may read or write files depending on the surface you use.
 
-For untrusted uploads, run Formulon in a sandboxed process or worker, set file-size and time limits, restrict filesystem access, and keep the package version pinned and updated.
+For untrusted uploads, restrict process and filesystem permissions and set file-size and time limits. In browsers, a worker separates parsing and recalculation from the UI thread. Pin the package version and validate updates against representative files.
 
 ### Are charts, shapes, images, and formatting recalculated?
 
@@ -116,9 +116,9 @@ Use Excel or a rendering layer for visual review. Use Formulon for calculation a
 
 ### Why is the core C++17?
 
-C++17 is a conservative portability choice for this project. It runs predictably through Emscripten / WASM, can be packaged for npm, PyPI, CLI, and native embedding, and keeps the compiler baseline broad enough for GCC 9+ and Clang 10+ environments.
+C++17 lets the project build the same calculation source for Emscripten / WASM, npm, PyPI, CLI, and native embedding. Building the core requires a C++17 toolchain.
 
-The implementation also uses a deliberately small C++ subset: C ABI boundaries, explicit error values, limited template use, controlled inlining, and translation-unit-level size tracking. That makes code size and generated artifacts easier to reason about across the supported distribution targets. It also reuses the author's existing C++ conventions: C++17, `Expected<T, Error>`, no exceptions / RTTI, and Google-style formatting.
+The implementation uses a C ABI, explicit error values, controlled inlining, and WASM size budgets to manage the bindings and generated artifacts. Its conventions include C++17, `Expected<T, Error>`, exceptions and RTTI disabled in the core, and Google-style formatting.
 
 ### Why not Rust?
 
@@ -147,7 +147,9 @@ No. The `formulon` wheel is `py3-none-any` and ships `formulon_capi.wasm` plus a
 
 ### Does Native Node expose the full WASM API?
 
-Yes for the shared Workbook shape. The source-tree Native Node package under `packages/npm-native` shares the WASM surface and the three static factories (`createDefault` / `createEmpty` / `loadBytes`), including phonetic guides, iterative read-back, three-state visibility, print-setting authoring, range XF assignment, and cache-index pivot items. It adds `dispose()` for deterministic release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Table authoring, AutoFilter XML, and cell-style authoring remain WASM-only. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
+The shared Workbook methods are available, with some differences. The source-tree Native Node package under `packages/npm-native` exposes the three static factories (`createDefault` / `createEmpty` / `loadBytes`), phonetic guides, iterative settings, three-state sheet visibility, print settings, range XF assignment, and cache-index pivot items. Table authoring, AutoFilter XML, and cell-style authoring remain WASM-only.
+
+Native Node adds `dispose()` for explicit release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
 
 Choose Native Node when you build or stage the source-tree package and can deploy a platform-specific `.node` binary. It is useful for native threads and fewer heap copies on `loadBytes` / `save`. Choose WASM for browsers or Node deployments that cannot ship native addons.
 
@@ -165,18 +167,18 @@ Your host application can still send files elsewhere if you build it that way. M
 
 ### Do browser deployments need COOP / COEP?
 
-Yes for the pthread-backed WASM path. Browsers require `SharedArrayBuffer`, which normally means serving with:
+Only the pthread-backed WASM path needs these headers. The default `@libraz/formulon` entry uses ordinary memory and runs in a browser without cross-origin isolation. Import `@libraz/formulon/threads` for parallel worker execution; browsers require `SharedArrayBuffer`, which normally means serving that entry with:
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Without those headers, `@libraz/formulon` (the raw WASM package) has no fallback: `createFormulon()` hard-fails. `formulon-cell`'s `WorkbookHandle.createDefault()` also rejects by default when `SharedArrayBuffer` is unavailable; the in-memory stub engine only runs if the host opts in with `preferStub: true`. Use `wb.isStub` / `isUsingStub()` to detect the stub at runtime, and handle the rejection with `onError` or a `try`/`catch` around `createDefault()` instead of assuming a silent fallback.
+Without those headers, `@libraz/formulon/threads` cannot initialize its pthread pool and its factory rejects. The default `@libraz/formulon` factory does not need the headers. For the UI kit, follow the [formulon-cell bundler guide](/cell/bundler); engine initialization failures should be handled with `onError` or `try`/`catch`.
 
 ### Are Vite warnings about `node:module` or `node:worker_threads` a problem?
 
-Usually no. The `@libraz/formulon` WASM factory contains a Node runtime branch, so browser bundlers can warn that Node modules were externalized. That branch is dead code in browsers.
+Usually no. The `@libraz/formulon` WASM factory contains a Node runtime branch, and the threads entry also contains a `node:worker_threads` branch, so browser bundlers can warn that Node modules were externalized. Those branches are dead code in browsers.
 
 If the build fails rather than only warning, use ES module workers and an `es2022` or newer build target. See [Troubleshooting](/start/troubleshooting).
 
@@ -186,7 +188,7 @@ If the build fails rather than only warning, use ES module workers and an `es202
 
 It fits systems that treat Excel workbooks as part of an application or workflow: browser quote tools, server-side report calculation, CI checks for workbook result drift, Python batch jobs, and AI-agent workbook editing.
 
-It is not a desktop Excel replacement, a VBA runtime, a PowerQuery / DAX engine, or a live external-data refresh platform. See [Scenarios](/scenarios/).
+It is not a desktop Excel replacement, a VBA runtime, a Power Query / DAX engine, or a live external-data refresh platform. See [Scenarios](/scenarios/).
 
 ### Is it fast?
 
@@ -226,7 +228,7 @@ See [MCP](/mcp/).
 
 ### Can agents execute arbitrary code through it?
 
-No. The MCP server validates inputs and isolates sessions by `sessionId`. The low-level `formulon_workbook_call` tool only dispatches `Workbook` methods listed in the allowlist in `formulon-mcp`'s `src/sessions.ts`.
+The tools do not expose a shell or a general-purpose code evaluator. The MCP server validates inputs and identifies each open workbook by `sessionId`. The low-level `formulon_workbook_call` tool only dispatches `Workbook` methods listed in `formulon-mcp`'s `src/session/workbook-call.ts`. A session ID identifies a workbook; it is not an authorization boundary.
 
 The MCP server can still read and write files, so production use should control the client permissions, working directory, and allowed file scope.
 

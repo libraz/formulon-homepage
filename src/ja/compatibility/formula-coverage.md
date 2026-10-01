@@ -3,22 +3,22 @@
 このページは、Formulon が認識する Excel 関数名の一覧と、各関数をローカルで評価できるかどうかを説明します。内部的には、実行時レジストリの `RegistryCatalog.CoverageReport` と、`tools/catalog/function_status.tsv` の対応状況注記に基づきます。
 
 ::: warning 認識対象は「ローカルで実行できる関数」と同じではありません
-522 という数は、Formulon が名前を認識する Excel 関数の数です。この中には `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、翻訳関数、CUBE 接続関数のように、Excel 側では外部サービスやホスト固有の状態へ処理を委ねる関数も含まれます。これらは意図的に名前を認識しますが、ローカル実装済みではありません。
+523 という数は、Formulon が名前を認識する Excel 関数の数です。この中には `COPILOT`、`PY`、`IMAGE`、`RTD`、`STOCKHISTORY`、`WEBSERVICE`、翻訳関数、CUBE 接続関数のように、Excel 側では外部サービスやホスト固有の状態へ処理を委ねる関数も含まれます。これらは意図的に名前を認識しますが、ローカル実装済みではありません。
 :::
 
 ## 概要
 
-Formulon は **522** 件の Excel 関数名を認識します。**507 件の実装（環境依存の `CELL`、`INFO` を含む）と、15 件の未提供スタブ**に分かれます。
+Formulon は **523** 件の Excel 関数名を認識します。**508 件の実装（環境依存の `CELL`、`INFO` を含む）と、15 件の未提供スタブ**に分かれます。
 
 | 状態 | 件数 | 意味 |
 | --- | ---: | --- |
-| 実装済み | 507 | ローカルで評価する。`CELL`、`INFO` の結果はワークブック / ホスト状態に依存する |
+| 実装済み | 508 | ローカルで評価する。`CELL`、`INFO` の結果はワークブック / ホスト状態に依存する |
 | 外部サービススタブ | 15 | 名前と引数数は認識するが、必要な外部サービスが Formulon の外にあるため、決定的な Excel エラーを返す |
-| **認識対象の合計** | **522** | |
+| **認識対象の合計** | **523** | |
 
 <DiagramLayers :layers="[
-  { title: '522 件の認識対象関数名', nodes: [
-    { label: '507 件が実装済み', note: 'CELL, INFO を含む' },
+  { title: '523 件の認識対象関数名', nodes: [
+    { label: '508 件が実装済み', note: 'CELL, INFO を含む' },
     { label: '15 件が外部サービススタブ', note: 'サービス / 接続に依存' }
   ] }
 ]" />
@@ -36,7 +36,7 @@ Formulon は **522** 件の Excel 関数名を認識します。**507 件の実�
 | 数学 / 三角 | 81 | ローカル実装 |
 | 統計 | 149 | ローカル実装 |
 | 論理 | 20 | ローカル実装 |
-| テキスト | 50 | ローカル実装 |
+| テキスト | 51 | ローカル実装 |
 | 日付 / 時刻 | 25 | ローカル実装 |
 | 検索 / 参照 | 39 | 動的配列対応の検索挙動を含むローカル実装。`IMAGE` と `RTD` は外部サービススタブ |
 | 財務 | 56 | `STOCKHISTORY` は外部サービススタブ |
@@ -51,7 +51,7 @@ Formulon は **522** 件の Excel 関数名を認識します。**507 件の実�
 
 数式レベルの Oracle 検証はセル値を確認します。ピボットテーブルや印刷レイアウトは、挙動が数式の結果ではなくワークブック構造として保存されているため、ワークブック単位の Oracle 検証トラックが別途必要です。
 
-このトラックは、信頼できる PivotTable 自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。製品版 Windows Microsoft 365 ja-JP で検証したワークブック Oracle は、`66/66` pass、`10` 件の記録済み skip です。golden には capture identifier があり、全 suite を単一の検証済み Microsoft 365 セッションに固定します。
+このトラックは、信頼できるピボットテーブル自動化に Windows Excel COM が必要なため、`win-365-ja_JP` をプライマリプロファイルとして使います。ゴールデンには取得識別子があり、各取得を検証済み Microsoft 365 セッションに固定します。合格数やスキップ数はスイートと取得データの更新で変わるため、現在のソースに対する状態は Oracle 検証コマンドで確認してください。
 
 ## 外部サービススタブ
 
@@ -59,14 +59,14 @@ Formulon は **522** 件の Excel 関数名を認識します。**507 件の実�
 
 | 関数 | ローカル実装ではない理由 | Formulon の挙動 |
 | --- | --- | --- |
-| `COPILOT` | Microsoft 365 Copilot / LLM サービスが必要 | 固定の利用不可エラー |
-| `PY` | Microsoft 365 のクラウド Python 実行環境が必要 | 固定の利用不可エラー |
-| `IMAGE` | 画像取得と描画を行うホスト機能が必要 | 固定の利用不可エラー |
-| `RTD` | 外部の Real-Time-Data プロバイダーが必要 | 固定の利用不可エラー |
-| `STOCKHISTORY` | Microsoft の市場データサービスまたはネットワーク I/O が必要 | 固定の利用不可エラー |
-| `WEBSERVICE` | HTTP / ネットワーク I/O が必要 | 固定の利用不可エラー |
-| `TRANSLATE`, `DETECTLANGUAGE` | クラウド翻訳 / 言語判定サービスが必要 | 固定の利用不可エラー |
-| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | ライブ OLAP キューブ接続が必要 | 固定の利用不可エラー |
+| `COPILOT` | Microsoft 365 Copilot / LLM サービスが必要 | 固定の `#NAME?` |
+| `PY` | Microsoft 365 のクラウド Python 実行環境が必要 | 固定の `#NAME?` |
+| `IMAGE` | 画像取得と描画を行うホスト機能が必要 | 固定の `#VALUE!` |
+| `RTD` | 外部の Real-Time-Data プロバイダーが必要 | 固定の `#N/A` |
+| `STOCKHISTORY` | Microsoft の市場データサービスまたはネットワーク I/O が必要 | 固定の `#VALUE!` |
+| `WEBSERVICE` | HTTP / ネットワーク I/O が必要 | 固定の `#VALUE!` |
+| `TRANSLATE`, `DETECTLANGUAGE` | クラウド翻訳 / 言語判定サービスが必要 | 固定の `#NAME?` |
+| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | ライブ OLAP キューブ接続が必要 | 固定の `#NAME?` |
 
 ## 実務上の確認
 
@@ -74,6 +74,13 @@ Formulon は **522** 件の Excel 関数名を認識します。**507 件の実�
 
 ```sh
 formulon dump --formulas workbook.xlsx > formulas.txt
+```
+
+Oracle の現在の状態は、次のコマンドで確認できます。
+
+```sh
+tools/oracle/.venv/bin/python tools/oracle/closure_check.py --report --json
+tools/oracle/.venv/bin/python tools/oracle/workbook_closure_check.py
 ```
 
 ## 一次情報源

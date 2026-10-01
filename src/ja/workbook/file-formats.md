@@ -1,37 +1,37 @@
 # ファイル形式
 
-Formulon は現代的な Office Open XML 系・バイナリ系のスプレッドシート形式を中心にサポートします。各リーダー / ライターの背後には同じ計算コアがあるため、形式層が担うのは構造の保持と機能のマッピングであり、計算挙動は形式によって変わりません。
+Formulon は現代的な Office Open XML 系・バイナリ系のスプレッドシート形式を中心にサポートします。各リーダー / ライターの背後には同じ計算コアがあるため、形式層が担うのは構造の保持と機能の対応付けであり、計算挙動は形式によって変わりません。
 
 ::: info 用語: OOXML
-Office Open XML（ISO/IEC 29500）。`.xlsx` / `.xlsm` / `.xltx` などの ZIP コンテナ形式で、内部は workbook / sheets / styles / shared strings / relationships などの XML パートで構成されます。
+Office Open XML（ISO/IEC 29500）。`.xlsx` / `.xlsm` / `.xltx` などの ZIP コンテナ形式で、内部はワークブック、シート、スタイル、共有文字列、リレーションシップなどの XML パーツで構成されます。
 :::
 
-::: info 用語: passthrough part
-Formulon が「意味的には所有しないが、保存時に消えないように構造だけ保持する」パートです。エンジンが評価しない機能でも、再計算して保存し直す間にバイト列が消失しません。
+::: info 用語: そのまま保持するパーツ（passthrough）
+Formulon が「意味を解釈しないが、保存時に消えないように構造だけ保持する」パーツです。エンジンが評価しない機能でも、再計算して保存し直す間にバイト列が消失しません。
 :::
 
 ## XLSX
 
-OOXML reader / writer は以下を扱います。
+OOXML リーダー / ライターは以下を扱います。
 
-- workbook パートと relationships
-- worksheets（セル、数式、キャッシュ値）
-- styles、number formats、fonts、fills、borders、themes
-- shared strings
-- tables、defined names
-- comments / threaded comments
-- hyperlinks
-- merges
-- data validations
-- conditional formatting
-- pivot tables / pivot caches
-- external links
-- ふりがな注釈（run ごとの UTF-16 span と `phoneticPr` の表示プロパティを含む）
-- protection metadata
-- sheet view、freeze panes、hidden tabs
+- ワークブックのパーツとリレーションシップ
+- ワークシート（セル、数式、キャッシュ値）
+- スタイル、表示形式、フォント、塗りつぶし、罫線、テーマ
+- 共有文字列
+- テーブル、定義名
+- コメント / スレッドコメント
+- ハイパーリンク
+- セル結合
+- 入力規則
+- 条件付き書式
+- ピボットテーブル / ピボットキャッシュ
+- 外部リンク
+- ふりがな注釈（要素ごとの UTF-16 範囲と `phoneticPr` の表示プロパティを含む）
+- 保護情報
+- シート表示、ウィンドウ枠の固定、非表示シート
 - 行・列単位の上書き設定
 
-worksheet の印刷設定は、page setup、余白、print options、print area、print titles、header / footer、手動の行 / 列改ページを typed setter で編集できます。モデル化していない部分には raw XML setter も使えますが、不正な fragment は保存前に拒否します。external-link 数式は package の external-link table に結び付いた index 形式を解決し、`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた参照は解決しません。
+ワークシートの印刷設定は、ページ設定、余白、印刷オプション、印刷範囲、印刷タイトル、ヘッダー / フッター、手動の行 / 列改ページを型付きの設定メソッドで編集できます。モデル化していない部分には生の XML を設定するメソッドも使えますが、不正な断片は保存前に拒否します。外部リンク数式はパッケージの外部リンク表に結び付いたインデックス形式を解決し、`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた参照は解決しません。
 
 ::: tip キャッシュ値の扱い
 読み込み時、数式セルは数式テキストとファイル内のキャッシュ値の両方を保持します。`recalc()` 後、キャッシュ値はエンジンの計算結果で置き換わり、保存時に「数式と値が整合した」ファイルが書き出されます。
@@ -39,23 +39,26 @@ worksheet の印刷設定は、page setup、余白、print options、print area�
 
 ## XLSB
 
-XLSB は styles（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。XLSB の pivot cache definition、cache record、pivot table パートは、record encoding が対応済みであれば pivot model へデコードして評価します。未計測の encoding は推測せずスキップします。既存の worksheet tail（条件付き書式、入力規則、ハイパーリンク、auto-filter、印刷設定 / 改ページ、drawing / table 参照と relationship）はバイト列のまま保持します。保持されることは編集・評価できることを意味しません。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`saveWithDiagnostics(WorkbookFormat.Xlsb)` の `downgradedFormulaCount`（Python では `save_with_diagnostics(WorkbookFormat.XLSB)` の `downgraded_formula_count`）で件数を確認できます。
+XLSB はスタイル（`BrtFmt` / `BrtXF`）、行 / 列レイアウト、結合、`date1904`、表示倍率 / ウィンドウ枠固定、動的配列メタデータ、対応するトークン化数式をモデル化して出力します。XLSB のピボットキャッシュ定義、キャッシュレコード、ピボットテーブルのパーツは、レコード形式が対応済みであれば共通のモデルへデコードして評価します。未計測の形式は推測せずスキップします。条件付き書式、入力規則、シート / ワークブック保護も共通のモデルへデコードして保存時に出力します。条件付き書式は対応する評価範囲と x14 データバーなどの表示情報を含みます。入力規則と保護情報はモデル化したメタデータであり、計算エンジンによる評価や強制は行いません。モデル化していないワークシート末尾のうち、ハイパーリンク、オートフィルター、印刷設定 / 改ページ、図形 / テーブル参照とリレーションシップなどはバイト列のまま保持します。非対応数式はキャッシュ済みリテラルへ置き換える場合があり、`saveWithDiagnostics(WorkbookFormat.Xlsb)` の `downgradedFormulaCount`（Python では `save_with_diagnostics(WorkbookFormat.XLSB)` の `downgraded_formula_count`）で件数を確認できます。
 
 | XLSB の機能 | 現在の挙動 |
 | --- | --- |
-| Styles（`BrtFmt` / `BrtXF`） | モデル化して出力 |
+| スタイル（`BrtFmt` / `BrtXF`） | モデル化して出力 |
 | 行 / 列レイアウト、結合 | モデル化して出力 |
-| `date1904`、view / zoom / frozen panes | モデル化して出力 |
-| 動的配列メタデータと対応する tokenized formula | モデル化して出力 |
-| Pivot cache / PivotTable パート | 対応する record encoding は評価。未計測の encoding はスキップ |
-| worksheet tail と relationship | バイト列のまま保持。編集・評価はしない |
+| `date1904`、表示倍率 / ウィンドウ枠固定 | モデル化して出力 |
+| 動的配列メタデータと対応するトークン化数式 | モデル化して出力 |
+| ピボットキャッシュ / ピボットテーブルのパーツ | 対応するレコード形式は評価。未計測の形式はスキップ |
+| 条件付き書式 | モデル化して出力。対応する判定式を評価し、x14 データバーの表示情報も扱う |
+| 入力規則 | モデル化して出力。規則の情報は保持するが、エンジンでは評価しない |
+| シート / ワークブック保護 | メタデータとしてモデル化して出力。セルロックはエンジンで強制しない |
+| ハイパーリンク、オートフィルター、印刷設定 / 改ページ、図形 / テーブル参照、リレーションシップ | モデル化していないものはバイト列のまま保持。一般に編集・評価はしない |
 | 非対応数式 | キャッシュ済みリテラルへ置き換える場合があり、件数を報告 |
 
-worksheet tail の保持から comment や pivot の保存を推測しないでください。これらが重要な場合は、入力ファイルを保持したうえで出力パッケージを確認してください。
+ワークシート末尾の保持からコメントやピボットの保存を推測しないでください。これらが重要な場合は、入力ファイルを保持したうえで出力パッケージを確認してください。
 
-保存時のコンテナ形式は明示的です。`saveAs(format)` / `save_as(fmt)` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。`saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` も同じ形式指定を使い、パッケージ損失の一部を対象とするカウンターを返します。`readDiagnostics()` / `read_diagnostics()` では読み込み時に取得したカウンターを確認できます。CLI は `-o` パスの拡張子から出力形式を判断します（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みはバイト列の中身を見て判定します。`loadBytes()` / `Workbook.load()` はバイト列そのもの（ZIP シグネチャか BIFF12 レコードストリームか）から XLSX / XLSB を判別するため、拡張子が一致していない `.xlsb` ペイロードでも正しく読み込めます。
+保存時のコンテナ形式は明示的です。`saveAs(format)` / `save_as(fmt)` は `WorkbookFormat` を受け取って XLSB か XLSX かを選べます。`saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` も同じ形式指定を使い、パッケージ損失の一部を対象とするカウンターを返します。`readDiagnostics()` / `read_diagnostics()` では読み込み時に取得したカウンターを確認できます。CLI は `-o` パスの拡張子から出力形式を判断します（`-o out.xlsb` は MS-XLSB を書き出し、それ以外は OOXML を書き出します）。一方、読み込みは内容を調べて判定します。`loadBytes()` / `Workbook.load()` はどちらの形式も ZIP パッケージとして開き、通常は XLSX の `xl/workbook.xml`、XLSB の `xl/workbook.bin` とコンテンツタイプを確認します。ファイル名は判定に使いません。
 
-下のパネルでは、1 つのワークブックを両方のコンテナに書き出し、生成したバイト列をファイル名なしでそのまま `loadBytes()` に戻しています。カウンターはその書き出しについて `saveWithDiagnostics()` が返した値そのままです。すべて 0 のパネルは「上に挙げた損失が起きなかった」という意味であり、確認していないという意味ではありません。手元のワークブックを読み込ませると、カウンターが動く様子も確認できます。
+下のパネルでは、1 つのワークブックを両方のコンテナに書き出し、生成したバイト列をファイル名なしでそのまま `loadBytes()` に戻しています。カウンターはその書き出しについて `saveWithDiagnostics()` が返した値です。すべて 0 のパネルは「報告対象の損失が起きなかった」という意味であり、すべての未対応機能が保持されたことを示すものではありません。重要な構造は出力パッケージも確認してください。
 
 <FormatDemo />
 
@@ -65,27 +68,30 @@ worksheet tail の保持から comment や pivot の保存を推測しないで�
   { title: '入力', nodes: ['*.xlsx / *.xlsb バイト列'] },
   { title: '読み込み', nodes: ['Reader'] },
   { nodes: [
-      { label: '評価対象パート', note: 'cells・formulas・defined names・tables・条件付き書式の subset' },
-      { label: 'Passthrough パート', note: 'charts・drawings・form controls・VBA' }
+      { label: 'モデル化したパーツ', note: 'セル・数式・定義名・テーブル・条件付き書式の対応範囲・入力規則・保護情報' },
+      { label: 'そのまま保持するパーツ', note: 'グラフ・図形・フォームコントロール・VBA' }
     ] },
   { nodes: [
-      { label: 'エンジンで再計算' },
+      { label: 'エンジンで再計算', note: '数式値と対応する条件付き書式の判定式' },
       { label: 'バイト列のまま保持' }
     ] },
-  { title: '書き出し', nodes: ['Writer'] },
+  { title: '書き出し', nodes: ['ライター'] },
   { title: '出力', nodes: ['*.xlsx / *.xlsb バイト列'] }
-]" label="読み込みは評価対象パート（再計算される）と passthrough パート（バイト列のまま保持される）に分かれ、どちらも Writer で合流する" />
+]" label="読み込みはモデル化したパーツ（対応範囲を再計算）と、そのまま保持するパーツ（バイト列のまま保持）に分かれ、どちらもライターで合流する" />
 
 | 機能 | 読み込み | 再計算 | 書き出し |
 | --- | --- | --- | --- |
-| セル内の数式 | yes | yes | yes |
-| Styles / number formats | yes | n/a | yes |
-| Defined names / tables | yes | yes（参照として解決） | yes |
-| 条件付き書式 | yes | partial（評価対象 subset） | yes |
-| Pivot tables | layout / cache | no | yes |
-| Chart | パートを保持 | no | yes |
-| Form controls / drawings | passthrough | no | yes |
-| VBA project | passthrough | 実行しない | yes |
+| セル内の数式 | 対応 | 対応 | 対応 |
+| スタイル / 表示形式 | 対応 | 対象外 | 対応 |
+| 定義名 / テーブル | 対応 | 対応（参照として解決） | 対応 |
+| 条件付き書式 | 対応 | 一部（対応する判定式） | 対応 |
+| 入力規則 | 対応 | エンジンでは評価しない | 対応 |
+| シート / ワークブック保護 | 対応 | メタデータのみ。セルロックは強制しない | 対応 |
+| ハイパーリンク / オートフィルター / 印刷設定 / 図形参照 | 未モデル化部分はそのまま保持 | 対象外 | 対応 |
+| ピボットテーブル | レイアウト / 対応キャッシュ | `pivotLayout()` / `GETPIVOTDATA` で対応キャッシュを集計・取得。元シートからのキャッシュ更新はしない | 対応 |
+| グラフ | パーツを保持 | 対象外 | 対応 |
+| フォームコントロール / 図形 | そのまま保持 | 対象外 | 対応 |
+| VBA プロジェクト | そのまま保持 | 実行しない | 対応 |
 
 ::: warning VBA は保持するが実行はしない
 VBA を含むワークブックは読み込み後に保存し直せますが、マクロは決して実行されません。マクロ側の状態に依存する計算は Excel と差分が出ます。
@@ -95,10 +101,10 @@ VBA を含むワークブックは読み込み後に保存し直せますが、�
 
 - 旧 `.xls`（BIFF）の読み書き
 - CSV はシンプルな取り込みのみ。Excel CSV の引用符の細かな境界には対応しない
-- ライブ外部接続（PowerQuery / OLE DB / Web）
+- ライブ外部接続（Power Query / OLE DB / Web）
 
 ## 次に読むもの
 
 - [ライフサイクル](/ja/workbook/lifecycle) ─ バイト列からワークブックモデルへの変換
-- [ワークブック操作](/ja/workbook/operations) ─ sheet / cell / 構造の編集
-- [互換性 / ファイル形式サポート](/ja/compatibility/file-format-support) ─ read / write / preserve の対応表
+- [ワークブック操作](/ja/workbook/operations) ─ シート / セル / 構造の編集
+- [互換性 / ファイル形式サポート](/ja/compatibility/file-format-support) ─ 読み込み / 書き出し / 保持の対応表

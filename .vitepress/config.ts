@@ -6,7 +6,7 @@ import { generateLlmsTxt, type LlmsLocale, llmsDevPlugin } from './llms'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.11.1'
+const docsVersion = '0.12.0'
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
 
@@ -217,14 +217,17 @@ const cellSidebar = [
   {
     text: 'formulon-cell',
     items: [
-      { text: 'What it is', link: '/cell/' },
+      { text: 'Overview', link: '/cell/' },
       { text: 'Full demo', link: '/cell/demo' },
       { text: 'Install', link: '/cell/install' },
       { text: 'Bundler setup', link: '/cell/bundler' },
+      { text: 'Options', link: '/cell/options' },
       { text: 'Embedding guide', link: '/cell/embedding' },
-      { text: 'Extension catalogue', link: '/cell/extensions' },
+      { text: 'Modals and fullscreen', link: '/cell/modals' },
+      { text: 'Extensions', link: '/cell/extensions' },
       { text: 'Theming', link: '/cell/theming' },
       { text: 'Framework adapters', link: '/cell/frameworks' },
+      { text: 'Hooks and composables', link: '/cell/hooks' },
       { text: 'Host integration', link: '/cell/host-integration' },
       { text: 'i18n', link: '/cell/i18n' },
       { text: 'API surface', link: '/cell/api' }
@@ -239,7 +242,12 @@ const mcpSidebar = [
       { text: 'Overview', link: '/mcp/' },
       { text: 'Install', link: '/mcp/install' },
       { text: 'Workflow', link: '/mcp/workflow' },
+      { text: 'Author documents', link: '/mcp/authoring' },
+      { text: 'Layout and previews', link: '/mcp/layout-preview' },
+      { text: 'Formula audit', link: '/mcp/formula-audit' },
+      { text: 'Tables and pivots', link: '/mcp/tables-pivots' },
       { text: 'Tools', link: '/mcp/tools' },
+      { text: 'Advanced API', link: '/mcp/advanced' },
       { text: 'Security model', link: '/mcp/security' }
     ]
   }
@@ -277,7 +285,7 @@ const jaStartSidebar = [
     text: '次のステップ',
     items: [
       { text: 'Formulon が必要な理由', link: '/ja/why' },
-      { text: '実行入口を選ぶ', link: '/ja/start/choose-runtime' },
+      { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'FAQ', link: '/ja/faq' }
@@ -314,7 +322,7 @@ const jaRuntimesSidebar = [
     text: 'API 詳細',
     items: [
       { text: '概要', link: '/ja/api/' },
-      { text: 'パッケージと実行入口', link: '/ja/api/surfaces' },
+      { text: 'パッケージと API', link: '/ja/api/surfaces' },
       { text: 'C API', link: '/ja/api/c' },
       { text: 'WASM API', link: '/ja/api/wasm' },
       { text: 'Python API', link: '/ja/api/python' },
@@ -334,7 +342,7 @@ const jaCompatibilitySidebar = [
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'エラーモデル', link: '/ja/compatibility/errors' },
       { text: 'Oracle テスト', link: '/ja/compatibility/oracle-testing' },
-      { text: '非目標', link: '/ja/compatibility/non-goals' }
+      { text: '対象外の機能', link: '/ja/compatibility/non-goals' }
     ]
   }
 ]
@@ -349,7 +357,7 @@ const jaWorkbookSidebar = [
       { text: '操作', link: '/ja/workbook/operations' },
       { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
       { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
-      { text: 'PivotTable', link: '/ja/workbook/pivots' },
+      { text: 'ピボットテーブル', link: '/ja/workbook/pivots' },
       { text: 'ライフサイクル', link: '/ja/workbook/lifecycle' }
     ]
   }
@@ -359,16 +367,19 @@ const jaCellSidebar = [
   {
     text: 'formulon-cell',
     items: [
-      { text: '位置づけ', link: '/ja/cell/' },
+      { text: '概要', link: '/ja/cell/' },
       { text: 'フルデモ', link: '/ja/cell/demo' },
       { text: 'インストール', link: '/ja/cell/install' },
       { text: 'バンドラ設定', link: '/ja/cell/bundler' },
+      { text: '設定オプション', link: '/ja/cell/options' },
       { text: '埋め込みガイド', link: '/ja/cell/embedding' },
-      { text: '拡張機能一覧', link: '/ja/cell/extensions' },
+      { text: 'モーダルと全画面表示', link: '/ja/cell/modals' },
+      { text: '拡張機能', link: '/ja/cell/extensions' },
       { text: 'テーマ設定', link: '/ja/cell/theming' },
       { text: 'フレームワーク連携', link: '/ja/cell/frameworks' },
+      { text: 'フックとコンポーザブル', link: '/ja/cell/hooks' },
       { text: 'ホスト連携', link: '/ja/cell/host-integration' },
-      { text: 'i18n', link: '/ja/cell/i18n' },
+      { text: '国際化（i18n）', link: '/ja/cell/i18n' },
       { text: 'API 一覧', link: '/ja/cell/api' }
     ]
   }
@@ -381,7 +392,12 @@ const jaMcpSidebar = [
       { text: '概要', link: '/ja/mcp/' },
       { text: 'インストール', link: '/ja/mcp/install' },
       { text: 'ワークフロー', link: '/ja/mcp/workflow' },
+      { text: '帳票の作成', link: '/ja/mcp/authoring' },
+      { text: 'レイアウトとプレビュー', link: '/ja/mcp/layout-preview' },
+      { text: '数式の監査', link: '/ja/mcp/formula-audit' },
+      { text: 'テーブルとピボット', link: '/ja/mcp/tables-pivots' },
       { text: 'ツール一覧', link: '/ja/mcp/tools' },
+      { text: '高度な API 操作', link: '/ja/mcp/advanced' },
       { text: 'セキュリティモデル', link: '/ja/mcp/security' }
     ]
   }
@@ -397,8 +413,8 @@ const jaDevelopmentSidebar = [
       { text: 'バインディング', link: '/ja/development/bindings' },
       { text: 'ソースからビルド', link: '/ja/development/build-from-source' },
       { text: 'テストマトリクス', link: '/ja/development/test-matrix' },
-      { text: 'Oracle 提供', link: '/ja/development/oracle-contribution' },
-      { text: 'サイズ予算', link: '/ja/development/size-budgets' },
+      { text: 'Oracle データの提供', link: '/ja/development/oracle-contribution' },
+      { text: 'サイズ上限', link: '/ja/development/size-budgets' },
       { text: 'リリースチェックリスト', link: '/ja/development/release-checklist' }
     ]
   }
@@ -413,7 +429,7 @@ const LLMS_LOCALES: LlmsLocale[] = [
     summary:
       'Headless Excel-compatible calculation engine for WebAssembly, native Node, Python, and the CLI. Opens a workbook, recalculates it, and reads the results back — with no spreadsheet application involved.',
     intro:
-      'Formulon is a C++ core distributed to several runtimes from one implementation, so a\nformula evaluates identically in the browser, in a Node service, in a Python batch job,\nand in CI. It is a calculation engine, not a spreadsheet UI. The links below point to\nthe canonical HTML documentation.',
+      'Formulon distributes the same C++ calculation core to browsers, Node services, Python batch jobs, and CI. This shared implementation helps keep results aligned across runtimes; validate the workbooks and compatibility profile you use. The links below point to the canonical HTML documentation.',
     overviewHeading: 'Key pages',
     homeText: 'Formulon home',
     alternate: {
@@ -434,7 +450,7 @@ const LLMS_LOCALES: LlmsLocale[] = [
     summary:
       'WebAssembly・ネイティブ Node・Python・CLI に組み込めるヘッドレスな Excel 互換計算エンジン。ワークブックを開き、再計算し、結果を取り出す——表計算アプリを介さずに。',
     intro:
-      'Formulon は単一の C++ コアを複数のランタイムへ配布する構成で、同じ数式がブラウザでも\nNode サービスでも Python の一括処理でも CI でも同じ結果になる。表計算の UI ではなく\n計算エンジンそのものを提供する。以下は日本語ドキュメントへのリンク一覧。',
+      'Formulon はブラウザ、Node サービス、Python の一括処理、CI で同じ C++ 計算コアを使い、実行環境間の差を抑えます。実際に使うワークブックと互換性プロファイルで検証してください。以下は日本語ドキュメントへのリンク一覧です。',
     overviewHeading: '主要ページ',
     homeText: 'Formulon トップ',
     alternate: {

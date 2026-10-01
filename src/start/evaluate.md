@@ -11,7 +11,7 @@ Formula evaluation is useful when your application needs spreadsheet semantics w
     {
       title: 'Need to evaluate a formula?',
       nodes: [
-        { label: 'Fresh, disposable formula', note: 'evalFormula / eval_formula — no workbook context' },
+        { label: 'Fresh, disposable formula', note: 'evalFormula / eval_formula — fresh Sheet1!A1 context' },
         { label: 'Ad-hoc, against a loaded workbook', note: 'evaluateFormulaText — read-only, JS/WASM + Native Node only' },
         { label: 'Persist into the workbook', note: 'setFormula + recalc() — joins the dependency graph' }
       ]
@@ -61,7 +61,7 @@ The panel below is where to check that claim. Its `=1/0` preset comes back with 
 
 ## Evaluating against a loaded workbook
 
-The examples above always evaluate in a fresh, disposable formula context: there is no workbook, so cell references, defined names, and `ROW()` / `COLUMN()` have nothing to resolve against. `evaluateFormulaText` (and its conditional-formatting counterpart, `evaluateConditionalFormula`) evaluates formula text as if it were entered at a specific cell of an **already-loaded** workbook, without changing anything in it.
+The one-shot helpers evaluate at `Sheet1!A1` in a new workbook. Blank cell references resolve against that workbook, and `ROW()` / `COLUMN()` return `1`. They cannot access cells or defined names from an existing workbook. To use those, load the workbook and call `evaluateFormulaText` (or its conditional-formatting counterpart, `evaluateConditionalFormula`), which evaluates formula text as if it were entered at a specific cell without changing the workbook.
 
 ::: warning Read-only, and scalar-only
 `evaluateFormulaText` / `evaluateConditionalFormula` never mutate the workbook and never join the dependency graph — a self-reference reads the target cell's cached value instead of raising `#REF!`. Array and spill results are reduced to their top-left element; this is the direct scalar-result behavior, not Excel's implicit-intersection or spill behavior. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling actually works.

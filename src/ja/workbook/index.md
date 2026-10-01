@@ -12,8 +12,8 @@
 
 - [ライフサイクル](/ja/workbook/lifecycle) ─ バイト列とモデルの往復
 - [数式エンジン](/ja/workbook/formula-engine) ─ 値の種類・座標・関数挙動
-- [ワークブック操作](/ja/workbook/operations) ─ sheet / cell / style / metadata
-- [再計算](/ja/workbook/recalculation) ─ dirty セル・依存関係・iteration・partial recalc
-- [動的配列](/ja/workbook/dynamic-arrays) ─ スピルと shape 依存の再計算
+- [ワークブック操作](/ja/workbook/operations) ─ シート / セル / 書式 / メタデータ
+- [再計算](/ja/workbook/recalculation) ─ 再計算待ちセル・依存関係・反復計算・部分再計算
+- [動的配列](/ja/workbook/dynamic-arrays) ─ スピルと形状に応じた再計算
 - [ファイル形式](/ja/workbook/file-formats) ─ OOXML、XLSB、保持境界
-- [PivotTable](/ja/workbook/pivots) ─ cache に基づく集計の作成と確認
+- [ピボットテーブル](/ja/workbook/pivots) ─ キャッシュに基づく集計の作成と確認

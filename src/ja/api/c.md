@@ -1,8 +1,8 @@
 # C API
 
-stable C11 ABI は、独自の言語バインディングやネイティブホストから使うための実行入口です。opaque な `fm_workbook_t` handle を中心とするフラットな API で、配布中の Python、CLI、WASM も同じ model を使っています。
+安定した C11 ABI は、独自の言語バインディングやネイティブホストから使うための API です。内部構造を公開しない `fm_workbook_t` ハンドルを中心とするフラットな API で、配布中の Python、CLI、WASM も同じモデルを使います。
 
-ソースからビルドした成果物の `formulon_c.h` を include し、Formulon core library と link してください。public header が完全なリファレンスです。このページでは、バインディング実装で守るべき所有権と寿命のルールを説明します。
+ソースからビルドした `formulon_c.h` ヘッダーを取り込み、計算コアのライブラリをリンクしてください。公開ヘッダーが完全なリファレンスです。このページでは、バインディング実装で守るべき所有権と寿命のルールを説明します。
 
 ## 最小のワークブック往復
 
@@ -41,36 +41,36 @@ int main(void) {
 }
 ```
 
-既存の `.xlsx` または `.xlsb` から始める場合は、`fm_workbook_create()` の代わりに `fm_workbook_load(input_bytes, input_len, &wb)` を呼びます。reader はバイト列からコンテナを判別します。
+既存の `.xlsx` または `.xlsb` から始める場合は、`fm_workbook_create()` の代わりに `fm_workbook_load(input_bytes, input_len, &wb)` を呼びます。読み込み処理はバイト列からコンテナ形式を判別します。
 
-## 所有権と view
+## 所有権と参照
 
 | 値 | 所有者 | ルール |
 | --- | --- | --- |
 | `fm_workbook_t *` | 呼び出し側 | `fm_workbook_destroy()` で解放します。`NULL` でも構いません。 |
-| save bytes | save 成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
-| `fm_value_t.u.text` と text getter | workbook | 次の scratch-backed read 成功、mutation、handle の破棄より前にコピーします。 |
-| error message / context | 現在の thread | 同じ thread で次の API を呼ぶ前にコピーします。 |
+| 保存バイト列 | 保存成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
+| `fm_value_t.u.text` とテキスト取得結果 | ワークブック | 次の一時バッファを使う読み取りの成功、変更、ハンドル破棄の前にコピーします。 |
+| エラーメッセージとコンテキスト | 現在のスレッド | 同じスレッドで次の API を呼ぶ前にコピーします。 |
 
-save API は失敗時に output pointer と length を初期値へ戻し、`fm_buffer_free(NULL)` は安全です。そのため、例のように無条件で cleanup できます。
+保存 API は失敗時に出力ポインターと長さを初期値へ戻し、`fm_buffer_free(NULL)` は安全です。そのため、例のように無条件で後処理できます。テキスト取得結果は次の一時バッファを使う読み取りや変更で無効になるため、必要なら呼び出し側でコピーしてください。
 
-## エラーと thread
+## エラーとスレッド
 
-`#DIV/0!` のようなセルレベルの Excel error は `FM_VAL_ERROR` という値であり、失敗 status ではありません。非 0 の `fm_status_t` は、不正な入力、無効な handle、I/O error などのホスト側失敗を表します。`fm_last_error_message()` と `fm_last_error_context()` は同じ thread の次の API 呼び出しで上書きされるため、その前に読み取ってください。
+`#DIV/0!` のようなセルレベルの Excel エラーは `FM_VAL_ERROR` という値であり、ステータスの失敗ではありません。非 0 の `fm_status_t` は、不正な入力、無効なハンドル、I/O エラーなどのホスト側の失敗を表します。`fm_last_error_message()` と `fm_last_error_context()` は同じスレッドの次の API 呼び出しで上書きされるため、その前に読み取ってください。
 
-1 つの workbook handle は、同時には 1 つの外部 caller thread が所有します。同じ handle を並行して read、mutation、recalc してはいけません。`fm_workbook_recalc_parallel()` は 1 回の呼び出しの内部で worker thread を作る場合がありますが、別々の API 呼び出しを安全にはしません。別々の handle は並行して使えます。
+1 つのワークブックハンドルは、同時には 1 つの外部呼び出しスレッドから使います。同じハンドルを並行して読み取り、変更、再計算してはいけません。`fm_workbook_recalc_parallel()` は 1 回の呼び出しの内部でワーカースレッドを作る場合がありますが、別々の API 呼び出しを安全にはしません。別々のハンドルは並行して使えます。
 
-## Workbook API additions
+## ワークブック操作
 
-C ABI では、各 binding に合わせた次の操作を直接呼び出せます。`fm_workbook_get_iterative()` は `enabled`、`max_iterations`、`max_change` を読み出します。`fm_workbook_set_iterative()` は iteration 上限を `32767` に制限し、getter は制限後の値を返します。`fm_sheet_set_visibility()` は `FM_SHEET_VISIBLE`、`FM_SHEET_HIDDEN`、`FM_SHEET_VERY_HIDDEN` を受け取り、`fm_sheet_get_view()` は従来の `tab_hidden` と正規の 3 状態 `visibility` を返します。
+C ABI では、各バインディングで使うワークブック操作を直接呼び出せます。`fm_workbook_get_iterative()` は `enabled`、`max_iterations`、`max_change` を読み出します。`fm_workbook_set_iterative()` は反復回数の上限を `32767` に制限し、getter は制限後の値を返します。`fm_sheet_set_visibility()` は `FM_SHEET_VISIBLE`、`FM_SHEET_HIDDEN`、`FM_SHEET_VERY_HIDDEN` を受け取り、`fm_sheet_get_view()` は従来の `tab_hidden` と正規の 3 状態 `visibility` を返します。
 
-typed worksheet print setter は page setup、余白、print options、header / footer、print area、print titles、手動の行 / 列改ページを扱います（`fm_sheet_set_page_setup`、`fm_sheet_set_page_margins`、`fm_sheet_set_print_options`、`fm_sheet_set_header_footer`、`fm_sheet_set_print_area`、`fm_sheet_set_print_titles`、`fm_sheet_add_row_break`、`fm_sheet_add_col_break`）。raw XML setter は保存前に well-formed でサイズ制限内の fragment かを検証します。`fm_sheet_set_range_xf_index()` は style XF index を両端を含む矩形へ適用し、style 付き blank cell を materialize します。
+ワークシートの印刷設定 API は、ページ設定、余白、印刷オプション、ヘッダー / フッター、印刷範囲、印刷タイトル、手動の行 / 列改ページを扱います（`fm_sheet_set_page_setup`、`fm_sheet_set_page_margins`、`fm_sheet_set_print_options`、`fm_sheet_set_header_footer`、`fm_sheet_set_print_area`、`fm_sheet_set_print_titles`、`fm_sheet_add_row_break`、`fm_sheet_add_col_break`）。未モデル化の XML 設定 API は、保存前に整形式でサイズ制限内の断片かを検証します。`fm_sheet_set_range_xf_index()` はセル書式（XF）インデックスを両端を含む矩形へ適用し、書式付きの空セルを作成します。
 
-`fm_workbook_pivot_field_add_item_at()` は cache の shared-item index で手動 filter item を指定します。blank pivot member を表現できる形式であり、label 形式の `fm_workbook_pivot_field_add_item()` に空文字列を渡しても指定できません。external-link reader は `[1]Sheet1!A1` のような index 形式を cached link value へ解決します。`[Book1.xlsx]Sheet1!A1` のような path 形式は未対応です。
+`fm_workbook_pivot_field_add_item_at()` はキャッシュの共有項目インデックスで手動フィルター項目を指定します。空白のピボット項目を表現できる形式で、ラベル形式の `fm_workbook_pivot_field_add_item()` に空文字列を渡しても指定できません。外部リンクの読み込み処理は `[1]Sheet1!A1` のようなインデックス形式をキャッシュ済みリンク値から解決します。`[Book1.xlsx]Sheet1!A1` のようなパス形式は未対応です。
 
 ## 次に読むもの
 
-- [ワークブック操作](/ja/workbook/operations) ─ 座標モデル、編集、レイアウト、metadata
-- [再計算](/ja/workbook/recalculation) ─ dirty cell、反復計算、時計に依存する関数
+- [ワークブック操作](/ja/workbook/operations) ─ 座標モデル、編集、レイアウト、メタデータ
+- [再計算](/ja/workbook/recalculation) ─ 変更されたセル、反復計算、時計に依存する関数
 - [ファイル形式](/ja/workbook/file-formats) ─ XLSX / XLSB の選択と保持境界
-- [ソースからビルド](/ja/development/build-from-source) ─ ネイティブ library と tool のビルド
+- [ソースからビルド](/ja/development/build-from-source) ─ ネイティブライブラリとツールのビルド

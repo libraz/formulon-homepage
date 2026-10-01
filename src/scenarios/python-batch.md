@@ -93,7 +93,7 @@ git diff --exit-code report.values.txt
 Pair the Python entrypoint with the CLI `dump --values` snapshot, and you have an end-to-end regression check that catches both code drift and workbook drift.
 
 ::: warning Volatile inputs need handling
-`NOW`, `TODAY`, `RAND`, and the network functions return non-deterministic values. For golden snapshots, either replace them with fixed inputs at the template level or move them out of the snapshotted range.
+`NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` are volatile. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O; they return a fixed unavailable Excel error. For golden snapshots, replace volatile inputs with fixed values or move them out of the snapshotted range, and record or exclude unavailable-service cells according to [formula coverage](/compatibility/formula-coverage).
 :::
 
 ## Error handling

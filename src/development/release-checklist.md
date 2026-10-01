@@ -1,15 +1,15 @@
 # Release Checklist
 
-A green per-package build is not enough. The release is healthy only when every surface agrees on workbook behavior and the compatibility claims still line up with reality.
+A successful package build is not enough. The release is healthy only when every surface agrees on workbook behavior and the compatibility claims still line up with reality.
 
 ::: info Glossary: same-revision release
-A release where every shipped artifact — WASM, Native Node, Python wheel, CLI binaries, MCP server, `formulon-cell` — was built from the same Git revision of the core. Avoids the subtle bug where one surface ships a fix and another does not.
+A core release whose WASM, Native Node, Python wheel, and CLI binaries are built from the same Git revision. This keeps a fix consistent across the core bindings. MCP and `formulon-cell` are separate packages; verify their supported engine dependencies before upgrading them.
 :::
 
 ## Before a release
 
 - [ ] Run core tests (`make test-all`).
-- [ ] Run oracle tests for available profiles (`make oracle-verify`).
+- [ ] Run primary Oracle verification (`make oracle-verify`). If a supported variant changed, also configure `FORMULON_ORACLE_VARIANTS=ON`, build `formulon_oracle_variant_tests` and `formulon_workbook_oracle_variant_tests`, and run `ctest -L VARIANT`.
 - [ ] Verify WASM size budgets (`make size-check`).
 - [ ] Build JavaScript, Python, CLI, and native artifacts from the same revision.
 - [ ] Smoke-test each package surface.
@@ -32,21 +32,23 @@ A release where every shipped artifact — WASM, Native Node, Python wheel, CLI 
 | Compatibility audit | "Excel-compatible" claims that no longer hold |
 | Changelog and docs | User-facing surprises after upgrade |
 
-::: warning Do not treat a green package build as enough
-The release is only healthy if the surfaces agree on workbook behavior. A WASM build that recalcs differently from Python is a worse user experience than either build being slightly wrong — at least when they agree, applications can be debugged with one mental model.
+::: warning Package builds do not prove cross-surface agreement
+Run the parity check and binding smoke tests before release. They cover agreement between the available channels and host-side translation and lifetime behavior.
 :::
 
-## After release
+## Publish and verify
 
-- [ ] Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`) — this push *is* the release: it triggers the tag-driven `release.yml` workflow, which builds and publishes npm, PyPI, CLI binaries, and the GitHub Release automatically over OIDC trusted publishing. There is no separate manual publish step. Watch the workflow run to completion rather than looking for something to publish by hand.
-- [ ] Update the `docsVersion` in the homepage repo if the docs site tracks it.
+- [ ] Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`). The tag triggers `release.yml`, which publishes npm and PyPI through trusted publishing and creates the GitHub Release and CLI assets with GitHub workflow credentials.
+- [ ] Check the separate `prebuild.yml` workflow for the Native Node matrix and its `release-bundle` job on the same tag. Verify the uploaded native artifacts separately.
+- [ ] Update the `docsVersion` in the homepage repo if the docs site tracks it. After npm publication, update the root demo dependency, remove the global `@libraz/formulon` resolution, and regenerate the lockfile. Verify the displayed runtime versions. Keep `formulon-cell` on its supported engine dependency until its binding adapter supports the new accessor results.
 - [ ] Watch for incoming compatibility issues and route them to the right oracle / profile.
 
-<DiagramFlow steps="Work on develop → Open PR to main → CI green → Merge → Push vX.Y.Z tag" />
+<DiagramFlow steps="Work on develop → Open PR to main → CI passes → Merge → Push vX.Y.Z tag → release.yml + prebuild.yml → Verify artifacts" />
 
 <DiagramLayers :layers="[
   { title: 'release.yml (tag-triggered)', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },
-  { title: 'Result', nodes: ['npm + PyPI + CLI binaries + GitHub Release — live'] }
+  { title: 'prebuild.yml (same tag)', nodes: ['Native Node matrix', 'release-bundle'] },
+  { title: 'Result', nodes: ['npm + PyPI + CLI binaries + GitHub Release + Native Node artifacts — verified'] }
 ]" />
 
 ## Read next

@@ -81,11 +81,10 @@ formulon paginate [--sheet INDEX] <in.xlsx>
 
 ## CI usage
 
-Run `recalc` and `dump --values` to snapshot calculated outputs against checked-in goldens. The CLI is deterministic for the same workbook + profile, so a `git diff` over the dump file is a stable signal in CI.
+Run `dump --values` to snapshot calculated outputs against a checked-in golden file. With volatile inputs controlled and the engine version and profile fixed, a `git diff` over the dump file exposes workbook or engine changes.
 
 ```sh
-formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
-formulon dump --values /tmp/model.recalc.xlsx > model.values.txt
+formulon dump --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
@@ -99,7 +98,7 @@ git diff --exit-code model.formulas.txt
 This catches formula edits without depending on cached calculated values.
 
 ::: warning Volatiles are not deterministic
-`NOW`, `TODAY`, `RAND`, `RANDBETWEEN`, and a few network functions return different values on each call. Avoid them in CI snapshot fixtures, or stub them at the workbook level.
+`NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` are volatile. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O; they return a fixed unavailable Excel error. Control or replace the volatile inputs, and record or exclude the unavailable-service cells according to [formula coverage](/compatibility/formula-coverage).
 :::
 
 ## Read next

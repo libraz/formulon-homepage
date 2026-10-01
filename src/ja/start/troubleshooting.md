@@ -7,12 +7,12 @@
     {
       title: '症状 → 対処法',
       nodes: [
-        { label: 'SharedArrayBuffer が使えない', note: 'COOP / COEP headers を設定' },
-        { label: 'bundler が node:* を警告する', note: 'node: を external 指定し、optimizeDeps から除外' },
-        { label: 'loadBytes が invalid を返す', note: 'wb.isValid() を確認し、lastErrorMessage() を読む' },
-        { label: 'セルが #DIV/0! / #VALUE!', note: 'Excel エラーは値 — value kind を確認する' },
-        { label: 'Python から WASM が見つからない', note: 'wheel を install、または make python-package' },
-        { label: 'CLI の結果が Excel と違う', note: 'ロケール、揮発性関数、保持のみ（未評価）を確認' }
+        { label: 'SharedArrayBuffer が使えない', note: '明示的な /threads 入口にヘッダーを設定' },
+        { label: 'バンドラが node:* を警告する', note: 'node: を external にし、optimizeDeps から除外' },
+        { label: 'loadBytes が無効なハンドルを返す', note: 'wb.isValid() と lastErrorMessage() を確認' },
+        { label: 'セルが #DIV/0! / #VALUE!', note: 'Excel エラーは値。値の種類を確認する' },
+        { label: 'Python から WASM が見つからない', note: 'wheel をインストール、または make python-package' },
+        { label: 'CLI の結果が Excel と違う', note: 'ロケール、揮発性関数、保持されるだけの構造を確認' }
       ]
     }
   ]"
@@ -21,7 +21,7 @@
 
 ## SharedArrayBuffer が使えない
 
-cross-origin isolation headers を設定します。
+既定の `@libraz/formulon` 入口は単一スレッドで、`SharedArrayBuffer` を必要としません。このエラーは、アプリケーションが `@libraz/formulon/threads` や別の pthread 統合を明示的に読み込んだ場合に発生します。そのページではオリジン間分離のヘッダーを設定します。
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
@@ -29,12 +29,12 @@ Cross-Origin-Embedder-Policy: require-corp
 ```
 
 ::: tip 本番ホストで確認する
-ローカル開発サーバーではなく、実際の CDN / アプリケーションサーバーで headers を確認してください。
+ローカル開発サーバーではなく、実際の CDN / アプリケーションサーバーでヘッダーを確認してください。
 :::
 
-## Vite が `node:` imports を警告する
+## Vite が `node:` のインポートを警告する
 
-WASM package には Node 実行環境向けの分岐が含まれます。ブラウザ向け bundler では `node:module` や `node:worker_threads` の警告が出る場合があります。Vite では、このパッケージを optimizeDeps から除外し、`node:` imports を external に指定します。
+WASM パッケージには Node 実行環境向けの分岐が含まれ、threads 入口には `node:worker_threads` の分岐も含まれます。ブラウザ向けバンドラでは `node:module` や `node:worker_threads` の警告が出る場合があります。Vite では、このパッケージを `optimizeDeps` から除外し、`node:` の読み込みを外部として指定します。
 
 ```ts
 import { defineConfig } from 'vite'
@@ -48,14 +48,18 @@ export default defineConfig({
 })
 ```
 
-## ワークブック読み込みが invalid handle を返す
+## ワークブックの読み込みが無効なハンドルを返す
 
 WASM では `loadBytes(bytes)` の直後に `wb.isValid()` を確認し、`Module.lastErrorMessage()` を読みます。
 
 ```ts
 const wb = Module.Workbook.loadBytes(bytes)
-if (!wb.isValid()) {
-  throw new Error(Module.lastErrorMessage())
+try {
+  if (!wb.isValid()) {
+    throw new Error(Module.lastErrorMessage())
+  }
+} finally {
+  wb.delete()
 }
 ```
 
@@ -69,23 +73,21 @@ CLI も同じ規則です。不正な `eval` 構文（`formulon eval '=SUM('`）
 
 WASM と Native Node で `allowBlank` を省略した場合の既定値は、Python と同じ `false` です。空セルを許可する入力規則では `allowBlank: true`（Python は `allow_blank=True`）を明示してください。
 
-## Python が WASM runtime を読み込めない
+## Python が WASM 実行環境を読み込めない
 
-公開 wheel を install して pip に互換性のある `wasmtime` wheel を解決させるか、
-repository root で staging します。
+公開 wheel をインストールして pip に互換性のある `wasmtime` wheel を解決させるか、リポジトリのルートで配置処理を実行します。
 
 ```sh
 make python-package
 ```
 
-source tree から import する場合は、C ABI WASM module が
-`packages/python/formulon/_wasm/` に stage されている必要があります。
+ソースツリーから読み込む場合は、C ABI の WASM モジュールが `packages/python/formulon/_wasm/` に配置されている必要があります。
 
 ## CLI の結果が Excel と違う
 
 まず次を確認してください。
 
-- `PY` や CUBE 接続関数のように、外部サービススタブとして登録されているため意図的に Excel エラーを返す関数か。
+- `PY` や CUBE 接続関数のように、外部サービスのスタブとして登録されているため意図的に Excel エラーを返す関数か。
 - `win-365-ja_JP` 外のロケール挙動に依存していないか。
 - 揮発性関数が絡んでいないか。
 - 保持はされるが評価対象ではないワークブック構造に依存していないか。

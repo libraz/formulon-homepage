@@ -7,7 +7,7 @@ This page covers common integration failures.
     {
       title: 'Symptom → fix',
       nodes: [
-        { label: 'SharedArrayBuffer missing', note: 'Set COOP / COEP headers' },
+        { label: 'SharedArrayBuffer missing', note: 'Use headers for an explicit /threads entry' },
         { label: 'Bundler warns about node:*', note: 'Mark node: external, exclude from optimizeDeps' },
         { label: 'loadBytes returns invalid', note: 'Check wb.isValid(), read lastErrorMessage()' },
         { label: 'Cell shows #DIV/0! / #VALUE!', note: 'Excel error is a value — inspect the value kind' },
@@ -21,7 +21,7 @@ This page covers common integration failures.
 
 ## Browser says SharedArrayBuffer is unavailable
 
-Serve the page with cross-origin isolation headers:
+The default `@libraz/formulon` entry is single-threaded and does not need `SharedArrayBuffer`. This error applies when the application explicitly loads `@libraz/formulon/threads` or another pthread-backed integration. Serve that page with cross-origin isolation headers:
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
@@ -34,7 +34,7 @@ Check the headers in the actual deployed environment. A local dev server passing
 
 ## Vite warns about `node:` imports
 
-The WASM package contains a Node branch for Node runtime support. Browser bundlers may warn about `node:module` or `node:worker_threads`. In Vite, exclude the package from optimizeDeps and mark `node:` imports external.
+The WASM package contains a Node branch for Node runtime support, and the threads entry also contains a `node:worker_threads` branch. Browser bundlers may warn about `node:module` or `node:worker_threads`. In Vite, exclude the package from optimizeDeps and mark `node:` imports external.
 
 ```ts
 import { defineConfig } from 'vite'
@@ -54,8 +54,12 @@ In WASM, check `wb.isValid()` immediately after `loadBytes(bytes)` and read `Mod
 
 ```ts
 const wb = Module.Workbook.loadBytes(bytes)
-if (!wb.isValid()) {
-  throw new Error(Module.lastErrorMessage())
+try {
+  if (!wb.isValid()) {
+    throw new Error(Module.lastErrorMessage())
+  }
+} finally {
+  wb.delete()
 }
 ```
 
@@ -71,15 +75,13 @@ The CLI follows the same rule for malformed `eval` syntax: `formulon eval '=SUM(
 
 ## Python cannot load the WASM runtime
 
-Install the published wheel so pip can resolve a compatible `wasmtime` wheel, or
-run the staging command from the repository root:
+Install the published wheel so pip can resolve a compatible `wasmtime` wheel, or run the staging command from the repository root:
 
 ```sh
 make python-package
 ```
 
-The source-tree import expects the staged C-ABI WASM module under
-`packages/python/formulon/_wasm/`.
+The source-tree import expects the staged C-ABI WASM module under `packages/python/formulon/_wasm/`.
 
 ## CLI result differs from Excel
 

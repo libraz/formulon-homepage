@@ -1,6 +1,6 @@
 # Development
 
-This section is for contributors and maintainers. It now focuses on the few workflows people actually need: build the project, run the right tests, update oracle data, and understand where implementation details live.
+This section covers contributor workflows: building, testing, updating oracle data, and finding the relevant implementation.
 
 ::: tip Start with the workflow, not the architecture
 Most contributors should start with [Build from source](/development/build-from-source) and [Test matrix](/development/test-matrix). Architecture details are useful after you know which surface or formula family you are changing.

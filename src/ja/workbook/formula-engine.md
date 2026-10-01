@@ -1,9 +1,9 @@
 # 数式エンジン
 
-評価器は、スカラー値、範囲、配列、エラー、参照、ロケール依存の挙動を Excel と一致させることを目指しています。Formulon は認識対象の関数名を起動時に登録し、各バインディングはその中で評価できる関数を呼び出せます。
+評価器は、スカラー値、範囲、配列、エラー、参照、ロケール依存の挙動を Excel と一致させることを目指しています。Formulon は認識対象の関数名を起動時に登録し、各バインディングは登録済みの関数を評価できます。
 
-::: info 用語: tree-walker と実験的 bytecode VM
-リリース用の CLI・WASM・バインディングバイナリは、パース済み AST を直接解釈する tree-walker を使い、実験的な bytecode compiler・optimizer・VM は含みません。開発・テストビルドでは `FORMULON_BUILD_VM=ON` のときだけ VM をコンパイルできます。
+::: info 用語: tree-walker
+評価器は解析済み AST を直接解釈し、すべてのビルドがこの tree-walker を使います。
 :::
 
 ::: info 用語: value kind（値の種類）
@@ -14,30 +14,34 @@
   { label: '数式テキスト', note: '=SUM(A1:A10)' },
   { label: '字句 / 構文解析' },
   { label: 'AST' },
-  { label: '参照解決', note: 'names・tables・ranges' },
-  { label: '評価器', note: '本番は tree-walker。明示した開発・テストの parity ビルドだけ実験的 VM を使う' },
+  { label: '参照解決', note: '名前・テーブル・範囲' },
+  { label: '評価器', note: 'tree-walker' },
   { label: 'Value', note: 'Number・Text・Bool・Error・Array・Ref・Lambda・Blank' }
 ]" />
 
 ## 認識対象の関数
 
-Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 522 件の Excel 関数名を認識します。これは認識カタログであり、Microsoft 365 の外部サービスに依存する関数まですべてローカル実装済みという意味ではありません。
+Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検索、財務、エンジニアリング、情報、データベース、Web、キューブ、`LET` / `LAMBDA` / 動的配列系など、合計 523 件の Excel 関数名を認識します。これは認識カタログであり、Microsoft 365 の外部サービスに依存する関数まですべてローカル実装済みという意味ではありません。
 
-**507 件の実装（環境依存の `CELL`、`INFO` を含む）と、15 件の未提供スタブで、認識対象は合計 522 件**です。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
+**508 件の実装（環境依存の `CELL`、`INFO` を含む）と、15 件の未提供スタブで、認識対象は合計 523 件**です。カテゴリ別、状態別の内訳は [数式カバレッジ](/ja/compatibility/formula-coverage) を参照してください。
 
 ## 評価モード
 
-本番の評価は tree-walker で行います。開発・テストビルドでは `FORMULON_BUILD_VM=ON` のときに実験的な bytecode VM をコンパイルできますが、両方を実行して結果を比較するのは `FORMULON_VM_PARITY_CHECK=ON` を明示したビルドだけです。通常のテストは二重評価を行いません。
+すべてのビルドは同じ tree-walker で数式を評価します。
 
 ## アドホック評価
 
-同じ評価器の上に、WASM と Native Node は読み取り専用のスカラーアドホック評価 `evaluateFormulaText()` / `evaluateConditionalFormula()` を公開しています。Python は配列全体の `evaluate_formula_array()` と CF 用の `evaluate_cf_formula()` を公開しますが、一般的なスカラー `evaluate_formula_text()` は公開していません。[ワークブック操作 — アドホック数式評価](/ja/workbook/operations#アドホック数式評価) を参照してください。
+同じ評価器の上に、WASM と Native Node は読み取り専用のスカラー評価 `evaluateFormulaText()` / `evaluateConditionalFormula()` を公開しています。Python は配列全体の `evaluate_formula_array()` と条件付き書式用の `evaluate_cf_formula()` を公開しますが、一般的なスカラー `evaluate_formula_text()` は公開していません。[ワークブック操作 — アドホック数式評価](/ja/workbook/operations#evaluate-formula) を参照してください。
 
-範囲形の defined name は Array として評価され、スピルによる phantom cell も列挙されます。`date1904` は評価器へ伝わり、行全体 / 列全体や 3-D range はワークブックモデルに基づいて解決されます。配列の broadcasting は関数ごとの Excel 規則に従います。
+範囲形の定義名は配列として評価され、スピルによる仮想セルも列挙されます。`date1904` は評価器へ伝わり、行全体 / 列全体や 3-D 範囲はワークブックモデルに基づいて解決されます。配列の要素数の拡張（ブロードキャスト）は関数ごとの Excel 規則に従います。
 
-### index で書かれた外部ワークブック参照
+### 参照値を範囲の端点に使う
 
-外部 link table に保存された index を使う参照は、`[1]Sheet1!A1`、`[1]Sheet1!A1:B2`、`[2]!Name`、`'[1]My Sheet'!A1` のように書くと、その link part の cached value に対して解決されます。`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた形式は、結び付ける link-table index がないため未対応です。XLSB reader は supporting-book table もデコードするので、外部 sheet index はこの workbook と決め打ちせず、指定された supporting book に結び付きます。外部参照は cached value を評価するだけで、外部データを更新したり XLSB 保存時に書き戻したりはしません。
+参照値を返す定義名や `INDEX`、`OFFSET`、`XLOOKUP`、`IFS`、`SWITCH` などの関数は、範囲の端点に使えます（`A1:MyName`、`A1:INDEX(...)`、`XLOOKUP(...):B3`）。`ROW` / `COLUMN` も、このような動的な範囲を受け取ります。名前の定義が定数・通常の式・文字列を返す場合、端点に使うと `#VALUE!` になります。未定義の名前は `#NAME?`、別シートの端点は `#VALUE!` になります。同じブックの名前や関数は `[0]!Name`、`[0]!Fn(args)` の形式で指定できます。`A1:[0]!Rng` のような範囲や、`[0]!Rng A1:A5` のような交差にも使えます。
+
+### インデックスで指定する外部ワークブック参照
+
+外部リンク表に保存されたインデックスを使う参照は、`[1]Sheet1!A1`、`[1]Sheet1!A1:B2`、`[2]!Name`、`'[1]My Sheet'!A1` のように書くと、そのリンクパーツのキャッシュ値に対して解決されます。`[Book1.xlsx]Sheet1!A1` のようにファイル名だけで書いた形式は、結び付けるリンク表のインデックスがないため未対応です。XLSB リーダーは参照元ブックの表もデコードするので、外部シートのインデックスはこのワークブックと決め打ちせず、指定された参照元ブックに結び付きます。外部参照はキャッシュ値を評価するだけで、外部データを更新したり XLSB 保存時に書き戻したりはしません。
 
 ### 数式の境界ケース
 
@@ -45,17 +49,19 @@ Formulon は、数学、統計、論理、テキスト、日付 / 時刻、検�
 
 - `TRIM` は連続する trim 対象の空白を 1 文字へまとめますが、先頭の run を構成していた文字を保持します。全角スペース（U+3000）を U+0020 へ書き換えません。
 - `ISOMITTED` は `LAMBDA` 呼び出しの空の引数 slot を `TRUE` と判定します。先頭・途中・末尾の omission が対象です。
-- 長さ 0 の文字列は blank cell ではなく text です。`CELL("type", ...)` は `"l"` を返し、ワイルドカード条件 `COUNTIF(range, "*")` はこれを含めます。一方、`COUNTIF(range, "=")` の blank-cell probe はこの値を満たしません。
+- 長さ 0 の文字列は空白セルではなく文字列です。`CELL("type", ...)` は `"l"` を返し、ワイルドカード条件 `COUNTIF(range, "*")` はこれを含めます。一方、`COUNTIF(range, "=")` の空白セル検査はこの値を満たしません。
+
+`USDOLLAR` と `DOLLAR` はどちらも文字列を返します。`USDOLLAR` は常に米ドル表示を使い、既定では小数 2 桁、負数は括弧で表します。`DOLLAR` は選択したロケールの通貨形式と既定の小数桁数に従います。たとえば `win-365-ja_JP` では `DOLLAR(1234.5)` は小数 0 桁の円表示になり、`USDOLLAR(1234.5)` は `$1,234.50` になります。表示上 0 に丸められる負数も符号を保つため、`USDOLLAR(-0.001, 2)` は `($0.00)`、`DOLLAR(-0.001, 2)` は `¥-0.00` になります。
 
 ## エラーの扱い
 
-Excel error はホスト言語の例外ではなく **値** として扱います。
+Excel エラーはホスト言語の例外ではなく **値** として扱います。以下は代表例で、全 `ErrorCode` は [エラーモデル](/ja/compatibility/errors) にまとめています。
 
-| Excel error | 意味 |
+| Excel エラー | 意味 |
 | --- | --- |
 | `#DIV/0!` | 0 除算、または除数が空 |
 | `#VALUE!` | 引数・オペランドの型不一致 |
-| `#REF!` | 参照を解決できない（削除されたシート、壊れた range など） |
+| `#REF!` | 参照を解決できない（削除されたシート、壊れた範囲など） |
 | `#NAME?` | 未知の関数 / defined name |
 | `#NUM!` | 数値オーバーフローや不正な数値入力 |
 | `#N/A` | 値なし。`MATCH` / `VLOOKUP` 系で発生 |
@@ -64,7 +70,7 @@ Excel error はホスト言語の例外ではなく **値** として扱いま�
 | `#CALC!` | エンジンが結果を返せない（再帰・未完了評価など） |
 | `#GETTING_DATA` | 外部参照の取得中 |
 
-::: tip セルの error とホスト失敗は別物
+::: tip セルエラーとホスト失敗は別物
 `#DIV/0!` を返す数式は API として **失敗していません**。呼び出しは成功しており、結果がエラー値なのです。`getValue()` の結果で `status` を確認してから、`result.value.kind === ValueKind.Error` で判定してください。バイト列不正・ハンドル失効・IO 失敗などはステータス envelope / 例外 / 非ゼロ終了で別経路で報告されます。
 :::
 
@@ -82,11 +88,11 @@ A1 テキストは CLI 引数・数式文字列・MCP ツール入力など、�
 
 ## ロケール依存挙動
 
-テキスト整形・日付パース・通貨・リスト区切りなど、一部関数は有効な互換性プロファイルを参照します。既定は `win-365-ja_JP` です。対応する Oracle データが揃ったプロファイルだけが公開されます。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
+現在の互換性プロファイルは、文字列の照合と型変換、`CODE()` / `CHAR()`、環境依存の `INFO()` / `CELL()`、ピボットテーブルのラベルとレイアウトの既定値を制御します。保存された数式は英語の関数名と不変のパーサー文法を使い、関数名ヘルパーは表示用の名前を別に提供します。プロファイルを変更しても保存済みの数式を翻訳することや、すべての Excel ロケール差を実装することは意味しません。既定は `win-365-ja_JP` で、対応する Oracle データが揃ったプロファイルだけが公開されます。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles) を参照してください。
 
 ## 次に読むもの
 
 - [再計算](/ja/workbook/recalculation) ─ エンジンが評価をどう順序付けるか
-- [ワークブック操作](/ja/workbook/operations#アドホック数式評価) ─ セルを変更せずに数式を評価する
+- [ワークブック操作](/ja/workbook/operations#evaluate-formula) ─ セルを変更せずに数式を評価する
 - [数式カバレッジ](/ja/compatibility/formula-coverage) ─ 関数族ごとの登録状況
-- [エラーモデル](/ja/compatibility/errors) ─ エラー値とホスト失敗の違い
+- [エラーモデル](/ja/compatibility/errors) ─ エラー値とホスト側のエラーの違い

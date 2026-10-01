@@ -14,13 +14,13 @@ Capturing a profile is a one-way pipeline from a real Excel build to a reusable 
   { label: 'Compatibility profile', note: 'win-365-ja_JP — verified' }
 ]" />
 
-Every recalculation then checks itself against that same oracle data:
+Oracle tests recalculate fixture workbooks and compare their results with captured Excel values. Applications run the same engine, but do not compare against oracle data automatically:
 
 <DiagramLayers :layers="[
-  { title: 'Inputs', nodes: ['Workbook', 'Compatibility profile'] },
+  { title: 'Test inputs', nodes: ['Fixture workbook', 'Compatibility profile'] },
   { nodes: ['Formulon engine'] },
   { nodes: ['Calculated values'] },
-  { title: 'Compare vs oracle data', nodes: [
+  { title: 'Oracle test comparison', nodes: [
     { label: 'No divergence', note: 'profile claim holds' },
     { label: 'Tracked divergence', note: 'reason + last-verified build' },
     { label: 'Untracked divergence', note: 'bug — fix or document' }

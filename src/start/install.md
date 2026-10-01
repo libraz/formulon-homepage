@@ -9,12 +9,12 @@ Use exact package versions for experiments and internal tooling. Do not float on
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.11.1
+yarn add @libraz/formulon@0.12.0
 ```
 
 Use this for browsers, workers, and Node-based services that should run the WASM build. The package is ESM-only and requires Node 22 or newer when used in Node.
 
-For browser hosting, configure cross-origin isolation when pthread workers are enabled:
+The default WASM entry and the standard `formulon-cell` loader run serially without cross-origin isolation. The parallel build at `@libraz/formulon/threads` requires the following headers:
 
 ```http
 Cross-Origin-Opener-Policy: same-origin
@@ -24,12 +24,10 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.11.1
+python -m pip install formulon==0.12.0
 ```
 
-Use this for scripts, notebooks, and batch jobs. The wheel ships a standalone
-Formulon C-ABI WASM module plus a pure-Python wrapper driven through
-`wasmtime`; it does not require NumPy, Cython, or pybind11 at runtime.
+Use this for scripts, notebooks, and batch jobs. The wheel targets Python 3.9 and later and ships a standalone Formulon C-ABI WASM module plus a pure-Python wrapper driven through `wasmtime`; it does not require NumPy, Cython, or pybind11 at runtime.
 
 ## CLI
 
@@ -44,7 +42,7 @@ formulon recalc input.xlsx -o output.xlsx
 ## formulon-cell
 
 ```sh
-yarn add @libraz/formulon-cell@0.6.0 @libraz/formulon-cell-vue@0.6.0
+yarn add @libraz/formulon-cell@0.7.0 @libraz/formulon-cell-vue@0.7.0
 ```
 
 Install `@libraz/formulon-cell-vue` when using the Vue adapter. The core package is shared by the framework adapters.

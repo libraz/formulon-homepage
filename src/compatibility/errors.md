@@ -18,7 +18,7 @@ A *cell error* is a value with `kind = Error`. It travels through the binding as
   ] }
 ]" />
 
-A host failure (bad bytes, missing handle, IO error) means fix the integration; a cell error means show it inline and keep going.
+A host failure (bad bytes, missing handle, or IO error) must be handled and reported through its host-failure channel; retry or fix the integration when appropriate. A cell error is data: show it inline and keep going.
 
 | Error | Meaning |
 | --- | --- |
@@ -40,7 +40,7 @@ A host failure (bad bytes, missing handle, IO error) means fix the integration; 
 | `#PYTHON!` | Error raised while evaluating a `PY` cell |
 | `#UNKNOWN!` | Unrecognized or unmapped error code |
 
-This is the full, wired `ErrorCode` set (`src/value.h`'s `kErrorTable`); build any host-side lookup table against all 17 codes, not just the classic ten.
+This is the full, wired `ErrorCode` set (`src/value.h`'s `kErrorTable`). The display helpers in each binding cover all 17 codes, including names that may be preserved from an input workbook. `#PYTHON!` does not mean Formulon executes Python, and `#GETTING_DATA` does not mean it performs a live network lookup.
 
 Bindings should preserve these values instead of converting them into host exceptions unless the host API is reporting an API misuse or IO failure.
 
@@ -74,29 +74,41 @@ The panel below reads that set out of the running engine and runs both channels 
 
 ## Handling pattern
 
-```ts
+::: code-group
+
+```ts [WASM]
 const result = wb.getValue(0, 0, 0)
 if (!result.status.ok) throw new Error(result.status.message)
 
 const value = result.value
 if (value.kind === ValueKind.Error) {
   // cell error — surface to the user, do not throw.
-  // value.errorCode is a formulon.ErrorCode ordinal; map it to a
-  // display string (e.g. "#DIV/0!") with your own lookup table.
-  showInline(value.errorCode)
+  showInline(Module.errorDisplayName(value.errorCode))
 } else if (value.kind === ValueKind.Number) {
   consume(value.number)
 }
 ```
 
-```python
+```ts [Native Node]
+import { errorDisplayName, ValueKind } from '@libraz/formulon-native'
+
+const result = wb.getValue(0, 0, 0)
+if (!result.status.ok) throw new Error(result.status.message)
+const value = result.value
+if (value.kind === ValueKind.Error) showInline(errorDisplayName(value.errorCode))
+```
+
+```python [Python]
+from formulon import ValueKind, error_display_name
+
 v = wb.get_value(0, 0, 0)
 if v.kind is ValueKind.ERROR:
-    # v.error_code is an int ErrorCode ordinal; map it yourself.
-    show_inline(v.error_code)
+    show_inline(error_display_name(v.error_code))
 elif v.kind is ValueKind.NUMBER:
     consume(v.number)
 ```
+
+:::
 
 ## Read next
 

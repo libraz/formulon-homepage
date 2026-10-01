@@ -10,22 +10,35 @@ A captured set of Excel-produced values for a known workbook, profile, and build
 A case where Formulon deliberately differs from Excel. Each accepted divergence carries a reason (security, deterministic behavior, fixed Excel bug, …) and a last-verified Excel build. Accepted divergences are documented rather than hidden behind generic "Excel-like" claims.
 :::
 
-## Current results
+## Verification tracks
 
-Where the oracle tracks stand today. Each row is what the suite reports on the checked-in goldens, not an aspiration.
+The oracle suite has separate tracks for formulas, conditional formatting, imported-engine comparisons, and workbook structures. The table records each track's scope and capture source; run the source checks below for the current pass and skip details.
 
-| Track | Result | Documented skips / divergences | Golden source |
-| --- | --- | --- | --- |
-| Primary formula oracle | `4423/4423` passing | `125` documented skips | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
-| Conditional-formatting oracle | `23/23` passing | — | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
-| Imported third-party engine corpus (cross-check) | `12510/12510` passing | `168` divergences | Third-party engine, not Excel |
-| Workbook oracle (pivot + print) | `66/66` passing | `10` documented skips | Product-verified Windows Microsoft 365 ja-JP (`win-365-ja_JP`) |
+| Track | Scope | Golden source |
+| --- | --- | --- |
+| Primary formula oracle | Formula cell values | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
+| Conditional-formatting oracle | Conditional-format predicates and visual results | Mac Excel 365 ja-JP (`mac-365-ja_JP`) |
+| Imported third-party engine corpus | Cross-check against a non-Excel engine | Third-party engine, not Excel |
+| Workbook oracle | PivotTable structures and print layout | Windows Microsoft 365 ja-JP (`win-365-ja_JP`) |
 
-**103 oracle categories** are defined. The formula and conditional-formatting tracks regenerate from Mac Excel 365 ja-JP; the workbook track regenerates from Windows Excel 365 ja-JP. Workbook goldens carry a capture identifier that pins every suite to a single verified Microsoft 365 session.
+The formula and conditional-formatting tracks regenerate from Mac Excel 365 ja-JP; the workbook track regenerates from Windows Excel 365 ja-JP. Workbook goldens carry a capture identifier that pins every suite to a single verified Microsoft 365 session. The workbook capture uses a WSL2-to-Windows COM bridge for PivotTable and print behavior. Pass and skip counts belong to a particular capture and are intentionally omitted here. From a [Formulon source checkout](https://github.com/libraz/formulon), build the test binaries and run the suites:
 
-Of the `522` catalogued functions, `518` satisfy all six closure conditions (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, `behavior_drift`). The remaining four — `ARRAYTOTEXT`, `FILTERXML`, `GETPIVOTDATA`, `PHONETIC` — fail only `behaviors_declared`; their behavior taxonomy is under-specified rather than unimplemented. `JIS` closes as a declared alias of `DBCS`: Excel rewrites that ja-JP formula-bar spelling before it stores or evaluates a formula, so no oracle case can name it, and the closure harness resolves the alias to the function it defers to.
+```sh
+make build
+make oracle-verify
+make ironcalc-verify
+```
 
-Every skip is an explicit divergence, host-service dependency, volatile or environment-bound case, or driver limitation — none is a silent stub. Each carries the Excel build it was last verified against in [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml).
+The catalogue closure checks are separate metadata checks; they do not recalculate the engine or report suite pass counts:
+
+```sh
+tools/oracle/.venv/bin/python tools/oracle/closure_check.py --report --json
+tools/oracle/.venv/bin/python tools/oracle/workbook_closure_check.py
+```
+
+Of the `523` catalogued functions, `519` satisfy all six closure conditions (`behaviors_declared`, `cases_cover_behaviors`, `golden_present`, `divergence_documented`, `not_in_pilot`, `behavior_drift`). The remaining four — `ARRAYTOTEXT`, `FILTERXML`, `GETPIVOTDATA`, `PHONETIC` — fail only `behaviors_declared`; their behavior taxonomy is under-specified rather than unimplemented. `JIS` closes as a declared alias of `DBCS`: Excel rewrites that ja-JP formula-bar spelling before it stores or evaluates a formula, so no oracle case can name it, and the closure harness resolves the alias to the function it defers to.
+
+Every skip is classified as an explicit divergence, host-service dependency, volatile or environment-bound case, or driver limitation — none is a silent stub. Skips registered in the divergence registry carry their reason and last-verified Excel build in [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml); driver or runner skips are checked separately against the goldens, feature metadata, and execution results.
 
 ## Why oracle data matters
 

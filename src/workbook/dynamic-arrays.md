@@ -3,11 +3,11 @@
 Dynamic arrays let one formula return multiple values that *spill* into neighboring cells. The anchor cell holds the formula; the surrounding spill range holds the computed values. Formulon models the spill shape, dependency edges, and collision behavior as part of recalculation.
 
 ::: info Glossary: spill / spill range
-The rectangle of cells produced when a dynamic-array formula returns more than one value. The top-left cell (the *anchor*) holds the formula text; the other cells in the spill range are read-only projections of the result.
+The rectangle of cells produced when a dynamic-array formula returns more than one value. The top-left cell (the *anchor*) holds the formula text; the other cells obtain their values from that anchor and do not hold independent formulas.
 :::
 
 ::: info Glossary: anchor cell
-The cell that owns the dynamic-array formula. Editing or clearing the anchor changes the whole spill. Cells inside the spill (non-anchor) cannot be edited directly — clearing them is a no-op until the anchor is changed.
+The cell that owns the dynamic-array formula. Editing or clearing the anchor changes the whole spill. A host API can write to a non-anchor cell: the existing spill projection is invalidated and the anchor becomes dirty. After recalculation, a blank non-anchor cell lets the spill regenerate; a non-blank cell blocks it with `#SPILL!`.
 :::
 
 ## What to expect
@@ -50,7 +50,7 @@ Those formulas can be run below. The upper table comes from `evaluateFormulaArra
 Start with `=SEQUENCE(3,4)` and note the preview shape. Write it to the sheet, then block its far corner to observe that the anchor becomes `#SPILL!` without partially writing a result. Clear the blocker, switch to `=FILTER(A2:B6,B2:B6>4)`, and edit a source value in columns A or B. The preview changes immediately; the committed formula keeps its own spill range until it is recalculated.
 :::
 
-Computed anchors are evaluated by the tree-walker. The bytecode spill-reference opcode has no pool entry for an anchor produced at runtime, so the release artifacts use the tree-walker path for these formulas.
+Computed anchors are evaluated by the tree-walker, as are all spill-reference formulas in release, development, and test artifacts.
 
 ## Recalculation interaction
 
@@ -71,7 +71,7 @@ WASM and Native Node expose `spillInfo(sheet, row, col)` and the MCP `formulon_t
 
 ## Compatibility caveats
 
-Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE arrays exist in the same sheet. Mixed dynamic-array / CSE workbooks should be checked against the goldens before relying on the results.
+Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE (Ctrl+Shift+Enter) array formulas exist in the same sheet. For a mixed dynamic-array / CSE workbook, compare a fixture against the target Excel profile before relying on the results; internal golden fixtures are not required for that check.
 
 ## Read next
 

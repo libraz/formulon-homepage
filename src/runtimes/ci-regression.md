@@ -8,6 +8,8 @@ A repo-internal test runner that evaluates shared fixtures across every availabl
 
 ## Snapshot formulas
 
+Create `model.formulas.txt` and `model.values.txt` in the repository, then commit them before enabling this check. `git diff` does not compare untracked files. A CI job can fail fast with `git ls-files --error-unmatch model.formulas.txt model.values.txt`.
+
 ```sh
 formulon dump --formulas model.xlsx > model.formulas.txt
 git diff --exit-code model.formulas.txt
@@ -18,8 +20,7 @@ This catches formula edits without depending on cached calculated values. The du
 ## Snapshot recalculated values
 
 ```sh
-formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
-formulon dump --values /tmp/model.recalc.xlsx > model.values.txt
+formulon dump --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
@@ -43,7 +44,7 @@ The parity runner checks that *our own* surfaces agree with each other. The [ora
   { title: 'Input', nodes: ['Shared workbook fixtures'] },
   { title: 'Verification track', nodes: [
     { label: 'Parity runner', note: 'WASM vs Python vs CLI' },
-    { label: 'Oracle testing', note: 'any channel vs real Excel' }
+    { label: 'Oracle testing', note: 'shared engine vs captured Excel values' }
   ] },
   { title: 'Answers', nodes: [
     { label: 'Do our own surfaces agree?' },
@@ -53,7 +54,7 @@ The parity runner checks that *our own* surfaces agree with each other. The [ora
 
 ## When not to use CI snapshots
 
-Avoid direct snapshots for formulas that include volatile functions such as `NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` unless the fixture controls or documents the volatility. The same applies to functions that depend on external services (web / cube), which can produce different values on different CI runners.
+Avoid direct snapshots for formulas that include volatile functions such as `NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` unless the fixture controls or documents the volatility. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O in this engine; they return a fixed unavailable Excel error. See [formula coverage](/compatibility/formula-coverage) for the list. Snapshot those errors as intentional compatibility behavior or exclude the cells.
 
 For volatile-heavy workbooks, snapshot the formulas only (`dump --formulas`) and verify representative cells through a script that asserts ranges or shapes rather than exact values.
 

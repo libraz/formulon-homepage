@@ -14,13 +14,13 @@ Formulon は互換性を *測定可能な性質* として扱います。一般�
   { label: '互換性プロファイル', note: 'win-365-ja_JP ─ 検証済み' }
 ]" />
 
-再計算のたびに、その同じ Oracle データと突き合わせます。
+Oracle テストでは、検証用ワークブックを再計算し、Excel から取得した期待値と比較します。通常の API 呼び出しが期待値との比較を自動で行うわけではありません。
 
 <DiagramLayers :layers="[
-  { title: '入力', nodes: ['ワークブック', '互換性プロファイル'] },
+  { title: 'テスト入力', nodes: ['検証用ワークブック', '互換性プロファイル'] },
   { nodes: ['Formulon エンジン'] },
   { nodes: ['計算値'] },
-  { title: 'Oracle データと比較', nodes: [
+  { title: 'Oracle テストで比較', nodes: [
     { label: '差分なし', note: 'プロファイル互換が成立' },
     { label: '追跡済みの差分', note: '理由 + last-verified build' },
     { label: '未追跡の差分', note: 'バグ ─ 修正または文書化' }
@@ -38,11 +38,11 @@ Formulon は互換性を *測定可能な性質* として扱います。一般�
 避けられない差分があります。
 
 - プラットフォーム間の浮動小数ドリフト
-- volatile snapshot の不一致
+- 揮発性関数の取得時刻の差
 - 未文書の Excel 挙動で、ビルドをまたぐと安定しないもの
 - Excel 通りに揃えるとエンジンの予測可能性が落ちる境界ケースの意図的な是正（暗黙オーバーフロー・暗黙型変換など）
 
-受け入れ済み差分は理由と *last-verified Excel build* を付けて記録し、将来 Excel 側で挙動が変わっても判断可能にします。
+受け入れ済み差分は理由と *最後に検証した Excel ビルド* を付けて記録し、将来 Excel 側で挙動が変わっても判断できるようにします。
 
 ## 運用ルール
 
@@ -57,4 +57,4 @@ Formulon は互換性を *測定可能な性質* として扱います。一般�
 
 - [ロケールプロファイル](/ja/compatibility/locale-profiles) ─ プロファイル一覧
 - [Oracle テスト](/ja/compatibility/oracle-testing) ─ プロファイルをどう検証するか
-- [非目標](/ja/compatibility/non-goals) ─ 互換性が意図的にカバーしない範囲
+- [対象外の機能](/ja/compatibility/non-goals) ─ 互換性が意図的にカバーしない範囲

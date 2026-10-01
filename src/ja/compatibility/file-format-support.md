@@ -8,24 +8,24 @@
 
 | 領域 | 状態 |
 | --- | --- |
-| `.xlsx` 読み込み | workbook、sheets、cells、styles、shared strings、relationships、tables、names、comments、hyperlinks、merges、validations、conditional formatting、pivot structures に対応 |
-| `.xlsx` 書き出し | 上の読み込み行に挙げた構造 ─ workbook、sheets、cells、styles、shared strings、relationships、tables、names、comments、hyperlinks、merges、validations、conditional formatting、pivot structures ─ を、再計算済みワークブック出力の一部としてすべて書き戻す |
-| `.xlsb` 読み込み / 書き出し | styles、行 / 列レイアウト、結合、`date1904`、view / zoom / frozen panes、動的配列メタデータ、対応する tokenized formula をモデル化して出力。既存 worksheet tail はそのまま保持 |
+| `.xlsx` 読み込み | ワークブック、シート、セル、スタイル、共有文字列、リレーションシップ、テーブル、定義名、コメント、ハイパーリンク、結合、入力規則、条件付き書式、ピボット構造に対応 |
+| `.xlsx` 書き出し | 上の読み込み行に挙げたモデル化済みの構造を書き戻し、可能な未モデル化パーツを保持。重要な構造は出力パッケージで確認 |
+| `.xlsb` 読み込み / 書き出し | スタイル、行 / 列レイアウト、結合、`date1904`、表示倍率 / ウィンドウ枠固定、動的配列メタデータ、対応するトークン化数式、条件付き書式、入力規則、シート / ワークブック保護のメタデータをモデル化して出力。モデル化していないワークシート末尾の一部はそのまま保持 |
 | `.xlsm` のマクロバイト | 保持するが実行しない |
 | 旧形式の `.xls` | 対象外 |
-| chart / drawing の描画 | 対象外 |
-| pivot cache の再計算 | 対象外。構造保持は対象 |
+| グラフ / 図形の描画 | 対象外 |
+| 元シートまたは外部データからのピボットキャッシュ更新 | 対象外。対応済みキャッシュの保持・投影は対象 |
 
 <DiagramLayers :layers="[
   { title: '形式別サポートの幅', nodes: [
-    { label: '.xlsx', note: 'フル対応 ─ 読み込み・書き出し・往復保存' },
-    { label: '.xlsb', note: 'モデル化したコアと worksheet tail の保持' },
+    { label: '.xlsx', note: 'モデル化した機能 + 保持したパッケージパーツ' },
+    { label: '.xlsb', note: '条件付き書式・入力規則・protection と一部 tail を保持' },
     { label: '.xlsm', note: 'マクロバイトは通過のみ、実行しない' },
     { label: '.xls', note: '対象外' }
   ] }
 ]" />
 
-Formulon は出力ファイル拡張子（CLI の `-o file.xlsb`、バインディングの `saveAs` / `save_as`）からコンテナ形式を決め、読み込み時は内容をスニッフィングします。そのため `.xlsb` という拡張子で OOXML バイト列を持つファイル（またはその逆）も正しく扱えます。
+CLI は `-o` のファイル拡張子で出力コンテナを選びます。バインディングは `saveAs(format)` / `save_as(fmt)` に渡す `WorkbookFormat` で選びます。読み込みはパッケージの内容を調べるため、入力ファイルの拡張子では形式を決めません。
 
 ## 保持ルール
 

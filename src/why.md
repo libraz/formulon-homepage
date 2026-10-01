@@ -20,14 +20,14 @@ The project optimizes for reproducible compatibility. The default behavior profi
 - Run `.xlsx` and `.xlsb` workbooks in services, jobs, and notebooks.
 - Evaluate Excel formulas inside a browser or worker.
 - Keep browser, Python, CLI, Native Node, and MCP results aligned because they share one core.
-- Preserve workbook structure while recalculating values.
+- Preserve supported workbook structures while recalculating values.
 - Audit formula behavior against versioned oracle data.
-- Let AI agents edit workbooks safely through `@libraz/formulon-mcp`.
+- Let AI agents edit workbooks through validated MCP tools, with filesystem permissions controlled by the host.
 
 ## What it does not try to solve
 
-Formulon is not a spreadsheet UI, chart renderer, VBA runtime, PowerQuery/DAX engine, or legacy `.xls` implementation. Those boundaries keep the calculation engine small, testable, and embeddable.
+Formulon is not a spreadsheet UI, chart renderer, VBA runtime, Power Query/DAX engine, or legacy `.xls` implementation. Those boundaries keep the calculation engine small, testable, and embeddable.
 
 ## Current status
 
-Formulon is under active development and is not yet production-ready. The formula engine has broad local coverage and explicitly marks service-backed functions such as `COPILOT`, `PY`, and `WEBSERVICE` as unavailable service stubs rather than pretending to implement the corresponding Microsoft 365 services. APIs and package layout may still change before the first stable release. Validate business-critical workbooks with fixtures against the Excel profile you target.
+Formulon is under active development and has not reached its first stable release. The formula engine has broad local coverage and explicitly marks service-backed functions such as `COPILOT`, `PY`, and `WEBSERVICE` as unavailable service stubs rather than pretending to implement the corresponding Microsoft 365 services. APIs and package layout may still change before the first stable release. Validate business-critical workbooks with fixtures against the Excel profile you target.

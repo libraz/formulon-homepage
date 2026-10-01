@@ -10,22 +10,35 @@ Oracle テストは、実際の Excel から取得した値と Formulon の値�
 Formulon が意図的に Excel と違う挙動をするケースです。理由（セキュリティ、決定論的な挙動、Excel 側の不具合修正など）と、最後に確認した Excel ビルドを記録します。「Excel 風」とぼかさず、明示的に管理します。
 :::
 
-## 現在の結果
+## 検証の種類
 
-各 Oracle トラックの現状です。いずれもチェックイン済みのゴールデンデータに対してスイートが報告している値であり、目標値ではありません。
+Oracle の検証は、数式、条件付き書式、他エンジンとの照合、ワークブック構造のトラックに分かれています。表は各トラックの対象と取得元を示します。現在の合格数やスキップ数は、下のソース検証を実行して確認してください。
 
-| トラック | 結果 | 記録済みの skip / divergence | ゴールデンの出所 |
-| --- | --- | --- | --- |
-| 主要な数式 Oracle | `4423/4423` pass | skip `125` 件（記録済み） | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
-| 条件付き書式 Oracle | `23/23` pass | — | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
-| 他エンジン由来コーパス（クロスチェック） | `12510/12510` pass | divergence `168` 件 | 他エンジン。Excel ではない |
-| ワークブック Oracle（ピボット + 印刷） | `66/66` pass | skip `10` 件（記録済み） | 製品版 Windows Microsoft 365 ja-JP で検証済み（`win-365-ja_JP`） |
+| トラック | 対象 | ゴールデンの出所 |
+| --- | --- | --- |
+| 主要な数式 Oracle | 数式セルの値 | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
+| 条件付き書式 Oracle | 条件付き書式の判定と表示結果 | Mac Excel 365 ja-JP（`mac-365-ja_JP`） |
+| 他エンジン由来コーパス（クロスチェック） | Excel 以外のエンジンとの照合 | 他エンジン。Excel ではない |
+| ワークブック Oracle | ピボットテーブルの構造と印刷レイアウト | Windows 版 Microsoft 365 の Excel（`win-365-ja_JP`） |
 
-**103 の Oracle カテゴリ**を定義しています。数式と条件付き書式の track は Mac Excel 365 ja-JP、workbook track は Windows Excel 365 ja-JP から再生成します。workbook の golden には capture identifier があり、全 suite を単一の検証済み Microsoft 365 セッションに固定します。
+数式と条件付き書式の検証は Mac Excel 365 ja-JP、ワークブック単位の検証は Windows 版 Microsoft 365 の Excel から再生成します。ワークブックのゴールデンには取得識別子があり、各スイートを検証済み Microsoft 365 セッションに固定します。ワークブックの取得はピボットテーブルと印刷挙動を対象に、WSL2 から Windows の COM へ接続して行います。合格数やスキップ数は取得時点のデータに依存するため、このページでは固定しません。[Formulon のソースチェックアウト](https://github.com/libraz/formulon)でテストバイナリをビルドし、次のスイートを実行してください。
 
-カタログ済みの `522` 関数のうち `518` が6つのクロージャ条件（`behaviors_declared` / `cases_cover_behaviors` / `golden_present` / `divergence_documented` / `not_in_pilot` / `behavior_drift`）をすべて満たします。残る4つ（`ARRAYTOTEXT` / `FILTERXML` / `GETPIVOTDATA` / `PHONETIC`）が満たさないのは `behaviors_declared` だけで、未実装ではなく挙動の分類が不足しています。`JIS` は `DBCS` の alias として宣言され、closure 条件を満たします。Excel はこの ja-JP の数式バー表記を保存・評価の前に書き換えるため、`JIS` を直接指定する Oracle ケースは作れません。closure harness は alias 先の関数に解決して判定します。
+```sh
+make build
+make oracle-verify
+make ironcalc-verify
+```
 
-skip はいずれも明示的な divergence、ホストサービス依存、volatile または環境依存のケース、ドライバの制約のいずれかで、黙って握りつぶしたスタブはありません。それぞれ最後に確認した Excel ビルドを [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) に記録しています。
+カタログの検証完了条件を確認するメタデータ検査は、エンジンの再計算やスイートの合格数集計とは別です。
+
+```sh
+tools/oracle/.venv/bin/python tools/oracle/closure_check.py --report --json
+tools/oracle/.venv/bin/python tools/oracle/workbook_closure_check.py
+```
+
+カタログ済みの `523` 関数のうち `519` が 6 つの検証完了条件（`behaviors_declared` / `cases_cover_behaviors` / `golden_present` / `divergence_documented` / `not_in_pilot` / `behavior_drift`）をすべて満たします。残る 4 つ（`ARRAYTOTEXT` / `FILTERXML` / `GETPIVOTDATA` / `PHONETIC`）が満たさないのは `behaviors_declared` だけで、未実装ではなく挙動の分類が不足しています。`JIS` は `DBCS` の別名として宣言され、検証完了条件を満たします。Excel は ja-JP の数式バー表記を保存・評価の前に書き換えるため、`JIS` を直接指定する Oracle ケースは作れません。検証ツールは別名の解決先で判定します。
+
+スキップはいずれも明示的な差分（divergence）、ホストサービス依存、揮発性または環境依存のケース、ドライバの制約のいずれかに分類され、黙って握りつぶしたスタブはありません。差分レジストリに登録したスキップは、理由と最後に確認した Excel ビルドを [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) に記録します。ドライバやランナーによるスキップは、ゴールデンデータ、機能メタデータ、実行結果を別途確認します。
 
 ## なぜ Oracle データが必要か
 
@@ -37,8 +50,8 @@ skip はいずれも明示的な divergence、ホストサービス依存、vola
   { label: 'Oracle テスト失敗', note: 'Formulon ≠ Excel 取得値' },
   { label: '誤った値か？', note: 'はい → Formulon の不具合: エンジンを修正し、ゴールデンデータを追加' },
   { label: 'Excel ビルドが変わったか？', note: 'はい → プロファイル差分: 再取得して記録' },
-  { label: 'NOW / RAND / ネットワークに依存？', note: 'はい → 揮発性のゴールデンデータ: 入力固定で再取得、または volatile として記録' },
-  { label: '受け入れ済み差分', note: '理由 + last-verified build を記録' }
+  { label: 'NOW / RAND / ネットワークに依存？', note: 'はい → 揮発性のゴールデンデータ: 入力固定で再取得、または揮発性として記録' },
+  { label: '受け入れ済み差分', note: '理由 + 最後に確認したビルドを記録' }
 ]" />
 
 通常、失敗は次のいずれかです。
@@ -47,14 +60,14 @@ skip はいずれも明示的な divergence、ホストサービス依存、vola
 | --- | --- | --- |
 | Formulon の不具合 | エンジンが誤った値を返した | エンジンを修正し、回帰用のゴールデンデータを追加 |
 | プロファイル差分 | 対象 Excel ビルドが変わった | ゴールデンデータを再取得し、変更を記録 |
-| 揮発性のゴールデンデータ | 取得時に `NOW` / `RAND` / ネットワーク依存を含んでいた | 入力を制御して取り直す、またはそのゴールデンデータを volatile として記録 |
+| 揮発性のゴールデンデータ | 取得時に `NOW` / `RAND` / ネットワーク依存を含んでいた | 入力を制御して取り直す、またはそのゴールデンデータを揮発性として記録 |
 | 受け入れ済み差分 | 意図的に Excel と異なる | 差分リストに理由と最後に確認した Excel ビルドを記録 |
 
 ## データの提供
 
 各自の Excel 環境で Oracle データ取得フローを実行し、得られたゴールデンデータを提供すると、検証できるロケールが増えていきます。同じワークブックを `win-365-ja_JP`、`mac-365-ja_JP` など複数のプロファイルで取得すれば、エンジンが検証できる範囲も広がります。取得フローは [Oracle データの提供](/ja/development/oracle-contribution) を参照してください。
 
-数式と条件付き書式のプライマリプロファイルは `mac-365-ja_JP` です。ワークブックトラックのプライマリプロファイルは、製品版 Windows Microsoft 365 で検証した `win-365-ja_JP` です。
+数式と条件付き書式の主プロファイルは `mac-365-ja_JP` です。ワークブック検証の主プロファイルは、製品版 Windows Microsoft 365 で検証した `win-365-ja_JP` です。
 
 ## 次に読むもの
 

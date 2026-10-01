@@ -15,18 +15,21 @@ import createFormulon from '@libraz/formulon'
 
 const Module = await createFormulon()
 const workbook = Module.Workbook.loadBytes(xlsxBytes)
+const check = (status: { ok: boolean; message: string; context: string }) => {
+  if (!status.ok) throw new Error(`${status.message}: ${status.context}`)
+}
 
 try {
   if (!workbook.isValid()) {
     throw new Error(Module.lastErrorMessage())
   }
 
-  workbook.setNumber(0, 3, 1, 125000) // sheet 0, B4
-  workbook.recalc()
+  check(workbook.setNumber(0, 3, 1, 125000)) // sheet 0, B4
+  check(workbook.recalc())
 
   const saved = workbook.save()
   if (!saved.status.ok || saved.bytes === null) {
-    throw new Error(saved.status.message)
+    throw new Error(`${saved.status.message}: ${saved.status.context}`)
   }
 
   await upload(saved.bytes)
@@ -59,7 +62,7 @@ formulon recalc input.xlsx -o output.xlsx
 formulon dump --values output.xlsx
 ```
 
-The engine preserves workbook structure while updating calculated values. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks.
+The engine updates calculated values while preserving supported workbook structures and passing through parts it does not model. The preservation and conversion boundary depends on the container and feature; check [file format support](/compatibility/file-format-support) and save diagnostics. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks.
 
 ## Run the round trip here
 

@@ -3,7 +3,7 @@
 Formulon exposes the same core through several packaging surfaces.
 
 ::: info Same engine, different host contracts
-Surface choice affects packaging, memory lifetime, deployment, and error reporting. It should not change spreadsheet semantics.
+Surface choice affects packaging, memory lifetime, deployment, and error reporting. The shared core is intended to keep formula behavior common; verify exact agreement with the same engine/profile and workbook inputs because documented compatibility boundaries still apply.
 :::
 
 | Surface | Best for | Package |
@@ -57,4 +57,4 @@ Pick the highest-level surface that fits your deployment. Drop to the C ABI only
 | CI workbook snapshots | CLI |
 | New language binding | C ABI |
 
-All surfaces share the same engine. Differences should be about packaging, lifetime management, and host error reporting, not formula semantics.
+All surfaces share the same engine. Differences include packaging, lifetime management, and host error reporting; verify exact result agreement under the same engine/profile and workbook inputs when it matters.

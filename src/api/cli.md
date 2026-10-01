@@ -28,18 +28,22 @@ The CLI follows a two-tier convention. Cell-level Excel errors (`#DIV/0!`, `#VAL
 formulon eval [--json] [--repeat N] <formula>
 ```
 
-Evaluates a single formula on a fresh empty workbook. The formula may be passed with or without a leading `=`.
+Evaluates one formula on a new workbook whose evaluation anchor is `Sheet1!A1`. The formula may be passed with or without a leading `=`; `--repeat` takes a positive integer.
 
 | Flag | Effect |
 | --- | --- |
 | `--json` | Emit a structured JSON result instead of a string |
-| `--repeat N` | Evaluate the same formula `N` times — useful for micro-benchmarks |
+| `--repeat N` | Evaluate the same formula `N` times — useful for micro-benchmarks; `N` must be positive |
 
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
 formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
 formulon eval '=SUM('               # → #NAME?; stdout, exit 0
+formulon eval '=SEQUENCE(2,2)'       # → two tab-separated rows: 1\t2 and 3\t4
+formulon eval --json '=SEQUENCE(2,2)' # → nested arrays of typed value objects
 ```
+
+Scalar results use the compact scalar form. A multi-cell result is printed as tab-separated rows on stdout; `--json` prints a nested array whose cells carry their value kind and payload. With `--repeat`, the timing line is written to stderr so stdout keeps the formula result.
 
 Cell-level Excel errors print to stdout and return exit code 0. Malformed eval syntax follows the same rule: it produces the Excel `#NAME?` error value on stdout and exits 0, so scripts must inspect the printed value rather than use the exit code to detect a formula typo. Usage errors return 64. Engine and I/O failures return 1.
 

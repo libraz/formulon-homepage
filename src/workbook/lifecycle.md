@@ -14,7 +14,7 @@ The file-format layer reads workbook parts, relationships, shared strings, style
 
 Data validations now expose the dropdown-visibility flag (`show_dropdown`). OOXML stores that flag with inverted `showDropDown` semantics; Formulon normalizes it for host APIs and writes the correct package representation back out.
 
-Loaded XLSB pivot cache definitions, cache records, and pivot-table parts enter the same model used by the OOXML reader when their record encoding is supported, so `recalc()` can evaluate the pivot instead of dropping it. Phonetic annotations retain the UTF-16 span of each `<rPh>` run, and external-link tables retain the supporting-book index used by formulas such as `[1]Sheet1!A1`. Those external references resolve from cached values; they are not refreshed by the lifecycle.
+Loaded XLSB pivot-cache definitions, cache records, and pivot-table parts enter the same model used by the OOXML reader when their record encoding is supported. `pivotLayout()` and `GETPIVOTDATA` can aggregate or read supported cached records on demand; `recalc()` does not rebuild a pivot cache from worksheet source data. Phonetic annotations retain the UTF-16 span of each `<rPh>` run, and external-link tables retain the supporting-book index used by formulas such as `[1]Sheet1!A1`. Those external references resolve from cached values; they are not refreshed by the lifecycle.
 
 Verify the load before using the workbook:
 
@@ -40,17 +40,28 @@ Cells, formulas, sheet structure, defined names, tables, styles, and many other 
 
 ## Recalculate
 
-When edits have been applied, calling `recalc()` (or `partialRecalc()` for incremental work) brings cached values back in sync with formulas. See [Recalculation](/workbook/recalculation) for dirty-set behavior, volatile functions, and iterative calculation.
+When edits have been applied, calling `recalc()` brings all dirty cached values back in sync with formulas. `partialRecalc(viewport)` updates only the dirty formula cells needed for the requested output viewport and leaves unrelated dirty cells pending. See [Recalculation](/workbook/recalculation) for the dependency closure, volatile functions, and iterative calculation.
 
 ## Read or save
 
 After recalculation, the host can either read calculated values directly:
 
-```ts
+::: code-group
+
+```ts [WASM / Native Node]
 const result = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
 if (!result.status.ok) throw new Error(result.status.message)
 const value = result.value
 ```
+
+```python [Python]
+with Workbook.load(blob) as wb:
+    wb.recalc()
+    value = wb.get_value(0, 0, 0)
+    saved = wb.save()
+```
+
+:::
 
 …or save the entire workbook back to bytes:
 
@@ -65,7 +76,7 @@ Saved bytes contain coherent formula / cached-value pairs, so downstream consume
 
 ## Threading and reuse
 
-The recalculation engine itself uses pthread workers in the WASM build. A `Workbook` handle is **not safe to share across threads or workers**. If a host needs concurrent recalculation, give each worker its own `Workbook` instance — there is no shared state to synchronize because there is no sharing:
+The default `@libraz/formulon` WASM package is single-threaded and does not require cross-origin isolation. Its `recalc()` is serial, and `recalcParallel()` remains a valid serial fallback with `workerThreadsStarted: 0`. To enable pthread workers, import `@libraz/formulon/threads`; a browser deployment then needs COOP/COEP headers. Python uses the serial path, while the native CLI is serial by default and opts into threads with `--threads`. A `Workbook` handle is **not safe to share across threads or workers**. If a host needs concurrent recalculation, give each worker its own `Workbook` instance:
 
 <DiagramLayers :layers="[
   { title: 'Workers', nodes: ['Worker 1', 'Worker 2', 'Worker N'] },

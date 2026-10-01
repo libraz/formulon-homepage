@@ -3,14 +3,14 @@
 | Surface | Package | Runtime |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | Browser, worker, Node |
-| Native Node | `@libraz/formulon-native` | Node.js N-API addon. Not published to npm — build from a source checkout; that build produces darwin-arm64 / linux-x64 / linux-arm64 binaries. See [Native Node](/runtimes/node-native) |
+| Native Node | `@libraz/formulon-native` | Node.js N-API addon. Not published to npm — build from a source checkout and stage the binary for the deployment OS / architecture. Release CI targets darwin-arm64, linux-x64, and linux-arm64. See [Native Node](/runtimes/node-native) |
 | Python | `formulon` | py3 wheel using wasmtime |
 | CLI | `formulon-cli-<os>-<arch>` | Standalone binary |
 | C ABI | headers and native library | Custom hosts |
 | MCP | `@libraz/formulon-mcp` | stdio MCP server for agents |
-| Reference UI | `@libraz/formulon-cell` | Browser integration-test UI |
+| Spreadsheet UI | `@libraz/formulon-cell` | Browser spreadsheet UI kit |
 
-All surfaces should expose the same calculation core. Differences should be packaging differences, not semantic differences.
+All surfaces use the same calculation core. Packaging and host differences can also include documented compatibility gaps, so compare the stated surface boundaries when exact parity matters.
 
 <DiagramLayers label="C++17 calculation core -> C ABI -> WASM / Native Node / Python / CLI; WASM -> formulon-cell and formulon-mcp" :layers="[
   { title: 'Core', nodes: ['C++17 calculation core'] },
@@ -22,13 +22,13 @@ All surfaces should expose the same calculation core. Differences should be pack
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
-  { title: 'Built on WASM', nodes: ['formulon-cell (reference UI)', 'formulon-mcp (stdio agent server)'] }
+  { title: 'Built on WASM', nodes: ['formulon-cell (UI kit)', 'formulon-mcp (stdio agent server)'] }
 ]" />
 
 `formulon-cell` and `formulon-mcp` are built specifically on the WASM package, not directly on the C ABI — they reach the calculation core the same way any browser or Node consumer of `@libraz/formulon` does.
 
 ::: info Glossary: surface
-A packaging boundary on top of the shared C++17 engine. Every surface speaks to the engine through the C ABI (directly or transitively). What changes between surfaces is host language, memory ownership, and IO style — never formula semantics.
+A packaging boundary on top of the shared C++17 engine. Every surface speaks to the engine through the C ABI (directly or transitively). Host language, memory ownership, IO style, and documented compatibility boundaries can differ between surfaces; the shared core defines the common formula behavior.
 :::
 
 ## Surface maturity
@@ -38,10 +38,10 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 | WASM | broadest JS API | Full generated `formulon.d.ts`, browser and Node support |
 | Python | broad workbook API | wasmtime-backed wrapper, context-manager workbook lifecycle |
 | CLI | focused tools | `eval`, `recalc`, `dump`, `paginate` |
-| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; table authoring, AutoFilter XML, and cell-style authoring remain WASM-only |
+| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; within the JavaScript bindings, table authoring, AutoFilter XML, and cell-style authoring remain WASM-only |
 | C ABI | binding contract | Stable low-level contract for packaged surfaces |
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
-| `formulon-cell` | reference UI | Public integration-test and example surface, not a complete Excel-compatible UI |
+| `formulon-cell` | UI kit | Embeddable spreadsheet surface with TypeScript, React, and Vue entrypoints |
 
 ::: info Python parity boundary
 Python has broad workbook parity, including whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), `paginate()`, iterative-settings read-back, three-state sheet visibility, typed print-setting authoring, range XF assignment, and cache-index pivot items. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.

@@ -2,12 +2,12 @@
 
 スケジュールジョブ、ノートブック、データパイプラインの一部としてスプレッドシート再計算を組み込むパターンです。ブラウザで動くエンジンと同じものを、ホスト言語だけ Python に置き換えて動かします。
 
-::: tip ワークブック IO は端に寄せる
+::: tip ワークブックの入出力は端にまとめる
 最初にバイト列をロードし、明示的に変更 / 再計算し、最後にバイト列を書き出します。計算ロジックと無関係なデータロードを混ぜないこと。原因の切り分けとテストが楽になります。
 :::
 
 ::: info 用語: scheduled job（スケジュールジョブ）
-cron / Airflow / GitHub Actions / クラウドスケジューラなどから定期実行されるバッチ処理。1 つ以上の入力アーティファクトを消費して出力アーティファクトを生成する。ステートレスかつべき等な設計が運用しやすく、Formulon の `load → mutate → recalc → save` の形と相性が良い。
+cron / Airflow / GitHub Actions / クラウドスケジューラなどから定期実行されるバッチ処理。1 つ以上の入力ファイルを読み込み、出力ファイルを生成する。状態を持たず冪等な設計が運用しやすく、Formulon の `load → mutate → recalc → save` の形と相性が良い。
 :::
 
 ## 流れ
@@ -20,14 +20,14 @@ cron / Airflow / GitHub Actions / クラウドスケジューラなどから定�
     { nodes: ['recalc()'] },
     { nodes: ['get_value（検証）'] },
     { nodes: [
-      { label: '検証 OK → save()', note: '出力バイト列をファイルシステムへ書込' },
-      { label: '検証 NG', note: 'log + raise' }
+      { label: '検証 OK → save()', note: '出力バイト列をファイルシステムへ書き込む' },
+      { label: '検証 NG', note: 'ログを記録して例外を送出' }
     ] }
   ]"
-  label="バッチジョブの流れ。テンプレートのバイト列読込、Workbook.load、set_number / set_formula での入力設定、recalc、get_value による検証を経て、検証 OK なら save して書き込み、検証 NG なら log して raise する"
+  label="バッチジョブの流れ。テンプレートのバイト列を読み込み、Workbook.load、set_number / set_formula で入力を設定し、recalc、get_value で検証する。検証に成功したら save して書き込み、失敗したらログを記録して例外を送出する"
 />
 
-`Workbook` を包む `with` ブロックは、どちらの分岐でもネイティブハンドルを抜け際に解放します。失敗分岐で例外が送出される場合も同様です。
+`Workbook` を包む `with` ブロックは、どちらの分岐でもブロック終了時にネイティブハンドルを解放します。失敗分岐で例外が送出される場合も同様です。
 
 ## ジョブの例
 
@@ -67,7 +67,7 @@ with Workbook.load(template_bytes) as wb:
     output_path.write_bytes(wb.save())
 ```
 
-`set_number` / `set_text` / `set_formula` が定番。座標は 0-based の `(sheet, row, col)` です。詳しくは [ワークブック操作](/ja/workbook/operations)。
+`set_number` / `set_text` / `set_formula` が定番です。座標は 0 始まりの `(sheet, row, col)` です。詳しくは [ワークブック操作](/ja/workbook/operations)。
 
 ## 互換性プロファイルを固定する
 
@@ -93,7 +93,7 @@ git diff --exit-code report.values.txt
 Python の実行入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を一連の流れとして検知できます。
 
 ::: warning 揮発性の入力は要対処
-`NOW` / `TODAY` / `RAND` / ネットワーク関数は非決定的です。期待値スナップショットに含めるなら、テンプレート側で固定値に置き換えるか、スナップショット範囲外に移動してください。
+`NOW` / `TODAY` / `RAND` / `RANDBETWEEN` は揮発性関数です。`WEBSERVICE`、CUBE 関数、`STOCKHISTORY` など外部サービス依存の関数はネットワークへアクセスせず、利用不可を表す固定の Excel エラーを返します。期待値スナップショットでは、揮発性の入力をテンプレート側で固定値に置き換えるか対象範囲から外し、外部サービス依存のセルは [数式カバレッジ](/ja/compatibility/formula-coverage) に従って記録するか除外してください。
 :::
 
 ## エラー処理
@@ -109,7 +109,7 @@ try:
             # セルの Excel エラー ─ 例外にせずデータとして処理
             log.warning("cell error: %s", value.error_code)
 except FormulonError as e:
-    # ホスト失敗（バイト列不正・ハンドル失効・IO）
+    # ホスト失敗（バイト列不正・ハンドル失効・入出力）
     log.error("formulon host failure: %s", e)
     raise
 ```
@@ -121,11 +121,11 @@ except FormulonError as e:
 | cron 駆動の夜間レポート | Python |
 | Jupyter / Colab ノートブック | Python |
 | ブラウザ内再計算 | WASM |
-| 大規模スループットの Node サービス | Native Node |
+| 大規模処理を高スループットで行う Node サービス | Native Node |
 | シェル駆動の CI スナップショット | CLI |
 
 ## 次に読むもの
 
 - [Python API](/ja/api/python) ─ トップレベル API
-- [ワークブックの流れ](/ja/workbook/lifecycle) ─ スクリプトの裏で動く engine フロー
+- [ワークブックの流れ](/ja/workbook/lifecycle) ─ スクリプトの裏で動くエンジンの流れ
 - [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ Python とスナップショットの組み合わせ

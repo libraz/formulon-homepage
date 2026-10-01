@@ -1,42 +1,42 @@
-# Oracle 提供
+# Oracle データの提供
 
-Oracle データは検証済み互換性を広げる主な手段です。生成は実 Excel を駆動し、検証はコミット済みゴールデンデータを読むだけで CI でも安全に走らせられます。
+Oracle データは検証済みの互換性を広げる主な手段です。生成では実際の Excel を操作し、検証ではコミット済みの正解値（ゴールデンデータ）を読むため、CI でも安全に実行できます。
 
 ::: info 用語: Oracle データの生成と検証
-生成は実 Excel に対して取得ツールを走らせ、ゴールデン JSON を書き出す処理です。Excel を持つコントリビュータのマシンでだけ実行されます。検証はそのコミット済みゴールデンデータと Formulon 出力を比較する処理です。Excel は不要で CI でも安全です。
+生成は実際の Excel に対して取得ツールを実行し、Excel で取得した正解値（ゴールデンデータ）を JSON に書き出す処理です。Excel を持つコントリビュータのマシンでだけ実行します。検証はコミット済みのゴールデンデータと Formulon の出力を比較します。Excel は不要で、CI でも安全に実行できます。
 :::
 
 ::: warning Microsoft 365 限定
-Oracle データは **Excel 365**（Microsoft 365 サブスクリプション）から取得する必要があります。Office 2019 以前はサポート対象外です ─ `ARRAYTOTEXT`、`LAMBDA`、動的配列系関数（`SORT` / `FILTER` / `UNIQUE` / `XLOOKUP` など）は post-2019 の関数であり、Office 2019 では警告なしに `#NAME?` を返します。これをそのまま取り込むとゴールデンデータに誤った値が焼き付いてしまいます。3 つの生成コマンド（`oracle-gen` / `oracle-gen-cf` / `oracle-gen-workbook`）はすべて起動時に `=ARRAYTOTEXT(1)` を評価するセンチネルチェックを行い、Excel がこれを認識しなければ明確なエラーで生成を中止します。通常の利用でこれに当たることはないはずですが、誤ったインストール先を対象にしてしまう事故を防ぐ安全網として存在します。
+Oracle データは **Excel 365**（Microsoft 365 サブスクリプション）から取得する必要があります。Office 2019 以前はサポート対象外です ─ `ARRAYTOTEXT`、`LAMBDA`、動的配列系関数（`SORT` / `FILTER` / `UNIQUE` / `XLOOKUP` など）は Office 2019 より後に追加された関数で、Office 2019 では警告なしに `#NAME?` を返します。その値を記録すると、誤った値が参照データになります。3 つの生成コマンド（`oracle-gen` / `oracle-gen-cf` / `oracle-gen-workbook`）は起動時に `=ARRAYTOTEXT(1)` を評価し、Excel が認識しなければ明確なエラーで生成を中止します。
 :::
 
 <DiagramLayers :layers="[
   { title: 'コントリビュータ環境', nodes: ['実 Excel 365（ロケール別ビルド）'] },
   { title: '生成', nodes: ['make oracle-contribute / oracle-gen[-cf|-workbook]'] },
-  { title: '取得', nodes: ['ゴールデン JSON + build / OS / locale のメタデータ'] },
+  { title: '取得', nodes: ['ゴールデン JSON + Excel ビルド・OS・ロケールのメタデータ'] },
   { title: 'レビュー', nodes: ['Pull request'] },
   { title: 'CI', nodes: [{ label: 'make oracle-verify', note: 'Excel 不要' }] },
   { title: '比較', nodes: ['Formulon エンジン vs 取得済みゴールデン'] },
-  { title: '結果', nodes: ['互換性 OK', 'oracle-testing のフローで調査'] }
+  { title: '結果', nodes: ['互換性を確認', 'Oracle テストのフローで調査'] }
 ]" />
 
 ## 提供フロー
 
-1. 提供対象ロケールの Excel 365 を用意する。
-2. リポジトリルートで `make oracle-contribute` を実行する。
-3. 生成されたゴールデンデータとメタデータを確認する。
-4. データを乗せた pull request を出す。
+1. 提供対象ロケールの Excel 365 を用意します。
+2. リポジトリルートで `make oracle-contribute` を実行します。
+3. 生成されたゴールデンデータとメタデータを確認します。
+4. データを含む pull request を出します。
 
-各提供データには platform / Excel build / locale / profile identity を含めてください。後からゴールデンデータと Formulon が食い違ったときに、どの Excel build で取り直すべきかをメタデータから追えるようになります。
+各提供データには OS・Excel ビルド・ロケール・プロファイル識別子を含めてください。後からゴールデンデータと Formulon が食い違ったときに、どの Excel ビルドで取り直すべきかをメタデータから確認できます。
 
 ## ターゲット
 
-ターゲット名は `<host>-<excel-major>-<locale>` の形式です（例: `mac-365-ja_JP` / `win-365-ja_JP`）。manifest は `tools/oracle/targets.yaml`。
+ターゲット名は `<host>-<excel-major>-<locale>` の形式です（例: `mac-365-ja_JP` / `win-365-ja_JP`）。ターゲット一覧は `tools/oracle/targets.yaml` にあります。
 
-現在募集中のロケールは英語・ドイツ語・フランス語・中国語・韓国語・タイ語の Excel 環境です。これらのターゲットを 1 つでも提供すると、推測ではなく実測のロケール挙動が増えます。
+現在募集中のロケールは英語・ドイツ語・フランス語・中国語・韓国語・タイ語の Excel 環境です。これらのターゲットを 1 つでも提供すると、推測ではなく実測のロケール挙動を確認できる範囲が広がります。
 
 ::: tip 提供範囲は完全でなくてよい
-全関数を網羅する必要はありません。1 ロケール x 1 関数族（テキスト / 日付 / 検索など）のゴールデンデータでも、互換性カバレッジの意味のあるアップグレードになります。
+全関数を網羅する必要はありません。1 ロケールの 1 関数族（テキスト / 日付 / 検索など）を対象にしたゴールデンデータでも、互換性を確認できる範囲が広がります。
 :::
 
 ## コマンド
@@ -51,15 +51,27 @@ make oracle-gen-workbook TARGET=<name> SUITE=<category>
 make oracle-verify
 ```
 
-`make oracle-verify` は CI で動きます。それ以外は Excel が必要で、コントリビュータのマシンでだけ実行します。`oracle-gen` は数式のゴールデンを扱い、`oracle-gen-cf` は条件付き書式トラック（macOS 限定）を、`oracle-gen-workbook` はピボットテーブル / 印刷範囲トラックを扱います（`TARGET` を省略するとホスト OS から自動判定されます）。
+`make oracle-verify` は CI で動きます。それ以外は Excel が必要で、コントリビュータのマシンでだけ実行します。`oracle-gen` は数式のゴールデンを扱い、`oracle-gen-cf` は条件付き書式の検証系統（macOS 限定）を、`oracle-gen-workbook` はピボットテーブル / 印刷範囲の検証系統を扱います（`TARGET` を省略するとホスト OS から自動判定されます）。
+
+### ワークブック検証対象の取り込み
+
+新しいワークブック検証ターゲットのデータは、取得元情報と正解値を確認するまでリポジトリ外に保存されます。生成したデータを確認してから、まず dry run（確認実行）で取り込み内容を確認し、その後に取り込んでください。
+
+```sh
+make oracle-gen-workbook TARGET=<name> SUITE=<category>
+make oracle-promote TRACK=workbook TARGET=<name> DRY_RUN=1
+make oracle-promote TRACK=workbook TARGET=<name>
+```
+
+承認済みのデータは `oracle-promote` で取り込みます。JSON をコピーするだけではテスト対象になりません。
 
 ## レビュー観点
 
 Oracle データ追加 PR は次の点でレビューされます。
 
-- ターゲット名と manifest エントリが正しい
-- Excel build / OS / locale のメタデータが記録されている
-- ゴールデンデータが verifier の探索パス配下に置かれている
+- ターゲット名とターゲット一覧のエントリが正しい
+- Excel ビルド・OS・ロケールのメタデータが記録されている
+- ゴールデンデータが検証ツールの探索パス配下に置かれている
 - スクリーンショットや入力サンプルに個人情報が混入していない
 
 ## 次に読むもの

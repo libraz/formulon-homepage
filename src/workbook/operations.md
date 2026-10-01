@@ -31,24 +31,66 @@ with Workbook.create_default() as wb:
 
 ## Cells
 
-Set values by kind, then recalculate:
+Set values by kind, recalculate, and check the status before reading the
+cached result. Each example owns its workbook for the duration of the block.
 
-```ts
-wb.setNumber(0, 0, 0, 10)
-wb.setBool(0, 0, 1, true)
-wb.setText(0, 0, 2, 'sku-001')
-wb.setFormula(0, 0, 3, '=SUM(A1:A10)')
-wb.setBlank(0, 0, 4)
-wb.recalc()
+::: code-group
+
+```ts [WASM]
+import createFormulon, { ValueKind } from '@libraz/formulon'
+
+const Module = await createFormulon()
+const wb = Module.Workbook.createDefault()
+try {
+  wb.setNumber(0, 0, 0, 10)
+  wb.setBool(0, 0, 1, true)
+  wb.setText(0, 0, 2, 'sku-001')
+  wb.setFormula(0, 0, 3, '=SUM(A1:A10)')
+  wb.setBlank(0, 0, 4)
+  const recalcStatus = wb.recalc()
+  if (!recalcStatus.ok) throw new Error(recalcStatus.message)
+  const result = wb.getValue(0, 0, 3)
+  if (!result.status.ok) throw new Error(result.status.message)
+  if (result.value.kind === ValueKind.Number) console.log(result.value.number)
+} finally {
+  wb.delete()
+}
 ```
 
-Read calculated values back as kind-tagged structs:
+```ts [Native Node]
+import { ValueKind, Workbook } from '@libraz/formulon-native'
 
-```ts
-const result = wb.getValue(0, 0, 3)
-if (!result.status.ok) throw new Error(result.status.message)
-if (result.value.kind === ValueKind.Number) console.log(result.value.number)
+const wb = Workbook.createDefault()
+try {
+  wb.setNumber(0, 0, 0, 10)
+  wb.setBool(0, 0, 1, true)
+  wb.setText(0, 0, 2, 'sku-001')
+  wb.setFormula(0, 0, 3, '=SUM(A1:A10)')
+  wb.setBlank(0, 0, 4)
+  const recalcStatus = wb.recalc()
+  if (!recalcStatus.ok) throw new Error(recalcStatus.message)
+  const result = wb.getValue(0, 0, 3)
+  if (!result.status.ok) throw new Error(result.status.message)
+  if (result.value.kind === ValueKind.Number) console.log(result.value.number)
+} finally {
+  wb.dispose()
+}
 ```
+
+```python [Python]
+from formulon import Workbook
+
+with Workbook.create_default() as wb:
+    wb.set_number(0, 0, 0, 10)
+    wb.set_bool(0, 0, 1, True)
+    wb.set_text(0, 0, 2, "sku-001")
+    wb.set_formula(0, 0, 3, "=SUM(A1:A10)")
+    wb.set_blank(0, 0, 4)
+    wb.recalc()
+    print(wb.get_value(0, 0, 3).to_python())
+```
+
+:::
 
 ::: warning Setting a formula does not evaluate it
 `setFormula()` only mutates the model. The result is `Blank` until `recalc()` (or `partialRecalc()`) is called. Hosts that read values after edits should always trigger a recalc.
@@ -63,7 +105,7 @@ wb.insertRows(/*sheet*/ 0, /*startRow*/ 5, /*count*/ 2)
 wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 ```
 
-References inside formulas that move with the inserted / deleted range are shifted; references that anchor outside the range are preserved. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place.
+References inside formulas that move with the inserted / deleted range are shifted, including `$`-anchored references; this structural rewrite differs from copying a formula. Surviving ranges shrink or expand as appropriate. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place.
 
 The panel below runs these calls against a live sheet. Selecting a cell moves the target row or column with it, and both formula lists are read back out of the workbook either side of the call — so what you see is the formula text the engine holds, including the ones it rewrote and the ones it broke.
 
@@ -128,11 +170,11 @@ DataBar rules expose the complete `x14` extension payload on WASM, Native Node, 
 
 ### Pivot cache sources
 
-Newly authored PivotTables must set a worksheet source on their cache before saving. Use `pivotCacheSetWorksheetSource(cacheId, { present: true, ref: 'A1:C10', sheet: 'Data' })` on WASM or Native Node, or `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref='A1:C10', sheet='Data'))` in Python. A declared range is enough even when the sheet has no data. Saving a newly created cache without a worksheet source fails; caches loaded from a file already have one.
+Newly authored PivotTables must set a worksheet source on their cache before saving. Use `pivotCacheSetWorksheetSource(cacheId, { present: true, ref: 'A1:C10', sheet: 'Data' })` on WASM or Native Node, or `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref='A1:C10', sheet='Data'))` in Python. A declared range is enough even when the sheet has no data. Saving a newly created cache without a worksheet source fails. A loaded cache retains its supported source metadata, which may describe a non-worksheet or external source; the requirement here applies to newly authored worksheet caches.
 
 WASM and Native Node expose comment *enumeration* with `getComments(sheet)`; Python uses `comment_count(sheet)` and `get_comments(sheet)`. Each list includes comments anchored on otherwise-empty cells. `getCommentResult(sheet, row, col)` distinguishes an absent comment from an invalid sheet on the JS surfaces.
 
-Host applications can merge localized function metadata with `mergeFunctionMetadata()` (Node) / `merge_function_metadata()` (Python). It is pure and applies locale-override, entry-default, then engine-value precedence.
+Host applications can merge localized function metadata with `mergeFunctionMetadata()` (Native Node package) / `merge_function_metadata()` (Python). It is pure and applies locale-override, entry-default, then engine-value precedence.
 
 ### Pagination
 
@@ -176,7 +218,7 @@ This is read-only: it does not mutate the workbook, write a value anywhere, or j
 
 `evaluateFormulaArray()` (Node addon, WASM, and C API) and `evaluate_formula_array()` (Python) return the whole array result instead of reducing a dynamic-array formula to its top-left element. Python also exposes `evaluate_cf_formula()` for conditional-format predicates, but does not expose the general scalar `evaluate_formula_text()`; for a scalar evaluated in workbook context, write the formula to a cell and recalculate.
 
-`evaluateConditionalFormula()` follows the same read-only rule, additionally shifting relative references from the rule's anchor and applying Excel's CF-predicate coercion (error / blank / text / numeric-zero are `false`; any other number is `true`), so the result matches what a real CF rule would evaluate to at that cell.
+`evaluateConditionalFormula()` follows the same read-only rule, additionally shifting relative references from the rule's anchor and applying Excel's conditional-formatting predicate coercion (error / blank / text / numeric-zero are `false`; any other number is `true`), so the result matches what a real rule would evaluate to at that cell.
 
 The normal edit path and the ad-hoc path answer different questions — the first commits a value you can read again later, the second is a disposable "what if" query:
 
@@ -194,7 +236,7 @@ The normal edit path and the ad-hoc path answer different questions — the firs
 The CLI is intentionally narrower. It is a command surface for `eval`, `recalc`, and `dump`, not a fine-grained workbook-editing API. For application embedding, choose WASM, Native Node, or Python.
 
 ::: tip Discovering what is implemented
-Both `Module.functionNames()` (WASM) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs.
+`Workbook.functionNames()` (WASM / Native Node) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs.
 :::
 
 ## Read next

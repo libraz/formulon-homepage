@@ -30,9 +30,11 @@ A checked-in expected-output file that a test compares against the current outpu
   label="Pipeline: a pull request triggers a CI job that runs both a formula snapshot and a recalculated-value snapshot, writes them to testdata, diffs them with git, and either passes cleanly or routes drift to reviewer classification"
 />
 
-The base snapshot commands (`formulon dump --formulas`, `formulon recalc && formulon dump --values`) are the same ones covered in [CI regression workflows](/runtimes/ci-regression) — see that page for the exact invocations and for when to skip snapshotting volatile formulas. This page focuses on wiring them into a PR pipeline and on the review policy for classifying drift.
+The base snapshot commands (`formulon dump --formulas`, `formulon dump --values`) are the same ones covered in [CI regression workflows](/runtimes/ci-regression) — see that page for the exact invocations and for when to skip snapshotting volatile formulas. This page focuses on wiring them into a PR pipeline and on the review policy for classifying drift.
 
-Before pushing, `make parity-test` is a fast complementary local check: it evaluates shared fixtures across the available channels (`cli`, `npm` WASM, `python`) and reports channel disagreement, which is a form of regression the CI job above does not catch on its own. See [CI regression workflows](/runtimes/ci-regression#compare-package-surfaces) for details.
+Create and commit the expected files before enabling this job. `git diff` ignores untracked files, so add a fail-fast check such as `git ls-files --error-unmatch testdata/model.formulas.txt testdata/model.values.txt`.
+
+From a Formulon source checkout, `make parity-test` is a fast complementary check before pushing: it evaluates shared fixtures across the available channels (`cli`, `npm` WASM, `python`) and reports channel disagreement, which is a form of regression the CI job above does not catch on its own. See [CI regression workflows](/runtimes/ci-regression#compare-package-surfaces) for details.
 
 ## GitHub Actions example
 
@@ -44,9 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Check committed snapshots
+        run: git ls-files --error-unmatch testdata/model.formulas.txt testdata/model.values.txt
       - name: Install formulon CLI
         run: |
-          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.11.1/formulon-0.11.1-linux-x64.tar.gz"
+          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.12.0/formulon-0.12.0-linux-x64.tar.gz"
           tar -xzf formulon.tar.gz --strip-components=1
           chmod +x formulon
           sudo mv formulon /usr/local/bin/
@@ -55,14 +59,13 @@ jobs:
           formulon dump --formulas model.xlsx > testdata/model.formulas.txt
       - name: Snapshot values
         run: |
-          formulon recalc model.xlsx -o /tmp/model.xlsx --quiet
-          formulon dump --values /tmp/model.xlsx > testdata/model.values.txt
+          formulon dump --values model.xlsx > testdata/model.values.txt
       - name: Fail on diff
         run: |
           git diff --exit-code testdata/
 ```
 
-The job is deterministic for the same workbook + profile + Formulon version, so the only way the step fails is if the workbook or the engine changed — both worth a review.
+With volatile inputs controlled and the workbook profile and Formulon engine version fixed, a changed snapshot points to a workbook or engine change. An upgrade can intentionally change output, so review the pinned version as part of the diff.
 
 ## Review policy
 
@@ -77,7 +80,7 @@ Require reviewers to classify diffs as:
 This keeps workbook regression tests from becoming opaque golden files. The reviewer's classification is captured in the PR body (or a commit trailer); future contributors looking at the same diff can see why it was accepted.
 
 ::: tip Pin Formulon version in CI
-The dump output format and value semantics are stable across patch releases but pin the Formulon version (or the CLI binary URL) explicitly so an unrelated release upgrade does not show up as a workbook regression.
+Pin the Formulon version (or the CLI binary URL) explicitly. An engine upgrade can change formula or file-format behavior intentionally, so do not treat patch releases as output-compatible by default.
 :::
 
 ## Read next

@@ -2,8 +2,8 @@
 
 CLI は Formulon の最も軽量な実行入口です。ホスト言語との連携コードを書かずに、シェル・CI・問題再現でスプレッドシート計算を使いたいときに便利です。
 
-::: info 用語: standalone バイナリ
-Formulon と最小限のコマンドランナーをリンクした単一実行ファイル。Node / Python / 共有ライブラリは不要です。GitHub Releases から `(os, arch)` 別に配布されます。
+::: info 用語: 単体バイナリ
+Formulon と最小限のコマンドランナーをリンクした単一実行ファイルです。Node、Python、共有ライブラリは不要です。GitHub Releases から OS / CPU アーキテクチャ別に配布されます。
 :::
 
 主なコマンド:
@@ -53,17 +53,17 @@ formulon recalc --quiet -o output.xlsx -- -input.xlsx
 formulon recalc model.xlsx -o model.xlsb
 ```
 
-XLSB はスタイル、行 / 列レイアウト、結合、`date1904`、シート表示 / ズーム / 固定ペイン、動的配列メタデータ、対応する tokenized formula をモデル化して出力します。条件付き書式、入力規則、ハイパーリンク、オートフィルター、印刷設定 / 改ページ、drawing / table の参照とリレーションシップはワークシート末尾としてそのまま保持します。保持されることは編集・評価できることを意味しません。[XLSB のカバレッジ](/ja/compatibility/file-format-support) を確認してください。
+XLSB はスタイル、行 / 列レイアウト、結合、`date1904`、シート表示 / ズーム / 固定ペイン、動的配列メタデータ、対応するトークン化された数式をモデル化して出力します。条件付き書式、入力規則、ハイパーリンク、オートフィルター、印刷設定 / 改ページ、描画・テーブルの参照と関連付けは、ワークシート末尾の XML としてそのまま保持します。保持されることは編集・評価できることを意味しません。[XLSB のカバレッジ](/ja/compatibility/file-format-support) を確認してください。
 
 `recalc` は一時ファイルへ書き込み、成功時だけ対象を置き換えます。失敗しても既存の対象ファイルは壊れません。
 
-`--threads N` を指定しない `recalc` は serial です。並列 SCC scheduler は `0` で最大 8 の自動検出、`1` で worker を起動しない呼び出し側スレッドだけの実行、`2..8` で worker 数の上限を指定します。`0..8` の範囲外は拒否され、要求値より少ない worker 数で完了する場合があります。
+`--threads N` を指定しない `recalc` はシリアル実行です。並列 SCC スケジューラは `0` で最大 8 の自動検出、`1` でワーカーを起動しない呼び出し側スレッドだけの実行、`2..8` でワーカー数の上限を指定します。`0..8` の範囲外は拒否され、要求値より少ないワーカー数で完了する場合があります。
 
-コマンドは、復元できなかった数式・定義名、削除された package part、formula cell の downgrade、model 化されなかった feature について loss diagnostics を stderr に警告します。`--quiet` が抑制するのは成功時の status 行だけで、これらの警告は表示されます。
+コマンドは、復元できなかった数式・定義名、削除されたパッケージパート、数式セルのダウングレード、モデル化されなかった機能について保存時の診断を stderr に警告します。`--quiet` が抑制するのは成功時のステータス行だけで、これらの警告は表示されます。
 
 ## 反復計算
 
-意図的な循環参照を含むワークブックでは、反復計算を有効にしないと `recalc` はエンジンの非反復循環参照処理がそのまま返す値に収束します。
+反復計算が無効な場合、循環参照はエラーとして扱われます。意図的な循環参照を含むワークブックでは `--iterative` を指定してください。
 
 ```sh
 formulon recalc circular.xlsx -o circular.xlsx --iterative
@@ -77,15 +77,14 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 formulon paginate [--sheet INDEX] <in.xlsx>
 ```
 
-`INDEX` の既定値は `0` で 0 始まりです。出力は `sheet`、`pages`、両端を含む 0 始まりの `print_area`、`horizontal_breaks`、`vertical_breaks` を示します。成功は `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。
+`INDEX` の既定値は `0` で 0 始まりです。出力は `sheet`、`pages`、両端を含む 0 始まりの `print_area`、`horizontal_breaks`、`vertical_breaks` を示します。成功は `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。改ページがない場合、対応する配列は空になります。
 
 ## CI での使い方
 
-`recalc` と `dump --values` で計算値スナップショットを期待値として保存できます。同じワークブック + プロファイルに対して CLI は決定論的なので、ダンプファイルへの `git diff` が安定したシグナルになります。
+`dump --values` で計算値スナップショットを作成し、先にコミットした期待値ファイルと比較できます。期待値ファイルを作成してコミットし、未追跡ファイルを `git diff` が比較しないことに注意してください。揮発性の入力を固定し、エンジンのバージョンとプロファイルをそろえると、ダンプの `git diff` からワークブックやエンジンの変更を確認できます。
 
 ```sh
-formulon recalc model.xlsx -o /tmp/model.recalc.xlsx --quiet
-formulon dump --values /tmp/model.recalc.xlsx > model.values.txt
+formulon dump --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
@@ -99,11 +98,11 @@ git diff --exit-code model.formulas.txt
 キャッシュ値に依存せずに数式編集を検知できます。
 
 ::: warning 揮発性関数は決定論的ではない
-`NOW` / `TODAY` / `RAND` / `RANDBETWEEN` や一部のネットワーク関数は呼び出すたびに値が変わります。CI スナップショット用の検証データでは避けるか、ワークブック側で固定値に置き換えてください。
+`NOW` / `TODAY` / `RAND` / `RANDBETWEEN` は揮発性関数です。`WEBSERVICE`、CUBE 関数、`STOCKHISTORY` など外部サービス依存の関数はネットワークへアクセスせず、利用不可を表す固定の Excel エラーを返します。揮発性の入力を固定または置き換え、外部サービス依存のセルは [数式カバレッジ](/ja/compatibility/formula-coverage) に従って記録するか、スナップショットから除外してください。
 :::
 
 ## 次に読むもの
 
 - [CLI リファレンス](/ja/api/cli) ─ コマンド構文
-- [CI 回帰検査の例](/ja/runtimes/ci-regression) ─ CI gating パターン
+- [CI 回帰検査の例](/ja/runtimes/ci-regression) ─ CI の判定パターン
 - [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ パイプライン例

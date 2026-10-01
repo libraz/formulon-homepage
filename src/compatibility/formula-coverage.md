@@ -3,22 +3,22 @@
 This page explains which Excel function names Formulon recognizes and which of them execute locally. Internally, it reflects the runtime registry report from `RegistryCatalog.CoverageReport` and the availability annotations in `tools/catalog/function_status.tsv`.
 
 ::: warning Recognized does not mean locally executable
-The 522-function number is the count of Excel function names Formulon recognizes. It includes names that Excel routes to external services or host-specific state, such as `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, translation functions, and CUBE connection functions. Those are recognized deliberately, but they are not local implementations.
+The 523-function number is the count of Excel function names Formulon recognizes. It includes names that Excel routes to external services or host-specific state, such as `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, translation functions, and CUBE connection functions. Those are recognized deliberately, but they are not local implementations.
 :::
 
 ## Summary
 
-Formulon recognizes **522** Excel function names: **507 real implementations, including 2 environment-bound (`CELL`, `INFO`), plus 15 unavailable stubs**.
+Formulon recognizes **523** Excel function names: **508 real implementations, including 2 environment-bound (`CELL`, `INFO`), plus 15 unavailable stubs**.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| Real implementation | 507 | Evaluated locally; 2 (`CELL`, `INFO`) depend on workbook or host state |
+| Real implementation | 508 | Evaluated locally; 2 (`CELL`, `INFO`) depend on workbook or host state |
 | Unavailable service stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
-| **Total recognized** | **522** | |
+| **Total recognized** | **523** | |
 
 <DiagramLayers :layers="[
-  { title: '522 recognized function names', nodes: [
-    { label: '507 real implementations', note: 'includes CELL, INFO' },
+  { title: '523 recognized function names', nodes: [
+    { label: '508 real implementations', note: 'includes CELL, INFO' },
     { label: '15 unavailable service stubs', note: 'service/connection dependent' }
   ] }
 ]" />
@@ -36,7 +36,7 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 | Math & Trig | 81 | Local implementation |
 | Statistical | 149 | Local implementation |
 | Logical | 20 | Local implementation |
-| Text | 50 | Local implementation |
+| Text | 51 | Local implementation |
 | Date & Time | 25 | Local implementation |
 | Lookup & Reference | 39 | Local implementation, including dynamic-array lookup behavior; `IMAGE` and `RTD` are unavailable service stubs |
 | Financial | 56 | Includes `STOCKHISTORY` as an unavailable service stub |
@@ -51,7 +51,7 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 
 Formula oracle cases check cell values. Pivot tables and print layout need a workbook-level oracle because their behavior is stored in workbook structures, not just formula results.
 
-That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. The product-verified Windows Microsoft 365 ja-JP workbook oracle reports `66/66` passing with `10` documented skips. Its goldens carry a capture identifier that pins the suites to a single verified Microsoft 365 session.
+That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Its goldens carry a capture identifier that pins each capture to a verified Microsoft 365 session. Run the workbook oracle and closure checks against the current checkout before quoting pass or skip counts; those counts change when suites or captures change.
 
 ## Unavailable service stubs
 
@@ -59,14 +59,14 @@ These names are intentionally recognized so workbooks fail in a predictable, Exc
 
 | Function(s) | Why it is not locally implemented | Formulon behavior |
 | --- | --- | --- |
-| `COPILOT` | Requires the Microsoft 365 Copilot / LLM service | Fixed unavailable error surface |
-| `PY` | Requires Microsoft 365's hosted Python runtime | Fixed unavailable error surface |
-| `IMAGE` | Requires image fetching and rendering host support | Fixed unavailable error surface |
-| `RTD` | Requires an external Real-Time-Data provider | Fixed unavailable error surface |
-| `STOCKHISTORY` | Requires Microsoft market-data service / network I/O | Fixed unavailable error surface |
-| `WEBSERVICE` | Requires HTTP/network I/O | Fixed unavailable error surface |
-| `TRANSLATE`, `DETECTLANGUAGE` | Require cloud translation / language services | Fixed unavailable error surface |
-| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | Require a live OLAP cube connection | Fixed unavailable error surface |
+| `COPILOT` | Requires the Microsoft 365 Copilot / LLM service | Fixed `#NAME?` |
+| `PY` | Requires Microsoft 365's hosted Python runtime | Fixed `#NAME?` |
+| `IMAGE` | Requires image fetching and rendering host support | Fixed `#VALUE!` |
+| `RTD` | Requires an external Real-Time-Data provider | Fixed `#N/A` |
+| `STOCKHISTORY` | Requires Microsoft market-data service / network I/O | Fixed `#VALUE!` |
+| `WEBSERVICE` | Requires HTTP/network I/O | Fixed `#VALUE!` |
+| `TRANSLATE`, `DETECTLANGUAGE` | Require cloud translation / language services | Fixed `#NAME?` |
+| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | Require a live OLAP cube connection | Fixed `#NAME?` |
 
 ## Practical guidance
 
@@ -77,8 +77,6 @@ Use the CLI to inspect a workbook:
 ```sh
 formulon dump --formulas workbook.xlsx > formulas.txt
 ```
-
-Then create a small fixture for every business-critical formula family and run it through both Formulon and your target Excel profile.
 
 ## Source of truth
 

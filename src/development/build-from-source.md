@@ -3,7 +3,7 @@
 Most contributors only need `make build` and `make test`. The other targets exist for surface-specific work (WASM, Python, Native Node) and release-time staging.
 
 ::: info Glossary: staging
-Copying built artifacts into the package layout each surface expects — `packages/npm/dist/`, `packages/python/formulon/_wasm/`, the Native Node addon directory. Staging is what makes `npm test` / `pytest` / `node -e '…'` reach the freshly built core.
+Staging places built artifacts in the package layout each surface expects — `packages/npm/dist/`, `packages/python/formulon/_wasm/`, and the Native Node addon directory. It is what makes `npm test`, `unittest`, and `node --test` reach the freshly built core.
 :::
 
 Clone the repository:
@@ -13,6 +13,8 @@ git clone https://github.com/libraz/formulon.git
 cd formulon
 ```
 
+Native builds require CMake and a C++17 toolchain. WASM builds require the Emscripten SDK pinned in `tools/wasm/emsdk-version.txt`. The npm package requires Node 22 or newer. Install `brotli` to run the complete size check.
+
 ## Native debug build
 
 ```sh
@@ -20,7 +22,7 @@ make build
 make test
 ```
 
-This configures `build/` with CMake and runs the fast CTest suite, excluding `SLOW` / `LOAD` labels. Use this loop for almost all core changes.
+This configures `build/` with CMake and runs the fast CTest suite. `make test` excludes `SLOW`, `BENCH`, and `TSAN` labels. `make test-slow` includes `SLOW` while still excluding `BENCH` and `TSAN`; `make test-all` runs every test enabled in the build configuration. Use this loop for most core changes.
 
 ## Release build
 
@@ -32,40 +34,41 @@ Use the release build before measuring performance or shipping artifacts. Debug 
 
 ## WASM package
 
-Requires [Emscripten](https://emscripten.org/):
+Requires the pinned [Emscripten](https://emscripten.org/) SDK and Node 22 or newer:
 
 ```sh
 make wasm
+make wasm-threads
 make test-wasm
 make npm-package
+make npm-check-dts
 make npm-test
 make npm-pack
 make size-check
 ```
 
-`make npm-package` stages `formulon.js`, `formulon.wasm`, and `formulon.d.ts` into `packages/npm/dist/`. `make size-check` is what enforces the [Size budgets](/development/size-budgets) — run it before any change that could pull in new code.
+`make wasm` builds the single-threaded `formulon.js` / `formulon.wasm` pair under `build-wasm/`. `make wasm-threads` builds the pthread `formulon_threads.js` / `formulon_threads.wasm` pair under `build-wasm-threads/`. `make test-wasm` runs smoke tests against both builds. `make npm-package` stages both builds, their entry shims, and `formulon.d.ts` into `packages/npm/dist/`; the default entry is `@libraz/formulon` and the pthread entry is `@libraz/formulon/threads`. `make npm-check-dts` checks the staged declaration against the source declaration, and `make npm-test` exercises both staged entries. `make size-check` enforces the [Size budgets](/development/size-budgets) for both WASM binaries.
 
 ## Python package
 
-Requires CMake, Python 3.9+, setuptools, wheel, and [Emscripten](https://emscripten.org/) — `make python-package` depends on the `wasm-capi` target, which builds the embedded `formulon_capi.wasm` via `emcmake`:
+Requires CMake, Python 3.9+, setuptools, wheel, the pinned [Emscripten](https://emscripten.org/) SDK, and the `wasmtime` runtime. `make python-package` depends on the `wasm-capi` target, which builds the embedded `formulon_capi.wasm` via `emcmake`:
 
 ```sh
-make python-package
-make python-test
-make python-wheel
+python3 -m venv .venv-python
+. .venv-python/bin/activate
+python -m pip install 'wasmtime>=49,<50' setuptools wheel
+make PYTHON=python python-package python-test python-wheel
 ```
 
-The wheel stages `formulon_capi.wasm` into `packages/python/formulon/_wasm/` and builds a `py3-none-any` package; `wasmtime` supplies the platform-specific runtime wheel at install time. No native compiler is needed at install time.
+The wheel stages `formulon_capi.wasm` into `packages/python/formulon/_wasm/` and builds a `py3-none-any` package. `wasmtime` is required for local tests and supplies the platform-specific runtime at wheel install time. No native compiler is needed at install time.
 
 ## Native Node package
 
 ```sh
-make node-native
-make node-package
-make node-test
+make NODE_NATIVE_BUILD_DIR=build-node-native node-test
 ```
 
-This builds the addon (`node-native`), stages it into the package layout (`node-package`), and runs its N-API test suite via `node --test` (`node-test`). Prebuilt binaries are published per `(os, arch)` from CI; the local target is mostly for development.
+This builds the addon, stages it into the package layout, and runs its N-API test suite via `node --test`. Use a separate directory so the native addon build does not change the Debug core configuration in `build/`. Prebuilt binaries are published per `(os, arch)` from CI; the local target is mostly for development.
 
 ## Oracle tooling
 
@@ -80,7 +83,7 @@ make oracle-verify
 CI verification reads committed goldens and does not start Excel. See [Oracle contribution](/development/oracle-contribution) for the contributor flow.
 
 ::: tip Pick a minimal working set
-A contributor who only changes the formula evaluator usually needs `make build && make test`. A contributor who changes the WASM packaging usually needs `make wasm && make npm-test && make size-check`. Few changes need every target.
+A contributor who only changes the formula evaluator usually needs `make build && make test`. A contributor who changes the WASM packaging usually needs `make wasm && make npm-test && make size-check`. Choose the builds and tests required by the change; few changes need every target.
 :::
 
 ## Read next

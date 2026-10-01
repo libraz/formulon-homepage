@@ -1,13 +1,13 @@
 # Size Budgets
 
-The WASM package is budgeted because browser users pay for every byte. Native Node, Python, and CLI builds are not budgeted with the same rigor — they ship to environments where adding 200 KB is usually not user-visible — but the WASM build dictates the dependency policy for the whole core.
+Browser transfer size and load time increase with each byte, so the WASM package has explicit size limits. Native Node, Python, and CLI builds are not subject to these WASM size gates. The WASM build still dictates the dependency policy for the whole core.
 
 ::: info Glossary: size budget
 A per-target byte ceiling for the built artifact. Builds that exceed the ceiling fail; builds that exceed the target are warnings to investigate. Budgets are checked in CI through `make size-check`.
 :::
 
 ::: info Glossary: Brotli vs uncompressed
-*Uncompressed* is what the WASM file weighs on disk. *Brotli* is what a properly configured CDN serves to browsers. Brotli is the user-visible number; uncompressed bounds what the engine needs to keep loadable on hosts that cannot serve Brotli.
+*Uncompressed* is the WASM file size on disk. *Brotli* is the compressed size served by a CDN configured for Brotli. Uncompressed size remains relevant for hosts that cannot serve Brotli.
 :::
 
 <SizeBudgetTable
@@ -18,29 +18,29 @@ A per-target byte ceiling for the built artifact. Builds that exceed the ceiling
   pattern="{soft} soft target, {hard} hard ceiling"
 />
 
-Both uncompressed and Brotli limits are gated equally. Brotli is not a reporting-only metric.
+The uncompressed limit is checked for both the serial and pthread binaries. The Brotli limit is checked when the `brotli` command is available; otherwise the report marks that measure as skipped. `make size-check` uses the same ceilings for both builds.
 
 ## What "budgeted" means in practice
 
-Treat budget failures as product failures. Before adding a dependency to the engine, measure the resulting build size and decide whether the feature justifies the cost. "We can fix this later" is rarely true once the binary has shipped — users have already paid for the bytes.
+Treat size-limit failures as product failures. Before adding an engine dependency, measure the resulting build size and decide whether the feature justifies the increase. Fixing it after the binary ships leaves the extra transfer and load cost in every release until the next change.
 
 ## Reducing size
 
 When the WASM build approaches the ceiling, look in order at:
 
-1. **New unused code paths** — function families that the engine carries but most workbooks do not use can be lazy-dispatched.
-2. **Dependency review** — generic libraries are tempting but rarely break even after deduplication. Prefer in-tree implementations for the small set of spreadsheet-specific helpers.
+1. **Linker-retained code** — measure what the linker keeps. Formula families referenced by the dispatch table remain in the binary even when a workbook does not use them.
+2. **Dependency review** — remove unused dependencies and consolidate duplicated implementations. Prefer in-tree implementations for the small set of spreadsheet-specific helpers.
 3. **Build flag tuning** — Emscripten optimization passes, link-time optimization, dead-code elimination.
 4. **Public surface** — every exported symbol forces the engine to keep its dependencies; consider whether an API can be internal.
 
 ## Reading the build output
 
 ```sh
-make wasm
+make wasm wasm-threads
 make size-check
 ```
 
-`size-check` prints the current uncompressed and Brotli sizes and compares them against the budget. Fail it locally before sending a PR; CI does the same check.
+`size-check` prints the current uncompressed and Brotli sizes and compares them against the budget. Install `brotli` to check both measures; the report marks Brotli as skipped when compression is unavailable. Use the pinned Emscripten toolchain before comparing local sizes with CI. Run the check locally before sending a PR and resolve failures.
 
 ## Read next
 

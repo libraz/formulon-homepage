@@ -41,23 +41,26 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. XLSB pivot cache definitions, cache records, and pivot-table parts are decoded into the pivot model and evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. Existing XLSB worksheet tails are preserved verbatim: conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Preservation is not the same as editable or evaluated support. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
+The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. XLSB pivot cache definitions, cache records, and pivot-table parts are decoded into the pivot model and evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. Conditional-format rules, data validations, and sheet/workbook protection are also decoded into the shared model and emitted on save. Conditional-format rules include the supported evaluation subset and visual payloads such as x14 data bars; validation rules and protection are modeled metadata and are not evaluated or enforced by the calculation engine. Selected unmodeled worksheet tails remain verbatim, including hyperlinks, auto-filter, print setup/breaks, drawing/table references, and their relationships. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
 
 | XLSB feature | Current behavior |
-| --- | --- | --- |
+| --- | --- |
 | Styles (`BrtFmt` / `BrtXF`) | modeled and emitted |
 | Row/column layout, merges | modeled and emitted |
 | `date1904`, view/zoom/frozen panes | modeled and emitted |
 | Dynamic-array metadata and supported tokenized formulas | modeled and emitted |
 | Pivot cache and PivotTable parts | evaluated when the record encoding is supported; unmeasured encodings are skipped |
-| Worksheet tails and relationships | preserved verbatim, not editable/evaluated |
+| Conditional formatting | modeled and emitted; supported predicates are evaluated and visual payloads, including x14 data bars, are retained |
+| Data validation | modeled and emitted; rule payload is preserved but not engine-evaluated |
+| Sheet/workbook protection | modeled and emitted as metadata; the engine does not enforce cell locks |
+| Hyperlinks, AutoFilter, print settings/breaks, drawing/table references, and relationships | preserved verbatim when unmodeled; not generally editable/evaluated |
 | Unsupported formulas | may downgrade to cached literals; downgrade count is reported |
 
 Do not infer comment or pivot preservation from this tail-preservation rule. Keep a source workbook and verify the emitted package when those features matter.
 
-Saving is explicit about container format: `saveAs(format)` / `save_as(fmt)` take a `WorkbookFormat` to choose XLSB over XLSX. `saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` use the same selector and expose partial loss counters, while `readDiagnostics()` / `read_diagnostics()` expose counters captured during load. The CLI derives its output choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` detect XLSX vs XLSB from the bytes themselves (ZIP signature vs BIFF12 record stream), not from a file name, so a `.xlsb` payload loads correctly even without a matching extension.
+Saving is explicit about container format: `saveAs(format)` / `save_as(fmt)` take a `WorkbookFormat` to choose XLSB over XLSX. `saveWithDiagnostics(format)` / `save_with_diagnostics(fmt)` use the same selector and expose partial loss counters, while `readDiagnostics()` / `read_diagnostics()` expose counters captured during load. The CLI derives its output choice from the `-o` path's extension (`-o out.xlsb` writes MS-XLSB; anything else writes OOXML). Loading, in contrast, is content-sniffed: `loadBytes()` / `Workbook.load()` open both formats as ZIP packages and inspect their workbook parts and content types, normally `xl/workbook.xml` for XLSX and `xl/workbook.bin` for XLSB. The file name is not used for detection.
 
-The panel below writes one workbook into both containers and hands each result straight back to `loadBytes()`, with no file name to go on. The counters are whatever `saveWithDiagnostics()` reported for that write; an all-zero panel means none of the losses above occurred on it, not that the write went unchecked. Load a workbook of your own to see the counters move.
+The panel below writes one workbook into both containers and hands each result straight back to `loadBytes()`, with no file name to go on. The counters are whatever `saveWithDiagnostics()` reported for that write; an all-zero panel means none of the reported loss categories occurred on it. The counters are partial diagnostics, so verify business-critical structures in the emitted package as well.
 
 <FormatDemo />
 
@@ -67,16 +70,16 @@ The panel below writes one workbook into both containers and hands each result s
   { title: 'Input', nodes: ['*.xlsx / *.xlsb bytes in'] },
   { title: 'Read', nodes: ['Reader'] },
   { nodes: [
-      { label: 'Evaluated parts', note: 'cells · formulas · defined names · tables · CF subset' },
+      { label: 'Modeled parts', note: 'cells · formulas · names · tables · CF subset · validations · protection metadata' },
       { label: 'Passthrough parts', note: 'charts · drawings · form controls · VBA' }
     ] },
   { nodes: [
-      { label: 'Engine recalc' },
+      { label: 'Engine recalc', note: 'formula values and supported CF predicates' },
       { label: 'Preserved as bytes' }
     ] },
   { title: 'Write', nodes: ['Writer'] },
   { title: 'Output', nodes: ['*.xlsx / *.xlsb bytes out'] }
-]" label="Read splits into evaluated parts (recalculated) and passthrough parts (preserved as bytes), both converging at the writer" />
+]" label="Read splits into modeled parts (recalculated where supported) and passthrough parts (preserved as bytes), both converging at the writer" />
 
 | Feature | Read | Recalculate | Write |
 | --- | --- | --- | --- |
@@ -84,7 +87,10 @@ The panel below writes one workbook into both containers and hands each result s
 | Styles / number formats | yes | n/a | yes |
 | Defined names / tables | yes | yes (resolved as references) | yes |
 | Conditional formatting | yes | partial (evaluate subset) | yes |
-| Pivot tables | layout / cache | no | yes |
+| Data validation | yes | no (rule payload only) | yes |
+| Sheet/workbook protection | yes | no (metadata only; locks are not enforced) | yes |
+| Hyperlinks / AutoFilter / print settings / drawing references | unmodeled parts passthrough | no | yes |
+| Pivot tables | layout / supported cache | `pivotLayout()` / `GETPIVOTDATA` can aggregate or read supported cached records; no worksheet-source cache refresh | yes |
 | Charts | parts preserved | no | yes |
 | Form controls / drawings | passthrough | no | yes |
 | VBA project | passthrough | never | yes |
@@ -97,7 +103,7 @@ Workbooks containing VBA can round-trip through Formulon, but macros are never e
 
 - Legacy `.xls` (BIFF) read / write.
 - CSV is supported only via simple ingestion; rich Excel CSV quoting edge cases are not the target.
-- Live external connections (PowerQuery, OLE DB, Web).
+- Live external connections (Power Query, OLE DB, Web).
 
 ## Read next
 
