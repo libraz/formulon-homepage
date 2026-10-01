@@ -1,81 +1,41 @@
-# Security Model
+---
+description: Filesystem permissions, session isolation, allowlisted API access, and mutation failure behavior.
+---
 
-`formulon-mcp` is designed to give agents structured, observable access to workbook operations. The server's guarantees are deliberately narrow so that hosting it inside an agent loop does not become a code-execution surface.
+# Security model
 
-::: info Glossary: allowlist
-A whitelist of method names the server is willing to invoke on a `Workbook`. Anything not on the list is rejected at the dispatch layer, regardless of the input shape. The allowlist lives in `src/sessions.ts` of the `formulon-mcp` repo.
-:::
+`formulon-mcp` runs as a local stdio process with the filesystem permissions granted by its host. It has no built-in directory allowlist, authentication layer, or per-user session access control. Apply filesystem and process restrictions in the MCP client or operating system when required.
 
-## What the server does *not* do
+## Paths and writes
 
-- It does not evaluate arbitrary JavaScript, TypeScript, Python, or VBA. Formula evaluation happens entirely inside the Formulon C++17 engine.
-- It does not load user-supplied native modules. The only native code is the engine itself.
-- It does not open network sockets. The transport is stdio; the server has no HTTP server, no outbound fetcher, and does not require network access for calculation.
-- It does not preserve state across server restarts. Sessions live in process memory only.
+Workbook input paths, workbook output paths, and preview artifact paths resolve in the server process. Relative paths use its working directory, which may differ from the directory visible in a chat. Use absolute paths when configuring an agent workflow.
 
-## Process boundary
+Changing the working directory does not restrict filesystem access. The server can read, create, or overwrite any accessible path accepted by its tools. `formulon_preview_range` can also write `.png` or `.svg` files through `outputPath`.
 
-A stdio MCP server runs as a child process of the client. The OS process boundary is the security boundary:
+`formulon_save_session` resolves its destination in this order: the explicit `outputPath`, the session's previous output path, then the original source path. Omitting the argument can overwrite the input workbook. Use a separate explicit output path for review workflows. Saving returns a byte count and diagnostics, not downloadable workbook bytes.
 
-- The server inherits the client's file-system permissions. Sandbox the client, and the server is sandboxed too.
-- Killing the client (or the agent that owns it) terminates the server and clears every open session.
-- Multiple clients run separate server processes; sessions never cross processes.
+## Session lifetime and isolation
 
-<DiagramFlow :steps="[
-  { label: 'Client process', note: 'owns lifetime; sandbox here sandboxes below' },
-  { label: 'formulon-mcp', note: 'child process; killed when the client exits' }
-]" />
+Each `sessionId` identifies a separate in-memory workbook. Separate server processes have separate session tables. Within one process, callers that know a session ID can use it; IDs are handles rather than access credentials.
 
-## File-system access
+Closing a workbook discards its in-memory state, including unsaved changes. Server termination discards all sessions. There is no automatic persistence or recovery journal. The MCP client manages the child process; ensure it stops the server when the connection is closed.
 
-Tools that name a path (`formulon_open_workbook`, `formulon_save_session`, `formulon_get_cell` direct-from-path) operate on whatever paths the server process can see. Restrict the parent's working directory, or run the agent inside a sandbox, if you want to keep workbook IO inside a project.
+## Validated inputs and partial mutations
 
-::: tip Agents and write paths
-Always pass an explicit `outputPath` under an allowed directory when calling `formulon_save_session`. Omitting it does **not** avoid a disk write — it reuses the session's `outputPath` from a prior save, or failing that, the original `sourcePath` the workbook was opened from, and overwrites it. See [Workflow: Save](/mcp/workflow#save) for the full fallback chain. The server has no `target directory` policy of its own — that is up to the host.
-:::
+Tool schemas validate JSON shapes before dispatch. Higher-level operations also resolve addresses and enforce their own limits. Cell batches preflight addresses and finite numbers; layout batches preflight their complete operation list before applying it.
 
-## Tool input validation
+Validation is not a transaction. An engine failure during application can leave earlier writes in place. A low-level mutating call marks the session dirty before invoking the engine, even if the call fails. Inspect the workbook after a failed mutation; reopen the source in a new session to discard partial work. See [workflow](/mcp/workflow).
 
-Every tool's inputs are validated against a JSON schema before reaching the engine. Malformed payloads return an MCP error response without touching the session. Numeric coordinates are range-checked; A1 references are parsed and rejected if they cannot resolve to a sheet.
+## Allowlisted API access
 
-## Low-level access is allowlisted
+`formulon_workbook_call` invokes only methods listed in [`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts). It does not evaluate JavaScript or execute caller-supplied code. Workbook lifecycle and raw save methods (`save`, `saveAs`, `saveWithDiagnostics`) are withheld, as is callback-based `setIterativeProgress`.
 
-`formulon_workbook_call` exists for advanced features that do not yet have dedicated tools. Even so, it only dispatches methods on an explicit allowlist defined in the server source.
+Use [API discovery](/mcp/advanced) to read signatures and access classifications from the installed engine before constructing positional arguments. The allowlist controls which methods can be reached; it does not establish whether a requested edit is appropriate.
 
-<DiagramLayers :layers="[
-  { nodes: ['formulon_workbook_call(method, args)'] },
-  { nodes: ['Allowlist gate: is method in WORKBOOK_METHODS?'] },
-  { nodes: [
-      { label: 'Accept', note: 'method invoked on the Workbook' },
-      { label: 'Reject', note: 'MCP error: method is not allowlisted' }
-    ]
-  }
-]" />
+## Calculation, previews, and external content
 
-Examples of allowlisted methods include:
+The server does not run VBA. Existing macro and drawing content may be preserved as passthrough parts where the engine supports it; inspect load and save diagnostics for the actual file. The engine does not fetch external workbook links automatically.
 
-- PivotTables and PivotCaches, including cache sources and report layout / filters,
-- worksheet tables and their AutoFilter,
-- styles, differential formats, merges, comments, hyperlinks, and validations,
-- conditional formatting evaluation,
-- sheet display flags, page-layout view, phonetic guides, and pagination,
-- dependency graph queries (`precedents`, `dependents`),
-- function metadata and name helpers,
-- spill information, and the workbook clock pin.
+Formula calculation uses the Formulon WASM engine. PNG previews use the packaged native `@resvg/resvg-js` renderer and installed system fonts. The server exposes no HTTP transport or arbitrary module-loading tool. Package installation through `npx` can require network access; calculation itself uses the local engine.
 
-The server deliberately withholds workbook lifecycle methods, raw save methods (`save`, `saveAs`, `saveWithDiagnostics`), and the callback-based `setIterativeProgress`. Session saves go through `formulon_save_session`, which keeps session bookkeeping and returns save diagnostics. Other methods not on the allowlist are rejected.
-
-## Session isolation
-
-- Each `sessionId` owns its own workbook instance, dependency graph, dirty set, and recalc state.
-- Sessions cannot read each other's cells.
-- `formulon_close_workbook` releases the engine state immediately; `formulon_list_sessions` lets the agent (or a watcher) see what is still open.
-
-## VBA is preserved, never executed
-
-Workbooks containing VBA round-trip through Formulon. The macros are stored as passthrough bytes and rewritten on save, but the engine never compiles, interprets, or executes them.
-
-## Read next
-
-- [Workflow](/mcp/workflow) — operational loop the security model surrounds.
-- [Tools](/mcp/tools) — each tool's purpose.
+For format and formula limits, read [file format support](/compatibility/file-format-support) and [formula coverage](/compatibility/formula-coverage). For rendering limits, read [layout and previews](/mcp/layout-preview).

@@ -2,111 +2,93 @@
 import { MCP_TOOL_COUNT } from '@/data/facts'
 </script>
 
-# Tools
+# Tool reference
 
-This page lists all {{ MCP_TOOL_COUNT }} MCP tools exposed by `formulon-mcp`, grouped by purpose. The model receives the same descriptions through MCP tool discovery; this page mirrors them so a human can scan the surface at a glance.
+This page describes all {{ MCP_TOOL_COUNT }} tools registered by `formulon-mcp`. The tables follow the server schemas and implementation. MCP clients still receive the live schemas at connection time; use those schemas when a field is added after this page was published.
 
-::: info A1 vs zero-based
-Unless A1 notation is used, sheet / row / column indices are zero-based to match the Formulon API. Both styles are accepted on tools that take addresses.
-:::
+## Common conventions
 
-::: warning Only bounded, single-sheet ranges
-The A1 parser accepts rectangular ranges within a single sheet (`Sheet1!A1:C10`). It rejects whole-row/column references (`A:A`, `1:1` — the pattern requires both a column letter and a row digit) and cross-sheet 3-D ranges (`Sheet1:Sheet3!A1:B2`). The Formulon core supports 3-D references, but the `formulon-mcp` A1 parser rejects them. Build the bounded range you need from the sheet's used range (`formulon_inspect_layout`) instead of a whole-row/column shorthand.
-:::
+- `sessionId` identifies an open in-memory workbook. A `sheet` value accepts a zero-based index or an exact sheet name. When a sheet is omitted, most session tools use the first sheet; inspection and search tools that explicitly support all sheets say so below.
+- Numeric `row` and `col` values are zero-based. A1 addresses are one-based Excel addresses such as `Summary!B2`.
+- Cell values use `{kind, ...}` envelopes. Numbers, booleans, and text carry `value`; error cells carry `errorCode` and `errorName`; blank cells carry only `kind`.
+- A successful high-level call returns compact JSON text. A failure returns MCP `isError: true` with a text message. Status-bearing engine results retain `status`, including `ok`, numeric `status`, `message`, and `context`.
+- Paths are resolved from the MCP server process's working directory. Pass an explicit `outputPath` to every save. Output extensions must be `.xlsx` or `.xlsb` for workbooks, and `.png` or `.svg` for previews.
+- Bounded A1 ranges must be rectangular and on one sheet. Whole-row, whole-column, and 3-D references are not accepted by the MCP A1 parser.
 
-<DiagramLayers :layers="[
-  { nodes: ['formulon-mcp tools'] },
-  { nodes: [
-      { label: 'Engine', note: 'version / eval / lookup / trace' },
-      { label: 'Sessions', note: 'open / list / close / recalc / save / metadata' },
-      { label: 'Inspection', note: 'session / layout / regions / analyze' },
-      { label: 'Cells & ranges', note: 'set / get / range / set-range / find / replace' },
-      { label: 'Structure', note: 'sheets / defined names / insert-delete / view / dimension' },
-      { label: 'Rich data', note: 'merge / comment / hyperlink / validation / cond-format' },
-      { label: 'Advanced', note: 'workbook_call / one-shot inspect & update' }
-    ]
-  }
-]" />
 
-## Engine
+Low-level calls and operation tools that dispatch workbook methods return `{session, method, result}`. The outer `session` is a public session record, and `result` retains the engine response. A mutation may return a Status directly inside `result`; an accessor usually has `result.status` and its own value fields.
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_version` | Returns the loaded Formulon engine version and the MCP server version. |
-| `formulon_eval_formula` | Evaluates one Excel formula in a throwaway workbook, or read-only against an open session when given `sessionId`. |
-| `formulon_function_lookup` | Lists registered functions and resolves metadata or localized names. |
-| `formulon_trace` | Reads precedents, dependents, or spill info for a cell. |
+## Engine and one-shot tools
 
-## Sessions
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_version` | Report the loaded engine and server versions. | No arguments. | `{version, serverVersion}`. |
+| `formulon_eval_formula` | Evaluate one Excel formula without writing a cell. With `sessionId`, references and defined names resolve in that session and `row` and `col` anchor relative references and `ROW()` or `COLUMN()`. | `formula` required, with or without `=`. `sessionId` optional. `sheet`, `row`, and `col` default to `0`; a sheet name requires `sessionId`. | Global mode returns `{formula, status, value}`. Session mode returns `{session, method, result}`, with the engine `{status, value}` envelope under `result`. |
+| `formulon_inspect_workbook` | Load a path, optionally recalculate, and return a summary without retaining a session. | `path` required, `.xlsx` or `.xlsb`. `recalc` defaults `false`; `includeCells` defaults `false`; `maxCellsPerSheet` defaults `200`, maximum `10,000`. | `{sheets, definedNames, tables}`. Each sheet has `index`, `name`, `cellCount`, and optional sparse `cells` with `cellsTruncated`. |
+| `formulon_update_workbook` | Load or create a workbook, apply a batch of cell mutations, optionally recalculate, and save in one call. | `inputPath` optional. `outputPath` required and must end in `.xlsx` or `.xlsb`. `recalc` defaults `true`. `mutations` has 1 to 10,000 entries with concrete zero-based `sheet`, `row`, `col` and type `number`, `bool`, `text`, `blank`, or `formula`. | `{outputPath, bytes, format, losses?, summary}`. `bytes` is a count; `summary` contains sheets, defined names, and tables. |
+| `formulon_workbook_api` | Discover the installed Formulon `Workbook` methods and their source declarations before a low-level call. This tool is session-free. | `operation` is `search` by default or `describe`. Search accepts optional case-insensitive `query`, `limit` default `20` and maximum `100`, and `offset` default `0`. Describe requires exact `method`. | Search returns `{version, operation, query?, total, truncated, count, methods}`. Describe adds `declarations`, `declarationsTruncated`, and optional `truncation`; declarations are bounded by count, depth, and character limits. |
+| `formulon_function_lookup` | List registered functions, read metadata, or convert function names for a locale. | `sessionId` required. `operation` is `names`, `metadata`, `localize`, or `canonicalize`. `name` is required except for `names`. `locale` is a non-negative engine locale id, default `0`. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_workbook_call` | Call one installed `Workbook` method through the explicit server allowlist. | `sessionId`, exact `method`, and positional JSON `args` array. `args` defaults to `[]`; argument validation and limits belong to the discovered method. Methods such as save and callback-taking APIs are withheld. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_open_workbook` | Loads an `.xlsx` or `.xlsb` path into a new session, or creates a default workbook. A loaded session's `loadLosses` reports anything the reader could not decode. |
-| `formulon_list_sessions` | Lists open workbook sessions. |
-| `formulon_close_workbook` | Releases a session. |
-| `formulon_recalc_session` | Triggers a recalculation on an open session. |
-| `formulon_save_session` | Writes a session to disk (`outputPath` → session's last saved path → its original source path), selects XLSB for `.xlsb` output paths and XLSX otherwise, and returns `bytes`, the selected `format`, and any writer `losses` (dropped or downgraded content). |
-| `formulon_session_metadata` | Reads function names or external links from the session. |
+## Session and inspection tools
 
-## Inspection
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_open_workbook` | Create a session from a workbook path or a new default workbook. Opening a file recalculates it once. | `path` optional `.xlsx` or `.xlsb`; omit it for a default workbook with `Sheet1`. `sessionId` optional; omitted value is a UUID. | `{session}` with `id`, paths, timestamps, `dirty`, and optional `loadLosses`. |
+| `formulon_list_sessions` | List currently open sessions. | No arguments. | `{sessions}` containing public session records, without native workbook handles. |
+| `formulon_close_workbook` | Release one session and its native workbook handle. | `sessionId` required. | `{session}` with the final public session state. |
+| `formulon_inspect_session` | Return workbook structure and optional sparse cell entries. | `sessionId` required. `includeCells` defaults `false`; `maxCellsPerSheet` defaults `200`, maximum `10,000`. | `{session, workbook}` where `workbook` has `sheets`, `definedNames`, and `tables`. |
+| `formulon_recalc_session` | Recalculate the open workbook and update cached formula values. | `sessionId` required. | `{session, status}`. Recalculation marks the session dirty because cached values are model state. |
+| `formulon_find_cells` | Search text cell values and formula text. | `sessionId` and non-empty `query` required. Optional `sheet` limits the search to one sheet; omit it to search all. `target` defaults `both` and accepts `texts`, `formulas`, or `both`. `target: "texts"` also searches numeric and boolean constants as strings, such as `42`, `TRUE`, and `FALSE`; it does not search formula results. `matchCase`, `wholeCell`, and `regex` default `false`. `maxResults` defaults `1,000`, maximum `10,000`. `wholeCell` applies only when `regex` is `false`; anchor a full-cell regex with `^` and `$`. | `{session, query, options, results, count, truncated}`. Each result has sheet coordinates, A1 `ref`, target kind, and matched `text`. |
+| `formulon_replace_cells` | Replace matching text values and/or formula text. | The search fields plus required `replacement`. Replacement changes only string cells and formula text; numeric and boolean constants are not replaced. `maxResults` defaults `1,000`, maximum `10,000`; `maxReplacements` defaults to `maxResults`, maximum `10,000`; when specified, `maxReplacements` is the replacement cap and `maxResults` adds no second cap. `recalc` defaults `true`. | `{session, query, replacement, options, replacements, count, truncated}`. Each replacement includes `before`, `after`, address, target kind, and engine status. |
+| `formulon_inspect_layout` | Read stable per-sheet layout data without inference. | `sessionId` required. Optional `sheet` selects one sheet; omit it for all. `includeCells` defaults `true`; `includeStyles` defaults `false`; `maxCells` defaults `10,000`, maximum `50,000` per selected sheet. | `{session, sheets}`. Each sheet includes `usedRange`, `cellCount`, merged ranges, view, columns, rows, protection, optional `cells`, and `truncated`. |
+| `formulon_detect_regions` | Detect table-like regions, label-value pairs, and total-like regions with rule-based evidence. | `sessionId` required. Optional `sheet` selects one sheet or all when omitted. `maxCells` defaults `10,000`, maximum `50,000` per inspected sheet. | `{session, sheets, regions}`. Regions carry type, sheet, range, confidence, evidence, and table or label-value details. |
+| `formulon_analyze_workbook` | Classify workbook shape from deterministic features such as tables, labels, and totals. | `sessionId` required. `includeEvidence` defaults `true`; `maxCellsPerSheet` defaults `10,000`, maximum `50,000`. | `{session, classification, summary, evidence?, warnings}`. Classification includes `primaryType`, confidence, and ranked candidates; summary includes likely title, tables, totals, and key fields. |
+| `formulon_session_metadata` | Read registered function names or external links. | `sessionId` required. `kind` is `functions` or `externalLinks`. | `{session, kind, value}`. `value` is a plain array of function names or external-link records. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_inspect_session` | Returns sheets, defined names (including `localSheetId` when sheet-local), tables, and optionally sparse cell entries. |
-| `formulon_inspect_layout` | Per-sheet layout: used ranges, merges, row / column overrides, protection, cells, calculated values, formulas, optional style details, and sheet view (zoom, frozen panes, hidden state). |
-| `formulon_detect_regions` | Detects table-like regions, label-value pairs, and totals with rule-based confidence and evidence. |
-| `formulon_analyze_workbook` | Classifies workbook shape (invoice, list, report, schedule, form, …) with deterministic evidence. |
+## Cells, structure, and persistence
 
-## Cells and ranges
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_get_cell` | Read one cell from a session or a path. | Pass exactly one of `sessionId` or `path`. Pass `a1`, or pass `row` and `col`; `sheet` defaults `0`. `recalc` defaults `true`. A path read accepts `.xlsx` or `.xlsb` and is not retained. | An address object with sheet, row, col, and A1, plus `status`, `value`, `formula`, and optional decoded number-format fields. |
+| `formulon_get_range` | Read a sparse rectangular range from an open session. | `sessionId` and `range` required. Optional fallback `sheet`; `maxCells` defaults `10,000`, maximum `50,000`; `includeFormulas` and `recalc` default `false`. The request is clipped to used cells, then the scan rectangle is capped at `100,000` cells. | `{session, range, cellCount, truncated, cells}`. Blank formula-free cells are omitted; each cell has A1 coordinates, value, and optional formula and formatted-number fields. |
+| `formulon_save_session` | Write an open session as XLSX or XLSB. | `sessionId` required. `outputPath` is optional in the schema but should always be supplied; it must end in `.xlsx` or `.xlsb`. The save does not recalculate. | `{session, outputPath, bytes, format, losses?}`. `losses` reports dropped, downgraded, deferred, or other non-zero writer counters; a lossy save leaves `session.dirty` true. |
+| `formulon_set_cells` | Apply unrelated cell mutations to a session. | `sessionId` required. `mutations` has 1 to 10,000 entries. Each entry is `number`, `bool`, `text`, `blank`, or `formula`, addressed with A1 or optional `sheet` plus zero-based `row` and `col`; numbers must be finite. `recalc` defaults `true`. | `{session, applied, errorCells}`. `applied` records index, sheet, A1, and status; `errorCells` reports written formulas that evaluate to Excel errors. |
+| `formulon_set_range` | Write a row-major 2-D block from one A1 anchor. | `sessionId`, `start`, and at least one `values` row required. Values are numbers, booleans, strings, `{"f":"=..."}`, `{"blank":true}`, or `null` to skip. Optional fallback `sheet`; `recalc` defaults `true`. Addresses must stay within the Excel grid, up to row `1,048,576` and column `XFD`. | `{session, range:{sheet,start,end?}, cellsWritten, errorCells}`. A block containing only `null` writes zero cells. |
+| `formulon_sheet_operation` | Add, remove, rename, or move a worksheet. | `sessionId` and `operation` required. `add` uses `name`; `remove` and `rename` use `index`; `rename` also uses `newName`; `move` uses `fromIndex` and `toIndex`. Indices are non-negative. | `{session, status}`. |
+| `formulon_set_defined_name` | Add, replace, or remove a workbook or sheet-local defined name. | `sessionId`, `name`, and `formula` required. An empty `formula` removes the name. Omit `sheet` for workbook scope; provide a zero-based index or name for local scope. A leading `=` is accepted and stripped for OOXML. | `{session, status, localSheetId}`; workbook scope is `-1`. |
+| `formulon_edit_structure` | Insert or delete rows or columns while the engine rewrites affected references. | `sessionId`, `operation`, `start`, and positive `count` required. Operation is `insertRows`, `deleteRows`, `insertCols`, or `deleteCols`. `sheet` defaults `0`. | `{session, sheet, status}`. |
+| `formulon_set_sheet_view` | Set zoom, frozen panes, or worksheet tab visibility. | `sessionId` required. `sheet` defaults `0`. `zoom` is optional from 10 to 400; `freezeRows` and `freezeCols` are non-negative. Pass both frozen-pane counts when changing them: an omitted count becomes `0` instead of preserving its previous value. Use either `hidden` for two-state visibility or `visibility` with `visible`, `hidden`, `veryHidden`. | `{session, sheet, statuses}`. Each stated setting has its own engine status. |
+| `formulon_trace` | Read precedents, dependents, or dynamic-array spill information for one cell. | `sessionId`, `operation`, `row`, and `col` required. `sheet` defaults `0`. Operation is `precedents`, `dependents`, or `spillInfo`; `depth` defaults `1` and is capped at `32`. | Precedent or dependent mode returns `{session, operation, cell, depth, count, cells}` with A1 references. Spill mode returns `{session, operation, cell, spill}` with engaged state, anchor, rows, cols, and range. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_set_cells` | Applies mutations to a session. Cells use A1 (`Sheet1!B2`) or 0-based (`sheet` / `row` / `col`). |
-| `formulon_set_range` | Writes a 2D block of values from an anchor cell; each element's JSON type picks the cell type, `{"f":"=…"}` writes a formula, and `null` skips a cell. More compact than `set_cells` for tables. |
-| `formulon_get_cell` | Reads one cell, either from a session or directly from a path. |
-| `formulon_get_range` | Reads an A1 rectangular range from a session. |
-| `formulon_find_cells` | Searches text cell values and / or formula text. |
-| `formulon_replace_cells` | Replaces matching text and / or formula text. |
+## Presentation and preview tools
 
-## Workbook structure
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_dimension_operation` | List or change column widths and row heights, hidden state, or outline levels. | `sessionId`, `axis` (`column` or `row`), and `operation` (`list`, `size`, `hidden`, `outline`) required. `sheet` defaults `0`. Columns use inclusive `first` and `last`, with `last` defaulting to `first`; rows use `row`. Size units default to `chars` for columns and `pt` for rows, with `px` and `mm` converted through 96-DPI geometry. Column width is capped at 255 stored characters; row height at 409 points. `includeGeometry` adds points, pixels, and millimetres to list results. | List returns `{session, axis, operation, sheet, value}` with dimension arrays. Writes return `{session, axis, operation, sheet, status}` and, for size, stored units, stored size, and display geometry. |
+| `formulon_build_document` | Create a block-composed document with positions, formulas, formats, borders, merges, widths, and optional print setup resolved together. | `sessionId` required. Optional `sheet`; `start` defaults `B2`; `width` defaults to the widest table. `blocks` has at least one title, text, fields, table, summary, or spacer block. `sameRow` reuses the current row group; it does not automatically move a block to the next free column. Table formulas use `{key}` and named ranges such as `{table.Amount}`. Optional `theme`, print preset (`a4-portrait`, `a4-portrait-fit`, `a4-landscape`, `a4-landscape-fit`, `letter-portrait`, `letter-portrait-fit`, `letter-landscape`, `letter-landscape-fit`), and `repeatTableHeader` defaulting `true`. | `{session, sheet, sheetName, start, range, width, blocks, names, pageCount?}`. `names` maps generated names to A1 references for later refinement. |
+| `formulon_style_range` | Apply font, fill, border, number-format, and alignment deltas to an A1 range. | `sessionId`, `range`, and `style` required. Optional fallback `sheet`; `baseOn` defaults `existing` and accepts `default`. Colors are `#RRGGBB` or `#AARRGGBB`; alignment and border vocabulary follows the live schema. Styling materializes blank cells and is capped at 100,000 cells per range. | `{session, range:{sheet,sheetName,start,end}, regions}`. Each region reports its range, cell count, base style index, and resulting style index. |
+| `formulon_default_font` | Read or change the workbook-wide default font used by otherwise unstyled cells. | `sessionId` required. Omit `font` to read; otherwise pass deltas such as `name`, `size`, `bold`, `italic`, `strike`, `underline`, `vertAlign`, and color. | Read returns `{session, font}`. A write returns `{session, font}` with the applied font. |
+| `formulon_print_settings` | Read or partially update page setup, margins, print options, header and footer, print area, titles, and manual breaks. | `sessionId` required; `sheet` defaults `0`. Omit all settings to read. Page setup supports orientation, paper size, scale, fit-to-width, fit-to-height, and fit-to-page. Margins (`left`, `right`, `top`, `bottom`, `header`, `footer`) use inches; `0.5` is 12.7 mm. Print areas are comma-separated A1 ranges; row and column breaks accept up to 10,000 zero-based entries. Raw XML fields are available for unsupported attributes. | `{session, sheet, sheetName, applied?, settings}`. Settings include normalized values, raw XML fragments, breaks, and computed `pageCount`. |
+| `formulon_apply_layout` | Apply an ordered, preflighted batch of dimensions, merges, styles, and print settings. | `sessionId` and 1 to 200 `operations` required; `sheet` defaults `0`. Operations are `column`, `row`, `merge`, `style`, or `print`. Column width is capped at 255 characters, row height at 409 points, expanded row writes at 10,000, and styled cells at 100,000. A failed preflight leaves the session unchanged. | `{session, sheet, sheetName, operations}`. Each result records the resolved range or stored geometry, style regions, merge status, or applied print settings. |
+| `formulon_preview_range` | Render a bounded range as a PNG for visual review, with geometry and warning metadata. | `sessionId` required. Optional `sheet`, `range`, and `outputPath`; omit `range` to choose a print area or used cells plus merges. `scale` defaults `1` and accepts `0.25` through `2`; `showGridLines` defaults `false`; `showPageBreaks` defaults `true`; `recalc` defaults `false`. The range is capped at 10,000 cells, each image edge at 4,096 pixels, total pixels at 8,000,000, and SVG output at 4 MiB. | MCP content contains an image item first and JSON metadata second. Metadata includes sheet, range, logical and scaled dimensions, fonts, page count, page breaks, bounded cell geometry, warnings, and truncation counts. When `outputPath` is supplied, the artifact is written to that path. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_sheet_operation` | Adds, removes, renames, or moves sheets. |
-| `formulon_set_defined_name` | Adds, replaces, or removes defined names. Omit `sheet` for workbook scope; pass it for a sheet-local name. `_xlnm.Print_Area` and `_xlnm.Print_Titles` must be sheet-local for Excel to apply them. |
-| `formulon_edit_structure` | Inserts or deletes rows and columns. |
-| `formulon_dimension_operation` | Lists column-width / row-height overrides, or sets width / height, hidden, or outline level. Columns act on an inclusive `[first, last]` span; rows act on a single row index. |
-| `formulon_set_sheet_view` | Sets zoom, frozen panes, or sheet-tab hidden state. |
-| `formulon_default_font` | Reads the workbook default font, or replaces it in place. Unstyled cells resolve through font slot `0`. |
-| `formulon_build_document` | Lays out a titled document from named blocks, resolving cells, formats, ruling, widths, merges, and print area in one operation. |
-| `formulon_style_range` | Applies font, fill, border, number-format, and alignment deltas over an A1 range. |
-| `formulon_print_settings` | Reads or sets page setup, margins, print options, header/footer, print area/titles, and manual page breaks. |
+## Rich workbook objects
 
-## Rich workbook data
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_merge_operation` | List, add, remove, remove by index, or clear merged ranges. | `sessionId` required; `sheet` defaults `0`. `operation` is `list`, `add`, `remove`, `removeAt`, or `clear`. Add and remove use a bounded zero-based `{firstRow, firstCol, lastRow, lastCol}` range; `removeAt` uses non-negative `index`. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_comment_operation` | List, read, set, or remove cell comments. | `sessionId` required; `sheet` defaults `0`. `operation` is `list`, `get`, `set`, or `remove`. `row` and `col` are required except for `list`; `author` and `text` are optional for set and are cleared for remove. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_hyperlink_operation` | List, add, remove, remove by index, or clear hyperlinks. | `sessionId` required; `sheet` defaults `0`. Operations are `list`, `add`, `remove`, `removeAt`, and `clear`. Add uses `row`, `col`, optional inclusive `lastRow` and `lastCol`, `target`, `display`, `tooltip`, and `location`. An empty `target` with `location` creates an in-workbook link. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_validation_operation` | List, add, remove by index, or clear data-validation rules. | `sessionId` required; `sheet` defaults `0`. `operation` is `list`, `add`, `removeAt`, or `clear`; `index` is required for `removeAt`; `validation` is required for `add`. Validation ranges are inclusive zero-based rectangles. Types are 0 none, 1 whole, 2 decimal, 3 list, 4 date, 5 time, 6 text length, 7 custom. Omitted booleans default false; `showDropDown` defaults true. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_conditional_format_operation` | List, add, remove by index, clear, or evaluate conditional-format rules. | `sessionId` required; `sheet` defaults `0`. Operation is `list`, `add`, `removeAt`, `clear`, or `evaluate`. Add uses the live conditional-format schema for expression, cell, color-scale, data-bar, icon-set, top/bottom, average, text, blank, error, time-period, duplicate, and unique rules. `removeAt` needs `index`; `evaluate` needs `firstRow`, `firstCol`, `lastRow`, and `lastCol`. `todaySerial` is optional and controls time-period evaluation. | `{session, method, result}`. `result` contains the engine response: an accessor envelope such as `{status,value}`, `{status,items}`, or `{status,comment}`, a mutation Status, or method-specific fields. |
+| `formulon_table_operation` | List, create, update, or remove a native worksheet Table. | `sessionId` and `operation` required; `sheet` defaults `0`. List can filter by sheet. Create uses `range`, `name`, optional `columns`, `style` or `styleName`, `headerRow` default `true`, and `totalsRow` default `false`; omitted columns are derived from a unique non-empty text header row. Update and remove use global workbook `index`; update can change `range` or `ref`, style, header row, or totals row. A changed range must keep the original width. | List returns `{session,count,tables}`. Create and update return `{session,table,status}`; remove returns `{session,removed,status}`. Table indices are global across the workbook. |
+| `formulon_create_pivot` | Build a native PivotCache and PivotTable from a bounded worksheet range. | `sessionId`, `sourceRange`, `target`, `name`, and at least one `values` entry required. `sourceSheet` and `targetSheet` are fallbacks; targets may include sheet names. `rows`, `columns`, and `pages` default to empty arrays. Each value has `field`, `aggregation` default `sum`, optional display `name`, and optional Excel `numberFormat`. Supported aggregations are `sum`, `count`, `average`, `max`, `min`, `product`, `countNumbers`, `stddev`, `stddevp`, `var`, and `varp`. `layout` defaults `compact`; grand totals default on when stated; `sourceLimit` defaults 10,000 and is capped at 10,000, with at least 2 source cells. Every source header must be assigned exactly once, except repeated value aggregations. | `{session, source:{sheet,sheetName,ref,headers,rows}, target, cacheId, pivotIndex, layout, status}`. Source formulas are recalculated before the cache is read. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_merge_operation` | Lists, adds, removes, or clears merged ranges. |
-| `formulon_comment_operation` | Gets, sets, or removes cell comments. |
-| `formulon_hyperlink_operation` | Lists, adds, removes, or clears hyperlinks. An add can cover the inclusive rectangle through `lastRow` / `lastCol`; use `location` with an empty `target` for an in-workbook link. |
-| `formulon_validation_operation` | Lists, adds, removes, or clears data validations. |
-| `formulon_conditional_format_operation` | Lists, adds, removes, clears, or evaluates conditional formats. |
+## Formula audit
 
-## Advanced
+| Tool | Purpose | Inputs, defaults, and limits | Successful response |
+| --- | --- | --- | --- |
+| `formulon_audit_formulas` | Review repeated formula patterns, constants, blanks, outliers, and formula errors. It never repairs cells and does not prove a formula is correct. | `sessionId` required. Optional `sheet` defaults to the first sheet; optional `range` can qualify the sheet. `direction` defaults `vertical`, `window` defaults `5` and accepts 2–50, `minPeers` defaults `3` and accepts 3–20, `maxCells` defaults `50,000` and is capped there, `maxFindings` defaults `100` and is capped at `500`, and `recalc` defaults `false`. `minPeers` cannot exceed twice `window`; the stored-cell inventory is capped at 1,000,000 even when a range is supplied. | `{complete, session, sheet, sheetName, range, direction, window, minPeers, scannedCells, formulaCells, unsupportedFormulaCells, findingCount, findings, findingsTruncated, warnings}`. Findings include the cell, direction, issue type, neighboring evidence, and reason for review. A blank row or column is a hard boundary. |
 
-| Tool | What it does |
-| --- | --- |
-| `formulon_workbook_call` | Allowlisted low-level access to the Formulon `Workbook` API. |
-| `formulon_inspect_workbook` | One-shot summary from path. |
-| `formulon_update_workbook` | One-shot load / create, mutate, recalculate, save; returns the selected `format` and any writer `losses` alongside `bytes`. |
-
-::: warning `workbook_call` is allowlisted, not arbitrary
-`formulon_workbook_call` only dispatches methods on the server's allowlist (see [Security model](/mcp/security)). Calls to non-allowlisted methods are rejected. The tool exists for advanced access — PivotTables and PivotCaches, worksheet tables and AutoFilter, styles and differential formats, sheet display and page-layout view, phonetic guides, pagination, dependency graph queries, function metadata, spill info, and the workbook clock pin — that the higher-level tools do not cover yet.
-
-`setPinnedNow` changes in-memory model state only; saving does not persist the pin. See [recalculation](/workbook/recalculation) for its effect on time-dependent formulas. A PivotCache created through the API also needs `pivotCacheSetWorksheetSource` before saving; see [PivotTables](/workbook/pivots).
-:::
-
-## Read next
-
-- [Workflow](/mcp/workflow) — the canonical loop.
-- [Security model](/mcp/security) — what the server will refuse.
+For an end-to-end session sequence, see [Workflow](/mcp/workflow). The [Advanced API](/mcp/advanced) guide explains discovery, allowlist behavior, response envelopes, pinned time, and the WASM calculation path in more detail.

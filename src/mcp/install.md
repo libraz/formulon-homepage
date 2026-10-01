@@ -1,28 +1,43 @@
+---
+description: Register the stdio server, verify a first calculation, and troubleshoot client startup.
+---
+
 # Install formulon-mcp
 
-`formulon-mcp` is published to npm and runs unmodified through `npx`. Most MCP clients only need a one-line registration.
+The npm package `@libraz/formulon-mcp` runs as a stdio MCP server. Use a Node.js runtime satisfying the package's [`engines` requirement](https://github.com/libraz/formulon-mcp/blob/main/package.json) (Node.js 22 or newer). A normal installation needs no repository checkout.
 
-::: tip Node.js 22+ is required
-The server uses Node 22 features. Earlier versions will fail to start. Check with `node --version`.
-:::
+## Interactive setup
 
-## Claude Code
+Run the bundled installer in a terminal:
 
 ```sh
-claude mcp add --scope user formulon -- npx -y @libraz/formulon-mcp
+npx -y @libraz/formulon-mcp init
 ```
 
-Verify with:
+Choose one or more target numbers, separated by commas. An empty selection defaults to Claude Code user scope.
+
+| Target | Configuration file |
+| --- | --- |
+| Claude Code — user | `~/.claude.json` |
+| Claude Code — project | `.mcp.json` in the current directory |
+| Codex CLI | `~/.codex/config.toml` |
+| Claude Desktop — macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Claude Desktop — Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Claude Desktop — Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+The installer previews whether each file will be created, merged, or have its existing `formulon` entry replaced, then asks before writing. It preserves other server entries. For project scope, run it from the project root. Restart the client after registration.
+
+To remove registration, run:
 
 ```sh
-claude mcp list
+npx -y @libraz/formulon-mcp uninstall
 ```
 
-`formulon` should report `✓ Connected`. If it does not, the [Claude Code docs](https://docs.claude.com/en/docs/claude-code/mcp) include logs and troubleshooting steps.
+The removal menu defaults to all four client targets. It removes the `formulon` entry from selected configuration files; it does not uninstall Node.js or other MCP servers.
 
-### Project scope
+## Manual registration
 
-The command above uses `--scope user`, which registers `formulon` for every project. To scope it to a single repository instead, write a `.mcp.json` file in the project root:
+For clients using JSON configuration, add this server entry inside the existing `mcpServers` object:
 
 ```json
 {
@@ -35,11 +50,7 @@ The command above uses `--scope user`, which registers `formulon` for every proj
 }
 ```
 
-Claude Code picks up `.mcp.json` automatically for any session opened inside that directory — no `claude mcp add` call needed. The interactive installer below can write this file for you.
-
-## Codex CLI
-
-Add this entry to `~/.codex/config.toml`:
+For Codex CLI, the installer writes this TOML section:
 
 ```toml
 [mcp_servers.formulon]
@@ -47,109 +58,54 @@ command = "npx"
 args = ["-y", "@libraz/formulon-mcp"]
 ```
 
-Restart `codex` and the server will appear in tool discovery.
+Other stdio clients use the same command and arguments. When configuring a GUI client, ensure its environment can find `node` and `npx`; a terminal's PATH may differ. Use an absolute executable path when needed.
 
-## Claude Desktop
+## First calculation
 
-Add `formulon` to `claude_desktop_config.json` (location depends on OS):
+Ask the connected agent:
 
-| OS | Path |
-| --- | --- |
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Linux | `~/.config/Claude/claude_desktop_config.json` |
+> Use Formulon to report the server and engine versions, then evaluate `=SUM(10,20,30)`.
+
+The agent calls `formulon_version` with `{}` and `formulon_eval_formula` with:
+
+```json
+{ "formula": "=SUM(10,20,30)" }
+```
+
+The formula response has a `value` envelope with `kind: "number"` and `value: 60`. This requires no workbook path or persistent session. Continue with the [workbook workflow](/mcp/workflow) to edit a file.
+
+## Working with an unreleased checkout
+
+The unpinned `npx` command runs the published npm package. To use local changes before publication, build the checkout and register its absolute entry path:
+
+```sh
+cd /absolute/path/to/formulon-mcp
+yarn install
+yarn run build
+```
 
 ```json
 {
   "mcpServers": {
     "formulon": {
-      "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp"]
+      "command": "node",
+      "args": ["/absolute/path/to/formulon-mcp/dist/index.js"]
     }
   }
 }
 ```
 
-Restart Claude Desktop. The tools will be available in the next session.
+The checkout must have its engine dependency available. A website documenting the release candidate does not change the package selected by `npx`.
 
-## Interactive setup
+## Troubleshooting
 
-Instead of hand-editing config files, the package ships an installer that registers (or removes) `formulon` across one or more clients:
+| Symptom | Check |
+| --- | --- |
+| Server does not start | Check Node.js, `npx`, the client's PATH, and its server logs. |
+| Command appears to wait in a terminal | Running the server without `init` starts stdio transport and waits for an MCP client. |
+| No tools appear after setup | Restart the client and confirm it loaded the selected config file. |
+| Workbook path cannot be opened | Use an absolute path visible to the server; check file permissions. |
+| Session ID is unknown | Server restarts discard sessions. Open the file again. |
+| A documented tool is missing | Check `serverVersion` from `formulon_version`; a local checkout and the published package can differ. |
 
-```sh
-npx -y @libraz/formulon-mcp init
-```
-
-It prompts for one or more targets, comma-separated:
-
-1. Claude Code — user (`~/.claude.json`)
-2. Claude Code — project (`./.mcp.json`)
-3. Codex CLI (`~/.codex/config.toml`)
-4. Claude Desktop (path per OS, see above)
-
-It previews what each file will change (new / merge / replace an existing `formulon` entry) before writing, and never touches other servers already registered in the same file. Restart the client afterward to pick up the change.
-
-To remove the entry later:
-
-```sh
-npx -y @libraz/formulon-mcp uninstall
-```
-
-Same target menu; each target is left untouched if it has no `formulon` entry to remove.
-
-## Other stdio MCP clients
-
-Any stdio-capable MCP client works. Point it at:
-
-```sh
-npx -y @libraz/formulon-mcp
-```
-
-Or, after a global install:
-
-```sh
-npm install -g @libraz/formulon-mcp
-formulon-mcp
-```
-
-::: info Glossary: stdio MCP server
-A long-running child process that speaks JSON-RPC over stdin / stdout. The client owns process lifetime; killing the parent terminates the server. No port is opened.
-:::
-
-## From source
-
-For development or to pin a specific fork:
-
-```sh
-git clone https://github.com/libraz/formulon-mcp.git
-cd formulon-mcp
-yarn install
-yarn run build
-```
-
-Register the absolute path to the built `dist/index.js`:
-
-```sh
-claude mcp add --scope user formulon node /absolute/path/to/formulon-mcp/dist/index.js
-```
-
-Or install the latest `main` without a local clone:
-
-```sh
-npx -y github:libraz/formulon-mcp
-```
-
-## Verifying the install
-
-Inside any connected client, the model has access to:
-
-- `formulon_version` — returns the loaded Formulon engine version.
-- `formulon_eval_formula` — evaluates one Excel formula in a throwaway workbook.
-
-Calling either is a low-cost smoke test.
-
-## Read next
-
-- [Workflow](/mcp/workflow) — the open / mutate / recalc / save loop.
-- [Tools](/mcp/tools) — every tool, grouped by category.
-- [Security model](/mcp/security) — what the server is allowed to do.
+See the [tool catalogue](/mcp/tools) and [security model](/mcp/security) for input and filesystem behavior.
