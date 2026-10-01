@@ -1,107 +1,94 @@
 ---
 title: formulon-cell
-description: formulon-cell は Formulon の結合試験と参考実装のために公開している UI ライブラリです。
+description: ブラウザアプリケーションに Excel 風の表計算 UI を組み込む方法です。
 ---
 
 # formulon-cell
 
-`@libraz/formulon-cell` は、Formulon の **結合試験と参考実装のために公開している UI ライブラリ** です。`@libraz/formulon` WASM 計算エンジンの上に乗り、ブラウザ版をワークブック風の画面から検証できるようにします。
+`@libraz/formulon-cell` は、ワークブックを表示・編集するグリッドをアプリケーションへ組み込むためのブラウザ UI キットです。フレームワークを使わないパッケージは DOM コアを提供し、React と Vue のパッケージは各フレームワーク向けのアダプターを提供します。Excel 風の画面を基本にしていますが、個々のコントロールや操作は継続して更新されます。
 
-これは完成済みの表計算プロダクトではありません。全機能を網羅しているわけではなく、UI/UX を Excel に完全に寄せているわけでもなく、UI 側のバグをすべて取り切れているわけでもありません。エンジン結合を確認するための参考公開として扱ってください。
+このドキュメントでは、表示する周辺 UI、編集できるセル、メニューやダイアログの配置、ホスト側のコントロールとの接続方法など、UI の更新に左右されにくい組み込み方を説明します。
 
-::: warning 位置づけ: 結合試験用 UI であり、Excel の代替ではありません
-`formulon-cell` は、実際のブラウザ上で `@libraz/formulon` を結合試験するために作っています。選択、編集、数式入力、再計算、ファイルの読み書きといった基本的なワークブック操作は使えます。一方で、詳細なコントロールの挙動、ダイアログ、キーボード操作、アクセシビリティなどの UI/UX は Excel 互換を保証しておらず、UI 側の不具合が残る可能性もあります。エンドユーザー向けに Excel の代替として案内したり、完成した表計算プロダクトとして扱ったりしないでください。
-:::
-
-パッケージには、canvas グリッド、数式バー、ステータスバー、シートタブ、選択、キーボード編集、コンテキストメニュー、ランタイム i18n、テーマトークン、各種ダイアログなど、デスクトップ表計算ソフト風の UI 部品が含まれます。計算・読み込み・再計算・ヘッドレス回帰検査だけが目的なら、まず Formulon 本体の実行環境ドキュメントを読んでください。
-
-::: info 用語: chrome（UI 用語）
-UI の作業領域を囲む装飾部分 ─ ツールバー、メニュー、ステータスバー、スクロールバー、ダイアログなど。「Chrome ブラウザ」とは無関係です。
-:::
-
-::: info 用語: canvas-rendered grid
-HTML `<canvas>` 上にグリッドを描画する方式で、セルを DOM ノードとして並べないため数万セル規模でも軽快に動きます。代わりに DOM ベースの a11y や CSS スタイルは canvas 周囲の chrome にしか効きません。
-:::
-
-## 位置づけ
-
-- `@libraz/formulon` を裏に持つ実際のブラウザワークブックの結合確認
-- 関数入力、数式再計算、セル結果の表示
-- ホストアプリが再利用できるストア / コマンドヘルパーベースのスプレッドシート操作 API
-- `en` / `ja` 辞書によるランタイム i18n
-- CSS 変数による `paper`（明）/ `ink`（暗）/ `contrast`（ハイコントラスト）テーマ
-- 結合試験と参考実装のための UI。Formulon の公式な完成 UI ではない
+このページのデモでは、表示する周辺 UI、操作権限、表示・移動できるセル範囲を個別に設定できます。
 
 ## パッケージ
 
 | パッケージ | 用途 |
 | --- | --- |
-| `@libraz/formulon-cell` | Vanilla TS / DOM のコア。framework 非依存 |
-| `@libraz/formulon-cell-react` | React 18+ コンポーネントと hooks |
-| `@libraz/formulon-cell-vue` | Vue 3 コンポーネントと composables |
+| `@libraz/formulon-cell` | ホストが DOM とライフサイクルを管理する場合に使います。 |
+| `@libraz/formulon-cell-react` | React 18 以降のアプリケーションで使います。 |
+| `@libraz/formulon-cell-vue` | Vue 3 のアプリケーションで使います。 |
 
-```sh
-npm install @libraz/formulon-cell zustand
-# adapter（任意）
-npm install @libraz/formulon-cell-react react react-dom
-npm install @libraz/formulon-cell-vue vue
-```
+コアパッケージは、`Spreadsheet.mount()`、`WorkbookHandle`、プリセット、ポリシー、ビューポートとコンテキストメニューのオプション、オーバーレイの配置、コードからダイアログを開くメソッドを提供します。フレームワークパッケージは同じ API を各フレームワークのライフサイクルに合わせてラップします。
 
-::: info なぜ zustand が peer dependency なのか
-組み込み UI が購読しているストアを、ホストアプリ側からも同じ実体で読めるようにするためです。ステータスバー、サイドパネル、解析オブザーバなどをパッケージを fork せずに作れます。
-:::
+## 目的に合わせた始め方
 
-## SharedArrayBuffer が無いと reject する
+### 読み取り専用のワークブックビューアー
 
-WASM エンジンは pthread 有効で配布されており、`SharedArrayBuffer` を必要とします。cross-origin isolation（`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp`）が無い環境では、`WorkbookHandle.createDefault()` は **reject します** ─ 劣化したエンジンを黙って返すことはありません。ホスト側の設定不備は、いつまでも再計算されないスプレッドシートではなく、エラーとして現れるべきです。
-
-<DiagramLayers :layers="[
-  { nodes: ['Spreadsheet.mount(host, options)'] },
-  { nodes: ['WorkbookHandle.createDefault()'] },
-  { title: 'SharedArrayBuffer は利用可能か', nodes: [
-    { label: 'はい', note: 'COOP/COEP が正しく設定済み' },
-    { label: 'いいえ、preferStub 未指定', note: 'デフォルトの挙動' },
-    { label: 'いいえ、preferStub: true', note: '明示的なオプトイン' }
-  ] },
-  { title: '結果', nodes: [
-    { label: 'WASM エンジンを読込', note: '実際の再計算・.xlsx 往復保存・数式評価' },
-    { label: 'Promise が reject', note: 'ホストが try/catch や MountOptions.onError で捕捉' },
-    { label: '簡易エンジンを読込', note: 'wb.isStub / isUsingStub() → true ─ テスト・デモ専用' }
-  ] }
-]" label="Spreadsheet.mount のフロー: SharedArrayBuffer が無く preferStub も指定していない場合、WorkbookHandle.createDefault は reject する" />
-
-`preferStub: true` はテストと明示的なデモ専用です ─ 本番の暗黙フォールバックとして使わないでください。reject に行き先を用意して呼び出します。
+ワークブックを表示し、セルの選択とコピーだけを許可する場合は、`embedded` UI プロファイルと `viewerPolicy()` を使います。
 
 ```ts
-import { WorkbookHandle } from '@libraz/formulon-cell'
-
-try {
-  const wb = await WorkbookHandle.createDefault()
-  // ここでは wb.isStub は false ─ 実際の WASM エンジンが動いている
-} catch (err) {
-  // SharedArrayBuffer が無い（COOP/COEP 未設定）か、WASM の初期化に失敗した
-  showConfigurationError(err)
-}
-
-// テスト・デモ専用 ─ 本番の暗黙フォールバックとして使わないこと
-const wb = await WorkbookHandle.createDefault({ preferStub: true })
-wb.isStub // true
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  ui: {
+    profile: 'embedded',
+    theme: 'paper',
+    features: { clipboard: true, shortcuts: true }
+  },
+  toolbar: false,
+  policy: viewerPolicy(),
+  contextMenu: { mode: 'disabled' }
+})
 ```
 
-`Spreadsheet.mount()` も同じ reject を伝播します。core が組み込みのエラーパネルを描画する代わりに自分でハンドリングしたい場合は、`MountOptions.onError`（と任意で `renderError: false`）を渡してください。`onError` と各フレームワークアダプタの `error` イベント / `errorFallback` プロパティについては [埋め込みガイド](/ja/cell/embedding#ライフサイクルフック) を参照してください。
+レポートの一部だけを表示する場合は `viewport.range` を追加します。範囲の行と列は 0 始まりで、両端を含みます。詳しくは [オプション](/ja/cell/options) を参照してください。
 
-ホスト側のヘッダ設定は [バンドラ設定](/ja/cell/bundler)、実行時の動作条件は [インストール](/ja/cell/install) を参照してください。
+<CellEmbedDemo scenario="viewer" />
 
-## 参考プレイグラウンド
+### 入力セルを限定したフォーム
 
-トップページにはコンパクトなライブ関数ピッカーを置いています。より大きい参考プレイグラウンドは同梱 `formulon-cell` UI をオーバーレイの子ウィンドウで開き、Formulon 本体や完成 UI と誤認されないようにしています。
+シートを事前入力し、指定したセルだけに値を入力できるようにする場合は `fixedFormPolicy()` を使います。
 
-[参考プレイグラウンドを開く](/ja/cell/demo)
+```ts
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  ui: {
+    profile: 'embedded',
+    features: { clipboard: true, shortcuts: true }
+  },
+  policy: fixedFormPolicy([
+    { sheet: 0, r0: 2, c0: 1, r1: 20, c1: 3 }
+  ]),
+  viewport: {
+    range: { sheet: 0, r0: 0, c0: 0, r1: 24, c1: 5 },
+    tabNavigation: 'editable',
+    tabBoundary: 'stop'
+  }
+})
+```
 
-## 次に読むもの
+初期値はホストから `instance.applyChanges()` で入力し、ユーザーの編集はポリシーで制御できます。ホスト更新とユーザー操作の違いは [埋め込み](/ja/cell/embedding) で説明します。
 
-- [インストール](/ja/cell/install) ─ 導入と簡易エンジンの動作条件
-- [バンドラ設定](/ja/cell/bundler) ─ Vite / webpack / esbuild の要件
-- [埋め込みガイド](/ja/cell/embedding) ─ プリセット / 拡張 / コマンドヘルパー / ヘッドレス
-- [i18n](/ja/cell/i18n) ─ ロケール切替と辞書登録
-- [API 一覧](/ja/cell/api) ─ Spreadsheet / WorkbookHandle / events / store
+<CellEmbedDemo scenario="form" />
+
+### アプリケーションがツールバーを所有する場合
+
+周囲のツールバーやメニューをアプリケーション側で用意する場合は、`presets.minimal()` または `embedded` プロファイルから始めます。ホスト側のコンテキストメニュー、コマンドヘルパー、組み込みダイアログの起動メソッドを組み合わせられます。[モーダルとダイアログ](/ja/cell/modals) では、ネイティブ `<dialog>`、フレームワークのモーダル、全画面表示を扱います。
+
+<CellEmbedDemo scenario="profiles" />
+
+## ドキュメントの構成
+
+- [インストール](/ja/cell/install) — パッケージ、スタイル、サイズ、エラー、破棄。
+- [バンドラ設定](/ja/cell/bundler) — 現在の Vite 設定とアセット確認。
+- [オプション](/ja/cell/options) — UI プロファイル、機能スイッチ、ポリシー、ビューポート、メニュー、実行時変更。
+- [埋め込み](/ja/cell/embedding) — ビューアー、フォーム、カスタム UI、ホスト更新。
+- [モーダルとダイアログ](/ja/cell/modals) — オーバーレイの配置とダイアログ起動メソッド。
+- [フレームワークアダプター](/ja/cell/frameworks) — React と Vue の利用方法。
+- [フックとコンポーザブル](/ja/cell/hooks) — 選択、編集、言語設定に連動するホスト UI の例です。
+- [API 一覧](/ja/cell/api) — 公開 API とイベント。
+- [デモ](/ja/cell/demo) — 操作できるサンプル。
+- [拡張](/ja/cell/extensions) — 任意 UI の追加、置換、削除。
+- [テーマ](/ja/cell/theming) — 組み込みテーマと CSS トークンの上書き。
+- [国際化](/ja/cell/i18n) — ロケール辞書とラベルの上書き。
+- [ホスト連携](/ja/cell/host-integration) — ファイル、状態、印刷、ホストコールバック。

@@ -1,200 +1,189 @@
 ---
 title: formulon-cell API 一覧
-description: formulon-cell 参考 UI パッケージが公開する主な API。
+description: パッケージの入口、スプレッドシートのマウント、アプリケーションとの接続に使うインスタンスを説明します。
 ---
 
 # API 一覧
 
-`formulon-cell` は、合成可能な部品で構成されています。エンジンをラップする `WorkbookHandle`、`SpreadsheetInstance` を作る `Spreadsheet.mount()`、型付きイベントバス、zustand ベースのストア、コマンドヘルパー、i18n コントローラ、テーマコントローラを提供します。主役のエンジンは `@libraz/formulon` のまま、これらは結合試験と実装例のための参考 UI API です。Excel 互換の完成 UI レイヤではありません。
+多くのアプリケーションは `@libraz/formulon-cell` の `WorkbookHandle`、`Spreadsheet.mount()`、戻り値の `SpreadsheetInstance` を使います。React と Vue はコアの型を再エクスポートし、フレームワーク用コンポーネントを追加します。
 
-<DiagramLayers :layers="[
-  { nodes: ['@libraz/formulon（WASM エンジン）'] },
-  { nodes: ['WorkbookHandle'] },
-  { nodes: ['Spreadsheet.mount(host, options)'] },
-  { title: 'SpreadsheetInstance', nodes: [
-    { label: 'store', note: 'zustand ─ 選択範囲、undo、セルデータ' },
-    { label: 'history', note: 'undo / redo スタック' },
-    { label: 'i18n', note: 'ロケールコントローラ' },
-    { label: 'theme', note: 'setTheme() コントローラ' },
-    { label: 'events', note: 'on(event, fn) ─ 型付きイベントバス' }
-  ] },
-  { nodes: [{ label: 'ホストコード', note: 'ストアを読み、コマンドヘルパーを呼び、イベントを購読' }] }
-]" label="WorkbookHandle がエンジンを包み、Spreadsheet.mount が store・history・i18n・theme・events を公開する SpreadsheetInstance を組み立てる。ホストコードはコマンドヘルパー経由で駆動する" />
+## インポート先の選び方
 
-::: info 用語: WorkbookHandle
-`@libraz/formulon` のワークブックインスタンスとエンジン状態を包む薄いラッパーです。`Spreadsheet.mount()` とホストコードがネイティブメモリを直接管理せずに同じワークブックを共有するためにあります。
-:::
+| 用途 | インポート先 |
+| --- | --- |
+| フレームワークを使わず DOM にマウント | `@libraz/formulon-cell` → `Spreadsheet` |
+| ワークブックを読み書き | `@libraz/formulon-cell` → `WorkbookHandle` |
+| 表示する周辺 UI を選択 | `@libraz/formulon-cell` → `presets`、`resolveSpreadsheetUiOptions` |
+| 閲覧専用または入力フォームの制限 | `@libraz/formulon-cell` → `viewerPolicy`、`fixedFormPolicy` |
+| 組み込み UI の追加・置換 | `@libraz/formulon-cell` → 拡張ファクトリと `Extension` 型 |
+| React コンポーネントとフック | `@libraz/formulon-cell-react` |
+| Vue コンポーネントとコンポーザブル | `@libraz/formulon-cell-vue` |
+| スタイルシート | `@libraz/formulon-cell/styles.css` と、独立したツールバーを使う場合のアダプター用スタイルシート |
+
+パッケージ直下からはコマンドヘルパーと公開型も利用できます。完全なシンボル一覧は、インストールしたバージョンの型宣言を参照してください。このページでは主な部品の使い分けを説明します。
 
 ## WorkbookHandle
 
+`WorkbookHandle` は、ファイル層とスプレッドシート UI が共有するワークブックのハンドルです。
+
 ```ts
-import { WorkbookHandle } from '@libraz/formulon-cell'
+import { WorkbookHandle, Spreadsheet } from '@libraz/formulon-cell'
 
-// WASM エンジンで動く新規の空ワークブック
-const wb = await WorkbookHandle.createDefault()
+const workbook = await WorkbookHandle.createDefault()
+const instance = await Spreadsheet.mount(host, { workbook })
 
-// 既存の .xlsx / .xlsb / .xls / .csv をバイト列から読み込む
-const bytes = new Uint8Array(await file.arrayBuffer())
-const loaded = await WorkbookHandle.loadBytes(bytes)
+const bytes = instance.workbook.save()
+const loaded = await WorkbookHandle.loadBytes(new Uint8Array(fileBytes))
+await instance.setWorkbook(loaded)
+workbook.dispose()
 
-if (wb.isStub) {
-  // preferStub: true を明示的に渡した場合のみ発生。インメモリの簡易エンジンが
-  // 代わりに動いており、評価できる数式はごく小さいサブセットに限られる
+function closeView() {
+  instance.dispose()
 }
 ```
 
-`WorkbookHandle` が公開する static ファクトリは `createDefault(opts)` と `loadBytes(bytes, opts)` の 2 つだけです。`createEmpty()` や `fromBytes()` は存在しません。いずれも `SharedArrayBuffer` が無い場合はデフォルトで reject します。`preferStub` オプトインについては [SharedArrayBuffer が無いと reject する](/ja/cell/index#sharedarraybuffer-が無いと-reject-する) を参照してください。`Spreadsheet.mount({ workbook })` に渡し、UI とエンジンが同じ状態を共有するようにします。
+新しいワークブックには `createDefault()`、ファイルや API のバイト列には `loadBytes()` を使います。先にデータを準備する場合は `Spreadsheet.mount()` にハンドルを渡します。`WorkbookHandle.save()` は、ホストがダウンロードまたはアップロードできるバイト列を返します。
 
-### 数式のアドホック評価
+初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
 
-`WorkbookHandle.evaluateFormulaArray(addr, formula)` は、動的配列 / スピルを返す数式をワークブックに書き込まずに評価し、左上のスカラーへ畳み込む代わりに配列結果全体を返します。
-
-```ts
-const result = wb.evaluateFormulaArray({ sheet: 0, row: 0, col: 0 }, '=SEQUENCE(2,2)')
-// result.rows, result.cols, result.cells（行優先: cells[r][c]）
-```
-
-`arrayFormulaEvaluation` エンジンケーパビリティで制御され、エンジンが提供しない場合はスカラー評価を 1×1 で包んだ結果にフォールバックします。これは F9 の数式プレビューを支えており、スピル範囲を左上値ではなく `{a,b;c,d}` のような配列定数として表示します。結果型 `EvalArrayResult` は `@libraz/formulon-cell` から re-export されています。
-
-### 関数メタデータのローカライズ
-
-`WorkbookHandle.setFunctionMetadataProvider(provider)` は、ローカライズした関数シグネチャ・説明・別名を供給するプロバイダを登録し、エンジンの構造的な関数カタログにマージします。`null` を渡すと解除します。純粋なヘルパー `mergeFunctionMetadata`（`LOCALE_TAGS` と `localeTag` も同様）を export し、型 `FunctionMetadataProvider`、`FunctionMetadataEntry`、`FunctionMetadataLocalized`、`FunctionMetadataResult`、`MergedFunctionMetadataResult` を re-export します。ホストが自動補完や数式ツールチップにローカライズした関数名やシグネチャを供給する方法は [i18n](/ja/cell/i18n#関数メタデータのローカライズ) を参照してください。
-
-## マウント
+## マウントと実行中のインスタンス
 
 ```ts
-import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
+import { Spreadsheet, presets } from '@libraz/formulon-cell'
 
-const workbook = await WorkbookHandle.createDefault()
 const instance = await Spreadsheet.mount(host, {
-  workbook,
-  features: presets.standard(),
+  ui: {
+    profile: 'standard',
+    theme: 'paper',
+    features: { comments: true },
+  },
   locale: 'ja',
-  theme: 'paper'
 })
+
+instance.setTheme('ink')
+instance.openFindReplace('find')
+instance.dispose()
 ```
 
-`Spreadsheet.mount()` は `SpreadsheetInstance` を返します。公開メンバ:
+マウントはホスト要素の子要素を管理します。周囲のレイアウトで高さを与え、`@libraz/formulon-cell/styles.css` を読み込みます。マウントオプションには UI プロファイル、機能スイッチ、ポリシー、ビューポート、コンテキストメニュー、オーバーレイの配置先、ロケール、拡張、ツールバー、ホスト側のコールバックがあります。[埋め込み](/ja/cell/embedding) では用途ごとの組み合わせを説明します。
 
-| フィールド / メソッド | 役割 |
+`SpreadsheetInstance` がホスト向けの主な API です。
+
+| メンバ | 用途 |
 | --- | --- |
-| `workbook` | `WorkbookHandle` |
-| `store` | 組み込み UI が使う zustand リアクティブストア |
-| `history` | undo / redo スタック |
-| `i18n` | ランタイムロケールコントローラ |
-| `setTheme(name)` | `paper` / `ink` / 独自テーマの切替 |
-| `on(event, fn)` | 型付きイベント購読 |
-| `dispose()` | マウント解除 / リスナ解放 |
+| `workbook` | ワークブックの読み書き、再計算、保存を行います。 |
+| `applyChanges()` | サーバー、インポート、フォームから信頼済みの変更を適用します。 |
+| `setPolicy()`、`setViewportOptions()` | マウント後の権限または埋め込み範囲を変更します。 |
+| `setContextMenu()`、`setOverlayOptions()` | メニューやダイアログをホストのレイアウトに合わせます。 |
+| `setUi()`、`setFeatures()`、`setExtensions()` | マウント中の UI を調整します。 |
+| `i18n`、`setTheme()` | ラベルとテーマを切り替えます。 |
+| `on()` | 型付きの名前付きイベントを購読します。 |
+| `print()`、`captureScreenClip()` | 印刷とキャプチャのホスト処理を呼び出します。 |
+| `dispose()` | UI とイベント購読を解放します。 |
 
 ## プリセット
 
-プリセットは機能のまとまりを「UI 密度」で束ねたものです。
+`presets` は複数の機能フラグをまとめたショートカットです。
 
-| プリセット | 用途 |
+| プリセット | 開始点 |
 | --- | --- |
-| `presets.minimal()` | グリッド、数式バー、ステータスバー、基本キーマップ |
-| `presets.standard()` | 表示ツールバー、クイック分析、セッション内チャートオーバーレイ、ワークブックオブジェクトインスペクタ、コンテキストメニュー、検索 / 置換、クリップボード、書式コピー、ホイールスクロール |
-| `presets.full()` | デフォルトのフル UI。書式ダイアログ、形式を選択して貼り付け、条件付き書式、反復計算、ジャンプ機能、ページ設定、名前定義、ハイパーリンク、ピボットテーブル作成、入力規則、自動補完、ホバーコメント、スプレッドシート用キーマップ |
+| `presets.minimal()` | コンパクトなグリッドと基本編集、ステータス表示です。 |
+| `presets.standard()` | 一般的な移動、クリップボード、選択、分析機能です。 |
+| `presets.full()` | 組み込みスプレッドシート UI を広く有効にします。 |
 
-::: tip 必要最小のプリセットを選ぶ
-プリセットは DOM とバンドルを増やします。ホストが既に独自ダイアログを持っているなら `presets.minimal()` まで下げ、[コマンドヘルパー](#コマンドヘルパー) を直接呼ぶのが軽量です。
-:::
-
-## 拡張
-
-プリセット以外に、置換可能な UI 部品は引数を取らないファクトリとして、`features` とは別の `extensions` 配列に渡します。
+埋め込みコンポーネントでは、リボンや印刷の表示もまとめて制御できる `ui: { profile: 'embedded' }` が開始点として分かりやすくなります。個別のスイッチは `ui.features` に指定します。`ui.features` と `features` の両方に同じキーを渡した場合は、明示した `features` が優先されます。
 
 ```ts
-import { Spreadsheet, presets, findReplace, formatDialog, hoverComment } from '@libraz/formulon-cell'
-
 const instance = await Spreadsheet.mount(host, {
-  workbook,
-  features: { ...presets.minimal(), findReplace: false },
-  extensions: [findReplace(), formatDialog(), hoverComment()]
+  ui: {
+    profile: 'embedded',
+    theme: 'paper',
+    features: { contextMenu: false, sheetTabs: false },
+  },
+  features: { clipboard: true },
 })
 ```
 
-全ファクトリのカタログ、`features` と `extensions` の使い分け、ライフサイクルは [埋め込みガイド](/ja/cell/embedding#選択的な拡張) を参照。
+## 拡張 {#extensions}
+
+拡張は、特定の UI 機能やホスト連携を追加します。組み込みファクトリはパッケージ直下と `@libraz/formulon-cell/extensions` から利用できます。組み込みを置き換える場合は対応する機能フラグを無効にしてから、同じ ID の拡張を渡します。
+
+```ts
+import { Spreadsheet, findReplace, presets } from '@libraz/formulon-cell'
+
+const instance = await Spreadsheet.mount(host, {
+  features: { ...presets.minimal(), findReplace: false },
+  extensions: [findReplace()],
+})
+```
+
+合成パターンと組み込み機能のグループは [拡張](/ja/cell/extensions) を参照してください。
+
+`openFindReplace()` などのインスタンスメソッドは組み込み機能を開きます。`extensions` で追加したダイアログは `instance.features[id]` のハンドルを使って開いてください。組み込み機能を無効にすると、その起動メソッドも動作しません。
 
 ## イベント
 
-```ts
-const off = instance.on('selectionChange', (event) => {
-  console.log(event.active)
-})
+`instance.on(name, handler)` は解除関数を返します。イベントのデータは TypeScript で型付けされています。
 
-off()
-```
-
-主なイベント:
-
-| Event | 発火タイミング |
+| イベント | 用途 |
 | --- | --- |
-| `cellChange` | セル値 / 数式が編集された |
-| `selectionChange` | アクティブセルや選択矩形が変わった |
-| `workbookChange` | sheet 追加・削除・改名 / defined name 変更 |
-| `localeChange` | `i18n.setLocale()` が辞書を切り替えた |
-| `themeChange` | `setTheme()` がテーマを切り替えた |
-| `recalc` | エンジンの再計算が完了した |
-
-## Store
-
-組み込み UI と拡張は、マウントごとに作られる [zustand](https://github.com/pmndrs/zustand) の vanilla ストアを読みます。これは `instance.store` として公開されます。グローバルな `useSpreadsheetStore` フックは存在しません ─ `Spreadsheet.mount()` を呼ぶたびに専用のストアが作られ、ホストはそのインスタンスに直接接続します。
+| `changeBatch` | 適用されたセル更新に反応します。 |
+| `cellChange` | 値または数式をホスト側へ反映します。 |
+| `selectionChange` | インスペクターやホスト操作の状態を更新します。 |
+| `workbookChange` | ワークブックの差し替えに反応します。 |
+| `localeChange` | ロケールの選択を保存します。 |
+| `themeChange` | テーマの選択を保存または同期します。 |
+| `recalc` | 再計算に依存するホスト表示を更新します。 |
 
 ```ts
-const selection = instance.store.getState().selection
-
-const unsubscribe = instance.store.subscribe((state) => {
-  console.log(state.selection)
+const unsubscribe = instance.on('selectionChange', ({ active, range }) => {
+  inspector.show({ active, range })
 })
+
+unsubscribe()
 ```
 
-`subscribe` はセレクタではなく、state 全体を受け取るリスナ（`(state, prevState) => void`）を取ります。`State` の一部だけに関心がある場合は、コールバック内でフィルタしてください。
+保存や信頼済み更新は [ホスト統合](/ja/cell/host-integration) を参照してください。
 
 ## コマンドヘルパー
 
-組み込み UI を使わず、ホスト独自の UI から呼べるコマンドヘルパーも export しています。
+パッケージ直下からは、独自のボタンやダイアログを作るアプリケーション向けに、機能ごとのヘルパーを利用できます。書式、クリップボードと CSV / TSV、検索と置換、コメント、ハイパーリンク、入力規則、フィルター、テーブル、シートビュー、ページ設定、グラフ、スライサー、保護などが含まれます。各ヘルパーの引数は、インスタンスのストアまたはワークブックの状態に対応しています。
 
-- クリップボード / 形式を選択して貼り付け
-- 書式設定
-- 定義名、コメント、ハイパーリンク、入力規則
-- ステータスバー向けの選択範囲集計
-- ワークブックオブジェクト / 互換性サマリ
-- シート表示、ページ設定、保護、参照元 / 参照先トレース、スライサー、セッション内チャート
+組み込みダイアログを開く場合は `openFormatDialog()` や `openPageSetup()` などのインスタンスメソッドを使います。周囲の UI をホストが所有する場合はコマンドヘルパーを使います。
 
-この分離は意図的です。同梱プレイグラウンドはこれらを使って参考 UI を構成しますが、アプリ側はプレイグラウンドの UI を採用せず、エンジン連携済みコマンドだけを再利用できます。
+## ストアへのアクセス
 
-## i18n コントローラ
+`instance.store` は、選択範囲、レイアウト、セル状態を購読する必要があるホスト連携で使えます。ストアはインスタンスごとに作られます。React / Vue ではコンポーネントの寿命と購読解除が連動する `useSelection()` や `useSpreadsheet()` が使いやすくなります。
+
+## i18n コントローラ {#i18n-controller}
 
 ```ts
 instance.i18n.setLocale('ja')
-instance.i18n.extend('ja', { contextMenu: { copy: 'コピーする' } })
-
-import fr from './fr.js'
-instance.i18n.register('fr', fr)
-instance.i18n.setLocale('fr')
+instance.i18n.extend('ja', {
+  contextMenu: { copy: 'コピー' },
+})
 ```
 
-辞書の形と上書きパターンは [i18n](/ja/cell/i18n) を参照。
+`i18n` は `setLocale()`、`extend()`、`register()`、`subscribe()`、解決済みの `strings` を公開します。実行時の切り替えは [国際化](/ja/cell/i18n) を参照してください。
 
-## テーマコントローラ
-
-`setTheme('paper' | 'ink' | string)` で同梱テーマ / カスタムテーマを切り替えます。CSS 変数で独自テーマを定義できます。
-
-```css
-.fc-theme-mine {
-  --fc-bg: #faf6e8;
-  --fc-rule: #b09870;
-  /* トークンの全語彙は styles/tokens.css に定義されています */
-}
-```
+## テーマコントローラ {#theme-controller}
 
 ```ts
-instance.setTheme('mine')
+instance.setTheme('paper')
+instance.setTheme('ink')
+instance.setTheme('contrast')
+instance.setTheme('brand') // 独自パレットの定義が必要です
 ```
 
-## 次に読むもの
+組み込みテーマは `paper`、`ink`、`contrast` です。任意の名前を `data-fc-theme` に対応するホスト側 CSS で使えます。組み込みテーマの色は自動で引き継がれないため、完全なカスタムパレットが必要です。トークンは [テーマ](/ja/cell/theming) を参照してください。
 
-- [埋め込みガイド](/ja/cell/embedding) ─ プリセットと拡張のアーキテクチャ、ヘッドレスモード
-- [i18n](/ja/cell/i18n) ─ 辞書登録 / 上書き / 切替
-- [バンドラ設定](/ja/cell/bundler) ─ ホストに必要な配信設定
+## 次に読むページ
+
+- [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
+- [埋め込み](/ja/cell/embedding) ─ full、minimal、embedded の使い分け
+- [React / Vue アダプター](/ja/cell/frameworks) ─ コンポーネントのプロパティ、イベント、フック、コンポーザブル
+- [ホスト統合](/ja/cell/host-integration) ─ ファイル、保存状態、印刷、ネイティブフック
+- [拡張](/ja/cell/extensions) ─ 任意 UI の追加、置換、削除
+- [テーマ](/ja/cell/theming) ─ 組み込みテーマと CSS トークンの上書き
+- [国際化](/ja/cell/i18n) ─ ロケール辞書とラベルの上書き
+- [モーダルとダイアログ](/ja/cell/modals) ─ オーバーレイの配置とダイアログの入口

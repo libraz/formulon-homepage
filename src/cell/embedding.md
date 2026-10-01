@@ -1,346 +1,200 @@
 ---
 title: Embedding formulon-cell
-description: Compose presets, extensions, and command helpers from the formulon-cell reference UI.
+description: Embed the spreadsheet UI with host-owned policies, commands, and lifecycle.
 ---
 
-# Embedding Guide
+# Embedding guide
 
-`formulon-cell` is a reference UI library, so its pieces are intentionally reusable. The bundled playground mounts the package with `presets.full()`, but hosts that adopt ideas from it should usually start with a smaller preset and add only the pieces they need.
+The core API separates the spreadsheet surface from the surrounding application. The host, or embedding application, chooses the visible UI, the cells that may be edited, the placement of floating UI, and the lifecycle of the workbook.
 
-Do not treat the default chrome as a complete Excel-compatible application shell. It is useful for integration testing and examples; production products should decide their own feature coverage, UX, and quality bar.
-
-::: info Glossary: preset vs extension
-A *preset* is a curated list of features. An *extension* is a single composable feature factory. `presets.minimal()` / `presets.standard()` / `presets.full()` each return a plain `FeatureFlags` object — not an array of extensions; you can build the same set of flags yourself.
-:::
-
-## Three host shapes
-
-<DiagramLayers :layers="[
-  { nodes: ['Host application'] },
-  { nodes: ['Spreadsheet.mount(host, options)'] },
-  { title: 'What mount() wires up', nodes: [
-    { label: 'WorkbookHandle', note: 'WASM engine, or stub engine if preferStub: true' },
-    { label: 'features + extensions', note: 'chrome — dialogs, toolbars, panels' },
-    { label: 'store (zustand)', note: 'selection, undo, cell data' }
-  ] },
-  { nodes: [{ label: 'Host code', note: 'reads instance.store.getState(), calls command helpers, subscribes to events' }] }
-]" label="Host application mounts Spreadsheet, which wires up WorkbookHandle, features/extensions, and the store; host code then reads and drives the store directly" />
-
-1. **Drop-in spreadsheet.** Use a preset, accept the default chrome, customize via i18n and themes.
-2. **Mixed chrome.** Use `presets.minimal()` and add only the dialogs / toolbars you need as extensions.
-3. **Headless surface.** Mount the canvas without chrome, drive it from your application's own toolbar via [command helpers](#command-helpers).
-
-## Drop-in mount
+Before mounting, import the package stylesheet and give the host a height. See [Install](/cell/install) for the CSS import, sizing example, and disposal contract.
 
 ```ts
-import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
-import '@libraz/formulon-cell/styles.css'
-
-const host = document.getElementById('sheet')!
-const workbook = await WorkbookHandle.createDefault()
-
 const instance = await Spreadsheet.mount(host, {
   workbook,
-  features: presets.full(),
-  locale: 'en',
-  theme: 'paper'
+  ui: { profile: 'standard', theme: 'paper' },
+  policy,
+  viewport,
+  contextMenu,
+  overlays
 })
 ```
 
-## Selective extensions
+The address types used in these options are zero-based. A cell is `{ sheet, row, col }`; a range is `{ sheet, r0, c0, r1, c1 }`, with both ends included.
 
-`MountOptions` has two independent knobs for feature composition:
+## Use case: report viewer
 
-- **`features: FeatureFlags`** — a plain object of booleans that turns a built-in on or off (e.g. `{ findReplace: false }`). `presets.minimal()` / `presets.standard()` / `presets.full()` each return one of these objects — never an array, so don't spread one into a list.
-- **`extensions: ExtensionInput[]`** — an array of extension *factories* (zero-argument functions returning an `Extension`) that mount alongside — or, once you've disabled the matching built-in, in place of — the default chrome.
-
-<DiagramLayers :layers="[
-  { nodes: ['MountOptions'] },
-  { nodes: [
-    { label: 'features: FeatureFlags', note: '{ findReplace: false } — object, toggles a built-in off/on' },
-    { label: 'extensions: ExtensionInput[]', note: '[findReplace(), formatDialog()] — array of factories' }
-  ] }
-]" label="MountOptions.features is a boolean-flag object; MountOptions.extensions is a separate array of zero-argument extension factories" />
-
-Replaceable factories live in the same export — verified against `extensions/index.ts`, called with **no arguments**:
+For a report page, keep the grid compact and make every mutation unavailable:
 
 ```ts
 import {
   Spreadsheet,
+  viewerPolicy,
+  WorkbookHandle
+} from '@libraz/formulon-cell'
+import '@libraz/formulon-cell/styles.css'
+
+const workbook = await WorkbookHandle.loadBytes(reportBytes)
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  ui: {
+    profile: 'embedded',
+    theme: 'paper',
+    features: { clipboard: true, shortcuts: true }
+  },
+  toolbar: false,
+  policy: viewerPolicy(),
+  viewport: {
+    range: { sheet: 0, r0: 0, c0: 0, r1: 40, c1: 8 },
+    tabBoundary: 'stop'
+  },
+  contextMenu: { mode: 'disabled' }
+})
+```
+
+`viewerPolicy()` keeps selection and copying available while blocking editing. The host can still provide its own export or navigation buttons around the grid.
+
+<CellEmbedDemo scenario="viewer" />
+
+## Use case: fixed-input form
+
+For a form, declare the input cells and guide Tab through them:
+
+```ts
+import {
+  fixedFormPolicy,
+  Spreadsheet,
+  WorkbookHandle
+} from '@libraz/formulon-cell'
+
+const workbook = await WorkbookHandle.createDefault()
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  ui: {
+    profile: 'embedded',
+    features: { clipboard: true, shortcuts: true }
+  },
+  policy: fixedFormPolicy([
+    { sheet: 0, r0: 2, c0: 1, r1: 20, c1: 3 }
+  ]),
+  viewport: {
+    range: { sheet: 0, r0: 0, c0: 0, r1: 24, c1: 5 },
+    tabNavigation: 'editable',
+    tabBoundary: 'stop'
+  }
+})
+
+// Host-owned prefill or refresh. This is not a user editing command.
+instance.applyChanges([
+  { addr: { sheet: 0, row: 2, col: 1 }, input: 'Ada Lovelace' }
+])
+```
+
+`fixedFormPolicy()` accepts a range list, an `EditableCells` predicate, or an object containing `ranges` or `predicate`. The helper allows value entry, clearing, paste, and fill in the declared cells. Use an explicit `InteractionPolicy` when the form needs a different set of operations. While a policy is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu; other built-ins remain unavailable even when their flags are true. See [Options](/cell/options#interaction-policy).
+
+<CellEmbedDemo scenario="form" />
+
+## Host-owned updates and user commands
+
+`instance.applyChanges()` is a trusted host update. It is useful for prefilled values, server refreshes, and imports that the host has authorized. It addresses the workbook, including cells outside the current viewport, and the default history mode resets user history after a successful update.
+
+Use `instance.commands.execute()` for user cell edits that must follow the active interaction policy. Exported low-level command helpers are trusted host APIs; the host must authorize their use. If a host update should be recorded as an undoable operation, pass `history: 'record'` and handle a rejected `ChangeBatchResult`:
+
+```ts
+const result = instance.applyChanges(
+  [{ addr: { sheet: 0, row: 4, col: 2 }, input: 'Approved' }],
+  { history: 'record', origin: 'server-refresh' }
+)
+
+if (result.status === 'rejected') showUpdateError(result.rejected)
+```
+
+## Use case: host-owned toolbar and menu
+
+Start with a small UI profile and let the application own the surrounding controls:
+
+```ts
+import {
   presets,
-  findReplace,
-  formatDialog,
-  namedRangeDialog,
-  hyperlinkDialog,
-  pivotTableDialog,
-  validationList,
-  hoverComment,
-  viewToolbar,
-  quickAnalysis
+  Spreadsheet
 } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(host, {
   workbook,
-  // Disable the built-ins you want to replace or drop...
-  features: { ...presets.minimal(), findReplace: false },
-  // ...and mount your own selection through `extensions` instead.
-  extensions: [findReplace(), formatDialog(), namedRangeDialog()]
-})
-```
-
-`autocomplete` has no matching extension factory — it is a `features` flag only (`features: { autocomplete: false }` turns it off; there is nothing to substitute it with).
-
-The order in the `extensions` array is the activation order. Most extensions are independent, but a few cooperate (e.g. `pasteSpecial` integrates with the clipboard command helper). When in doubt, check the order `allBuiltIns` mounts internally.
-
-## Headless mount
-
-```ts
-const headless = await Spreadsheet.mount(host, {
-  workbook,
   features: presets.minimal(),
-  locale: 'en'
-})
-
-// Read what the engine knows
-const state = headless.store.getState()
-const active = state.selection.active
-```
-
-From there, drive selection and edits from your own toolbar using [command helpers](#command-helpers).
-
-## Command helpers
-
-The package exports flat, engine-backed command functions — the same ones the chrome and extensions call internally — that operate on a `State` snapshot (`instance.store.getState()`), not on the store object itself. There are no `clipboardCommands` / `formattingCommands` grouped namespaces; import the functions you need directly:
-
-```ts
-import { copy, cut, pasteTSV, applyPasteSpecial, toggleBold, setNumFmt, addConditionalRule, listComments } from '@libraz/formulon-cell'
-
-const state = instance.store.getState()
-
-copy(state)                                    // clipboard
-toggleBold(state, instance.store)               // formatting (some helpers also take the store)
-setNumFmt(state, instance.store, '#,##0.00')
-listComments(state)                             // read-only helpers take just the state
-addConditionalRule(instance.store, {             // a few rule/history helpers take the store directly
-  kind: 'cell-value',
-  range: { sheet: 0, r0: 1, c0: 1, r1: 10, c1: 1 },
-  op: '>',
-  a: 100,
-  apply: { fill: '#ffe4e4' }
-})
-```
-
-Check `@libraz/formulon-cell`'s `index.ts` re-exports for the full list — clipboard (`copy`/`cut`/`pasteTSV`/`applyPasteSpecial`), formatting (`toggleBold`/`setNumFmt`/`setFont`/…), named ranges (`listDefinedNames`/`upsertDefinedName`/…), comments (`setComment`/`listComments`/…), hyperlinks (`setHyperlink`/`listHyperlinks`/…), conditional formatting (`addConditionalRule`/`listConditionalRules`/…), and selection aggregates (`aggregateSelection`/`visibleStatusAggregates`) for status bars.
-
-::: tip Same code path as the built-in chrome
-Whatever the built-in toolbars do, the command helpers do the same way. That means features stay in sync — a host-built toolbar gets the same undo entries, the same recalc behavior, and the same event emissions.
-:::
-
-## Ribbon toolbar
-
-The quickest way to add the ribbon is the `toolbar` option on `Spreadsheet.mount`. It builds the ribbon inside the host in a single call — no separate toolbar host to wire — and the ribbon shares the grid's `data-fc-theme`, so one `setTheme()` re-themes both surfaces:
-
-```ts
-const instance = await Spreadsheet.mount(host, {
-  workbook,
-  features: presets.full(),
-  toolbar: true, // or a MountToolbarOptions object
-})
-// instance.toolbar is the ToolbarInstance (null when the toolbar is not requested)
-```
-
-Pass a `MountToolbarOptions` object instead of `true` to add backstage content (`createBackstageView`), hooks, submenu factories, a ribbon-tab profile, or lifecycle callbacks (`onTabChange`, …) while keeping the single call — the fields you set are merged over the built-in defaults. `instance.dispose()` tears the toolbar down with the rest of the instance.
-
-In React / Vue, the framework packages' ready-made `SpreadsheetToolbar` component wraps the same ribbon — a thin adapter over core that ships the ribbon DOM, menu factories, activation model, and dropdown dispatcher for you:
-
-```tsx
-// React
-import { Spreadsheet, SpreadsheetToolbar } from '@libraz/formulon-cell-react'
-import '@libraz/formulon-cell-react/toolbar.css'
-
-export function Sheet() {
-  const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
-  const [activeTab, setActiveTab] = useState<RibbonTab>('home')
-
-  return (
-    <>
-      <SpreadsheetToolbar
-        instance={instance}
-        activeTab={activeTab}
-        locale="en"
-        onTabChange={setActiveTab}
-      />
-      <Spreadsheet locale="en" onReady={setInstance} />
-    </>
-  )
-}
-```
-
-```vue
-<!-- Vue -->
-<script setup lang="ts">
-import { ref } from 'vue'
-import { type RibbonTab, type SpreadsheetInstance } from '@libraz/formulon-cell'
-import { Spreadsheet } from '@libraz/formulon-cell-vue'
-import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
-import '@libraz/formulon-cell-vue/toolbar.css'
-
-const instance = ref<SpreadsheetInstance | null>(null)
-const activeTab = ref<RibbonTab>('home')
-</script>
-
-<template>
-  <SpreadsheetToolbar :instance="instance" :active-tab="activeTab" locale="en" @tab-change="(tab) => (activeTab = tab)" />
-  <Spreadsheet locale="en" @ready="(inst) => (instance = inst)" />
-</template>
-```
-
-Use the `dropdownActions` prop to override individual ribbon dropdown handlers (script/add-in actions, protect dialogs, etc.) without forking the ribbon:
-
-```tsx
-<SpreadsheetToolbar
-  instance={instance}
-  activeTab={activeTab}
-  locale="en"
-  onTabChange={setActiveTab}
-  dropdownActions={{ applyProtectAction: openProtectDialog }}
-/>
-```
-
-Both adapters mirror the same prop shape and delegate to core, so framework wrappers and host-built toolbars use the same command path.
-
-### Separate toolbar host (advanced)
-
-When the single-call `toolbar` option isn't enough — a host without React or Vue that needs the ribbon in a **fully separate DOM host** (outside `.fc-host`), or lower-level control than `SpreadsheetToolbar` exposes — call `Spreadsheet.mountToolbar(host, instance, opts)` from core directly. Its `theme` option and `ToolbarInstance.setTheme()` speak the same `paper` / `ink` / `contrast` vocabulary as the grid:
-
-```vue
-<script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
-import { Spreadsheet as CoreSpreadsheet, type RibbonTab, type SpreadsheetInstance, type ToolbarInstance } from '@libraz/formulon-cell'
-import { Spreadsheet } from '@libraz/formulon-cell-vue'
-
-const instance = ref<SpreadsheetInstance | null>(null)
-const activeTab = ref<RibbonTab>('home')
-const toolbarHost = ref<HTMLDivElement | null>(null)
-let toolbar: ToolbarInstance | null = null
-
-watch(instance, async (next) => {
-  await nextTick()
-  if (!next || !toolbarHost.value) return
-  toolbar?.dispose()
-  toolbar = CoreSpreadsheet.mountToolbar(toolbarHost.value, next, {
-    lang: 'en',
-    activeTab: activeTab.value,
-    onTabChange: (tab) => (activeTab.value = tab)
-  })
-})
-</script>
-
-<template>
-  <div ref="toolbarHost"></div>
-  <Spreadsheet locale="en" @ready="(inst) => (instance = inst)" />
-</template>
-```
-
-For host audits or custom chrome, import the shared manifests from core (`ribbonActivationEntries`, `ribbonSurfaceCommandIds`, `DYNAMIC_RIBBON_DROPDOWN_HANDLER_ATTRS`) instead of reconstructing ribbon command sets.
-
-## Lifecycle hooks
-
-Mount returns a `SpreadsheetInstance` with `dispose()`. `Spreadsheet.mount()` **rejects** if it can't produce an instance (most commonly when the WASM engine can't start — see [Stub engine](/cell/index#no-sharedarraybuffer-no-silent-fallback)), so wrap it in try/catch or pass `MountOptions.onError`:
-
-```ts
-useEffect(() => {
-  let instance: SpreadsheetInstance | undefined
-  ;(async () => {
-    try {
-      instance = await Spreadsheet.mount(host, {
-        workbook,
-        features: presets.minimal(),
-        onError: (err) => showConfigurationError(err),
+  toolbar: false,
+  contextMenu: {
+    mode: 'host',
+    onOpen: ({ cell, selection, permission }) => {
+      openCellMenu({
+        cell,
+        selection,
+        canEdit: permission({
+          operation: 'valueEdit',
+          origin: 'contextMenu',
+          effects: [{ kind: 'cells', cells: [cell] }]
+        }).allowed
       })
-    } catch (err) {
-      // onError already ran; this catch guards callers that omit it.
-      showConfigurationError(err)
     }
-  })()
-  return () => instance?.dispose()
-}, [])
+  }
+})
 ```
 
-`dispose()` detaches event listeners, unmounts DOM, and releases the engine reference held by the chrome. The `WorkbookHandle` itself is owned by the caller; release it with `wb.dispose()` when the application is done. The React and Vue adapters expose the same failure as an `onError` prop / `error` event plus an `errorFallback` prop for a framework-native fallback UI.
+The `host` context-menu mode suppresses the browser and built-in menu and hands the current cell, selection, and permission query to the application. A host menu can call a public command helper or open a host modal.
 
-## Stub-engine detection
-
-`preferStub: true` is the explicit, opt-in way to get the in-memory stub engine — for tests and demos only, never as an automatic production fallback:
+For a built-in menu with one host action, use `mode: 'builtIn'` and a `transform` callback to change the current item snapshot:
 
 ```ts
-import { WorkbookHandle } from '@libraz/formulon-cell'
+import type { ContextMenuOptions } from '@libraz/formulon-cell'
 
-const wb = await WorkbookHandle.createDefault({ preferStub: true })
-if (wb.isStub) {
-  showBanner('Running on the stub engine — only a small formula subset evaluates, and save is unavailable.')
+const contextMenu: ContextMenuOptions = {
+  mode: 'builtIn' as const,
+  transform: ({ defaultItems }) => [
+    ...defaultItems,
+    {
+      id: 'host:details',
+      label: 'Open details',
+      action: ({ cell }) => openDetails(cell)
+    }
+  ]
 }
 ```
 
-`wb.isStub` (and the module-level `isUsingStub()`) reflect whether the stub engine is in use. It does not change at runtime once the workbook is created. Without `preferStub`, a missing `SharedArrayBuffer` makes `createDefault()` reject instead — see [Bundler setup](/cell/bundler) for the COOP/COEP requirements.
+Use `{ mode: 'disabled' }` when the host supplies another interaction surface or when a compact viewer should have no right-click menu.
 
-## React adapter
+## Runtime changes
 
-```tsx
-import { Spreadsheet, presets } from '@libraz/formulon-cell-react'
+Settings can change after mount without replacing the workbook:
 
-export function Sheet() {
-  return (
-    <Spreadsheet
-      features={presets.standard()}
-      locale="en"
-      theme="paper"
-      onSelectionChange={(event) => console.log(event.active)}
-    />
-  )
+```ts
+instance.setUi({ profile: 'minimal', theme: 'ink' })
+instance.setPolicy(viewerPolicy())
+instance.setViewportOptions({
+  range: { sheet: 0, r0: 0, c0: 0, r1: 30, c1: 6 }
+})
+instance.setContextMenu({ mode: 'disabled' })
+instance.setOverlayOptions({ root: modalSurface })
+instance.setTheme('paper')
+instance.setToolbar(false)
+```
+
+Use `setFeatures()` for a direct `FeatureFlags` update. `setUi()` resolves a profile and its UI switches; the original top-level `features`, `theme`, and `toolbar` options are also reapplied. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly. See [Options](/cell/options) for the precedence rules and option reference.
+
+<CellEmbedDemo scenario="host-sync" />
+
+## Lifecycle
+
+Keep the instance and the workbook under the same view owner. Dispose both when the view is removed:
+
+```ts
+const instance = await Spreadsheet.mount(host, { workbook })
+
+function closeView() {
+  instance.dispose()
+  workbook.dispose()
 }
 ```
 
-The React adapter mounts and disposes for you and forwards events as props. Pass `onError` and/or `errorFallback` to handle a rejected mount (see [Lifecycle hooks](#lifecycle-hooks)) instead of letting it surface as an unhandled rejection. For more control, drop down to the vanilla package.
+For asynchronous mounts, keep the host's unmount path safe when initialization rejects. Framework adapters expose the same lifecycle through their component props and events.
 
-`@libraz/formulon-cell-react` also exports hooks for reading instance state without wiring up your own store subscription:
-
-| Hook | Description |
-| --- | --- |
-| `useSelection(instance)` | Subscribe to the active selection |
-| `useSpreadsheet(instance, selector, fallback)` | Subscribe to a selector over the store's `State`, with an SSR-safe fallback |
-| `useI18n(instance)` | Read the current locale + strings, reactive to runtime `setLocale`/`extend`/`register` |
-| `useSpreadsheetEvent(instance, event, handler)` | Subscribe to a `SpreadsheetInstance` lifecycle event (`cellChange`, `selectionChange`, …) |
-
-## Vue adapter
-
-```vue
-<script setup lang="ts">
-import { Spreadsheet, presets } from '@libraz/formulon-cell-vue'
-</script>
-
-<template>
-  <Spreadsheet
-    :features="presets.standard()"
-    locale="en"
-    theme="paper"
-    @selection-change="(event) => console.log(event.active)"
-    @error="(err) => showConfigurationError(err)"
-  />
-</template>
-```
-
-`@libraz/formulon-cell-vue` exports the same set of composables as the React adapter, for reading instance state without wiring up your own store subscription:
-
-| Composable | Description |
-| --- | --- |
-| `useSelection(instance)` | Subscribe to the active selection |
-| `useSpreadsheet(instance, selector, fallback)` | Subscribe to a selector over the store's `State`, with an SSR-safe fallback |
-| `useI18n(instance)` | Read the current locale + strings, reactive to runtime `setLocale`/`extend`/`register` |
-| `useSpreadsheetEvent(instance, event, handler)` | Subscribe to a `SpreadsheetInstance` lifecycle event (`cellChange`, `selectionChange`, …) |
-
-## Read next
-
-- [i18n](/cell/i18n) — locale registration and overrides.
-- [API surface](/cell/api) — events, store, command helpers.
-- [Bundler setup](/cell/bundler) — what the host must serve.
+A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.

@@ -1,108 +1,151 @@
 ---
-title: React / Vue アダプタ
-description: formulon-cell の framework パッケージが提供する <Spreadsheet> / <SpreadsheetToolbar> コンポーネント、hooks / composables、error / strings プロパティ。
+title: React / Vue アダプター
+description: formulon-cell を React / Vue から利用し、コアと同じ UI オプション、ホスト連携、イベントを使います。
 ---
 
-# フレームワークアダプタ
+# React / Vue アダプター
 
-`@libraz/formulon-cell-react` と `@libraz/formulon-cell-vue` は、vanilla の `@libraz/formulon-cell` core をフレームワーク流のプロパティ、イベント、状態フックで包みます。どちらも薄い層です ─ マウント、dispose、リボンの挙動はすべて core にあるため、2 つのアダプタは同じ形を鏡写しにし、互いに同期し続けます。`formulon-cell` の他の部分と同じく、結合試験と実装例のための参考品質の wrapper であり、堅牢化された本番向けコンポーネントライブラリではありません。
+`@libraz/formulon-cell-react` と `@libraz/formulon-cell-vue` は、`Spreadsheet` コンポーネント、独立したツールバーコンポーネント、状態を読むためのフック / コンポーザブルを提供します。マウントされる UI はコアパッケージと同じため、[埋め込み](/ja/cell/embedding) に記載したオプションをそのまま使えます。
 
-## `<Spreadsheet>`
+## React でのマウント例
 
-| プロパティ | 型 | 補足 |
-| --- | --- | --- |
-| `workbook` | `WorkbookHandle` | 読み込み済みワークブック。省略時は新規のデフォルトワークブックを作成 |
-| `ui` | `SpreadsheetUiOptions` | プリセット + 機能スイッチの簡易指定。`theme` / `features` と両方渡した場合はそちらが優先 |
-| `theme` | `MountOptions['theme']` | 変更時に `instance.setTheme()` を呼ぶ。再マウントなし |
-| `locale` | `MountOptions['locale']` | 変更時に `instance.i18n.setLocale()` を呼ぶ |
-| `strings` | `MountOptions['strings']` | 文字列単位の上書き。`i18n.extend()` 経由で適用 |
-| `features` | `FeatureFlags` | 組み込み機能を個別に on/off |
-| `extensions` | `ExtensionInput[]` | 組み込みと並べて / 代わりにマウントするカスタム拡張 |
-| `functions` | `MountOptions['functions']` | `instance.formula` に登録するホスト側カスタム関数 |
-| `seed` | `MountOptions['seed']` | セル初期投入のコールバック（主にデモ用） |
-| `printerProfiles` | `readonly PrinterProfile[]` | [ホスト統合](/ja/cell/host-integration#プリンタプロファイル-api) 参照 |
-| `printerProfileId` | `string` | アクティブなホスト側プリンタプロファイル id |
-| `refreshPrinterProfiles` | `MountOptions['refreshPrinterProfiles']` | ネイティブ / Electron のプリンタ検出フック |
-| `captureScreenClip` | `MountOptions['captureScreenClip']` | 挿入 > スクリーンショット > 画面の領域 を支えるフック |
-| `uploadStatus` | `MountOptions['uploadStatus']` | ステータスバーのアップロード状態インジケータ |
-| `macroRecording` | `MountOptions['macroRecording']` | ステータスバーのマクロ記録インジケータ |
-| `errorFallback` | React: `ReactNode \| ((error: unknown) => ReactNode)` · Vue: `(error: unknown) => VNodeChild` | マウントが reject したときに表示するフレームワークネイティブな UI |
-| `className` / `style`（React）、`class` / `style`（Vue） | — | ホスト要素へ転送 |
-
-ランタイムのプロパティ変更は、再マウントではなく命令的 API 経由で適用されます ─ `theme`、`locale`、`strings`、`workbook`、`features`、`extensions`、`printerProfiles`、`printerProfileId`、`uploadStatus`、`macroRecording` はいずれも動作中のインスタンスをその場で更新するため、選択範囲、フォーカス、イベント購読はプロパティ変更をまたいで生き残ります。
-
-### React
+アプリケーションでコアのスタイルシートを 1 回読み込みます。コンポーネントの親に高さを与えると、グリッドがその領域を使います。
 
 ```tsx
-import { Spreadsheet, presets } from '@libraz/formulon-cell-react'
+import '@libraz/formulon-cell/styles.css'
+import '@libraz/formulon-cell-react/toolbar.css'
+import {
+  Spreadsheet,
+  fixedFormPolicy,
+} from '@libraz/formulon-cell-react'
 
-<Spreadsheet
-  features={presets.standard()}
-  locale="ja"
-  theme="paper"
-  onReady={(instance) => console.log('mounted', instance.workbook.version)}
-  onCellChange={(e) => console.log(e)}
-  onSelectionChange={(e) => console.log(e.active)}
-  onWorkbookChange={(e) => console.log(e)}
-  onLocaleChange={(e) => console.log(e)}
-  onThemeChange={(e) => console.log(e)}
-  onRecalc={(e) => console.log(e)}
-  onError={(err) => showConfigurationError(err)}
-  errorFallback={(err) => <ConfigErrorPanel error={err} />}
-/>
+const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+
+export function OrderForm() {
+  return (
+    <div className="cell-frame">
+      <Spreadsheet
+        ui={{
+          profile: 'embedded',
+          theme: 'paper',
+          features: { shortcuts: true, clipboard: true },
+        }}
+        policy={fixedFormPolicy([formRange])}
+        viewport={{
+          range: formRange,
+          tabNavigation: 'editable',
+          tabBoundary: 'stop',
+        }}
+        contextMenu={{ mode: 'disabled' }}
+        onReady={(instance) => console.log('spreadsheet ready', instance)}
+        onChangeBatch={(event) => console.log('applied batch', event.revision)}
+        onCellChange={(event) => console.log('draft changed', event.addr, event.value)}
+      />
+    </div>
+  )
+}
 ```
 
-`SpreadsheetRef` は命令的アクセスのための生きたインスタンスを公開します。
+```css
+.cell-frame {
+  height: 560px;
+  min-height: 0;
+}
 
-```tsx
-const ref = useRef<SpreadsheetRef>(null)
-ref.current?.instance?.undo()
+.cell-frame > * {
+  height: 100%;
+}
 ```
 
-### Vue
+`onReady` は動作中の `SpreadsheetInstance` を受け取ります。外側の保存ボタンやホスト側ダイアログから `applyChanges()`、`print()`、`openFindReplace()` などを呼ぶ場合に保持します。`policy` は編集可能な操作を制御し、`viewport` は表示と移動の範囲を制御します。大きな画面内にフォームを埋め込む場合は、両方を組み合わせます。
+
+アダプターはマウント後のプロパティ変更を動作中のインスタンスへ反映します。`theme`、`locale`、`strings`、`ui`、`features`、`extensions`、`policy`、`viewport`、`contextMenu`、`overlays`、ホスト側のステータスプロパティを変更しても再マウントは必要ありません。`policy` が有効な間は、ほかの機能フラグが有効でも組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに限られます。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。
+
+## Vue でのマウント例
+
+Vue パッケージは同じオプションをプロパティとして渡せます。テンプレート内のイベント名は `@cell-change` のようにケバブケースで記述します。
 
 ```vue
 <script setup lang="ts">
-import { Spreadsheet, presets } from '@libraz/formulon-cell-vue'
+import '@libraz/formulon-cell/styles.css'
+import '@libraz/formulon-cell-vue/toolbar.css'
+import { fixedFormPolicy, Spreadsheet } from '@libraz/formulon-cell-vue'
+
+const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+
+function saveDraft(event: { addr: unknown; value: unknown }) {
+  console.log('draft changed', event.addr, event.value)
+}
 </script>
 
 <template>
-  <Spreadsheet
-    :features="presets.standard()"
-    locale="ja"
-    theme="paper"
-    @ready="(inst) => console.log('mounted', inst.workbook.version)"
-    @cell-change="(e) => console.log(e)"
-    @selection-change="(e) => console.log(e.active)"
-    @workbook-change="(e) => console.log(e)"
-    @locale-change="(e) => console.log(e)"
-    @theme-change="(e) => console.log(e)"
-    @recalc="(e) => console.log(e)"
-    @error="(err) => showConfigurationError(err)"
-    :error-fallback="(err) => h(ConfigErrorPanel, { error: err })"
-  />
+  <div class="cell-frame">
+    <Spreadsheet
+      :ui="{ profile: 'embedded', theme: 'paper', features: { shortcuts: true, clipboard: true } }"
+      :policy="fixedFormPolicy([formRange])"
+      :viewport="{ range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }"
+      :context-menu="{ mode: 'disabled' }"
+      @cell-change="saveDraft"
+      @change-batch="(event) => console.log(event.status)"
+    />
+  </div>
 </template>
+
+<style>
+.cell-frame {
+  height: 560px;
+  min-height: 0;
+}
+
+.cell-frame > * {
+  height: 100%;
+}
+</style>
 ```
 
-Vue コンポーネントは `{ instance }` を `expose()` してテンプレート ref から使えるようにしており、React の `SpreadsheetRef` と同じ形です。
+コンポーネントに `ref` を付けると `{ instance }` を取得できます。親の操作からインスタンスのメソッドを呼ぶ場合に使います。`ready` イベントは、アプリケーションの状態へインスタンスを保存する場所として使えます。
 
-## `<SpreadsheetToolbar>`
+## コンポーネントの主なオプション
 
-core の `Spreadsheet.mountToolbar` の薄いアダプタです ─ リボンの DOM、メニューファクトリ、activation モデル、dropdown ディスパッチャはすべて core にあり、framework パッケージが独自のリボン実装を持つことはありません。
+両アダプターは次のオプションを `Spreadsheet.mount()` へ転送します。
 
-| プロパティ | 型 | 補足 |
+| オプション | 主な用途 |
+| --- | --- |
+| `ui` | `embedded`、`minimal`、`standard`、`full` の UI とテーマを選びます。 |
+| `toolbar` | コンポーネント内にリボンを表示します。 |
+| `policy` | 閲覧専用または入力セルだけ編集できるフォームを作ります。 |
+| `viewport` | 表示・移動できるセル範囲と Tab 移動を設定します。 |
+| `contextMenu` | 組み込みメニュー、変換したメニュー、ホスト側メニューを選びます。 |
+| `overlays` | モーダルや全画面表示の中にメニューとダイアログを置きます。 |
+| `workbook` | ホストが読み込んだワークブックを渡します。 |
+| `locale`、`strings` | UI 言語とラベルの上書きを設定します。 |
+| `features`、`extensions` | 組み込み UI の切り替えと追加機能を設定します。 |
+| `functions` | マウント前にホスト側の数式関数を登録します。 |
+| `printerProfiles`、`refreshPrinterProfiles` | ネイティブ / Electron のプリンター情報を接続します。 |
+| `captureScreenClip` | 画面領域キャプチャをホストから提供します。 |
+| `uploadStatus`、`macroRecording` | ステータスバーの表示をホストから更新します。 |
+
+React には `className`、`style`、`children`、`onReady`、`onError`、`errorFallback` もあります。Vue には `class`、`style`、`ready`、`error` イベント、`error-fallback` 関数があります。
+
+## イベントとフック / コンポーザブル
+
+React のイベントプロパティと Vue のイベントは同じイベントを扱います。
+
+| React | Vue | 用途 |
 | --- | --- | --- |
-| `instance` | `SpreadsheetInstance \| null` | リボンを取り付けるマウント済みスプレッドシート |
-| `activeTab` | `RibbonTab` | 制御されたアクティブタブ |
-| `onTabChange` / `@tab-change` | `(tab: RibbonTab) => void` | リボンのタブが変わると発火 |
-| `locale` | `string` | `'en'` 以外は `'ja'` として扱う |
-| `dropdownActions` | `Partial<DynamicDropdownsCtx>` | リボンを fork せずに個々の dropdown ハンドラ（並べ替え、保護、ファイルピッカー、スクリプト / アドインのアクションなど）を上書き |
-| `ribbonTabs` | `readonly RibbonTab[]` | 共有のタブ面 ─ ベースラインプロファイルには `EXCEL365_STANDARD_RIBBON_TABS`、自動化タブを足すには `OPTIONAL_RIBBON_TABS` を追記 |
-| `onSpellingReview`, `onAccessibilityCheck`, `onTranslate` | `() => void` | 校閲タブのフック |
-| `onRunScript`, `onAddIn` | `() => void` | スクリプト / アドインの dropdown で「カスタム」「管理」アクションを選ぶと発火 |
-| `onDrawPen`, `onDrawEraser` | `() => void` | 描画タブのインクモードフック |
-| `onError` | `(error: unknown) => void` | core ツールバーのマウントに失敗すると発火 |
-| `onToolbarReady` | `(toolbar: ToolbarInstance \| null) => void` | マウント済みの core toolbar インスタンスを受け取る。DOM のボタンを探さずに共有コマンド（タイトルバー検索、Tell Me）をディスパッチできる |
+| `onChangeBatch` | `change-batch` | ホスト更新やユーザー操作で適用されたセル更新を受け取ります。 |
+| `onCellChange` | `cell-change` | 変更された値や数式を下書き状態へ反映します。 |
+| `onSelectionChange` | `selection-change` | インスペクターやホスト側の操作状態を更新します。 |
+| `onWorkbookChange` | `workbook-change` | ワークブックを差し替えた後にホスト状態を更新します。 |
+| `onLocaleChange` | `locale-change` | 選択した UI ロケールを保存します。 |
+| `onThemeChange` | `theme-change` | ホストのテーマと同期します。 |
+| `onRecalc` | `recalc` | 再計算後にホスト側の表示を更新します。 |
+
+React のフックと Vue のコンポーザブルは、選択状態、必要な表示値、変更イベント、言語設定をホスト側のコントロールへ接続します。[フックとコンポーザブルの利用例](/ja/cell/hooks) に、選択セルのインスペクター、変更表示、言語の同期、拒否された編集の表示をまとめています。
+
+## ツールバーコンポーネント
+
+リボンをスプレッドシートと別のレイアウトへ置く場合は `SpreadsheetToolbar` を使います。`onReady` またはコンポーネントの `ref` から取得したインスタンスを渡します。
 
 ```tsx
 <SpreadsheetToolbar
@@ -110,55 +153,29 @@ core の `Spreadsheet.mountToolbar` の薄いアダプタです ─ リボンの
   activeTab={activeTab}
   locale="ja"
   onTabChange={setActiveTab}
-  dropdownActions={{ applyProtectAction: openProtectDialog }}
+  onToolbarReady={setToolbar}
+  dropdownActions={{
+    applyProtectAction: () => openHostDialog('protect'),
+  }}
 />
 ```
 
-両フレームワークでのより完全なマウント例と、React / Vue を使わないホスト向けの手動 `Spreadsheet.mountToolbar()` は [埋め込みガイドのリボンツールバー節](/ja/cell/embedding#リボンツールバー) を参照してください。
+リボンを同じホストに含める場合は `Spreadsheet` の `toolbar` を使います。アプリケーションがタイトルバーや全体のレイアウトを所有する場合は `SpreadsheetToolbar` を使います。ツールバーはタブ一覧と、スクリプト、アドイン、スペルチェック、翻訳、描画などのホスト操作用コールバックを受け取ります。
 
-## Hooks / composables
+## マウントエラーとフォールバック
 
-両パッケージは、自前でストア購読を組まずにインスタンス状態を読むための同じ 4 つのプリミティブを export しています。React 側は hooks（`useSyncExternalStore` ベース）、Vue 側は composables（`watchEffect` ベースで `Ref` を返す）です。
-
-| React | Vue | シグネチャ | 説明 |
-| --- | --- | --- | --- |
-| `useSelection(instance)` | `useSelection(instance)` | `(instance: SpreadsheetInstance \| null) => Selection`（React）/ `(instance: Ref<SpreadsheetInstance \| null>) => Ref<Selection>`（Vue） | アクティブな選択範囲を購読 |
-| `useSpreadsheet(instance, selector, fallback)` | `useSpreadsheet(instance, selector, fallback)` | `<T>(instance, selector: (state: State) => T, fallback: T) => T`（React）/ `=> Ref<T>`（Vue） | ストアの `State` に対するセレクタを購読。インスタンスが null の間は SSR 安全な fallback を返す |
-| `useI18n(instance)` | `useI18n(instance)` | React: `=> { locale: string; strings: Strings \| null }` · Vue: `=> { locale: Ref<string>; strings: Ref<Strings> }` | 現在のロケールと strings。ランタイムの `setLocale`/`extend`/`register` に反応 |
-| `useSpreadsheetEvent(instance, event, handler)` | `useSpreadsheetEvent(instance, event, handler)` | `<K extends SpreadsheetEventName>(instance, event: K, handler: SpreadsheetEventHandler<K>) => void` | ライフサイクルイベント（`cellChange`、`selectionChange`、`workbookChange`、`localeChange`、`themeChange`、`recalc`）を購読。handler の参照はレンダー間で変わっても再購読しない |
+インスタンスを作れない場合に `onError` / `error` が呼ばれます。React は `errorFallback` でノードまたは描画関数を返せ、Vue は `error-fallback` から VNode を返せます。ホスト側で初期化エラーと再試行ボタンを表示できます。
 
 ```tsx
-// React
-import { useSelection, useI18n, useSpreadsheetEvent } from '@libraz/formulon-cell-react'
-
-const selection = useSelection(instance)
-const { locale, strings } = useI18n(instance)
-useSpreadsheetEvent(instance, 'cellChange', (e) => console.log(e))
+<Spreadsheet
+  onError={(error) => reportMountError(error)}
+  errorFallback={(error) => <MountError error={error} />}
+/>
 ```
 
-```vue
-<!-- Vue -->
-<script setup lang="ts">
-import { useSelection, useI18n, useSpreadsheetEvent } from '@libraz/formulon-cell-vue'
+## 次に読むページ
 
-const selection = useSelection(instance)
-const { locale, strings } = useI18n(instance)
-useSpreadsheetEvent(instance, 'cellChange', (e) => console.log(e))
-</script>
-```
-
-`useSelection` と `useSpreadsheet` は、`instance` が `null` の間（マウント前や `dispose()` 後）はニュートラルな `Selection` / `fallback` 値にフォールバックするため、コンポーネントは読み取りのたびに null チェックせずにスプレッドシートの準備前から描画できます。
-
-## `errorFallback` プロパティ / `error` イベント
-
-`Spreadsheet.mount()` はインスタンスを作れないと reject します ─ 最も多いのは WASM エンジンが起動できないときです（[SharedArrayBuffer が無いと reject する](/ja/cell/index#sharedarraybuffer-が無いと-reject-する) 参照）。両アダプタはこれを未処理の promise rejection にせず、`onError`（React のプロパティ）/ `error`（Vue の emit）と、フレームワークネイティブな代替 UI を出す `errorFallback` プロパティとして表面化します。`errorFallback` を渡すと、core 自身のエラーパネル（`renderError`）は自動的に抑止されます。vanilla パッケージでの同じ契約は [埋め込みガイドのライフサイクルフック](/ja/cell/embedding#ライフサイクルフック) を参照してください。
-
-## `strings` プロパティ
-
-`strings` プロパティは、自分で `instance.i18n.extend(locale, strings)` を呼ぶことの宣言的な等価物です ─ マウント直後に 1 回適用され、プロパティが変わるたびに再適用されます。i18n コントローラを命令的に呼ぶ代わりに、他のマウントプロパティと並べて文字列単位の上書きを宣言したいときに使ってください。辞書の形は [i18n](/ja/cell/i18n#fork-せず上書きする) を参照してください。
-
-## 次に読むもの
-
-- [埋め込みガイド](/ja/cell/embedding) ─ マウント形、プリセット / 拡張、コマンドヘルパー、リボンツールバー
-- [ホスト統合](/ja/cell/host-integration) ─ これらのコンポーネントが転送するステータスバー / プリンタプロファイルのプロパティ
-- [i18n](/ja/cell/i18n) ─ ロケール登録と `strings` 上書きの形
+- [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
+- [埋め込み](/ja/cell/embedding) ─ vanilla のマウント、オプション、モーダル配置
+- [ホスト統合](/ja/cell/host-integration) ─ 保存、ステータス表示、印刷、ホストコールバック
+- [国際化](/ja/cell/i18n) ─ 実行時ロケールと文字列上書き

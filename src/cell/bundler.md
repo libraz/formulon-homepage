@@ -1,61 +1,48 @@
 ---
 title: Bundler setup
-description: Vite and browser settings required by formulon-cell and the Formulon WASM engine.
+description: Configure a browser bundler for formulon-cell and its WASM asset.
 ---
 
-# Bundler Setup
+# Bundler setup
 
-`formulon-cell` reuses the pthread-enabled `@libraz/formulon` WASM module. The
-same browser bundling constraints apply to the UI package.
+`formulon-cell` is an ESM browser package. Import the package stylesheet from its public export and let the `@libraz/formulon` package resolve its own WASM asset.
 
 ## Vite
+
+This is the smallest useful starting point for a Vite application:
 
 ```ts
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp'
-    }
-  },
-  preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp'
-    }
-  },
   optimizeDeps: {
     exclude: ['@libraz/formulon-cell', '@libraz/formulon']
   },
   build: {
     target: 'es2022'
-  },
-  worker: {
-    format: 'es'
   }
 })
 ```
 
-## Why These Settings Matter
+The dependency exclusion prevents Vite from pre-bundling the package wrappers; the normal application build handles them. The ES2022 target supports the ESM features used by the browser package.
 
-The `server` and `preview` headers above only cover local Vite serving. Your
-production host must send the same COOP/COEP headers for pages that run the
-spreadsheet engine.
+```ts
+// browser entry point
+import '@libraz/formulon-cell/styles.css'
+```
 
-Workers must be emitted as ES modules because the Formulon scheduler is spawned
-through Emscripten with module workers.
+## Other bundlers
 
-The main and worker builds need an ES2022 target because the engine wrapper uses
-top-level await and conditional dynamic imports.
+For webpack, esbuild, and equivalent tools, keep the package in the browser ESM build and make sure the generated application serves the emitted Formulon WASM asset. No special cross-origin-isolation headers are required by the default `formulon-cell` loader.
 
-Dependency pre-bundling should skip both packages so the Emscripten wrapper can
-keep control of worker and WASM asset resolution.
+When initialization fails in the deployed application, inspect the browser network panel first. The package JavaScript and its `.wasm` asset must both be present in the deployed output and reachable from the page.
 
-The COOP/COEP headers are required for `SharedArrayBuffer`. Without them,
-`WorkbookHandle.createDefault()` **rejects** by default — it does not fall
-back to the stub engine automatically. Hosts that want a placeholder engine
-for local dev or tests can opt in explicitly with `preferStub: true`; treat a
-rejection everywhere else as a configuration bug to fix, not a case to handle
-gracefully in the UI. See [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback).
+## Checklist
+
+- Import `@libraz/formulon-cell/styles.css` once.
+- Keep `@libraz/formulon-cell` and `@libraz/formulon` out of Vite dependency pre-bundling.
+- Build for a modern browser target such as ES2022.
+- Verify that the generated `.wasm` asset is copied and served.
+- Give the mounted host a height; bundler configuration cannot provide layout size.
+
+The default loader is single-threaded and does not use `SharedArrayBuffer`. If an application separately imports a threaded Formulon entry point, its hosting requirements belong to that separate integration.

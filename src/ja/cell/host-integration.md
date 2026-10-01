@@ -1,196 +1,169 @@
 ---
-title: ホスト統合の境界
-description: ホストアプリが formulon-cell の SpreadsheetInstance 経由で駆動するステータスバーのアップロード / マクロ記録状態とプリンタプロファイル API。
+title: ホスト統合
+description: 保存、信頼済み更新、ステータス表示、印刷、ネイティブ連携を formulon-cell へ接続します。
 ---
 
 # ホスト統合
 
-Excel 365 風 chrome の一部は、ホストアプリケーションにしか提供できないデータを必要とします ─ クラウド同期 / 保存の状態、マクロ記録の状態、物理プリンタの能力です。`formulon-cell` の core が持つのは表示と配線だけで、この状態を自分ででっち上げることはありません。このページはその境界を、結合試験ハーネスの上に組むホストのための参考としてまとめたものです ─ 本番サポートの契約ではありません。
+`formulon-cell` はスプレッドシートの UI を提供します。ファイル、認証、クラウド保存、ネイティブプリンター、モーダルのレイアウトは通常ホストアプリケーションが管理します。`SpreadsheetInstance` のメソッドとイベントをホストとの接続に使います。
 
-::: info 用語: core とホスト
-*core* は `@libraz/formulon-cell` とその React / Vue アダプタ ─ chrome、ストア、エンジン結合です。*ホスト* はあなたのアプリケーション ─ 保存が実際に成功したか、マクロレコーダが動いているか、どのプリンタが物理的に接続されているかを知っているコードです。core はホストから渡された状態を読むだけで、自分から外の世界へ問い合わせることはありません。
-:::
+## ワークブックを読み込み、保存する
 
-## ステータスバー: アップロード状態とマクロ記録
-
-ステータスバーには、ホスト駆動のバッジを 2 つ表示できます ─ アップロード状態インジケータとマクロ記録インジケータです。どちらもホストが値を渡すまでは非表示です。
+ホストがファイルを持っている場合は、マウント前にバイト列を読み込みます。ユーザーがダウンロードまたはアップロードを要求したら、同じ `WorkbookHandle` を保存します。
 
 ```ts
-type StatusBarUploadStatus = 'saved' | 'saving' | 'error' | null
-// macroRecording には独立した export 型エイリアスがない ─ 現れる場所すべてで
-// `boolean | null`（MountOptions.macroRecording、setMacroRecording の引数）。
+import { Spreadsheet, WorkbookHandle } from '@libraz/formulon-cell'
+
+const bytes = new Uint8Array(await file.arrayBuffer())
+const workbook = await WorkbookHandle.loadBytes(bytes)
+const instance = await Spreadsheet.mount(host, { workbook })
+
+function downloadWorkbook() {
+  const output = instance.workbook.save()
+  download(new Blob([output.slice().buffer]), 'workbook.xlsx')
+}
 ```
 
-| 値 | 意味 |
-| --- | --- |
-| `'saved'` | 直近の保存 / 同期が成功した |
-| `'saving'` | 保存 / 同期が進行中 |
-| `'error'` | 直近の保存 / 同期が失敗した |
-| `null` / `undefined` | ホストに報告すべきアップロード状態が無い ─ バッジ非表示 |
+新しいワークブックでは `workbook` を省略して `Spreadsheet.mount()` に作成させるか、先にデータを投入するために `WorkbookHandle.createDefault()` を明示的に呼びます。`setWorkbook(nextWorkbook)` を使うと、ホスト要素を作り直さずにワークブックを差し替えられます。
 
-| 値 | 意味 |
-| --- | --- |
-| `true` | マクロ記録が実行中 |
-| `false` | 記録は可能だが現在停止中 ─ 「マクロの記録」として表示 |
-| `null` / `undefined` | ホストがマクロ記録を公開していない ─ バッジ非表示 |
+初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
 
-### エントリポイント
+## ステータスバー {#status-bar}
 
-どちらもマウント時に設定し、実行時は同じ 2 つのメソッドで更新します。
+1 セルの編集には `cellChange`、適用済みのセル更新には `changeBatch` を使います。拒否や変更なしの結果も受け取る場合は、下の例のように `instance.commands.subscribe()` を使います。数式の再計算後にホスト側の集計表示を更新する場合は `recalc` が使えます。
 
 ```ts
-const instance = await Spreadsheet.mount(host, {
-  uploadStatus: 'saving',
-  macroRecording: false
+const offBatch = instance.commands.subscribe((event) => {
+  if (event.status === 'rejected') {
+    showValidation(event.rejected)
+    return
+  }
+  if (event.status === 'applied') queueSave()
 })
 
-instance.setUploadStatus('saved')
-instance.setUploadStatus('error')
-instance.setUploadStatus(null)
-
-instance.setMacroRecording(true)
-instance.setMacroRecording(false)
-instance.setMacroRecording(null)
-```
-
-React / Vue は同じ状態をプロパティとして公開し（[フレームワークアダプタ](/ja/cell/frameworks) 参照）、プロパティ変更をこれらと同じ setter に転送します。framework パッケージが独自のステータスバーを実装することはありません。
-
-```tsx
-<Spreadsheet uploadStatus={syncState} macroRecording={isRecordingMacro} />
-```
-
-```vue
-<Spreadsheet :upload-status="syncState" :macro-recording="isRecordingMacro" />
-```
-
-### 責務の分担
-
-| core | ホスト |
-| --- | --- |
-| `uploadStatus` / `macroRecording` をステータスバーに描画 | 実際のクラウド保存 / 自動保存 / 共同編集の状態を `uploadStatus` へ変換 |
-| ステータスバーのチューザで各バッジの表示 / 非表示を切替 | 実際のマクロレコーダ / ネイティブ自動化 / スクリプトレコーダを `macroRecording` へ変換 |
-| 値が `null` / `undefined` のバッジを常に隠す | ワークブック切替、保存開始、保存完了、保存失敗、記録開始 / 停止のたびに setter を呼ぶ |
-
-```ts
-const sheet = await Spreadsheet.mount(host, {
-  uploadStatus: cloudSave.currentStatus(),
-  macroRecording: macroRecorder.isAvailable() ? macroRecorder.isRecording() : null
+const offCell = instance.on('cellChange', ({ addr, value, formula }) => {
+  draftStore.update(addr, { value, formula })
 })
 
-cloudSave.on('saving', () => sheet.setUploadStatus('saving'))
-cloudSave.on('saved', () => sheet.setUploadStatus('saved'))
-cloudSave.on('error', () => sheet.setUploadStatus('error'))
+const offRecalc = instance.on('recalc', () => updateCalculatedSummary())
 
-macroRecorder.on('start', () => sheet.setMacroRecording(true))
-macroRecorder.on('stop', () => sheet.setMacroRecording(false))
-macroRecorder.on('unavailable', () => sheet.setMacroRecording(null))
+function disposeHostBindings() {
+  offBatch()
+  offCell()
+  offRecalc()
+  instance.dispose()
+  workbook.dispose()
+}
 ```
 
-この例の `cloudSave` と `macroRecorder` はホスト所有です。同種のものは core には同梱されていません。
-
-## プリンタプロファイル API
-
-ブラウザの印刷 API は物理プリンタの印刷不能マージンを公開しないため、ページ設定と組み込みの印刷 / PDF フローは、ホストが把握しているプリンタの `PrinterProfile` データ供給に依存します。
+`uploadStatus` プロパティと `setUploadStatus()` は、ホストの保存状態をステータスバーへ表示するために使います。保存を開始したか、成功したかはホストが判断します。
 
 ```ts
-interface PrinterProfile {
-  id?: string
-  name?: string
-  paperSize?: 'A4' | 'A3' | 'A5' | 'letter' | 'legal' | 'tabloid'
-  orientation?: 'portrait' | 'landscape'
-  printableBounds: {
-    top?: number
-    right?: number
-    bottom?: number
-    left?: number
+const instance = await Spreadsheet.mount(host, { uploadStatus: 'saved' })
+
+async function saveToCloud() {
+  instance.setUploadStatus('saving')
+  try {
+    await api.save(instance.workbook.save())
+    instance.setUploadStatus('saved')
+  } catch (error) {
+    instance.setUploadStatus('error')
+    throw error
   }
 }
 ```
 
-`printableBounds` の単位はインチで、各用紙端からの印刷不能な最小インセットを表します（例: `left: 0.17` は左端 0.17 インチには印刷できないという意味）。
+`'saved'`、`'saving'`、`'error'` を表示でき、`null` でインジケータを隠せます。`macroRecording` も同様にホストが記録状態を指定します。`true` は記録中、`false` は利用可能だが停止中、`null` は非表示です。`setMacroRecording()` または React / Vue の対応するプロパティで更新します。
 
-### エントリポイント
+## 信頼済みの変更を適用する
+
+サーバーからのパッチ、インポート結果、フォームの復元には `applyChanges()` を使います。各要素は 0 始まりのシート、行、列を指定し、`input` 文字列または型付き `value` を持ちます。
+
+```ts
+const result = instance.applyChanges(
+  [
+    { addr: { sheet: 0, row: 2, col: 1 }, input: 'Approved' },
+    { addr: { sheet: 0, row: 2, col: 2 }, input: '=B3&" / "&TEXT(TODAY(),"yyyy-mm-dd")' },
+  ],
+  { history: 'record', origin: 'server-sync' },
+)
+
+if (result.status === 'rejected') reportRejectedChanges(result.rejected)
+```
+
+ユーザーが元に戻す操作に含める場合は `history: 'record'`、サーバーなどから取得した新しいデータ一式として扱う場合は `history: 'reset'` を使います。結果には `applied`、`rejected`、`status`、`revision` が含まれ、適用済みの結果は `changeBatch` でも通知されます。拒否の表示には戻り値か `instance.commands.subscribe()` を使ってください。
+
+## 閲覧専用または入力フォームを更新する
+
+`viewerPolicy()` は選択とコピーを許可する閲覧用に向いています。`fixedFormPolicy()` は、ホストが渡した範囲で値入力、値の消去、貼り付け、オートフィルを開始時から許可します。両方ともコアパッケージから公開され、React / Vue アダプターのプロパティにも渡せます。
+
+```ts
+import { fixedFormPolicy } from '@libraz/formulon-cell'
+
+const editable = [{ sheet: 0, r0: 1, c0: 1, r1: 12, c1: 3 }]
+const instance = await Spreadsheet.mount(host, {
+  policy: fixedFormPolicy(editable),
+  viewport: {
+    range: { sheet: 0, r0: 0, c0: 0, r1: 14, c1: 4 },
+    tabNavigation: 'editable',
+    tabBoundary: 'stop',
+  },
+})
+```
+
+別の権限モデルでは `operations`、`editable`、`selection`、`copy` を持つ `InteractionPolicy` を指定します。ユーザーの権限が変わったら `setPolicy()` を呼びます。
+
+<CellEmbedDemo scenario="host-sync" />
+
+## プリンタープロファイル {#printer-profiles}
+
+ブラウザの印刷 API からは、物理プリンターの印刷可能領域を取得できません。デスクトップまたは Electron のホストは、認識しているプリンターのプロファイルを渡し、プリンターの変更時に更新できます。
 
 ```ts
 const instance = await Spreadsheet.mount(host, {
-  printerProfiles,
-  printerProfileId,
-  refreshPrinterProfiles
+  printerProfiles: [
+    {
+      id: 'office-a4',
+      name: 'Office printer',
+      paperSize: 'A4',
+      orientation: 'portrait',
+      printableBounds: { top: 0.17, right: 0.17, bottom: 0.17, left: 0.17 },
+    },
+  ],
+  refreshPrinterProfiles: () => window.desktopPrinters.list(),
 })
 
-instance.setPrinterProfiles(nextProfiles)
-instance.setPrinterProfileId(nextPrinterId)
+instance.setPrinterProfileId('office-a4')
 await instance.refreshPrinterProfiles()
+instance.print('pdf')
 ```
 
-React / Vue は対応する `printerProfiles`、`printerProfileId`、`refreshPrinterProfiles` プロパティを公開し（[フレームワークアダプタ](/ja/cell/frameworks) 参照）、これらと同じ setter に転送します。framework 層に独立したプリンタ API はありません。
+`PrinterProfile.printableBounds` の単位はインチです。ネイティブ API が用紙オプションを返す場合は `printerProfilesFromHostDevices()` を使えます。プリンターの検出と更新のタイミングはホストが管理します。受け付ける用紙サイズと向きは公開された `PrinterProfile` 型で確認できます。
 
-`refreshPrinterProfiles` は `PrinterProfile[] | undefined` を、同期または `Promise` 経由で返します。`undefined` は「更新できなかったので既存のプロファイルを維持」、空配列は「プロファイルが無いことをホストが確認した」という意味です。
+## ネイティブの画面キャプチャ
 
-### 正規化
-
-core はホストから渡されたものを正規化します ─ `id` / `name` を trim（空白のみは未設定扱い）、未知の `paperSize` / `orientation` 値を破棄、`printableBounds` を非負の数値で補完し、プロファイルを重複排除します（`id` があれば `id`、無ければ `name` + `paperSize` + `orientation` で判定）。同じ正規化が欲しいホストは、再実装せずに直接呼べます: `normalizePrinterProfile()`、`normalizePrinterProfileId()`、`normalizePrinterProfiles()`。
-
-### プロファイル選択
-
-`resolvePrinterProfileBounds(setup, profiles, preferredId)` は次の順でプロファイルを選びます。
-
-1. `preferredId` に一致し、**かつ** 現在の用紙サイズ / 向きにも一致
-2. `preferredId` に一致
-3. 現在の用紙サイズと向きの両方に一致
-4. 現在の用紙サイズに一致
-5. 現在の向きに一致
-6. 最初の候補
-
-何も一致しない場合、core はホスト提供の bounds を一切適用しません ─ シートに保存済みの `PageSetup.printableBounds` へ、それも無ければインセット `0` へフォールバックします。
-
-### Electron / ネイティブホストの例
+挿入 > スクリーンショット > 画面の領域の操作は、ホストが渡した `captureScreenClip` フックを呼び出せます。ブラウザでは省略でき、ネイティブシェルでは画像 URL または `{ src, alt }` を返します。
 
 ```ts
-import { type PrinterProfile, printerProfilesFromHostDevices } from '@libraz/formulon-cell'
-
-async function loadPrinterProfiles(): Promise<readonly PrinterProfile[]> {
-  const devices = await window.nativePrinters.list()
-  return (
-    printerProfilesFromHostDevices(
-      devices.map((device) => ({
-        id: device.id,
-        name: device.name,
-        paperOptions: device.paperOptions.map((paper) => ({
-          id: paper.id,
-          label: paper.label,
-          paperSize: paper.size,
-          orientation: paper.orientation,
-          hardwareMarginsInches: paper.hardwareMarginsInches
-        }))
-      }))
-    ) ?? []
-  )
-}
-
 const instance = await Spreadsheet.mount(host, {
-  printerProfiles: await loadPrinterProfiles(),
-  refreshPrinterProfiles: loadPrinterProfiles
+  captureScreenClip: async () => {
+    const image = await window.desktopCapture.selectRegion()
+    return image ? { src: image.dataUrl, alt: image.description } : null
+  },
 })
+
+const image = await instance.captureScreenClip()
 ```
 
-`window.nativePrinters` はホスト所有の境界で、core がプリンタを列挙することはありません。`printerProfilesFromHostDevices()` は、デバイス / 用紙オプションの id、name / label、用紙サイズ、向き、`hardwareMarginsInches`（または `printableBounds`）を `PrinterProfile[]` に変換し、`normalizePrinterProfiles()` と同じ重複排除と bounds 正規化を適用します。
+ユーザーがキャンセルした場合は `null` を返します。権限確認とキャプチャ処理はホストが実装します。
 
-### 責務の分担
+## 印刷とホストのレイアウト
 
-| core | ホスト |
-| --- | --- |
-| 受け取った `PrinterProfile` データを正規化 | OS / Electron / ネイティブ API でプリンタと印刷可能領域を列挙 |
-| 現在の用紙サイズ / 向きに最も合うプロファイルを選択 | そのデータを `PrinterProfile` の形へ変換 |
-| 選ばれたプロファイルをページ設定の表示、警告、印刷 / PDF 出力へ反映 | ユーザーがプリンタ / 用紙 / 向きを変えたら `setPrinterProfiles` / `setPrinterProfileId` を呼ぶ |
-| 一致プロファイルが無ければシート保存値かインセット `0` へフォールバック | 「ドライバ値が取得できない」はプロファイル無しとして表現し、値をでっち上げない |
+組み込み印刷は `instance.print()`、PDF 出力は `instance.print('pdf')` で呼び出せます。ホスト側に印刷ボタンを置く場合は `openPageSetup()` でページ設定を開きます。グリッドの親に十分な高さを与え、浮動ダイアログをモーダルや全画面表示の境界内に置く場合は `overlays.root` にその要素を渡します。周囲のレイアウトは [埋め込み](/ja/cell/embedding)、配置の詳細は [モーダルとオーバーレイ](/ja/cell/modals) を参照してください。
 
-### UI のフォールバック挙動
+## 次に読むページ
 
-一致するプロファイルが無い場合: ページ設定のプリンタセレクタは非表示になり（`refreshPrinterProfiles` が使えるときだけ更新の導線が出ることはあります）、余白タブの「プリンタの最小余白」は、シートに保存済みの `printableBounds` が無い限り `0` を表示します。プロファイルがある場合: セレクタはホスト提供の `name` を優先し、無ければ `id` か用紙 / 向きのラベルへフォールバックします。用紙、向き、プロファイルを変えると `printableBounds` がシートのページ設定へ解決し直され、印刷出力にはユーザー指定の余白と印刷可能 bounds の大きい方が使われます。
-
-## 次に読むもの
-
-- [フレームワークアダプタ](/ja/cell/frameworks) ─ これらの setter へ転送する React / Vue プロパティ
-- [API 一覧](/ja/cell/api) ─ `SpreadsheetInstance` のその他の面
-- [埋め込みガイド](/ja/cell/embedding) ─ マウント形とライフサイクルフック
+- [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
+- [API 一覧](/ja/cell/api) ─ インスタンスとワークブックの入口
+- [React / Vue アダプター](/ja/cell/frameworks) ─ 各フレームワークのプロパティとイベント
+- [テーマ](/ja/cell/theming) ─ グリッドとホスト周辺 UI の調整

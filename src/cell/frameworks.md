@@ -1,108 +1,153 @@
 ---
-title: React & Vue adapters
-description: The <Spreadsheet> and <SpreadsheetToolbar> components, hooks/composables, and error/strings props for the formulon-cell framework packages.
+title: React and Vue adapters
+description: Use formulon-cell from React or Vue with the same UI options, host hooks, and events as the core package.
 ---
 
-# Framework Adapters
+# React and Vue adapters
 
-`@libraz/formulon-cell-react` and `@libraz/formulon-cell-vue` wrap the vanilla `@libraz/formulon-cell` core with framework-idiomatic props, events, and state hooks. Both are thin — mounting, disposal, and ribbon behavior all live in core, so the two adapters mirror the same shape and stay in sync with each other. As with the rest of `formulon-cell`, these are reference-quality wrappers for integration testing and examples, not a hardened production component library.
+`@libraz/formulon-cell-react` and `@libraz/formulon-cell-vue` provide the `Spreadsheet` component, a separate toolbar component, and small state hooks or composables. They mount the same core spreadsheet surface, so the options described in [Embedding](/cell/embedding) also apply here.
 
-## `<Spreadsheet>`
+## A complete React mount
 
-| Prop | Type | Notes |
-| --- | --- | --- |
-| `workbook` | `WorkbookHandle` | Pre-loaded workbook; a fresh default workbook is created if omitted |
-| `ui` | `SpreadsheetUiOptions` | Simplified preset + feature switches; `theme`/`features` win when both are supplied |
-| `theme` | `MountOptions['theme']` | Calls `instance.setTheme()` on change, no re-mount |
-| `locale` | `MountOptions['locale']` | Calls `instance.i18n.setLocale()` on change |
-| `strings` | `MountOptions['strings']` | Per-string overrides, applied via `i18n.extend()` |
-| `features` | `FeatureFlags` | Toggle individual built-ins |
-| `extensions` | `ExtensionInput[]` | Custom extensions mounted alongside/instead of built-ins |
-| `functions` | `MountOptions['functions']` | Host-side custom functions registered against `instance.formula` |
-| `seed` | `MountOptions['seed']` | Cell-seeding callback (mostly for demos) |
-| `printerProfiles` | `readonly PrinterProfile[]` | See [Host integration](/cell/host-integration#printer-profile-api) |
-| `printerProfileId` | `string` | Active host printer profile id |
-| `refreshPrinterProfiles` | `MountOptions['refreshPrinterProfiles']` | Native/Electron printer discovery hook |
-| `captureScreenClip` | `MountOptions['captureScreenClip']` | Backs Insert > Screenshot > Screen Clipping |
-| `uploadStatus` | `MountOptions['uploadStatus']` | Status bar Upload Status indicator |
-| `macroRecording` | `MountOptions['macroRecording']` | Status bar Macro Recording indicator |
-| `errorFallback` | React: `ReactNode \| ((error: unknown) => ReactNode)` · Vue: `(error: unknown) => VNodeChild` | Framework-native UI shown when mount rejects |
-| `className` / `style` (React), `class` / `style` (Vue) | — | Forwarded to the host element |
-
-Runtime prop changes are applied through the imperative API rather than by re-mounting — `theme`, `locale`, `strings`, `workbook`, `features`, `extensions`, `printerProfiles`, `printerProfileId`, `uploadStatus`, and `macroRecording` all update the running instance in place, so selection, focus, and event subscriptions survive a prop change.
-
-### React
+Import the core stylesheet once in the application. Give the component a height through its parent; the grid fills the available space.
 
 ```tsx
-import { Spreadsheet, presets } from '@libraz/formulon-cell-react'
+import '@libraz/formulon-cell/styles.css'
+import '@libraz/formulon-cell-react/toolbar.css'
+import {
+  Spreadsheet,
+  fixedFormPolicy,
+} from '@libraz/formulon-cell-react'
 
-<Spreadsheet
-  features={presets.standard()}
-  locale="en"
-  theme="paper"
-  onReady={(instance) => console.log('mounted', instance.workbook.version)}
-  onCellChange={(e) => console.log(e)}
-  onSelectionChange={(e) => console.log(e.active)}
-  onWorkbookChange={(e) => console.log(e)}
-  onLocaleChange={(e) => console.log(e)}
-  onThemeChange={(e) => console.log(e)}
-  onRecalc={(e) => console.log(e)}
-  onError={(err) => showConfigurationError(err)}
-  errorFallback={(err) => <ConfigErrorPanel error={err} />}
-/>
+const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+
+export function OrderForm() {
+  return (
+    <div className="cell-frame">
+      <Spreadsheet
+        ui={{
+          profile: 'embedded',
+          theme: 'paper',
+          features: { shortcuts: true, clipboard: true },
+        }}
+        policy={fixedFormPolicy([formRange])}
+        viewport={{
+          range: formRange,
+          tabNavigation: 'editable',
+          tabBoundary: 'stop',
+        }}
+        contextMenu={{ mode: 'disabled' }}
+        onReady={(instance) => console.log('spreadsheet ready', instance)}
+        onChangeBatch={(event) => console.log('applied batch', event.revision)}
+        onCellChange={(event) => console.log('draft changed', event.addr, event.value)}
+      />
+    </div>
+  )
+}
 ```
 
-`SpreadsheetRef` exposes the live instance for imperative access:
+```css
+.cell-frame {
+  height: 560px;
+  min-height: 0;
+}
 
-```tsx
-const ref = useRef<SpreadsheetRef>(null)
-ref.current?.instance?.undo()
+.cell-frame > * {
+  height: 100%;
+}
 ```
 
-### Vue
+`onReady` receives the live `SpreadsheetInstance`. Keep it when an outer button, save action, or host dialog needs to call methods such as `applyChanges()`, `print()`, or `openFindReplace()`. `policy` controls what a user may edit, while `viewport` controls the visible and navigable area; using both is useful for forms embedded in a larger screen.
+
+The adapter applies prop changes to the mounted instance. Changing `theme`, `locale`, `strings`, `ui`, `features`, `extensions`, `policy`, `viewport`, `contextMenu`, `overlays`, or host status props does not require a remount.
+
+When `policy` is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu even when other feature flags are true. See [Options](/cell/options#interaction-policy) for the policy and UI relationship.
+
+## A complete Vue mount
+
+The Vue package exposes the same options as props and the same lifecycle surface as kebab-case events.
 
 ```vue
 <script setup lang="ts">
-import { Spreadsheet, presets } from '@libraz/formulon-cell-vue'
+import '@libraz/formulon-cell/styles.css'
+import '@libraz/formulon-cell-vue/toolbar.css'
+import { fixedFormPolicy, Spreadsheet } from '@libraz/formulon-cell-vue'
+
+const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+
+function saveDraft(event: { addr: unknown; value: unknown }) {
+  console.log('draft changed', event.addr, event.value)
+}
 </script>
 
 <template>
-  <Spreadsheet
-    :features="presets.standard()"
-    locale="en"
-    theme="paper"
-    @ready="(inst) => console.log('mounted', inst.workbook.version)"
-    @cell-change="(e) => console.log(e)"
-    @selection-change="(e) => console.log(e.active)"
-    @workbook-change="(e) => console.log(e)"
-    @locale-change="(e) => console.log(e)"
-    @theme-change="(e) => console.log(e)"
-    @recalc="(e) => console.log(e)"
-    @error="(err) => showConfigurationError(err)"
-    :error-fallback="(err) => h(ConfigErrorPanel, { error: err })"
-  />
+  <div class="cell-frame">
+    <Spreadsheet
+      :ui="{ profile: 'embedded', theme: 'paper', features: { shortcuts: true, clipboard: true } }"
+      :policy="fixedFormPolicy([formRange])"
+      :viewport="{ range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }"
+      :context-menu="{ mode: 'disabled' }"
+      @cell-change="saveDraft"
+      @change-batch="(event) => console.log(event.status)"
+    />
+  </div>
 </template>
+
+<style>
+.cell-frame {
+  height: 560px;
+  min-height: 0;
+}
+
+.cell-frame > * {
+  height: 100%;
+}
+</style>
 ```
 
-The Vue component `expose()`s `{ instance }` as a template ref, mirroring the React `SpreadsheetRef` shape.
+`ref` on the component exposes `{ instance }`. Use it when a parent action must call the imperative API. The `ready` event is the convenient place to store the instance for application state.
 
-## `<SpreadsheetToolbar>`
+## Component options
 
-A thin adapter over core's `Spreadsheet.mountToolbar` — the ribbon DOM, menu factories, activation model, and dropdown dispatcher all live in core, so neither framework package carries its own ribbon implementation.
+Both adapters forward these options to `Spreadsheet.mount()`:
 
-| Prop | Type | Notes |
+| Option | Typical use |
+| --- | --- |
+| `ui` | Choose `embedded`, `minimal`, `standard`, or `full` and set a theme. |
+| `toolbar` | Mount the ribbon in the component, or pass toolbar options. |
+| `policy` | Create a read-only viewer or restrict edits to form cells. |
+| `viewport` | Limit the visible area and configure Tab navigation. |
+| `contextMenu` | Keep the built-in menu, transform its items, or hand it to the host. |
+| `overlays` | Keep menus and dialogs inside a modal or fullscreen root. |
+| `workbook` | Mount a workbook loaded or prepared by the host. |
+| `locale`, `strings` | Set the UI language and override labels. |
+| `features`, `extensions` | Toggle built-in UI and add selected extensions. |
+| `functions` | Register host-side formula functions before mount. |
+| `printerProfiles`, `refreshPrinterProfiles` | Connect printing to native or Electron printer data. |
+| `captureScreenClip` | Supply a host screenshot picker for Screen Clipping. |
+| `uploadStatus`, `macroRecording` | Drive optional status-bar indicators. |
+
+The React component additionally accepts `className`, `style`, `children`, `onReady`, `onError`, and `errorFallback`. Vue accepts `class`, `style`, the `ready` and `error` events, and an `error-fallback` function.
+
+## Events and hooks
+
+React event props and Vue emits cover the same events:
+
+| React | Vue | Use it for |
 | --- | --- | --- |
-| `instance` | `SpreadsheetInstance \| null` | The mounted spreadsheet to attach the ribbon to |
-| `activeTab` | `RibbonTab` | Controlled active tab |
-| `onTabChange` / `@tab-change` | `(tab: RibbonTab) => void` | Fires when the ribbon changes tab |
-| `locale` | `string` | `'en'` or otherwise treated as `'ja'` |
-| `dropdownActions` | `Partial<DynamicDropdownsCtx>` | Override individual ribbon dropdown handlers (sort, protect, file picker, script/add-in actions, …) without forking the ribbon |
-| `ribbonTabs` | `readonly RibbonTab[]` | Shared tab surface — `EXCEL365_STANDARD_RIBBON_TABS` for the baseline profile, append `OPTIONAL_RIBBON_TABS` to add automation tabs |
-| `onSpellingReview`, `onAccessibilityCheck`, `onTranslate` | `() => void` | Review-tab hooks |
-| `onRunScript`, `onAddIn` | `() => void` | Fire when the user picks the "custom"/"manage" action from the Script / Add-in dropdown |
-| `onDrawPen`, `onDrawEraser` | `() => void` | Drawing-tab ink mode hooks |
-| `onError` | `(error: unknown) => void` | Fires if the core toolbar fails to mount |
-| `onToolbarReady` | `(toolbar: ToolbarInstance \| null) => void` | Receives the mounted core toolbar instance so hosts can dispatch shared commands (titlebar search, Tell Me) without querying DOM buttons |
+| `onChangeBatch` | `change-batch` | React to an applied cell batch from a host update or user action. |
+| `onCellChange` | `cell-change` | Mirror a changed cell into draft state or analytics. |
+| `onSelectionChange` | `selection-change` | Update a side panel or field inspector. |
+| `onWorkbookChange` | `workbook-change` | Refresh host state after a workbook replacement. |
+| `onLocaleChange` | `locale-change` | Persist the selected UI locale. |
+| `onThemeChange` | `theme-change` | Persist or coordinate the host theme. |
+| `onRecalc` | `recalc` | Update a save indicator or derived host view. |
+
+React hooks and Vue composables connect selection, derived display values, change events, and language settings to host controls. The [Hooks and composables guide](/cell/hooks) includes a selection inspector, edit indicators, shared language controls, and rejected-edit feedback.
+
+## The toolbar component
+
+`SpreadsheetToolbar` is useful when the ribbon belongs in a layout separate from the spreadsheet component. Pass the instance received from `onReady` or a component ref.
 
 ```tsx
 <SpreadsheetToolbar
@@ -110,55 +155,29 @@ A thin adapter over core's `Spreadsheet.mountToolbar` — the ribbon DOM, menu f
   activeTab={activeTab}
   locale="en"
   onTabChange={setActiveTab}
-  dropdownActions={{ applyProtectAction: openProtectDialog }}
+  onToolbarReady={setToolbar}
+  dropdownActions={{
+    applyProtectAction: () => openHostDialog('protect'),
+  }}
 />
 ```
 
-See the [Embedding guide's Ribbon toolbar section](/cell/embedding#ribbon-toolbar) for a fuller mount example in both frameworks, and the manual `Spreadsheet.mountToolbar()` path for hosts without React or Vue.
+Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. Use `SpreadsheetToolbar` when the surrounding application owns the layout or title bar. The toolbar component accepts shared tab definitions and callbacks for host actions such as scripts, add-ins, spelling, translation, and drawing.
 
-## Hooks / composables
+## Mount errors and framework fallbacks
 
-Both packages export the same four primitives for reading instance state without wiring up your own store subscription. React's are hooks (`useSyncExternalStore`-backed); Vue's are composables (`watchEffect`-backed, returning `Ref`s).
-
-| React | Vue | Signature | Description |
-| --- | --- | --- | --- |
-| `useSelection(instance)` | `useSelection(instance)` | `(instance: SpreadsheetInstance \| null) => Selection` (React) / `(instance: Ref<SpreadsheetInstance \| null>) => Ref<Selection>` (Vue) | Subscribe to the active selection |
-| `useSpreadsheet(instance, selector, fallback)` | `useSpreadsheet(instance, selector, fallback)` | `<T>(instance, selector: (state: State) => T, fallback: T) => T` (React) / `=> Ref<T>` (Vue) | Subscribe to a selector over the store's `State`, with an SSR-safe fallback while the instance is null |
-| `useI18n(instance)` | `useI18n(instance)` | React: `=> { locale: string; strings: Strings \| null }` · Vue: `=> { locale: Ref<string>; strings: Ref<Strings> }` | Current locale + strings, reactive to runtime `setLocale`/`extend`/`register` |
-| `useSpreadsheetEvent(instance, event, handler)` | `useSpreadsheetEvent(instance, event, handler)` | `<K extends SpreadsheetEventName>(instance, event: K, handler: SpreadsheetEventHandler<K>) => void` | Subscribe to a lifecycle event (`cellChange`, `selectionChange`, `workbookChange`, `localeChange`, `themeChange`, `recalc`); the handler ref can change between renders without re-subscribing |
+`onError`/`error` runs when an instance cannot be mounted. React can render a node or render function with `errorFallback`; Vue can return a VNode from `error-fallback`. The host can use this to show a mount failure message with a retry control without querying the generated DOM.
 
 ```tsx
-// React
-import { useSelection, useI18n, useSpreadsheetEvent } from '@libraz/formulon-cell-react'
-
-const selection = useSelection(instance)
-const { locale, strings } = useI18n(instance)
-useSpreadsheetEvent(instance, 'cellChange', (e) => console.log(e))
+<Spreadsheet
+  onError={(error) => reportMountError(error)}
+  errorFallback={(error) => <MountError error={error} />}
+/>
 ```
-
-```vue
-<!-- Vue -->
-<script setup lang="ts">
-import { useSelection, useI18n, useSpreadsheetEvent } from '@libraz/formulon-cell-vue'
-
-const selection = useSelection(instance)
-const { locale, strings } = useI18n(instance)
-useSpreadsheetEvent(instance, 'cellChange', (e) => console.log(e))
-</script>
-```
-
-`useSelection` and `useSpreadsheet` fall back to a neutral `Selection`/`fallback` value while `instance` is `null` (before mount, or after `dispose()`), so components can render before the spreadsheet is ready without null-checking on every read.
-
-## `errorFallback` prop / `error` event
-
-`Spreadsheet.mount()` rejects when it can't produce an instance — most commonly when the WASM engine can't start (see [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback)). Both adapters surface this as `onError` (React prop) / `error` (Vue emit) plus an `errorFallback` prop for a framework-native fallback UI, instead of letting the rejection become an unhandled promise rejection. Core's own error panel (`renderError`) is suppressed automatically whenever `errorFallback` is supplied. See the [Embedding guide's Lifecycle hooks](/cell/embedding#lifecycle-hooks) for the same contract in the vanilla package.
-
-## `strings` prop
-
-The `strings` prop is the declarative equivalent of calling `instance.i18n.extend(locale, strings)` yourself — applied once, right after mount, and again whenever the prop changes. Use it to declare per-string overrides alongside the other mount props instead of reaching for the i18n controller imperatively. See [i18n](/cell/i18n#override-entries-without-forking) for the dictionary shape.
 
 ## Read next
 
-- [Embedding guide](/cell/embedding) — mounting shapes, presets/extensions, command helpers, the ribbon toolbar.
-- [Host integration](/cell/host-integration) — the status bar and printer profile props these components forward.
-- [i18n](/cell/i18n) — locale registration and the `strings` override shape.
+- [Hooks and composables](/cell/hooks) — selection, edit notifications, and shared language controls.
+- [Embedding](/cell/embedding) — vanilla mounting, options, and modal placement.
+- [Host integration](/cell/host-integration) — saving, status indicators, printing, and host callbacks.
+- [Internationalization](/cell/i18n) — runtime locale and string overrides.

@@ -1,84 +1,159 @@
 ---
-title: formulon-cell extension catalogue
-description: The 26 built-in extension factories, their matching feature flag, purpose, and preset inclusion.
+title: Extensions
+description: Select, replace, and compose optional formulon-cell UI features without taking over the spreadsheet mount.
 ---
 
-# Extension Catalogue
+# Extensions
 
-This page is the complete factory-by-factory reference for `formulon-cell`'s replaceable chrome. See the [Embedding guide](/cell/embedding#selective-extensions) for the `features` vs `extensions` architecture; this table exists so you can look up one factory without reading the whole guide.
+Extensions are the unit for optional UI around the grid. A preset or `ui.profile` chooses a starting surface, `features` turns built-in pieces on or off, and `extensions` adds a built-in factory or a host-owned feature.
 
-Every entry mounts as part of the reference chrome — useful for integration testing and examples, not a guarantee that a given dialog matches Excel behavior exactly.
+## Choose a starting surface
 
-::: info Glossary: preset vs extension
-A *preset* (`presets.minimal()` / `.standard()` / `.full()`) is a plain `FeatureFlags` object of booleans. An *extension* is a zero-argument factory function that returns an `Extension`. Disabling a feature flag removes the built-in and its DOM; passing the matching factory through `extensions` mounts your own (or the same built-in, reused standalone).
-:::
+Use a UI profile when the goal is to choose the surrounding UI:
 
-## Factories
-
-Each factory's `id` matches the `FeatureFlags` key `mount.ts` gates it against — disable the flag, then pass the factory (or your own replacement) through `extensions`. Columns show whether the factory is part of the default chrome for each preset:
-
-| Factory | Feature id | Purpose | `minimal()` | `standard()` | `full()` |
-| --- | --- | --- | --- | --- | --- |
-| `borderDraw` | `borderDraw` | Cell border draw / draw-grid / erase modes | – | ✓ | ✓ |
-| `charts` | `charts` | Session chart overlays | – | ✓ | ✓ |
-| `clipboard` | `clipboard` | OS clipboard bridge (copy/cut/paste) | ✓ | ✓ | ✓ |
-| `commentDialog` | `commentDialog` | Comment edit dialog (Shift+F2) | – | – | ✓ |
-| `conditionalDialog` | `conditional` | Conditional-formatting rule manager | – | – | ✓ |
-| `contextMenu` | `contextMenu` | Right-click context menu | – | ✓ | ✓ |
-| `findReplace` | `findReplace` | Find/Replace dialog (Ctrl+F) | – | ✓ | ✓ |
-| `formatDialog` | `formatDialog` | Format Cells dialog (Ctrl+1) | – | – | ✓ |
-| `formatPainter` | `formatPainter` | Format painter | – | ✓ | ✓ |
-| `goToSpecialDialog` | `gotoSpecial` | Go To Special dialog | – | – | ✓ |
-| `hoverComment` | `hoverComment` | Hover-comment popover | – | – | ✓ |
-| `hyperlinkDialog` | `hyperlink` | Hyperlink dialog (Ctrl+K) | – | – | ✓ |
-| `illustrations` | `illustrations` | Session shape / picture overlays | – | ✓ | ✓ |
-| `iterativeDialog` | `iterative` | Iterative-calculation settings dialog | – | – | ✓ |
-| `namedRangeDialog` | `namedRanges` | Named-range listing dialog | – | – | ✓ |
-| `pageSetupDialog` | `pageSetup` | Page Setup dialog | – | – | ✓ |
-| `pasteSpecial` | `pasteSpecial` | Paste-special dialog | – | – | ✓ |
-| `pivotTableDialog` | `pivotTableDialog` | PivotTable creation dialog | – | – | ✓ |
-| `quickAnalysis` | `quickAnalysis` | Quick Analysis popover (Ctrl+Q) | – | ✓ | ✓ |
-| `slicer` | `slicer` | Slicer floating panels | opt-in only | opt-in only | opt-in only |
-| `statusBar` | `statusBar` | Bottom status bar (calc mode, zoom, aggregates) | ✓ | ✓ | ✓ |
-| `validationList` | `validation` | Validation-list dropdown | – | – | ✓ |
-| `viewToolbar` | `viewToolbar` | View ribbon toolbar | – | ✓ | ✓ |
-| `watchWindow` | `watchWindow` | Watch Window dock | opt-in only | opt-in only | opt-in only |
-| `wheel` | `wheel` | Mouse-wheel scroll handler | ✓ | ✓ | ✓ |
-| `workbookObjects` | `workbookObjects` | Workbook Objects side panel | – | ✓ | ✓ |
+| Profile | Good starting point |
+| --- | --- |
+| `embedded` | A form or viewer placed inside an existing application screen. |
+| `minimal` | A compact editable grid with a small amount of surrounding UI. |
+| `standard` | A general-purpose spreadsheet area. |
+| `full` or `excel365` | A broad desktop-style surface with optional authoring tools. |
 
 ```ts
-import { Spreadsheet, presets, findReplace, formatDialog } from '@libraz/formulon-cell'
-
 const instance = await Spreadsheet.mount(host, {
-  workbook,
-  features: { ...presets.minimal(), findReplace: false },
-  extensions: [findReplace(), formatDialog()]
+  ui: {
+    profile: 'embedded',
+    features: { contextMenu: false, sheetTabs: false },
+  },
 })
 ```
 
-::: warning `watchWindow` and `slicer` default off even in `full()`
-These two ids are excluded from the "on unless explicitly disabled" rule that every other feature follows — they start disabled and require an explicit `features: { watchWindow: true }` / `{ slicer: true }` (or the matching factory in `extensions`) to appear, even under `presets.full()`. New panels ship this way so adopting a formulon-cell upgrade never silently grows the default chrome.
-:::
+`presets.minimal()`, `presets.standard()`, and `presets.full()` are useful when the host wants a `FeatureFlags` object directly. Add an explicit flag after a preset to adjust one feature.
 
-## Flag-only features (no factory)
+<CellEmbedDemo scenario="profiles" />
 
-A handful of `FeatureFlags` ids gate behavior that isn't a separate mountable dialog or panel — there is nothing to pass through `extensions` for these, only the boolean flag:
+## Turn built-in features on or off
 
-| Feature id | What it gates | `minimal()` | `standard()` | `full()` |
-| --- | --- | --- | --- | --- |
-| `formulaBar` | The formula input bar | ✓ | ✓ | ✓ |
-| `shortcuts` | The built-in spreadsheet keymap | ✓ | ✓ | ✓ |
-| `sheetTabs` | The bottom sheet-tab bar | – | ✓ | ✓ |
-| `errorIndicators` | Green corner-triangle error markers on cells | – | ✓ | ✓ |
-| `autocomplete` | Inline formula/name autocomplete while typing | – | ✓ | ✓ |
-| `fxDialog` | Insert Function (fx) dialog / argument helper | – | – | ✓ |
+The `ui.features` switches cover navigation and review, editing and formatting, workbook authoring, and host status. The lower-level `FeatureFlags` object uses the corresponding built-in ids; see [Options](/cell/options) for the complete switch list.
 
-## Non-toggleable core
+```ts
+import { presets, Spreadsheet } from '@libraz/formulon-cell'
 
-`nameBox`, `editor`, `pointer`, and `renderer` are not `FeatureFlags` ids at all — they are the spreadsheet surface itself. There is no flag to disable them; removing them would leave no UI to mount.
+const instance = await Spreadsheet.mount(host, {
+  features: {
+    ...presets.standard(),
+    formatDialog: true,
+    contextMenu: false,
+  },
+})
+
+// A role change can update the running surface.
+instance.setFeatures({ ...presets.standard(), clipboard: false })
+```
+
+Use `ui.features` for readable profile configuration and `features` when an already-built `FeatureFlags` object is convenient. The explicit `features` option wins for keys supplied in both places.
+
+If the instance has a `policy`, built-in UI is limited to the policy-supported routes even when other feature flags are true. See [Interaction policy](/cell/options#interaction-policy) before adding extensions for host-owned commands.
+
+## Add a built-in extension selectively
+
+Each replaceable built-in has a factory. This is useful when the default profile is small but one dialog or panel is needed.
+
+```ts
+import {
+  Spreadsheet,
+  findReplace,
+  formatDialog,
+  presets,
+} from '@libraz/formulon-cell'
+
+const instance = await Spreadsheet.mount(host, {
+  features: {
+    ...presets.minimal(),
+    findReplace: false,
+    formatDialog: false,
+  },
+  extensions: [findReplace(), formatDialog()],
+})
+```
+
+The factory and feature id share the same name in most cases. The public factories cover these user-facing groups:
+
+- Navigation and review: `contextMenu`, `findReplace`, `goToSpecialDialog`, `quickAnalysis`, `watchWindow`, `viewToolbar`.
+- Editing and formatting: `clipboard`, `pasteSpecial`, `formatDialog`, `formatPainter`, `borderDraw`, `validationList`.
+- Workbook authoring: `conditionalDialog`, `namedRangeDialog`, `hyperlinkDialog`, `commentDialog`, `iterativeDialog`, `pageSetupDialog`.
+- Visual objects and summaries: `charts`, `illustrations`, `pivotTableDialog`, `slicer`, `workbookObjects`.
+- Host-facing controls: `statusBar`, `wheel`.
+
+The package root exports these factories. They are also available from `@libraz/formulon-cell/extensions`.
+
+## Write a small host extension
+
+Use a custom extension when an application needs a listener or control that should be mounted and disposed with the spreadsheet.
+
+```ts
+import type { Extension } from '@libraz/formulon-cell'
+
+const saveShortcut: Extension = {
+  id: 'hostSaveShortcut',
+  setup({ host }) {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        saveFromHost()
+      }
+    }
+
+    host.addEventListener('keydown', onKeyDown)
+    return {
+      dispose() {
+        host.removeEventListener('keydown', onKeyDown)
+      },
+    }
+  },
+}
+
+await Spreadsheet.mount(host, { extensions: [saveShortcut] })
+```
+
+The `setup()` context includes the host element, workbook accessor, store, history, i18n controller, and helpers for refreshing cells or resolving another extension. Return `dispose()` for anything the extension registers. A handle may also expose application methods such as `open()` or `refresh()`; the handle is available as `instance.features[id]`.
+
+## Replace a built-in surface
+
+To provide an application-specific implementation, disable the built-in flag and register an extension using the same id. The host can then keep the rest of the default surface.
+
+```ts
+const customMenu: Extension = {
+  id: 'contextMenu',
+  setup({ host, store }) {
+    const menu = attachApplicationMenu(host, store)
+    return { dispose: () => menu.dispose() }
+  },
+}
+
+await Spreadsheet.mount(host, {
+  features: { ...presets.standard(), contextMenu: false },
+  extensions: [customMenu],
+})
+```
+
+Keep custom extensions focused on the host's UI. Use `contextMenu` mount options when only menu items need to change, and use [Modal and overlay options](/cell/modals) when an existing dialog should own the placement.
+
+Instance methods such as `openFindReplace()` target the built-in feature. For a dialog supplied through `extensions`, call the handle exposed by `instance.features[id]`; disabling the built-in also disables its instance opener.
+
+## Update and remove extensions
+
+The live instance can add or remove a feature after mount:
+
+```ts
+instance.use(findReplace())
+instance.remove('findReplace')
+instance.setExtensions([formatDialog()])
+```
+
+`remove()` destroys a matching custom extension, if present, and returns `true`. It does not enable or disable a built-in feature; use `setFeatures()` for that. Keep host references to handles only when the application needs a custom method, and call `dispose()` through the extension lifecycle before dropping external references.
 
 ## Read next
 
-- [Embedding guide](/cell/embedding#selective-extensions) — the `features` vs `extensions` split, headless mounting, command helpers.
-- [API surface](/cell/api#extensions) — `MountOptions.extensions`, `presets`.
-- [Theming](/cell/theming) — the CSS token surface for whatever chrome you keep on.
+- [API surface](/cell/api#extensions) — mount options and presets.
+- [Embedding](/cell/embedding) — compose options for a concrete application layout.
+- [Theming](/cell/theming) — style the grid and whichever extensions are enabled.

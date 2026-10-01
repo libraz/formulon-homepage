@@ -1,81 +1,106 @@
 ---
 title: Install formulon-cell
-description: Install the reference UI library used for Formulon browser integration testing.
+description: Install and mount the formulon-cell spreadsheet UI kit.
 ---
 
 # Install
 
-`formulon-cell` is the reference UI library used here for Formulon browser
-integration testing. It is public, but it is not a complete Excel-compatible UI:
-feature coverage is partial, UI/UX does not try to mirror Excel exactly, and UI
-bugs may remain. Install it when you want a workbook-like browser surface around
-the `@libraz/formulon` WASM engine for testing or reference.
-
-::: warning Not an Excel replacement
-Basic workbook workflows are available, but detailed UI compatibility is outside this package's scope. Do not use it as the promised end-user spreadsheet experience for a product that requires Excel-equivalent UI/UX.
-:::
+Install the core package and its `zustand` peer dependency:
 
 ```sh
 npm install @libraz/formulon-cell zustand
 ```
 
-`zustand` is a peer dependency because host applications can read the same store
-that the built-in chrome subscribes to.
+For framework applications, install one adapter as well:
 
-The UI surface is intentionally reference-grade. Use your package manager
-lockfile for reproducibility, and upgrade intentionally when new releases land.
+```sh
+npm install @libraz/formulon-cell-react react react-dom
+npm install @libraz/formulon-cell-vue vue
+```
 
-## Quick Start
+Import the core stylesheet once in the browser entry point. The package export is `@libraz/formulon-cell/styles.css`.
 
 ```ts
-import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
+import '@libraz/formulon-cell/styles.css'
+```
+
+## Quick start
+
+Give the spreadsheet a host with a defined height. `Spreadsheet.mount()` takes over the host's children and returns an instance that the host owns.
+
+```html
+<div id="sheet" style="height: 480px; min-height: 320px"></div>
+```
+
+```ts
+import {
+  Spreadsheet,
+  WorkbookHandle,
+  presets
+} from '@libraz/formulon-cell'
 import '@libraz/formulon-cell/styles.css'
 
-const host = document.getElementById('sheet')!
+const host = document.querySelector<HTMLElement>('#sheet')!
+let workbook: WorkbookHandle | undefined
+let instance: Awaited<ReturnType<typeof Spreadsheet.mount>> | undefined
+function disposeView() {
+  instance?.dispose()
+  instance = undefined
+  workbook?.dispose()
+  workbook = undefined
+}
 
 try {
-  const workbook = await WorkbookHandle.createDefault()
-
-  const sheet = await Spreadsheet.mount(host, {
-    workbook,
-    features: presets.full(),
+  const nextWorkbook = await WorkbookHandle.createDefault({ locale: 'en' })
+  workbook = nextWorkbook
+  instance = await Spreadsheet.mount(host, {
+    workbook: nextWorkbook,
+    features: presets.standard(),
     locale: 'en'
   })
+} catch (error) {
+  showSpreadsheetError(error)
+  disposeView()
+}
 
-  sheet.i18n.setLocale('ja')
-  sheet.setTheme('ink')
-} catch (err) {
-  // SharedArrayBuffer missing (no COOP/COEP), or WASM failed to init.
-  showConfigurationError(err)
+// Register disposeView with the surrounding view's cleanup hook.
+```
+
+`WorkbookHandle.createDefault()` loads the default Formulon WASM package. The current default loader does not require `SharedArrayBuffer` or COOP/COEP headers. A failed WASM or WebAssembly initialization rejects the promise; handle that failure at the host boundary instead of leaving an empty surface.
+
+`Spreadsheet.mount()` also accepts `onError`. The core error panel is rendered by default; set `renderError: false` when a framework or host renders its own fallback.
+
+```ts
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  onError: (error) => showSpreadsheetError(error),
+  renderError: false
+})
+```
+
+## Host sizing
+
+The grid fills the mounted element. Set a height on the host or on a containing layout with a definite height. A flex layout commonly needs `min-height: 0` on the panel that contains the host:
+
+```css
+.sheet-panel {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+}
+
+.sheet-host {
+  flex: 1 1 auto;
+  min-height: 320px;
 }
 ```
 
-## Runtime Requirement
+Use `instance.dispose()` when the host leaves the page. Dispose a `WorkbookHandle` when the application no longer owns it. React and Vue adapters perform the mount and disposal as part of their component lifecycle.
 
-The Formulon WASM package uses pthreads. Browsers require a
-cross-origin-isolated page before `SharedArrayBuffer` is available:
+A workbook passed to the initial `mount()` remains caller-owned. The instance owns a workbook it creates itself and any replacement passed to `setWorkbook()`. Dispose the original caller-owned handle after replacement when it is no longer needed; the instance disposes its current replacement.
 
-```txt
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
+## Optional stub engine
 
-Without those headers, `WorkbookHandle.createDefault()` **rejects** by
-default — it does not fall back to a degraded engine silently. Catch the
-rejection (or pass `MountOptions.onError` to `Spreadsheet.mount()`) and show
-the host a configuration error instead of a spreadsheet that looks fine but
-never recalculates.
+`WorkbookHandle.createDefault({ preferStub: true })` is an explicit in-memory engine choice for tests and small demos. It is useful when the host does not want to load WASM, but it does not provide the same workbook surface as the default engine. Keep the choice visible in test or demo code rather than making it an automatic fallback.
 
-For tests and explicit demos only, opt in to the in-memory stub engine with
-`preferStub: true`:
-
-```ts
-const wb = await WorkbookHandle.createDefault({ preferStub: true })
-wb.isStub // true — the stub only evaluates a tiny formula subset (SUM,
-          // AVERAGE, IF, …; everything else returns #ERR!) and cannot
-          // load or save .xlsx/.xlsb bytes at all
-```
-
-See [Stub engine](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the
-full decision flow and [Bundler setup](/cell/bundler) for hosting the required
-headers.
+See [Options](/cell/options) for the UI profile and feature choices, and [Bundler setup](/cell/bundler) for a small Vite configuration.

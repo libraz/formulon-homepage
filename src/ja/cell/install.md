@@ -1,80 +1,106 @@
 ---
 title: formulon-cell のインストール
-description: Formulon のブラウザ結合試験向け参考 UI ライブラリの導入方法。
+description: formulon-cell の表計算 UI キットをインストールしてマウントする方法です。
 ---
 
 # インストール
 
-`formulon-cell` は、このサイトで Formulon のブラウザ版結合試験に使っている
-参考 UI ライブラリです。公開はしていますが、Excel 互換の完成 UI ではありません。
-機能網羅は部分的で、UI/UX も Excel に完全には寄せておらず、UI 側のバグが残る
-可能性もあります。`@libraz/formulon` の WASM エンジンに、検証用・参考用の
-ワークブック風ブラウザ画面を載せたい場合に使います。
-
-::: warning Excel の代替ではありません
-基本的なワークブック操作は使えますが、詳細な UI 互換性はこのパッケージの対象外です。Excel 相当の UI/UX をエンドユーザーへ約束する製品には使わないでください。
-:::
+コアパッケージと、それが共有依存として使う `zustand` をインストールします。
 
 ```sh
 npm install @libraz/formulon-cell zustand
 ```
 
-`zustand` は peer dependency です。組み込み UI が購読しているストアを、
-ホストアプリ側からも読めるように公開しています。
+フレームワークを使う場合は、対応するアダプターもインストールします。
 
-UI パッケージは参考実装として公開しています。アプリケーションの再現性は
-パッケージマネージャの lockfile で管理し、新しいリリースは意図して取り込んでください。
+```sh
+npm install @libraz/formulon-cell-react react react-dom
+npm install @libraz/formulon-cell-vue vue
+```
+
+ブラウザのエントリーポイントでコアのスタイルシートを 1 回読み込みます。公開の読み込み先は `@libraz/formulon-cell/styles.css` です。
+
+```ts
+import '@libraz/formulon-cell/styles.css'
+```
 
 ## クイックスタート
 
+スプレッドシートをマウントする要素に高さを指定します。`Spreadsheet.mount()` は要素の子要素を管理し、ホストが所有するインスタンスを返します。
+
+```html
+<div id="sheet" style="height: 480px; min-height: 320px"></div>
+```
+
 ```ts
-import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
+import {
+  Spreadsheet,
+  WorkbookHandle,
+  presets
+} from '@libraz/formulon-cell'
 import '@libraz/formulon-cell/styles.css'
 
-const host = document.getElementById('sheet')!
+const host = document.querySelector<HTMLElement>('#sheet')!
+let workbook: WorkbookHandle | undefined
+let instance: Awaited<ReturnType<typeof Spreadsheet.mount>> | undefined
+function disposeView() {
+  instance?.dispose()
+  instance = undefined
+  workbook?.dispose()
+  workbook = undefined
+}
 
 try {
-  const workbook = await WorkbookHandle.createDefault()
-
-  const sheet = await Spreadsheet.mount(host, {
-    workbook,
-    features: presets.full(),
+  const nextWorkbook = await WorkbookHandle.createDefault({ locale: 'ja' })
+  workbook = nextWorkbook
+  instance = await Spreadsheet.mount(host, {
+    workbook: nextWorkbook,
+    features: presets.standard(),
     locale: 'ja'
   })
+} catch (error) {
+  showSpreadsheetError(error)
+  disposeView()
+}
 
-  sheet.i18n.setLocale('en')
-  sheet.setTheme('ink')
-} catch (err) {
-  // SharedArrayBuffer が無い（COOP/COEP 未設定）か、WASM の初期化に失敗した
-  showConfigurationError(err)
+// disposeView を周囲のビューの終了処理に登録します。
+```
+
+`WorkbookHandle.createDefault()` は Formulon の標準 WASM パッケージを読み込みます。現在の標準ローダーは `SharedArrayBuffer` や COOP/COEP ヘッダーを必要としません。WASM または WebAssembly の初期化に失敗すると Promise が拒否されるため、ホスト側でエラーを処理してください。
+
+`Spreadsheet.mount()` の `onError` でもエラーを受け取れます。標準ではコアのエラーパネルが表示されます。フレームワークやホスト側でフォールバックを描画する場合は `renderError: false` を指定します。
+
+```ts
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  onError: (error) => showSpreadsheetError(error),
+  renderError: false
+})
+```
+
+## ホストのサイズ
+
+グリッドはマウント先の要素いっぱいに表示されます。ホスト要素、または高さが確定している親レイアウトに高さを指定します。flex レイアウトでは、ホストを含むパネルに `min-height: 0` が必要になる場合があります。
+
+```css
+.sheet-panel {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+}
+
+.sheet-host {
+  flex: 1 1 auto;
+  min-height: 320px;
 }
 ```
 
-## 実行時要件
+ホストがページから外れるときは `instance.dispose()` を呼びます。アプリケーションが所有する `WorkbookHandle` も不要になった時点で破棄します。React と Vue のアダプターはコンポーネントのライフサイクルに合わせてマウントと破棄を行います。
 
-Formulon の WASM パッケージは pthread を使います。ブラウザで
-`SharedArrayBuffer` を有効にするには、ページを cross-origin isolated にする
-必要があります。
+初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理します。差し替え後、最初に渡したワークブックが不要になった時点で呼び出し元が破棄してください。
 
-```txt
-Cross-Origin-Opener-Policy: same-origin
-Cross-Origin-Embedder-Policy: require-corp
-```
+## スタブエンジンの明示的な利用
 
-これらのヘッダが無い場合、`WorkbookHandle.createDefault()` はデフォルトで
-**reject します** ─ 劣化したエンジンへ黙ってフォールバックすることはありません。
-reject を捕捉して（あるいは `Spreadsheet.mount()` に `MountOptions.onError` を渡して）、
-いつまでも再計算されないスプレッドシートの代わりに設定エラーをホストへ表示してください。
+`WorkbookHandle.createDefault({ preferStub: true })` は、テストや小さなデモで使うメモリー上の簡易エンジン（スタブ）を明示的に選択します。WASM を読み込まない確認に使えますが、対応するワークブック機能は標準エンジンより少なくなります。自動フォールバックにはせず、テストやデモのコードで選択を明示してください。
 
-テストと明示的なデモに限り、`preferStub: true` でインメモリの簡易エンジンへ
-明示的にオプトインできます。
-
-```ts
-const wb = await WorkbookHandle.createDefault({ preferStub: true })
-wb.isStub // true ─ 評価できる数式は SUM・AVERAGE・IF などごく小さい
-          // サブセットに限られ（それ以外は #ERR! を返す）、
-          // .xlsx / .xlsb の読み書きは一切できない
-```
-
-判定フローの詳細は [簡易エンジン](/ja/cell/index#sharedarraybuffer-が無いと-reject-する)、
-必要なヘッダの配信方法は [バンドラ設定](/ja/cell/bundler) を参照してください。
+UI プロファイルと機能の選び方は [オプション](/ja/cell/options)、Vite の設定は [バンドラ設定](/ja/cell/bundler) を参照してください。

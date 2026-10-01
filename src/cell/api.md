@@ -1,200 +1,189 @@
 ---
 title: formulon-cell API surface
-description: Main API concepts exposed by the formulon-cell reference UI package.
+description: Choose the package entry point, mount a spreadsheet, and connect the live instance to your application.
 ---
 
-# API Surface
+# API surface
 
-`formulon-cell` is built from composable pieces: a `WorkbookHandle` over the engine, the `Spreadsheet` mounter that produces a `SpreadsheetInstance`, a typed event bus, a zustand-backed store, command helpers, an i18n controller, and a theme controller. The main engine remains `@libraz/formulon`; these APIs provide a reference spreadsheet surface for integration testing and examples, not a complete Excel-compatible UI layer.
+Most applications use three pieces from `@libraz/formulon-cell`: `WorkbookHandle` for file and workbook data, `Spreadsheet.mount()` for the UI, and the returned `SpreadsheetInstance` for host actions. React and Vue re-export the same core types and add framework components.
 
-<DiagramLayers :layers="[
-  { nodes: ['@libraz/formulon (WASM engine)'] },
-  { nodes: ['WorkbookHandle'] },
-  { nodes: ['Spreadsheet.mount(host, options)'] },
-  { title: 'SpreadsheetInstance', nodes: [
-    { label: 'store', note: 'zustand — selection, undo, cell data' },
-    { label: 'history', note: 'undo / redo stack' },
-    { label: 'i18n', note: 'locale controller' },
-    { label: 'theme', note: 'setTheme() controller' },
-    { label: 'events', note: 'on(event, fn) — typed event bus' }
-  ] },
-  { nodes: [{ label: 'Host code', note: 'reads store, calls command helpers, subscribes to events' }] }
-]" label="Engine wrapped by WorkbookHandle, mounted by Spreadsheet.mount into a SpreadsheetInstance exposing store, history, i18n, theme, and events; host code drives it via command helpers" />
+## Import map
 
-::: info Glossary: WorkbookHandle
-A thin wrapper over a `@libraz/formulon` workbook instance plus the engine status. It lets `Spreadsheet.mount()` and host code share the same workbook without managing native memory directly.
-:::
+| Need | Import |
+| --- | --- |
+| Mount the vanilla DOM component | `@libraz/formulon-cell` → `Spreadsheet` |
+| Load or save workbook data | `@libraz/formulon-cell` → `WorkbookHandle` |
+| Select a UI profile | `@libraz/formulon-cell` → `presets`, `resolveSpreadsheetUiOptions` |
+| Restrict a viewer or form | `@libraz/formulon-cell` → `viewerPolicy`, `fixedFormPolicy` |
+| Add or replace optional UI | `@libraz/formulon-cell` → extension factories and `Extension` types |
+| React component and hooks | `@libraz/formulon-cell-react` |
+| Vue component and composables | `@libraz/formulon-cell-vue` |
+| Styles | `@libraz/formulon-cell/styles.css` and an adapter toolbar stylesheet when using a separate toolbar component |
+
+The root entry point also exports command helpers and public types. Keep the generated type declarations beside the version you install for the complete symbol list; this page explains how the main pieces fit together.
 
 ## WorkbookHandle
 
+`WorkbookHandle` is the object shared by the file layer and the spreadsheet UI.
+
 ```ts
-import { WorkbookHandle } from '@libraz/formulon-cell'
+import { WorkbookHandle, Spreadsheet } from '@libraz/formulon-cell'
 
-// New empty workbook, backed by the WASM engine.
-const wb = await WorkbookHandle.createDefault()
+const workbook = await WorkbookHandle.createDefault()
+const instance = await Spreadsheet.mount(host, { workbook })
 
-// Load an existing .xlsx / .xlsb / .xls / .csv from bytes.
-const bytes = new Uint8Array(await file.arrayBuffer())
-const loaded = await WorkbookHandle.loadBytes(bytes)
+const bytes = instance.workbook.save()
+const loaded = await WorkbookHandle.loadBytes(new Uint8Array(fileBytes))
+await instance.setWorkbook(loaded)
+workbook.dispose()
 
-if (wb.isStub) {
-  // preferStub: true was passed explicitly — the in-memory stub engine is
-  // standing in, evaluating only a small formula subset.
+function closeView() {
+  instance.dispose()
 }
 ```
 
-`WorkbookHandle` exposes exactly two static factories, `createDefault(opts)` and `loadBytes(bytes, opts)` — there is no `createEmpty()` or `fromBytes()`. Both reject by default without `SharedArrayBuffer`; see [No SharedArrayBuffer, no silent fallback](/cell/index#no-sharedarraybuffer-no-silent-fallback) for the `preferStub` opt-in. Pass it to `Spreadsheet.mount({ workbook })` so the UI and the engine share state.
+Use `createDefault()` for a new workbook and `loadBytes()` for bytes obtained from a file or an API. Pass the handle to `Spreadsheet.mount()` when the host must prepare or load data first. `WorkbookHandle.save()` returns bytes for the host to download or upload.
 
-### Ad-hoc formula evaluation
+A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.
 
-`WorkbookHandle.evaluateFormulaArray(addr, formula)` evaluates a dynamic-array / spill-returning formula against the workbook without mutating it, returning the whole array result instead of collapsing to the top-left scalar:
-
-```ts
-const result = wb.evaluateFormulaArray({ sheet: 0, row: 0, col: 0 }, '=SEQUENCE(2,2)')
-// result.rows, result.cols, result.cells (row-major: cells[r][c])
-```
-
-It is gated by the `arrayFormulaEvaluation` engine capability; when the engine does not expose it, the handle falls back to a 1×1 wrapper around scalar evaluation. This backs the F9 formula preview, which now renders a spilled selection as a spreadsheet array constant like `{a,b;c,d}` rather than its top-left value. The result type `EvalArrayResult` is re-exported from `@libraz/formulon-cell`.
-
-### Localized function metadata
-
-`WorkbookHandle.setFunctionMetadataProvider(provider)` installs a host-supplied source of localized function signatures, descriptions, and name aliases, merged over the engine's structural function catalog; pass `null` to clear it. The package also exports the pure helper `mergeFunctionMetadata` (alongside `LOCALE_TAGS` and `localeTag`) and re-exports the types `FunctionMetadataProvider`, `FunctionMetadataEntry`, `FunctionMetadataLocalized`, `FunctionMetadataResult`, and `MergedFunctionMetadataResult`. See [i18n](/cell/i18n#localizing-function-metadata) for how a host feeds localized function names and signatures into autocomplete and the formula tooltip.
-
-## Mounting
+## Mounting and the live instance
 
 ```ts
-import { Spreadsheet, WorkbookHandle, presets } from '@libraz/formulon-cell'
+import { Spreadsheet, presets } from '@libraz/formulon-cell'
 
-const workbook = await WorkbookHandle.createDefault()
 const instance = await Spreadsheet.mount(host, {
-  workbook,
-  features: presets.standard(),
+  ui: {
+    profile: 'standard',
+    theme: 'paper',
+    features: { comments: true },
+  },
   locale: 'en',
-  theme: 'paper'
 })
+
+instance.setTheme('ink')
+instance.openFindReplace('find')
+instance.dispose()
 ```
 
-`Spreadsheet.mount()` returns a `SpreadsheetInstance` exposing:
+The host element is taken over by the mount. Give it a height in the surrounding layout and import `@libraz/formulon-cell/styles.css`. The mount options cover UI profile, feature switches, policies, viewport bounds, context menus, overlay roots, locale, extensions, toolbar, and host callbacks. The [Embedding guide](/cell/embedding) shows those choices in application-shaped examples.
 
-| Field / method | Purpose |
+The returned `SpreadsheetInstance` is the main host API:
+
+| Member | Use it for |
 | --- | --- |
-| `workbook` | The `WorkbookHandle` |
-| `store` | Reactive zustand store used by the chrome |
-| `history` | Undo / redo stack |
-| `i18n` | Runtime locale controller |
-| `setTheme(name)` | Switch between `paper`, `ink`, or custom themes |
-| `on(event, fn)` | Subscribe to typed events |
-| `dispose()` | Tear the mount down and detach event listeners |
+| `workbook` | Read, modify, recalculate, load, or save workbook data. |
+| `applyChanges()` | Apply a trusted batch from a server, import, or form. |
+| `setPolicy()`, `setViewportOptions()` | Change permissions or the embedded area after mount. |
+| `setContextMenu()`, `setOverlayOptions()` | Coordinate menus and dialogs with the host layout. |
+| `setUi()`, `setFeatures()`, `setExtensions()` | Adjust the UI surface while it is mounted. |
+| `i18n`, `setTheme()` | Change labels and visual theme. |
+| `on()` | Subscribe to stable named events. |
+| `print()`, `captureScreenClip()` | Invoke host-facing print and capture actions. |
+| `dispose()` | Release the mounted UI and event subscriptions. |
 
 ## Presets
 
-Presets bundle features into common levels of UI density:
+`presets` is a shorthand for a group of feature flags. It is useful when the application wants a known starting set of built-in features and then needs to adjust a few flags.
 
-| Preset | Use it for |
+| Preset | Starting point |
 | --- | --- |
-| `presets.minimal()` | Bare grid, formula bar, status bar, basic keymap |
-| `presets.standard()` | Common app chrome: View toolbar, Quick Analysis, session chart overlays, workbook object inspector, context menu, find/replace, clipboard, format painter, wheel scroll |
-| `presets.full()` | Default full chrome: format dialog, paste special, conditional formatting, iterative calculation, Go To Special, page setup, named ranges, hyperlinks, PivotTable creation, validation, autocomplete, hover comments, spreadsheet keymap |
+| `presets.minimal()` | A compact grid with basic editing and status feedback. |
+| `presets.standard()` | Common navigation, clipboard, selection, and analysis tools. |
+| `presets.full()` | The broadest built-in spreadsheet surface. |
 
-::: tip Pick the smallest preset that still ships your feature
-Each preset adds DOM and bundle weight. If a host already provides its own dialogs, drop down to `presets.minimal()` and use [Command helpers](#command-helpers) directly.
-:::
+For an embedded component, `ui: { profile: 'embedded' }` is the clearer starting point because it also controls ribbon and print visibility. Pass `features` for individual switches; when both `ui.features` and `features` are supplied, the explicit `features` values win.
+
+```ts
+const instance = await Spreadsheet.mount(host, {
+  ui: {
+    profile: 'embedded',
+    theme: 'paper',
+    features: { contextMenu: false, sheetTabs: false },
+  },
+  features: { clipboard: true },
+})
+```
 
 ## Extensions
 
-Beyond the presets, replaceable UI pieces are zero-argument factories you pass through a separate `extensions` array — `features` stays a boolean-flag object:
+An extension adds a focused UI feature or host integration. Built-in factories are exported from the root package and from `@libraz/formulon-cell/extensions`. Disable the matching feature before supplying a replacement with the same id.
 
 ```ts
-import { Spreadsheet, presets, findReplace, formatDialog, hoverComment } from '@libraz/formulon-cell'
+import { Spreadsheet, findReplace, presets } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(host, {
-  workbook,
   features: { ...presets.minimal(), findReplace: false },
-  extensions: [findReplace(), formatDialog(), hoverComment()]
+  extensions: [findReplace()],
 })
 ```
 
-See [Embedding guide](/cell/embedding#selective-extensions) for the full factory catalogue, the `features` vs `extensions` split, and lifecycle hooks.
+See [Extensions](/cell/extensions) for the composition pattern and the built-in feature groups.
+
+Instance methods such as `openFindReplace()` target the built-in feature. For a dialog supplied through `extensions`, call the handle exposed by `instance.features[id]`; disabling the built-in also disables its instance opener.
 
 ## Events
 
-```ts
-const off = instance.on('selectionChange', (event) => {
-  console.log(event.active)
-})
+`instance.on(name, handler)` returns an unsubscribe function. The event payloads are typed in TypeScript.
 
-off()
-```
-
-Common events:
-
-| Event | When it fires |
+| Event | Use it for |
 | --- | --- |
-| `cellChange` | A cell value or formula was edited |
-| `selectionChange` | Active cell or selection rectangles changed |
-| `workbookChange` | Sheet added / removed / renamed, defined names changed |
-| `localeChange` | `i18n.setLocale()` swapped the active dictionary |
-| `themeChange` | `setTheme()` switched themes |
-| `recalc` | Engine completed a recalculation pass |
-
-## Store
-
-The chrome and extensions read from a per-mount [zustand](https://github.com/pmndrs/zustand) vanilla store, exposed as `instance.store`. There is no global `useSpreadsheetStore` hook — each `Spreadsheet.mount()` call creates its own store, and the host subscribes to that instance directly:
+| `changeBatch` | React to an applied cell batch. |
+| `cellChange` | Mirror a changed value or formula. |
+| `selectionChange` | Update an inspector or host command state. |
+| `workbookChange` | React to a workbook replacement. |
+| `localeChange` | Persist a locale selection. |
+| `themeChange` | Persist or coordinate a theme selection. |
+| `recalc` | Refresh host content that depends on calculated cells. |
 
 ```ts
-const selection = instance.store.getState().selection
-
-const unsubscribe = instance.store.subscribe((state) => {
-  console.log(state.selection)
+const unsubscribe = instance.on('selectionChange', ({ active, range }) => {
+  inspector.show({ active, range })
 })
+
+unsubscribe()
 ```
 
-`subscribe` takes a whole-state listener (`(state, prevState) => void`), not a selector — filter inside the callback if you only care about part of `State`.
+For save flows and trusted updates, see [Host integration](/cell/host-integration).
 
-## Command Helpers
+## Command helpers
 
-The package exports command helpers for host chrome that does not want the built-in UI:
+The root package exports focused helpers for applications that provide their own buttons or dialogs. Common groups include formatting, clipboard and CSV/TSV, find and replace, comments, hyperlinks, validation, filters, tables, sheet views, page setup, charts, slicers, and protection. Each helper works with the instance store or workbook state described by its type signature.
 
-- clipboard and paste-special helpers,
-- formatting commands,
-- named ranges, comments, hyperlinks, and validation commands,
-- selection aggregates for status bars,
-- workbook object and compatibility summaries,
-- sheet views, page setup, protection, trace arrows, slicers, and session charts.
+Use an instance method when the action opens one of the built-in dialogs, for example `openFormatDialog()` or `openPageSetup()`. Use a command helper when the host owns the surrounding control and wants to supply its own UI.
 
-The split is intentional: the bundled playground uses these pieces to present a reference spreadsheet UI; applications can reuse the engine-backed commands without adopting the playground chrome.
+## Store access
+
+`instance.store` is available for integrations that need a reactive view of selection, layout, or cell state. It is a per-instance store; there is no global spreadsheet store. Framework users normally prefer `useSelection()` or `useSpreadsheet()` from the adapter package so subscription cleanup follows component lifetime.
 
 ## i18n controller
 
 ```ts
 instance.i18n.setLocale('ja')
-instance.i18n.extend('ja', { contextMenu: { copy: 'コピーする' } })
-
-import fr from './fr.js'
-instance.i18n.register('fr', fr)
-instance.i18n.setLocale('fr')
+instance.i18n.extend('ja', {
+  contextMenu: { copy: 'コピー' },
+})
 ```
 
-See [i18n](/cell/i18n) for the dictionary shape and override patterns.
+`i18n` exposes `setLocale()`, `extend()`, `register()`, `subscribe()`, and the resolved `strings`. See [Internationalization](/cell/i18n) for runtime switching and custom labels.
 
 ## Theme controller
 
-`setTheme('paper' | 'ink' | string)` switches between bundled themes or a custom theme registered via CSS variable tokens.
-
-```css
-.fc-theme-mine {
-  --fc-bg: #faf6e8;
-  --fc-rule: #b09870;
-  /* ...full token vocabulary documented in styles/tokens.css */
-}
-```
-
 ```ts
-instance.setTheme('mine')
+instance.setTheme('paper')
+instance.setTheme('ink')
+instance.setTheme('contrast')
+instance.setTheme('brand') // requires a full custom palette
 ```
+
+Built-in themes are `paper`, `ink`, and `contrast`. A custom name selects host CSS rules scoped to `data-fc-theme`; it requires a complete custom palette and does not inherit a built-in theme. See [Theming](/cell/theming) for token overrides.
 
 ## Read next
 
-- [Embedding guide](/cell/embedding) — preset / extension architecture, headless mode.
-- [i18n](/cell/i18n) — dictionary shape, register / extend / swap.
-- [Bundler setup](/cell/bundler) — what the host must serve.
+- [Hooks and composables](/cell/hooks) — selection, edit notifications, and shared language controls.
+- [Embedding](/cell/embedding) — choose options for a full, minimal, or embedded surface.
+- [React and Vue adapters](/cell/frameworks) — component props, events, hooks, and composables.
+- [Host integration](/cell/host-integration) — files, save state, printing, and native hooks.
+- [Extensions](/cell/extensions) — add, replace, and remove optional UI.
+- [Theming](/cell/theming) — built-in themes and CSS token overrides.
+- [Internationalization](/cell/i18n) — locale dictionaries and label overrides.
+- [Modals and dialogs](/cell/modals) — overlay placement and dialog entry points.
