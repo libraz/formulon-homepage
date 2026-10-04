@@ -16,6 +16,7 @@ import './custom.css'
 // reader activates a demo.
 const FormulaEvalDemo = defineAsyncComponent(() => import('@/components/demos/FormulaEvalDemo.vue'))
 const SpillDemo = defineAsyncComponent(() => import('@/components/demos/SpillDemo.vue'))
+const PivotDemo = defineAsyncComponent(() => import('@/components/demos/PivotDemo.vue'))
 const TraceDemo = defineAsyncComponent(() => import('@/components/demos/TraceDemo.vue'))
 const RecalcDemo = defineAsyncComponent(() => import('@/components/demos/RecalcDemo.vue'))
 const FunctionLookupDemo = defineAsyncComponent(
@@ -45,6 +46,7 @@ export default {
     app.component('DemoFrame', DemoFrame)
     app.component('FormulaEvalDemo', FormulaEvalDemo)
     app.component('SpillDemo', SpillDemo)
+    app.component('PivotDemo', PivotDemo)
     app.component('TraceDemo', TraceDemo)
     app.component('RecalcDemo', RecalcDemo)
     app.component('FunctionLookupDemo', FunctionLookupDemo)

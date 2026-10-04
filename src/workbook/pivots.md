@@ -203,6 +203,12 @@ wb.pivotFieldAddItemAt(0, pivot.index, /*fieldIdx*/ 0, /*cacheIndex*/ 2, false)
 wb.pivot_field_add_item_at(0, pivot, 0, 2, False)  # field_idx=0, cache_index=2
 ```
 
+## Try it
+
+Pivot a small sales table below. The source rows sit in a read-only `formulon-cell` grid and the same rows are loaded into a pivot cache; choosing a row field, an optional column field and an aggregation rebuilds the pivot and renders the cells that `pivotLayout()` returns. The result is drawn by the page, not written into the sheet.
+
+<PivotDemo />
+
 ## Inspect the projected result
 
 `pivotLayout()` / `pivot_layout()` returns the projected rectangle and cells. It is a projection for host rendering and does not write ordinary worksheet values. Saving preserves the PivotTable definition and cache for Excel to render; a static report must write the returned cells explicitly with cell setters.

@@ -203,6 +203,12 @@ wb.pivotFieldAddItemAt(0, pivot.index, /*fieldIdx*/ 0, /*cacheIndex*/ 2, false)
 wb.pivot_field_add_item_at(0, pivot, 0, 2, False)  # field_idx=0、cache_index=2
 ```
 
+## 試してみる
+
+下の小さな売上表でピボットを試せます。元の行は読み取り専用の `formulon-cell` グリッドに表示し、同じ行をピボットキャッシュに読み込んでいます。行フィールド、任意の列フィールド、集計方法を選ぶとピボットを組み直し、`pivotLayout()` が返すセルを表示します。結果はページが描画したもので、シートには書き込まれません。
+
+<PivotDemo />
+
 ## 投影結果を調べる
 
 `pivotLayout()` / `pivot_layout()` は、投影した矩形とセルを返します。ホストで表示するための結果であり、通常のワークシート値は書き換えません。保存するとピボットテーブルの定義とキャッシュが保持され、Excel で表示できます。静的な帳票を作る場合は、返されたセルを setter で明示的に書き込んでください。
