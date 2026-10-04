@@ -42,7 +42,7 @@ formulon recalc input.xlsx -o output.xlsx
 ## formulon-cell
 
 ```sh
-yarn add @libraz/formulon-cell@0.7.0 @libraz/formulon-cell-vue@0.7.0
+yarn add @libraz/formulon-cell@0.8.0 @libraz/formulon-cell-vue@0.8.0
 ```
 
 Vue アダプターを使う場合は `@libraz/formulon-cell-vue` を追加します。フレームワーク用アダプターは共通のコアパッケージを使います。

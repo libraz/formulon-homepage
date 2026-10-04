@@ -19,6 +19,8 @@ description: 表示 UI、編集セル、ナビゲーション範囲、メニュ�
 | `excel365` | デスクトップ型の広い UI 構成です。 |
 | `full` | `full` プリセットと同じ、すべての UI を含む構成です。 |
 
+`ui.platform` は `ui.profile` とは独立して解決されます。既定の UI には `default`、Mac の UI を明示的に選ぶ場合は `mac`、ブラウザーから判定する場合は `auto` を使います。iPad と iPhone のユーザーエージェント、およびタッチ対応の `MacIntel` は `default` に解決されます。Mac リボンと制限は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
+
 ```ts
 const instance = await Spreadsheet.mount(host, {
   workbook,
@@ -49,7 +51,7 @@ const instance = await Spreadsheet.mount(host, {
 
 `ui.profile` を指定しない場合、機能プロファイルは `excel365` に解決されます。リボンは `toolbar` で有効にするか、リボンを含む `ui` を渡した場合にだけマウントされます。機能フラグは組み込み拡張を選びますが、それだけで周辺のリボン構成は決まりません。
 
-`setUi()` による更新でも、初回マウント時のトップレベルの `features`、`theme`、`toolbar` が優先されます。これらを直接変更する場合は、対応する `setFeatures()`、`setTheme()`、`setToolbar()` を使います。
+`setUi()` は現在のワークブックを保ったまま、プロファイル、プラットフォーム、テーマを再解決します。初回マウント時のトップレベルの `features`、`theme`、`toolbar` も再適用されます。プラットフォームを変更すると、開いている Mac の数式パレットを閉じ、保留中の下書きを破棄します。これらを直接変更する場合は、対応する `setFeatures()`、`setTheme()`、`setToolbar()` を使います。
 
 組み込みテーマは `paper`、`ink`、`contrast` です。アプリケーションの外観が変わったときは、マウント後に `instance.setTheme()` を呼びます。
 
@@ -118,6 +120,8 @@ const policy = fixedFormPolicy(({ addr, operation }) =>
 ```
 
 独自ポリシーは `defaultOperation: 'deny'` から始め、ホスト UI が提供する操作だけを許可すると管理しやすくなります。ビューを編集可能から読み取り専用へ変更する場合は `instance.setPolicy()` を使います。
+
+保護と結合セルも認可の対象です。結合範囲に触れる書き込みは結合全体を確認し、アンカーセルに適用します。`validation` UI スイッチは入力補助とリストのドロップダウンを制御し、ポリシーの `validation` 操作は入力規則の変更を制御します。複数範囲の書式設定や Clear を含む複合操作は、実行時だけでなく Undo / Redo 時にも現在のポリシーで再認可されるため、ポリシー変更後の再実行が拒否されることがあります。
 
 ::: info ポリシーと組み込み UI
 `policy` を指定したインスタンスでは、組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに限られます。それ以外の組み込み機能は、機能フラグを有効にしても表示されません。操作を許可する設定だけでは対応 UI は有効になりません。ホスト側のコードから低レベルのヘルパーを呼ぶ場合は、別途その操作を許可してください。

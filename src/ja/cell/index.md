@@ -82,6 +82,7 @@ const instance = await Spreadsheet.mount(host, {
 - [インストール](/ja/cell/install) — パッケージ、スタイル、サイズ、エラー、破棄。
 - [バンドラ設定](/ja/cell/bundler) — 現在の Vite 設定とアセット確認。
 - [オプション](/ja/cell/options) — UI プロファイル、機能スイッチ、ポリシー、ビューポート、メニュー、実行時変更。
+- [プラットフォームと Mac UI](/ja/cell/platform) — `default`、`mac`、`auto` の選択と Mac 専用 UI。
 - [埋め込み](/ja/cell/embedding) — ビューアー、フォーム、カスタム UI、ホスト更新。
 - [モーダルとダイアログ](/ja/cell/modals) — オーバーレイの配置とダイアログ起動メソッド。
 - [フレームワークアダプター](/ja/cell/frameworks) — React と Vue の利用方法。

@@ -82,6 +82,7 @@ Use `presets.minimal()` or the `embedded` profile when the surrounding applicati
 - [Install](/cell/install) — packages, styles, sizing, errors, and disposal.
 - [Bundler setup](/cell/bundler) — current Vite setup and asset checks.
 - [Options](/cell/options) — UI profiles, feature switches, policies, viewport, menus, and runtime changes.
+- [Platform and Mac UI](/cell/platform) — choose `default`, `mac`, or `auto` and use Mac-specific surfaces.
 - [Embedding](/cell/embedding) — viewer, form, host-owned controls, and host-owned updates.
 - [Modals and dialogs](/cell/modals) — overlay placement and direct dialog entry points.
 - [Framework adapters](/cell/frameworks) — React and Vue component usage.

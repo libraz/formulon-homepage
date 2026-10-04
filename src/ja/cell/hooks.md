@@ -130,7 +130,7 @@ export function SheetWithInspector() {
 
 `onReady` が呼ばれる前もフックを常に呼び出します。インスタンスの準備後にインスペクターだけを切り替え、`<Spreadsheet>` 要素はマウントしたままにします。
 
-上のセル数は `selection.range` にある主選択範囲の値です。非連続選択で全範囲の合計が必要な場合は、`selection.extraRanges` も明示的に加算します。
+上のセル数は `selection.range` にある主選択範囲の値です。非連続選択で全範囲の合計が必要な場合は、`selection.extraRanges` も明示的に加算します。`Ctrl` または `Cmd` を押しながらドラッグすると別の範囲を追加できます。`Ctrl+Enter` / `Cmd+Enter` は現在の編集内容を選択したすべての範囲へ書き込みます。リボンの書式設定とクリアもすべての範囲を処理し、各範囲を現在のポリシーで認可します。`selectionChange` イベントが返すのはアクティブセル、アンカー、主選択範囲だけで、`extraRanges` はアダプターのフックとストアの状態から取得します。
 
 ## Vue: 同じインスペクターを SFC で作る
 

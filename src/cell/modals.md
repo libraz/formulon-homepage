@@ -161,6 +161,8 @@ namesButton.addEventListener('click', () => {
 
 Other entry points include `openHyperlinkDialog()`, `openPageSetup()`, `openConditionalDialog()`, `openPasteSpecial()`, `openEvaluateFormulaDialog()`, and `openPivotTableDialog()`. Use the shipped package declarations for each method's current optional argument shape.
 
+The Mac ribbon opens Goal Seek, Consolidate, Subtotal, Sparkline, Slicer, and Workbook Statistics dialogs. See [Platform and Mac UI](/cell/platform) for the command IDs and limits when the host supplies its own toolbar.
+
 `openDataValidationDialog()` requires `formatDialog: true`; `validation` controls cell validation assistance and list dropdowns. The other entry points require the feature that owns the corresponding built-in dialog.
 
 If the matching feature is disabled, enable it in the profile or pass the corresponding feature flag:

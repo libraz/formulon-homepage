@@ -5,7 +5,7 @@ description: formulon-cell を React / Vue から利用し、コアと同じ UI 
 
 # React / Vue アダプター
 
-`@libraz/formulon-cell-react` と `@libraz/formulon-cell-vue` は、`Spreadsheet` コンポーネント、独立したツールバーコンポーネント、状態を読むためのフック / コンポーザブルを提供します。マウントされる UI はコアパッケージと同じため、[埋め込み](/ja/cell/embedding) に記載したオプションをそのまま使えます。
+`@libraz/formulon-cell-react` と `@libraz/formulon-cell-vue` は、`Spreadsheet` コンポーネントと状態を読むためのフック / コンポーザブルを提供します。React はパッケージ直下から `SpreadsheetToolbar` をエクスポートし、Vue は `@libraz/formulon-cell-vue/toolbar.vue` サブパスでツールバーを公開します。マウントされる UI はコアパッケージと同じため、[埋め込み](/ja/cell/embedding) に記載したオプションをそのまま使えます。
 
 ## React でのマウント例
 
@@ -111,7 +111,7 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 
 | オプション | 主な用途 |
 | --- | --- |
-| `ui` | `embedded`、`minimal`、`standard`、`full` の UI とテーマを選びます。 |
+| `ui` | `embedded`、`minimal`、`standard`、`excel365`、`full` の UI、テーマ、`default`、`mac`、`auto` の `platform` を選びます。 |
 | `toolbar` | コンポーネント内にリボンを表示します。 |
 | `policy` | 閲覧専用または入力セルだけ編集できるフォームを作ります。 |
 | `viewport` | 表示・移動できるセル範囲と Tab 移動を設定します。 |
@@ -120,6 +120,7 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 | `workbook` | ホストが読み込んだワークブックを渡します。 |
 | `locale`、`strings` | UI 言語とラベルの上書きを設定します。 |
 | `features`、`extensions` | 組み込み UI の切り替えと追加機能を設定します。 |
+| `getFunctionArgumentHelp` | Mac のパレットに型付きの引数ラベル、説明、参照 URL を渡します。 |
 | `functions` | マウント前にホスト側の数式関数を登録します。 |
 | `printerProfiles`、`refreshPrinterProfiles` | ネイティブ / Electron のプリンター情報を接続します。 |
 | `captureScreenClip` | 画面領域キャプチャをホストから提供します。 |
@@ -143,11 +144,15 @@ React のイベントプロパティと Vue のイベントは同じイベント
 
 React のフックと Vue のコンポーザブルは、選択状態、必要な表示値、変更イベント、言語設定をホスト側のコントロールへ接続します。[フックとコンポーザブルの利用例](/ja/cell/hooks) に、選択セルのインスペクター、変更表示、言語の同期、拒否された編集の表示をまとめています。
 
+`selection-change` イベントに含まれるのはアクティブセル、アンカー、主選択範囲だけです。ホストパネルで非連続の範囲も読む場合は、`useSelection()` または `useSpreadsheet()` から `state.selection.extraRanges` を取得します。
+
 ## ツールバーコンポーネント
 
-リボンをスプレッドシートと別のレイアウトへ置く場合は `SpreadsheetToolbar` を使います。`onReady` またはコンポーネントの `ref` から取得したインスタンスを渡します。
+リボンをスプレッドシートと別のレイアウトへ置く場合は `SpreadsheetToolbar` を使います。React では `@libraz/formulon-cell-react` から、Vue では `@libraz/formulon-cell-vue/toolbar.vue` のデフォルトコンポーネントとしてインポートします。`onReady` またはコンポーネントの `ref` から取得したインスタンスを渡します。
 
 ```tsx
+import { SpreadsheetToolbar } from '@libraz/formulon-cell-react'
+
 <SpreadsheetToolbar
   instance={instance}
   activeTab={activeTab}
@@ -158,6 +163,26 @@ React のフックと Vue のコンポーザブルは、選択状態、必要な
     applyProtectAction: () => openHostDialog('protect'),
   }}
 />
+```
+
+```vue
+<script setup lang="ts">
+import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
+import { ref } from 'vue'
+import type { RibbonTab, SpreadsheetInstance } from '@libraz/formulon-cell-vue'
+
+defineProps<{ instance: SpreadsheetInstance }>()
+const activeTab = ref<RibbonTab>('home')
+</script>
+
+<template>
+  <SpreadsheetToolbar
+    :instance="instance"
+    locale="ja"
+    :active-tab="activeTab"
+    @tab-change="activeTab = $event"
+  />
+</template>
 ```
 
 リボンを同じホストに含める場合は `Spreadsheet` の `toolbar` を使います。アプリケーションがタイトルバーや全体のレイアウトを所有する場合は `SpreadsheetToolbar` を使います。ツールバーはタブ一覧と、スクリプト、アドイン、スペルチェック、翻訳、描画などのホスト操作用コールバックを受け取ります。
@@ -177,5 +202,6 @@ React のフックと Vue のコンポーザブルは、選択状態、必要な
 
 - [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
 - [埋め込み](/ja/cell/embedding) ─ vanilla のマウント、オプション、モーダル配置
+- [プラットフォームと Mac UI](/ja/cell/platform) ─ プラットフォーム、Mac リボン、引数ヘルプ
 - [ホスト統合](/ja/cell/host-integration) ─ 保存、ステータス表示、印刷、ホストコールバック
 - [国際化](/ja/cell/i18n) ─ 実行時ロケールと文字列上書き

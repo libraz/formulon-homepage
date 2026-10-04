@@ -161,6 +161,8 @@ namesButton.addEventListener('click', () => {
 
 ほかに `openHyperlinkDialog()`、`openPageSetup()`、`openConditionalDialog()`、`openPasteSpecial()`、`openEvaluateFormulaDialog()`、`openPivotTableDialog()` があります。各メソッドの現在のオプション引数は、配布パッケージの型宣言を参照してください。
 
+Mac リボンからは、ゴール シーク、統合、小計、スパークライン、スライサー、ブック統計のダイアログを開けます。ホストが独自のツールバーを用意する場合の起動方法と制限は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
+
 `openDataValidationDialog()` を使うには `formatDialog: true` が必要です。`validation` はセル入力の検証補助やリストのドロップダウンを制御します。ほかの起動メソッドには、それぞれ対応する組み込みダイアログの機能フラグが必要です。
 
 対応する機能が無効な場合は、プロファイルまたは機能フラグで有効にします。

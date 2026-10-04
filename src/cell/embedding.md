@@ -5,7 +5,7 @@ description: Embed the spreadsheet UI with host-owned policies, commands, and li
 
 # Embedding guide
 
-The core API separates the spreadsheet surface from the surrounding application. The host, or embedding application, chooses the visible UI, the cells that may be edited, the placement of floating UI, and the lifecycle of the workbook.
+The core API separates the spreadsheet surface from the surrounding application. The host, or embedding application, chooses the visible UI, the cells that may be edited, the placement of floating UI, and the lifecycle of the workbook. Choose `ui.platform` independently from `ui.profile`; [Platform and Mac UI](/cell/platform) describes the Mac ribbon and its supported dialogs.
 
 Before mounting, import the package stylesheet and give the host a height. See [Install](/cell/install) for the CSS import, sizing example, and disposal contract.
 
@@ -98,7 +98,7 @@ instance.applyChanges([
 
 `instance.applyChanges()` is a trusted host update. It is useful for prefilled values, server refreshes, and imports that the host has authorized. It addresses the workbook, including cells outside the current viewport, and the default history mode resets user history after a successful update.
 
-Use `instance.commands.execute()` for user cell edits that must follow the active interaction policy. Exported low-level command helpers are trusted host APIs; the host must authorize their use. If a host update should be recorded as an undoable operation, pass `history: 'record'` and handle a rejected `ChangeBatchResult`:
+Use `instance.commands.execute()` for user cell edits that must follow the active interaction policy. Check each low-level helper's contract: direct store or workbook mutations require host authorization, while helpers routed through the interaction controller enforce its policy. The Mac ribbon actions for Goal Seek, Consolidate, and Subtotal authorize changes through the instance before applying them. If a host update should be recorded as an undoable operation, pass `history: 'record'` and handle a rejected `ChangeBatchResult`:
 
 ```ts
 const result = instance.applyChanges(
@@ -178,7 +178,7 @@ instance.setTheme('paper')
 instance.setToolbar(false)
 ```
 
-Use `setFeatures()` for a direct `FeatureFlags` update. `setUi()` resolves a profile and its UI switches; the original top-level `features`, `theme`, and `toolbar` options are also reapplied. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly. See [Options](/cell/options) for the precedence rules and option reference.
+Use `setFeatures()` for a direct `FeatureFlags` update. `setUi()` preserves the workbook while resolving a profile, platform, and its UI switches; the original top-level `features`, `theme`, and `toolbar` options are also reapplied. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly. See [Options](/cell/options) for the precedence rules and [Platform and Mac UI](/cell/platform) for platform changes.
 
 <CellEmbedDemo scenario="host-sync" />
 

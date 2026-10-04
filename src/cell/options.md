@@ -19,6 +19,8 @@ description: Choose the visible UI, editable cells, navigation bounds, menus, an
 | `excel365` | Full desktop-style surface. |
 | `full` | Full surface, equivalent to the full preset. |
 
+`ui.platform` is resolved independently from `ui.profile`. Use `default` for the default surface, `mac` for an explicit Mac surface, or `auto` for browser detection; iPad and iPhone user agents, including touch-enabled `MacIntel`, resolve to `default`. See [Platform and Mac UI](/cell/platform) for the Mac ribbon and its limits.
+
 ```ts
 const instance = await Spreadsheet.mount(host, {
   workbook,
@@ -51,7 +53,7 @@ The top-level `theme` takes precedence over `ui.theme`. The top-level `toolbar` 
 
 Without `ui.profile`, the feature profile resolves to `excel365`. The ribbon mounts only when `toolbar` enables it or a supplied `ui` resolves to a ribbon-enabled profile. Feature flags select built-in extensions; they do not by themselves choose the surrounding ribbon layout.
 
-`setUi()` also reapplies the original top-level `features`, `theme`, and `toolbar` overrides. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly.
+`setUi()` keeps the current workbook while re-resolving the profile, platform, and theme. It also reapplies the original top-level `features`, `theme`, and `toolbar` overrides. A platform change closes an open Mac formula palette and discards its suspended draft. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly.
 
 The built-in themes are `paper`, `ink`, and `contrast`. A host can call `instance.setTheme()` after mount when the surrounding application changes appearance.
 
@@ -120,6 +122,8 @@ const policy = fixedFormPolicy(({ addr, operation }) =>
 ```
 
 For a custom policy, `defaultOperation: 'deny'` is a useful starting point. Add only the operations that the host UI actually exposes. Use `instance.setPolicy()` when a view changes from editable to read-only.
+
+Protection and merged cells remain part of authorization. A write touching a merged range is checked across the merge and committed at its anchor. The `validation` UI switch controls input assistance and list dropdowns, while the policy's `validation` operation controls validation changes. Composite edits, including multi-area formatting and Clear, are re-authorized against the current policy when they are executed and when they are undone or redone; a policy change can therefore reject a later replay.
 
 ::: info Policy and built-in UI
 While a policy is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu. Other built-ins remain unavailable even if their flags are true; authorizing an operation alone does not enable its UI. Host-owned code must authorize low-level helpers separately.

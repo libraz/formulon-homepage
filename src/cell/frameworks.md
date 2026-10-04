@@ -5,7 +5,7 @@ description: Use formulon-cell from React or Vue with the same UI options, host 
 
 # React and Vue adapters
 
-`@libraz/formulon-cell-react` and `@libraz/formulon-cell-vue` provide the `Spreadsheet` component, a separate toolbar component, and small state hooks or composables. They mount the same core spreadsheet surface, so the options described in [Embedding](/cell/embedding) also apply here.
+`@libraz/formulon-cell-react` and `@libraz/formulon-cell-vue` provide the `Spreadsheet` component and small state hooks or composables. React exports `SpreadsheetToolbar` from its package root; Vue exposes the toolbar as the `@libraz/formulon-cell-vue/toolbar.vue` subpath. They mount the same core spreadsheet surface, so the options described in [Embedding](/cell/embedding) also apply here.
 
 ## A complete React mount
 
@@ -113,7 +113,7 @@ Both adapters forward these options to `Spreadsheet.mount()`:
 
 | Option | Typical use |
 | --- | --- |
-| `ui` | Choose `embedded`, `minimal`, `standard`, or `full` and set a theme. |
+| `ui` | Choose `embedded`, `minimal`, `standard`, `excel365`, or `full`, set a theme, and choose a `platform` of `default`, `mac`, or `auto`. |
 | `toolbar` | Mount the ribbon in the component, or pass toolbar options. |
 | `policy` | Create a read-only viewer or restrict edits to form cells. |
 | `viewport` | Limit the visible area and configure Tab navigation. |
@@ -122,6 +122,7 @@ Both adapters forward these options to `Spreadsheet.mount()`:
 | `workbook` | Mount a workbook loaded or prepared by the host. |
 | `locale`, `strings` | Set the UI language and override labels. |
 | `features`, `extensions` | Toggle built-in UI and add selected extensions. |
+| `getFunctionArgumentHelp` | Supply typed argument labels, descriptions, or reference URLs to the Mac palette. |
 | `functions` | Register host-side formula functions before mount. |
 | `printerProfiles`, `refreshPrinterProfiles` | Connect printing to native or Electron printer data. |
 | `captureScreenClip` | Supply a host screenshot picker for Screen Clipping. |
@@ -145,11 +146,15 @@ React event props and Vue emits cover the same events:
 
 React hooks and Vue composables connect selection, derived display values, change events, and language settings to host controls. The [Hooks and composables guide](/cell/hooks) includes a selection inspector, edit indicators, shared language controls, and rejected-edit feedback.
 
+The `selection-change` event contains only the active cell, anchor, and primary range. Use `useSelection()` or `useSpreadsheet()` to read `state.selection.extraRanges` when a host panel needs all disjoint ranges.
+
 ## The toolbar component
 
-`SpreadsheetToolbar` is useful when the ribbon belongs in a layout separate from the spreadsheet component. Pass the instance received from `onReady` or a component ref.
+`SpreadsheetToolbar` is useful when the ribbon belongs in a layout separate from the spreadsheet component. In React, import it from `@libraz/formulon-cell-react`; in Vue, import the default component from `@libraz/formulon-cell-vue/toolbar.vue`. Pass the instance received from `onReady` or a component ref.
 
 ```tsx
+import { SpreadsheetToolbar } from '@libraz/formulon-cell-react'
+
 <SpreadsheetToolbar
   instance={instance}
   activeTab={activeTab}
@@ -160,6 +165,26 @@ React hooks and Vue composables connect selection, derived display values, chang
     applyProtectAction: () => openHostDialog('protect'),
   }}
 />
+```
+
+```vue
+<script setup lang="ts">
+import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
+import { ref } from 'vue'
+import type { RibbonTab, SpreadsheetInstance } from '@libraz/formulon-cell-vue'
+
+defineProps<{ instance: SpreadsheetInstance }>()
+const activeTab = ref<RibbonTab>('home')
+</script>
+
+<template>
+  <SpreadsheetToolbar
+    :instance="instance"
+    locale="en"
+    :active-tab="activeTab"
+    @tab-change="activeTab = $event"
+  />
+</template>
 ```
 
 Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. Use `SpreadsheetToolbar` when the surrounding application owns the layout or title bar. The toolbar component accepts shared tab definitions and callbacks for host actions such as scripts, add-ins, spelling, translation, and drawing.
@@ -179,5 +204,6 @@ Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. 
 
 - [Hooks and composables](/cell/hooks) — selection, edit notifications, and shared language controls.
 - [Embedding](/cell/embedding) — vanilla mounting, options, and modal placement.
+- [Platform and Mac UI](/cell/platform) — platform selection, Mac ribbon, and argument help.
 - [Host integration](/cell/host-integration) — saving, status indicators, printing, and host callbacks.
 - [Internationalization](/cell/i18n) — runtime locale and string overrides.

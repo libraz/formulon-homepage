@@ -130,7 +130,7 @@ Give the spreadsheet host a real height. The imported core stylesheet supplies t
 
 The hook calls remain unconditional even before `onReady` fires. Keep the spreadsheet component mounted while the inspector changes; conditionally render the inspector contents instead of replacing the `<Spreadsheet>` element after the instance becomes ready.
 
-The count above describes the primary rectangle in `selection.range`. A disjoint selection can also have `selection.extraRanges`; add those ranges explicitly when the host panel needs a total across every selected rectangle.
+The count above describes the primary rectangle in `selection.range`. A disjoint selection can also have `selection.extraRanges`; add those ranges explicitly when the host panel needs a total across every selected rectangle. Hold `Ctrl` or `Cmd` while dragging to add another area. `Ctrl+Enter` / `Cmd+Enter` writes the current edit to every selected area. Ribbon formatting and Clear also visit every area and authorize each area against the active policy. The `selectionChange` event still reports only the active cell, anchor, and primary range; the adapter hooks and store state carry `extraRanges`.
 
 ## Vue: the same inspector as an SFC
 
