@@ -112,6 +112,11 @@ const capabilities = computed<Capability[]>(() =>
           link: '/ja/scenarios/'
         },
         {
+          key: 'Workbook',
+          value: '動的配列、ピボットテーブル、行列の挿入削除、反復計算',
+          link: '/ja/workbook/'
+        },
+        {
           key: 'Compatibility',
           value: '関数の対応状況と Excel 由来の期待値',
           link: '/ja/compatibility/'
@@ -132,6 +137,11 @@ const capabilities = computed<Capability[]>(() =>
           key: 'Use cases',
           value: 'Browser upload, Python batch, and CI workbook regression',
           link: '/scenarios/'
+        },
+        {
+          key: 'Workbook',
+          value: 'Dynamic arrays, PivotTables, structural edits, iterative calculation',
+          link: '/workbook/'
         },
         {
           key: 'Compatibility',

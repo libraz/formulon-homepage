@@ -29,3 +29,29 @@ it('keeps the function picker result and displayed grid in sync without extra ch
     }).status
   ).toBe('rejected')
 })
+
+it('spills array functions down column F and clears the spill when switching back', async () => {
+  const { instances } = await captureMounts()
+  const wrapper = mountDemo(HomeCellDemo)
+  await ready(wrapper)
+  const instance = instances[0]
+  const result = () => wrapper.find('.fln-demo-result')
+
+  await page.getByRole('button', { name: /^SORT / }).click()
+  expect(cellNumber(instance, 1, 5)).toEqual({ kind: 'number', value: 1890 })
+  expect(cellNumber(instance, 6, 5)).toEqual({ kind: 'number', value: 1280 })
+  expect(result().text()).toContain('F2:F7')
+  expect(result().find('strong').text()).toBe('1,890, 1,750, 1,610, 1,560, 1,420, 1,280')
+
+  await page.getByRole('button', { name: /^FILTER / }).click()
+  expect(cellNumber(instance, 4, 5)).toEqual({ kind: 'text', value: 'Jun' })
+  expect(cellNumber(instance, 5, 5)).toEqual({ kind: 'blank' })
+  expect(result().text()).toContain('F2:F5')
+
+  await page.getByRole('button', { name: /^MAX / }).click()
+  expect(cellNumber(instance, 1, 5)).toEqual({ kind: 'number', value: 1890 })
+  for (let row = 2; row <= 6; row += 1)
+    expect(cellNumber(instance, row, 5)).toEqual({ kind: 'blank' })
+  expect(result().text()).not.toContain('F2:F')
+  expect(result().find('strong').text()).toBe('1,890')
+})

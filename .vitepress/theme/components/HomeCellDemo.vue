@@ -28,11 +28,15 @@ const functions: DemoFunction[] = [
     category: 'Logic',
     formula: '=IF(SUM(D2:D7)>8000,"above plan","below plan")',
     target: 'F2'
-  }
+  },
+  { name: 'SORT', category: 'Array', formula: '=SORT(B2:B7,,-1)', target: 'F2' },
+  { name: 'FILTER', category: 'Array', formula: '=FILTER(A2:A7,D2:D7>650)', target: 'F2' },
+  { name: 'SORTBY', category: 'Array', formula: '=SORTBY(A2:A7,D2:D7,-1)', target: 'F2' }
 ]
 
 const activeFunction = ref(functions[0])
 const result = ref('')
+const spill = ref<{ range: string } | null>(null)
 const engine = ref('loading')
 const status = ref<'booting' | 'ready' | 'fallback' | 'error'>('booting')
 const host = ref<HTMLElement | null>(null)
@@ -46,42 +50,71 @@ const copy = computed(() =>
     ? {
         section: 'Live Workbook',
         heading: 'npm 版 formulon で関数を試す',
-        body: '下のシートは @libraz/formulon を読み込んだ formulon-cell の実デモです。関数を選ぶと F2 の式を書き換え、WASM エンジンで再計算します。',
+        body: '下のシートは @libraz/formulon を読み込んだ formulon-cell の実デモです。関数を選ぶと F2 の式を書き換え、WASM エンジンで再計算します。Array の関数は結果が F 列の下へスピルします。',
         badge: 'WASM',
         readonly: '表示専用',
         readonlyNote: 'シートは読み取り専用です。関数ボタンを選ぶと数式が切り替わります。',
         result: 'F2 の結果',
         formula: '現在の式',
         open: 'formulon-cell のドキュメント',
-        full: 'フルデモを見る'
+        full: 'フルデモを見る',
+        spillDoc: 'スピルのしくみ',
+        spillRange: 'スピル範囲'
       }
     : {
         section: 'Live Workbook',
         heading: 'Try functions through npm formulon',
-        body: 'This sheet is the real formulon-cell surface backed by @libraz/formulon. Pick a function to rewrite F2 and recalculate it in the WASM engine.',
+        body: 'This sheet is the real formulon-cell surface backed by @libraz/formulon. Pick a function to rewrite F2 and recalculate it in the WASM engine. Array functions spill their result down column F.',
         badge: 'WASM',
         readonly: 'Read-only',
         readonlyNote: 'The sheet is read-only. Changes are applied through the function picker.',
         result: 'F2 result',
         formula: 'Current formula',
         open: 'formulon-cell documentation',
-        full: 'Open full demo'
+        full: 'Open full demo',
+        spillDoc: 'How spilling works',
+        spillRange: 'Spill range'
       }
 )
 
 const targetAddr = { sheet: 0, row: 1, col: 5 }
+/** Rows of column F blanked before each write, so a shorter result never
+ *  leaves cells from the previous spill standing. */
+const CLEAR_ROWS = 8
+
+const readResult = () => {
+  if (!workbook || !spreadsheetApi) return
+  const info = workbook.spillInfo(targetAddr.sheet, targetAddr.row, targetAddr.col)
+  if (!info || (info.rows === 1 && info.cols === 1)) {
+    spill.value = null
+    result.value = formatCell(workbook.getValue(targetAddr))
+    return
+  }
+  const values: string[] = []
+  for (let i = 0; i < info.rows; i += 1) {
+    values.push(formatCell(workbook.getValue({ ...targetAddr, row: targetAddr.row + i })))
+  }
+  spill.value = { range: `F${targetAddr.row + 1}:F${targetAddr.row + info.rows}` }
+  result.value = values.join(', ')
+}
+
+const formatCell = (value: Parameters<typeof spreadsheetApi.formatCell>[0]) =>
+  spreadsheetApi.formatCell(value, lang.value === 'ja' ? 'ja-JP' : 'en-US')
 
 const applyFunction = (fn: DemoFunction) => {
   activeFunction.value = fn
   if (!workbook || !spreadsheet) return
-  const { mutators, formatCell } = spreadsheetApi
+  const { mutators } = spreadsheetApi
+  for (let i = 0; i < CLEAR_ROWS; i += 1) {
+    workbook.setBlank({ ...targetAddr, row: targetAddr.row + i })
+  }
   workbook.setText({ sheet: 0, row: 1, col: 4 }, fn.name)
   workbook.setFormula(targetAddr, fn.formula)
   // The instance recalculates and re-reads the sheet into the store; the
   // workbook's own recalc() only does the former, leaving the grid stale.
   spreadsheet.recalc()
   mutators.setActive(spreadsheet.store, targetAddr)
-  result.value = formatCell(workbook.getValue(targetAddr), lang.value === 'ja' ? 'ja-JP' : 'en-US')
+  readResult()
 }
 
 let spreadsheetApi: Awaited<typeof import('@libraz/formulon-cell')>
@@ -122,7 +155,7 @@ onMounted(async () => {
   try {
     spreadsheetApi = await import('@libraz/formulon-cell')
     if (disposed) return
-    const { Spreadsheet, WorkbookHandle, mutators, formatCell, isUsingStub } = spreadsheetApi
+    const { Spreadsheet, WorkbookHandle, mutators, isUsingStub } = spreadsheetApi
     wb = await WorkbookHandle.createDefault()
     if (disposed) {
       wb.dispose()
@@ -152,7 +185,7 @@ onMounted(async () => {
     spreadsheet = mounted
     workbook = wb
     mutators.setActive(spreadsheet.store, targetAddr)
-    result.value = formatCell(workbook.getValue(targetAddr), isJa.value ? 'ja-JP' : 'en-US')
+    readResult()
     engine.value = workbook.isStub || isUsingStub() ? 'stub' : `formulon ${workbook.version}`
     status.value = workbook.isStub || isUsingStub() ? 'fallback' : 'ready'
   } catch (error) {
@@ -180,9 +213,7 @@ watch(isDark, (dark) => {
 watch(isJa, async (ja) => {
   spreadsheet?.i18n.setLocale(ja ? 'ja' : 'en')
   await nextTick()
-  if (workbook && spreadsheetApi) {
-    result.value = spreadsheetApi.formatCell(workbook.getValue(targetAddr), ja ? 'ja-JP' : 'en-US')
-  }
+  readResult()
 })
 </script>
 
@@ -196,6 +227,9 @@ watch(isJa, async (ja) => {
         <div class="fln-demo-links">
           <a :href="isJa ? '/ja/cell/' : '/cell/'">{{ copy.open }}</a>
           <a :href="isJa ? '/ja/cell/demo' : '/cell/demo'">{{ copy.full }}</a>
+          <a :href="isJa ? '/ja/workbook/dynamic-arrays' : '/workbook/dynamic-arrays'">{{
+            copy.spillDoc
+          }}</a>
         </div>
       </div>
 
@@ -238,8 +272,8 @@ watch(isJa, async (ja) => {
             <code>{{ activeFunction.formula }}</code>
           </div>
           <div class="fln-demo-result-cell">
-            <span>{{ copy.result }}</span>
-            <strong>{{ result || '...' }}</strong>
+            <span>{{ spill ? `${copy.spillRange} ${spill.range}` : copy.result }}</span>
+            <strong :class="{ 'is-spill': spill }">{{ result || '...' }}</strong>
           </div>
         </footer>
       </div>
