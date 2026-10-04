@@ -28,8 +28,13 @@ describe('full spreadsheet demo', () => {
     const { instances } = await openDemo()
     const surface = requiredElement('.cell-full-demo__window')
     const sheet = requiredElement('.cell-full-demo__sheet')
+    const bar = requiredElement('.cell-full-demo__bar')
+    const platform = requiredElement<HTMLSelectElement>('.cell-full-demo__platform select')
     expect(surface.getBoundingClientRect().height).toBeCloseTo(height, 0)
     expect(sheet.getBoundingClientRect().height).toBeGreaterThan(height - 60)
+    expect(bar.getBoundingClientRect().width).toBeLessThanOrEqual(width)
+    expect(bar.getBoundingClientRect().right).toBeLessThanOrEqual(width)
+    expect(platform.getBoundingClientRect().right).toBeLessThanOrEqual(width)
     const canvas = requiredElement('.cell-full-demo__sheet canvas')
     expect(canvas.getBoundingClientRect().height).toBeGreaterThan(height * 0.6)
     if (width === 390) {
@@ -73,6 +78,118 @@ describe('full spreadsheet demo', () => {
     expect(document.querySelector('.cell-full-demo__close')?.getAttribute('aria-label')).toBe(
       'フルデモを閉じる'
     )
+    await userEvent.selectOptions(
+      requiredElement<HTMLSelectElement>('.cell-full-demo__platform select'),
+      'mac'
+    )
+    await expect.poll(() => instance.host.dataset.fcPlatform).toBe('mac')
+    expect(instance.i18n.locale).toBe('ja')
+    expect(instance.host.dataset.fcTheme).toBe('ink')
+  })
+
+  it('switches to Mac chrome and its palette without remounting the edited workbook', async () => {
+    const { instances } = await openDemo()
+    const instance = instances[0]
+    const result = instance.commands.execute({
+      type: 'cellBatch',
+      operation: 'valueEdit',
+      origin: 'instanceApi',
+      changes: [{ addr: { sheet: 0, row: 1, col: 1 }, input: '20000' }]
+    })
+    expect(result.status).toBe('applied')
+    expect(cellNumber(instance, 1, 3)).toEqual({ kind: 'number', value: 12600 })
+
+    const platform = requiredElement<HTMLSelectElement>('.cell-full-demo__platform select')
+    await userEvent.selectOptions(platform, 'mac')
+    await expect.poll(() => instance.host.dataset.fcPlatform).toBe('mac')
+    expect(instances).toEqual([instance])
+    expect(cellNumber(instance, 1, 1)).toEqual({ kind: 'number', value: 20000 })
+    expect(cellNumber(instance, 1, 3)).toEqual({ kind: 'number', value: 12600 })
+    await expect.element(page.getByRole('tab', { name: 'Draw', exact: true })).toBeVisible()
+
+    instance.openFunctionArguments('SUM')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .not.toBeNull()
+    const palette = requiredElement('.fc-mac-formula-palette')
+    expect(palette.textContent).toContain('numbers')
+    expect(palette.textContent).toContain('The values or range to add.')
+    expect(palette.querySelector('a')?.getAttribute('href')).toContain('/workbook/formula-engine')
+
+    await userEvent.keyboard('{Escape}')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .toBeNull()
+    expect(document.querySelector('.cell-full-demo__overlay')).not.toBeNull()
+
+    lang.value = 'ja'
+    await nextTick()
+    expect(instance.i18n.locale).toBe('ja')
+    instance.openFunctionArguments('SUM')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .not.toBeNull()
+    const japanesePalette = requiredElement('.fc-mac-formula-palette')
+    expect(japanesePalette.textContent).toContain('数値')
+    expect(japanesePalette.textContent).toContain('合計する値または範囲。')
+    expect(japanesePalette.querySelector('a')?.getAttribute('href')).toContain(
+      '/ja/workbook/formula-engine'
+    )
+    await userEvent.keyboard('{Escape}')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .toBeNull()
+
+    await userEvent.selectOptions(platform, 'default')
+    await expect.poll(() => instance.host.dataset.fcPlatform).toBe('default')
+    expect(instances).toEqual([instance])
+    expect(cellNumber(instance, 1, 1)).toEqual({ kind: 'number', value: 20000 })
+    expect(document.querySelector('.fc-mac-formula-palette')).toBeNull()
+  })
+
+  it('restores a compound formula-bar draft when the Mac palette is cancelled', async () => {
+    const { instances } = await openDemo()
+    const instance = instances[0]
+    const platform = requiredElement<HTMLSelectElement>('.cell-full-demo__platform select')
+    await userEvent.selectOptions(platform, 'mac')
+    await expect.poll(() => instance.host.dataset.fcPlatform).toBe('mac')
+
+    const formulaInput = requiredElement<HTMLTextAreaElement>('.fc-host__formulabar-input')
+    const draft = '=1+SUM(2,3)*4'
+    const caret = draft.indexOf('2') + 1
+    const beforeValue = instance.workbook.getValue({ sheet: 0, row: 0, col: 0 })
+    const beforeFormula = instance.workbook.cellFormula({ sheet: 0, row: 0, col: 0 })
+    await userEvent.fill(formulaInput, draft)
+    formulaInput.setSelectionRange(caret, caret)
+    formulaInput.dispatchEvent(new Event('select', { bubbles: true }))
+    expect(formulaInput.value).toBe(draft)
+    expect(formulaInput.selectionStart).toBe(caret)
+    expect(formulaInput.selectionEnd).toBe(caret)
+    expect(formulaInput.closest('.fc-host__formulabar')?.getAttribute('data-fc-editing')).toBe('1')
+
+    instance.openFunctionArguments('SUM')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .not.toBeNull()
+    const paletteArgument = requiredElement<HTMLInputElement>(
+      '.fc-mac-formula-palette input[data-argument-index="0"]'
+    )
+    await userEvent.fill(paletteArgument, '99')
+    expect(paletteArgument.value).toBe('99')
+
+    await userEvent.keyboard('{Escape}')
+    await expect
+      .poll(() => document.querySelector('.fc-mac-formula-palette:not([hidden])'))
+      .toBeNull()
+    expect(document.querySelector('.cell-full-demo__overlay')).not.toBeNull()
+    expect(instance.workbook.getValue({ sheet: 0, row: 0, col: 0 })).toEqual(beforeValue)
+    expect(instance.workbook.cellFormula({ sheet: 0, row: 0, col: 0 })).toBe(beforeFormula)
+    expect(formulaInput.isConnected).toBe(true)
+    expect(document.activeElement).toBe(formulaInput)
+    expect(formulaInput.value).toBe(draft)
+    expect(formulaInput.selectionStart).toBe(caret)
+    expect(formulaInput.selectionEnd).toBe(caret)
+    expect(formulaInput.closest('.fc-host__formulabar')?.getAttribute('data-fc-editing')).toBe('1')
   })
 
   it('closes search first, then closes the demo, disposes and restores trigger focus', async () => {

@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
+import type {
+  FunctionArgumentHelpProvider,
+  SpreadsheetInstance,
+  SpreadsheetPlatform,
+  WorkbookHandle
+} from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -12,6 +17,7 @@ const windowHost = ref<HTMLDivElement | null>(null)
 const failure = ref('')
 const busy = ref(false)
 const fullscreen = ref(false)
+const platform = ref<SpreadsheetPlatform>('default')
 let token = 0
 let returnFocus: HTMLElement | null = null
 const sheetHost = ref<HTMLDivElement | null>(null)
@@ -75,23 +81,53 @@ const copy = computed(() =>
   isJa.value
     ? {
         title: 'formulon-cell フルデモ',
-        body: 'formulon-cell を埋め込んだ表計算デモです。リボン、セル編集、数式入力を試せます。',
+        body: 'formulon-cell を埋め込んだ表計算デモです。リボン、セル編集、数式入力、UI プラットフォームの切り替えを試せます。',
         open: 'フルデモを開く',
         close: 'フルデモを閉じる',
         label: 'formulon-cell',
         expand: '全画面表示',
-        shrink: '全画面を終了'
+        shrink: '全画面を終了',
+        platform: 'UI プラットフォーム',
+        platformDefault: '既定',
+        platformMac: 'Mac',
+        platformAuto: '自動'
       }
     : {
         title: 'formulon-cell full demo',
-        body: 'A spreadsheet demo embedded with formulon-cell. Try the ribbon, cell editing, and formula entry.',
+        body: 'A spreadsheet demo embedded with formulon-cell. Try the ribbon, cell editing, formula entry, and the UI platform switch.',
         open: 'Open full demo',
         close: 'Close full demo',
         label: 'formulon-cell',
         expand: 'Enter fullscreen',
-        shrink: 'Exit fullscreen'
+        shrink: 'Exit fullscreen',
+        platform: 'UI platform',
+        platformDefault: 'Default',
+        platformMac: 'Mac',
+        platformAuto: 'Auto'
       }
 )
+
+const getFunctionArgumentHelp: FunctionArgumentHelpProvider = (
+  functionName,
+  argumentIndex,
+  locale
+) => {
+  if (argumentIndex !== 0) return null
+  const isJapanese = locale.toLowerCase().startsWith('ja')
+  const helpUrl = isJapanese ? '/ja/workbook/formula-engine' : '/workbook/formula-engine'
+  switch (functionName.toUpperCase()) {
+    case 'SUM':
+      return isJapanese
+        ? { label: '数値', description: '合計する値または範囲。', url: helpUrl }
+        : { label: 'numbers', description: 'The values or range to add.', url: helpUrl }
+    case 'AVERAGE':
+      return isJapanese
+        ? { label: '数値1', description: '平均する最初の値または範囲。', url: helpUrl }
+        : { label: 'number1', description: 'The first value or range to average.', url: helpUrl }
+    default:
+      return null
+  }
+}
 
 const openDemo = async () => {
   if (open.value) return
@@ -127,6 +163,15 @@ const onDialogEscape = (event: KeyboardEvent) => {
   if (find?.getClientRects().length) {
     event.preventDefault()
     spreadsheet?.closeFindReplace()
+    return
+  }
+  const palette = dialogHost.value?.querySelector<HTMLElement>(
+    '.fc-mac-formula-palette:not([hidden])'
+  )
+  const closePalette = spreadsheet?.features.fxDialog?.close
+  if (palette && typeof closePalette === 'function') {
+    event.preventDefault()
+    closePalette()
   }
 }
 
@@ -161,9 +206,13 @@ const mountDemo = async () => {
     spreadsheet?.dispose()
     spreadsheet = null
     instance.value = null
+    const requestedPlatform = platform.value
+    const requestedTheme = isDark.value ? 'ink' : 'paper'
+    const requestedLocale = isJa.value ? 'ja' : 'en'
     const mounted = await cellApi.Spreadsheet.mount(sheetEl, {
-      ui: { profile: 'excel365', theme: isDark.value ? 'ink' : 'paper' },
-      locale: isJa.value ? 'ja' : 'en',
+      ui: { profile: 'excel365', platform: requestedPlatform, theme: requestedTheme },
+      locale: requestedLocale,
+      getFunctionArgumentHelp,
       overlays: {
         root: () => {
           const surface = windowHost.value
@@ -179,6 +228,12 @@ const mountDemo = async () => {
     mounted.on('changeBatch', () => mounted.recalc())
     spreadsheet = mounted
     instance.value = mounted
+    const currentTheme = isDark.value ? 'ink' : 'paper'
+    if (platform.value !== requestedPlatform || currentTheme !== requestedTheme) {
+      mounted.setUi({ profile: 'excel365', platform: platform.value, theme: currentTheme })
+    }
+    const currentLocale = isJa.value ? 'ja' : 'en'
+    if (currentLocale !== requestedLocale) mounted.i18n.setLocale(currentLocale)
   } catch (error) {
     if (mine === token) failure.value = String(error)
   } finally {
@@ -188,6 +243,14 @@ const mountDemo = async () => {
 
 watch(isDark, (dark) => {
   spreadsheet?.setTheme(dark ? 'ink' : 'paper')
+})
+
+watch(platform, (nextPlatform) => {
+  spreadsheet?.setUi({
+    profile: 'excel365',
+    platform: nextPlatform,
+    theme: isDark.value ? 'ink' : 'paper'
+  })
 })
 
 watch(isJa, (ja) => {
@@ -231,6 +294,14 @@ onBeforeUnmount(() => {
           <header class="cell-full-demo__bar">
             <strong><a :href="isJa ? '/ja/cell/' : '/cell/'">{{ copy.label }}</a></strong>
             <div class="cell-full-demo__window-actions">
+              <label class="cell-full-demo__platform">
+                <span class="cell-full-demo__platform-label">{{ copy.platform }}</span>
+                <select v-model="platform" :aria-label="copy.platform">
+                  <option value="default">{{ copy.platformDefault }}</option>
+                  <option value="mac">{{ copy.platformMac }}</option>
+                  <option value="auto">{{ copy.platformAuto }}</option>
+                </select>
+              </label>
               <button type="button" @click="toggleFullscreen">{{ fullscreen ? copy.shrink : copy.expand }}</button>
             <button type="button" class="cell-full-demo__close" autofocus :aria-label="copy.close" @click="closeDemo">
               <span aria-hidden="true">×</span>

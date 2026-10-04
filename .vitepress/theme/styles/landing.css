@@ -1964,7 +1964,8 @@ a.fln-stack-chip:hover {
 .fln-demo-copy a:focus-visible,
 .fln-function-strip button:focus-visible,
 .cell-full-demo__intro button:focus-visible,
-.cell-full-demo__bar button:focus-visible {
+.cell-full-demo__bar button:focus-visible,
+.cell-full-demo__bar select:focus-visible {
   outline: 2px solid var(--biz-accent);
   outline-offset: -2px;
 }
@@ -2145,10 +2146,35 @@ a.fln-stack-chip:hover {
 }
 
 .cell-full-demo__bar strong {
+  min-width: 0;
   color: var(--demo-fg);
   font-family: var(--demo-font);
   font-size: 0.84rem;
   font-weight: 650;
+}
+
+.cell-full-demo__platform {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 6px;
+  color: var(--demo-muted);
+  font-family: var(--demo-font);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cell-full-demo__platform select {
+  min-width: 68px;
+  min-height: 34px;
+  padding: 0 5px;
+  border: 1px solid var(--demo-rule);
+  border-radius: 4px;
+  background: var(--demo-surface);
+  color: var(--demo-fg);
+  font: inherit;
+  cursor: pointer;
 }
 
 .cell-full-demo__sheet {
@@ -2370,5 +2396,40 @@ a.fln-stack-chip:hover {
   .cell-full-demo__sheet .fc-tb__ribbon-tabs,
   .cell-full-demo__sheet .fc-tb__ribbon:not([hidden]) {
     min-width: 1100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cell-full-demo__bar {
+    gap: 8px;
+    padding-left: 8px;
+  }
+
+  .cell-full-demo__window-actions {
+    gap: 4px;
+  }
+
+  .cell-full-demo__platform-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .cell-full-demo__platform select {
+    width: 64px;
+    min-width: 64px;
+    padding: 0 2px;
+    font-size: 0.74rem;
+  }
+
+  .cell-full-demo__bar button {
+    padding-right: 7px;
+    padding-left: 7px;
   }
 }
