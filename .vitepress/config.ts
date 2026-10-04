@@ -135,6 +135,7 @@ const startSidebar = [
     text: 'Next steps',
     items: [
       { text: 'Why Formulon', link: '/why' },
+      { text: 'Demos', link: '/demos' },
       { text: 'Choose a surface', link: '/start/choose-runtime' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
       { text: 'File format support', link: '/compatibility/file-format-support' },
@@ -286,6 +287,7 @@ const jaStartSidebar = [
     text: '次のステップ',
     items: [
       { text: 'Formulon が必要な理由', link: '/ja/why' },
+      { text: 'デモ', link: '/ja/demos' },
       { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
@@ -641,6 +643,7 @@ export default defineConfig({
         },
         nav: [
           { text: 'Start', link: '/start/' },
+          { text: 'Demos', link: '/demos' },
           {
             text: 'Guide',
             items: [
@@ -663,6 +666,7 @@ export default defineConfig({
         ],
         sidebar: {
           '/start/': startSidebar,
+          '/demos': startSidebar,
           '/scenarios/': useCasesSidebar,
           '/runtimes/': runtimesSidebar,
           '/api/': runtimesSidebar,
@@ -711,6 +715,7 @@ export default defineConfig({
         },
         nav: [
           { text: 'はじめる', link: '/ja/start/' },
+          { text: 'デモ', link: '/ja/demos' },
           {
             text: 'ガイド',
             items: [
@@ -733,6 +738,7 @@ export default defineConfig({
         ],
         sidebar: {
           '/ja/start/': jaStartSidebar,
+          '/ja/demos': jaStartSidebar,
           '/ja/scenarios/': jaUseCasesSidebar,
           '/ja/runtimes/': jaRuntimesSidebar,
           '/ja/api/': jaRuntimesSidebar,

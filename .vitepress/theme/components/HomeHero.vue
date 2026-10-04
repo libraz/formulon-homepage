@@ -20,7 +20,7 @@ const copy = computed(() =>
         primary: { text: 'クイックスタート', link: '/ja/start/install' },
         secondary: { text: 'MCP で使う', link: '/ja/mcp/' },
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
-        demo: { text: 'デモ UI を試す', link: '/ja/cell/demo' },
+        demo: { text: 'デモを試す', link: '/ja/demos' },
         stats: [
           { value: 'v0.12.0', label: 'ドキュメント対象' },
           { value: '508 / 523', label: 'ローカル実装 / 認識対象' },
@@ -51,7 +51,7 @@ const copy = computed(() =>
         primary: { text: 'Quick Start', link: '/start/install' },
         secondary: { text: 'Use from MCP', link: '/mcp/' },
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
-        demo: { text: 'Try the demo UI', link: '/cell/demo' },
+        demo: { text: 'Try the live demos', link: '/demos' },
         stats: [
           { value: 'v0.12.0', label: 'Documentation target' },
           { value: '508 / 523', label: 'Local / recognized functions' },
