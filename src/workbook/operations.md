@@ -8,7 +8,9 @@ Binding addresses are `(sheet, row, col)` with all indices starting at 0. `Sheet
 
 ## Sheets
 
-```ts
+::: code-group
+
+```ts [WASM]
 const wb = Module.Workbook.createDefault()
 try {
   wb.addSheet('Inputs')
@@ -20,14 +22,16 @@ try {
 }
 ```
 
-Python uses the same zero-based coordinate model:
-
-```python
+```python [Python]
 with Workbook.create_default() as wb:
     wb.add_sheet("Inputs")
-    print(wb.sheet_count())
-    print(wb.sheet_name(0))
+    wb.rename_sheet(0, "Model")
+    wb.move_sheet(1, 0)
+    wb.remove_sheet(1)
+    print(wb.sheet_count(), wb.sheet_name(0))
 ```
+
+:::
 
 ## Cells
 
@@ -114,41 +118,77 @@ Python's `get_cells_in_range(sheet, cell_range, cursor=None, limit=None)` takes 
 
 Row and column insert / delete operations rewrite affected formulas automatically:
 
-Inserting columns shifts existing coordinates without creating stored blank cells in the new columns, so the inserted gaps do not increase `cellCount`.
+::: code-group
 
-```ts
+```ts [WASM / Native Node]
 wb.insertRows(/*sheet*/ 0, /*startRow*/ 5, /*count*/ 2)
 wb.deleteCols(/*sheet*/ 0, /*startCol*/ 3, /*count*/ 1)
 ```
 
-References inside formulas that move with the inserted / deleted range are shifted, including `$`-anchored references; this structural rewrite differs from copying a formula. Surviving ranges shrink or expand as appropriate. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place.
+```python [Python]
+wb.insert_rows(0, 5, 2)  # sheet, start row, count
+wb.delete_cols(0, 3, 1)  # sheet, start column, count
+```
+
+:::
+
+References that move with the inserted or deleted range are shifted, including `$`-anchored references; this structural rewrite differs from copying a formula. Surviving ranges shrink or expand as appropriate. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place. Inserted rows and columns hold no stored cells, so they do not increase `cellCount`.
 
 The panel below runs these calls against a live sheet. Selecting a cell moves the target row or column with it, and both formula lists are read back out of the workbook either side of the call — so what you see is the formula text the engine holds, including the ones it rewrote and the ones it broke.
 
 <StructureDemo />
 
-Structural edits do not move coordinates held only in unmodeled payloads, including retained `extLst` records, x14 DataBar extensions, sparklines, and slicer anchors. They also produce no diagnostic for those unchanged coordinates. Check such workbook features in Excel after a structural edit.
+Structural edits move every structure the engine models, plus the ranges kept verbatim for a lossless save: the `x14` conditional-format and validation blocks, sparkline groups, protected ranges, scenarios, sort state, cell watches, ignored-error ranges and web-publish ranges. Two things do not follow the edit. The anchor of an embedded OLE object or form control keeps its pre-edit cell, and nothing reports it. An insert also does not copy the formatting of the neighbouring row or column onto the new one, which Excel does.
+
+## Names, merges, hyperlinks, and outlines
+
+::: code-group
+
+```ts [WASM / Native Node]
+const check = (s: { ok: boolean; message: string }) => {
+  if (!s.ok) throw new Error(s.message)
+}
+for (const [row, v] of [10, 20, 30].entries()) check(wb.setNumber(0, row, 0, v))
+check(wb.setDefinedName('Sales', 'Sheet1!$A$1:$A$3')) // workbook scope
+check(wb.setDefinedNameScoped('Rate', '0.1', 0))       // local to sheet 0
+check(wb.setFormula(0, 0, 1, '=SUM(Sales)*(1+Rate)'))
+check(wb.addMerge(0, { firstRow: 4, firstCol: 0, lastRow: 4, lastCol: 2 }))
+check(wb.addHyperlink(0, 5, 0, 'https://formulon.libraz.net', 'Docs', '', ''))
+check(wb.addHyperlink(0, 6, 0, '', 'Back to top', '', 'Sheet1!A1'))
+check(wb.setRowHidden(0, 2, true))
+check(wb.setColumnOutline(0, 3, 5, 1))
+check(wb.recalc())
+console.log(wb.getValue(0, 0, 1).value.number) // 66
+```
+
+```python [Python]
+from formulon import MergeRange
+
+for row, value in enumerate((10, 20, 30)):
+    wb.set_number(0, row, 0, value)
+wb.set_defined_name("Sales", "Sheet1!$A$1:$A$3")  # workbook scope
+wb.set_defined_name_scoped("Rate", "0.1", 0)       # local to sheet 0
+wb.set_formula(0, 0, 1, "=SUM(Sales)*(1+Rate)")
+wb.add_merge(0, MergeRange(4, 0, 4, 2))
+wb.add_hyperlink(0, 5, 0, "https://formulon.libraz.net", display="Docs")
+wb.add_hyperlink(0, 6, 0, "", display="Back to top", location="Sheet1!A1")
+wb.set_row_hidden(0, 2, True)
+wb.set_column_outline(0, 3, 5, 1)
+wb.recalc()
+print(wb.get_value(0, 0, 1).to_python())  # 66.0
+```
+
+:::
+
+- `setDefinedNameScoped()` takes `-1` for workbook scope or a zero-based sheet index. An empty formula removes the name. `definedNameCount()` / `definedNameAt(i)` enumerate names with their `localSheetId`; Python uses `iter_defined_names()`.
+- `getMerges()` lists every merge on a sheet. `removeMerge(range)` removes each merge that overlaps the range, `removeMergeAt(i)` removes one by index, and `clearMerges()` removes all of them.
+- A hyperlink takes a URL as `target`, or an empty `target` and an A1 `location` for a destination inside the workbook. `getHyperlinks()` reads them back; `removeHyperlink(sheet, row, col)`, `removeHyperlinkAt()`, and `clearHyperlinks()` remove them.
+- `setRowHidden()` / `setColumnHidden()` and `setRowOutline()` / `setColumnOutline()` (level clamped to 0–255) change layout only. Ordinary formulas still read hidden rows, as `SUM` does above; `SUBTOTAL` 101–111 skips them.
+- `getSheetProtection()` / `setSheetProtection()` read and replace the `<sheetProtection>` flags as a whole; `enabled: 0` removes protection on save. The engine stores the flags and does not enforce locks.
+
+Python uses the snake_case form of each name.
 
 ## Layout, styles, and metadata
-
-WASM, Native Node, and Python expose workbook operations such as:
-
-- row / column insert / delete with formula rewriting,
-- defined names,
-- tables,
-- passthrough OOXML parts,
-- pivot table report layout and pivot-cache worksheet-source access,
-- conditional formatting read / evaluate / write subset, visual payloads (`ColorScale`, `DataBar`, `IconSet`), and DXFs,
-- sheet view, freeze panes, and three-state tab visibility,
-- sheet protection metadata,
-- row / column layout overrides,
-- styles, number formats, fonts, fills, borders,
-- merges, comments, hyperlinks, and data validations,
-- precedent / dependent tracing,
-- function metadata and function-name helpers,
-- dynamic-array spill information.
-
-Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_rule`) also returns the new rule's flattened index, which makes host-side UI selection and follow-up edits easier.
 
 `Workbook.createDefault()` (and `fm_workbook_create`) starts with Excel's minimum style table: font, border, and cell-style index `0`, plus fill index `0` (`none`) and `1` (`gray125`). The first non-duplicate `addFont()` or `addBorder()` then returns `1`, and the first new `addFill()` returns `2`. `createForProfile()` may already have a phonetic font at index `1` for a CJK locale, so always use the returned index instead of assuming a new style table starts empty.
 
@@ -192,9 +232,9 @@ When `addValidation()` / `add_validation()` omits `allowBlank`, it defaults to `
 
 Use `validateValue()` / `validate_value()` to check a proposed value without storing it, and `listInvalidCells()` / `list_invalid_cells()` to inspect existing violations. The host decides whether to accept an edit; value setters do not enforce validation. See [Filters and validation](/workbook/filters-validation).
 
-### Conditional-format visuals
+### Conditional formats
 
-DataBar rules expose the complete `x14` extension payload on WASM, Native Node, and Python: `gradient`, `axisPosition` (`0` automatic, `1` middle, `2` none), `negativeFill`, `border`, `negativeBorder`, and `axisColor`. Python's `DataBar` uses the corresponding snake-case field names. These settings survive save and load. Omitted values use the model defaults: gradient fill, automatic axis, the positive fill for negative values, no border, and a black axis.
+`addConditionalFormat()` / `add_conditional_format()` adds a rule, and `evaluateCfRange()` / `evaluate_cf_range()` reports which cells match. Rule types, differential formats, data bars, color scales, icon sets, and the `todaySerial` argument are covered in [Conditional formats](/workbook/conditional-formats).
 
 ### Hyperlink ranges
 
@@ -204,15 +244,9 @@ DataBar rules expose the complete `x14` extension payload on WASM, Native Node, 
 
 Newly authored PivotTables must set a worksheet source on their cache before saving. Use `pivotCacheSetWorksheetSource(cacheId, { present: true, ref: 'A1:C10', sheet: 'Data' })` on WASM or Native Node, or `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref='A1:C10', sheet='Data'))` in Python. A declared range is enough even when the sheet has no data. Saving a newly created cache without a worksheet source fails. A loaded cache retains its supported source metadata, which may describe a non-worksheet or external source; the requirement here applies to newly authored worksheet caches.
 
-WASM and Native Node expose comment *enumeration* with `getComments(sheet)`; Python uses `comment_count(sheet)` and `get_comments(sheet)`. Each list includes comments anchored on otherwise-empty cells. `getCommentResult(sheet, row, col)` distinguishes an absent comment from an invalid sheet on the JS surfaces.
-
-Host applications can merge localized function metadata with `mergeFunctionMetadata()` (Native Node package) / `merge_function_metadata()` (Python). It is pure and applies locale-override, entry-default, then engine-value precedence.
-
 ### Pagination
 
-All binding coordinates and output ranges are zero-based. Print-area coordinates are inclusive.
-
-The result also reports paper, margins, printable area, scale, page order, print titles, per-page layouts, and manual-break flags. See [Presentation and geometry](/workbook/presentation) for units and layout behavior.
+`paginate(sheet)` resolves the print area, automatic and manual page breaks, and the physical page count:
 
 ::: code-group
 
@@ -237,22 +271,35 @@ formulon paginate --sheet 0 input.xlsx
 
 :::
 
-### Ad-hoc formula evaluation
+Coordinates in the result are zero-based, and print-area bounds are inclusive. The result also reports paper, margins, printable area, scale, page order, print titles, per-page layouts, and manual-break flags. See [Presentation and geometry](/workbook/presentation) for units and layout behavior.
 
-WASM and Native Node (C API) additionally expose read-only ad-hoc formula evaluation. `evaluateFormulaText()` answers "what would this general scalar formula return here?" without writing it into a cell first. `evaluateConditionalFormula()` evaluates conditional-format predicates. These JavaScript-facing methods are not exposed by Python; Python uses `evaluate_cf_formula()` for conditional-format predicates and `evaluate_formula_array()` for full array results:
+## Ad-hoc formula evaluation {#ad-hoc-formula-evaluation}
 
-```ts
+Ad-hoc evaluation answers "what would this formula return at this cell?" without writing it anywhere:
+
+::: code-group
+
+```ts [WASM / Native Node]
 const result = wb.evaluateFormulaText(/*sheet*/ 0, /*row*/ 0, /*col*/ 0, '=A1+B1')
 if (result.status.ok && result.value.kind === ValueKind.Number) {
   console.log(result.value.number)
 }
+const array = wb.evaluateFormulaArray(0, 0, 0, '=SEQUENCE(2)')
+if (array.status.ok) console.log(array.rows, array.cols, array.cells)
 ```
 
-This is read-only: it does not mutate the workbook, write a value anywhere, or join the dependency graph — nothing here becomes dirty on a later edit. Array/spill results are also reduced to their top-left element: evaluating `=SEQUENCE(3)` this way returns a single number, not a 3-row spill. A real cell containing `=SEQUENCE(3)` still spills normally. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling works when the formula is actually written into a cell.
+```python [Python]
+rows = wb.evaluate_formula_array(0, 0, 0, "=SEQUENCE(2)")  # list of rows of Value
+print([[v.to_python() for v in row] for row in rows])
+```
 
-`evaluateFormulaArray()` (Node addon, WASM, and C API) and `evaluate_formula_array()` (Python) return the whole array result instead of reducing a dynamic-array formula to its top-left element. Python also exposes `evaluate_cf_formula()` for conditional-format predicates, but does not expose the general scalar `evaluate_formula_text()`; for a scalar evaluated in workbook context, write the formula to a cell and recalculate.
+:::
 
-`evaluateConditionalFormula()` follows the same read-only rule, additionally shifting relative references from the rule's anchor and applying Excel's conditional-formatting predicate coercion (error / blank / text / numeric-zero are `false`; any other number is `true`), so the result matches what a real rule would evaluate to at that cell.
+The call does not mutate the workbook or join the dependency graph, so nothing it evaluates becomes dirty on a later edit. `evaluateFormulaText()` reduces an array result to its top-left element: `=SEQUENCE(3)` returns `1`, not a 3-row spill. `evaluateFormulaArray()` / `evaluate_formula_array()` return the whole array. Written into a real cell, the same formula spills normally; see [Dynamic arrays](/workbook/dynamic-arrays).
+
+Python has no workbook-context scalar evaluator. Take the top-left element of `evaluate_formula_array()`, or use the module-level `formulon.eval_formula()`, which evaluates against a fresh one-sheet workbook.
+
+`evaluateConditionalFormula()` (WASM and Native Node) and `evaluate_cf_formula()` (Python) evaluate a conditional-format predicate under the same read-only rule. They also shift relative references from the rule's anchor and apply Excel's predicate coercion (error, blank, text, and numeric zero are `false`; any other number is `true`), so the result matches what a real rule would evaluate to at that cell.
 
 The normal edit path and the ad-hoc path answer different questions — the first commits a value you can read again later, the second is a disposable "what if" query:
 
@@ -267,10 +314,8 @@ The normal edit path and the ad-hoc path answer different questions — the firs
   { label: 'Scalar result', note: 'array/spill results reduced to the top-left element' }
 ]" label="Ad-hoc path: evaluateFormulaText, read-only, scalar-only" />
 
-The CLI is intentionally narrower. It is a command surface for `eval`, `recalc`, and `dump`, not a fine-grained workbook-editing API. For application embedding, choose WASM, Native Node, or Python.
-
 ::: tip Discovering what is implemented
-`Workbook.functionNames()` (WASM / Native Node) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs.
+`wb.functionNames()` (WASM / Native Node) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs. For a function picker, `mergeFunctionMetadata()` (exported by both npm packages) / `merge_function_metadata()` (Python) overlays host-supplied localized descriptions on the engine's metadata, in locale-override, entry-default, then engine-value precedence.
 :::
 
 ## Read next

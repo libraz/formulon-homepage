@@ -33,11 +33,7 @@ The OOXML reader/writer handles:
 - sheet views, freeze panes, hidden tabs,
 - per-row / per-column overrides.
 
-Worksheet print settings are editable through typed setters for page setup, margins, print options, print area, print titles, header/footer, and manual row/column breaks. Raw XML setters remain available for modeled gaps, and malformed fragments are rejected before they are stored. Cell, defined-name, conditional-format, and data-validation formulas can enter external references by book name or path; an unregistered book creates an external-link record, while repeated references reuse it case-insensitively. XLSX and XLSB writers preserve the link table and formula through save/reload. External formulas use cached cells and names only: Formulon does not open the source workbook or fetch a network target.
-
-Sheet and table AutoFilters have typed read, write, evaluate, apply, clear, and remove operations. They cover value, date-group, custom, top-10, dynamic, colour, and icon criteria as well as sort state. Setting or replacing a filter leaves row visibility unchanged. `evaluateAutoFilter()` reports matches without changing the sheet, while `applyAutoFilter()` updates hidden rows and marks dependent `SUBTOTAL` / `AGGREGATE` formulas dirty; call `recalc()` before reading their updated values. `clearAutoFilter()` removes the criteria and shows the body rows. Data-validation rules can be checked with `validateValue()` for a proposed value, and `listInvalidCells()` scans populated cells using their stored values. `validateValue()` reports the outcome without storing the proposed value or enforcing later edits; custom formulas and rule bounds read the stored workbook.
-
-Drawing objects can be listed with their anchors. PNG, JPEG, GIF, and BMP picture bytes can be probed, read, inserted, and removed in XLSX. Picture-byte and anchor manipulation does not render charts or other drawing objects.
+Print settings have typed setters (see [Workbook operations](/workbook/operations#author-worksheet-print-settings)), with raw XML setters for fields the model does not cover; a malformed fragment is rejected before it is stored. External references entered in formulas create or reuse an external-link record, and both writers keep the link table and the formula through a save and reload. The values still come only from the cache in the file. Typed AutoFilters, data-validation checks, and picture editing are covered in [Filters and validation](/workbook/filters-validation) and [Comments and images](/workbook/comments-images).
 
 Phonetic runs and rendering properties round-trip through XLSX and XLSB. Font theme `scheme` values also round-trip, so a theme-linked Normal font remains linked after save.
 
@@ -47,11 +43,24 @@ On load, formula cells keep both the formula text and the cached value found in 
 
 ## XLSB
 
-The binary workbook path models and emits styles (`BrtFmt`/`BrtXF`), row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. XLSB pivot cache definitions, cache records, and pivot-table parts are decoded into the pivot model and evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed.
+XLSB shares the workbook model with XLSX, but its writer does not emit everything the model holds. Save with diagnostics to see what was left out:
 
-Conditional-format rules, data validations, and sheet/workbook protection are decoded into the shared model and emitted on save. Conditional-format rules include the supported evaluation subset and visual payloads such as x14 data bars. Data-validation rules can be checked against an explicit proposed value with `validateValue()`; the call reports the outcome without storing the value or enforcing a mutation. Custom validation formulas and rule bounds read the stored workbook. Protection remains metadata, and the calculation engine does not enforce cell locks.
+::: code-group
 
-Typed AutoFilters apply to XLSX and in-memory workbooks. An AutoFilter loaded from XLSB remains an opaque worksheet-tail record and is unavailable through the typed API. Typed AutoFilter edits are deferred when saving as XLSB and are reported by `saveWithDiagnostics()` as `deferredFeatureCount` (`deferred_feature_count` in Python). Selected unmodeled worksheet tails remain verbatim, including AutoFilter records loaded from XLSB, print setup/breaks, drawing/table references, and their relationships. Hyperlinks are modeled and emitted by the XLSB writer. Classic notes, threaded comments, and OOXML drawings are omitted on XLSB save, whether loaded from XLSX or inserted. The page/print fields listed below and modeled tables are also deferred; compatible retained XLSB tails and drawing parts may pass through. The table below lists the diagnosed omissions. Unsupported formulas may downgrade to cached literals; `saveWithDiagnostics(WorkbookFormat.Xlsb)` reports the count as `downgradedFormulaCount` (Python: `save_with_diagnostics(WorkbookFormat.XLSB)` and `downgraded_formula_count`).
+```ts [WASM / Native Node]
+const out = wb.saveWithDiagnostics(WorkbookFormat.Xlsb)
+if (!out.status.ok || out.bytes === null) throw new Error(out.status.message)
+console.log(out.deferredFeatureCount, out.downgradedFormulaCount)
+```
+
+```python [Python]
+out = wb.save_with_diagnostics(WorkbookFormat.XLSB)
+print(out.deferred_feature_count, out.downgraded_formula_count)
+```
+
+:::
+
+`deferredFeatureCount` counts features the XLSB writer did not emit, such as a note or a typed AutoFilter edit. `downgradedFormulaCount` counts formulas written as cached literals because they have no XLSB token encoding. Unmodeled worksheet tails loaded from XLSB, such as AutoFilter records, print setup, breaks, and drawing or table references, are kept verbatim with their relationships. An AutoFilter loaded from XLSB therefore stays opaque and is not visible to the typed API. XLSB pivot parts are decoded and evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. The table lists the current behavior feature by feature.
 
 | XLSB feature | Current behavior |
 | --- | --- |

@@ -57,7 +57,7 @@ The rewrite covers function names, decimal points, argument and array separators
 
 For a function picker, use `localizeFunctionName(canonicalName, profileId)` and `canonicalizeFunctionName(localizedName, profileId)` (`localize_function_name` and `canonicalize_function_name` in Python). An unknown profile or function returns a failed status in JavaScript and raises `FormulonError` in Python.
 
-German, French, Spanish (Spain and Mexico), Brazilian Portuguese, Russian, Italian and Dutch profiles have localized function names. Japanese changes the spellings of `DBCS`, `DOLLAR` and `USDOLLAR`; many other function names stay English. Chinese, Korean and Thai profiles retain English function names. A language's unchanged function names do not imply that its separators, currency or text comparisons are unchanged.
+German, French, Spanish (Spain and Mexico), Brazilian Portuguese, Russian, Italian and Dutch profiles have localized function names. Japanese renames only `DBCS`, `DOLLAR` and `USDOLLAR`, and Traditional Chinese renames only `DBCS`. Simplified Chinese, Korean, Thai and US English keep the English names. A language's unchanged function names do not imply that its separators, currency or text comparisons are unchanged.
 
 `functionMetadata(name)` describes the canonical function's arity and availability. Its result is locale-invariant; it does not provide localized descriptions or argument help. Supply those from a host-owned catalog when the UI needs them.
 

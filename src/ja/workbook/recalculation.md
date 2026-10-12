@@ -10,6 +10,10 @@
 依存先の値が変わったため、計算値が古い可能性があるとエンジンがマークしたセルです。全体再計算はこの集合を評価して再計算済みに戻します。
 :::
 
+::: info 用語: 揮発性関数 (volatile function)
+引数以外のもの（時刻、乱数、ワークブックの構造など）に値が依存する関数です。引数が変わらなくても再計算のたびに評価され、依存先のセルも毎回再計算待ちにします。
+:::
+
 ## エンジンが管理する状態
 
 | 状態 | 用途 |
@@ -20,7 +24,7 @@
 | ワークブックの時計 | `NOW`、`TODAY`、ピボットの相対期間フィルターで共有する任意の現地時刻 |
 | 反復計算の設定 | 循環参照を許容するための反復計算の有効化・最大回数・収束しきい値 |
 | 動的配列のスピル形状 | 起点セルごとの結果形状。依存セルの再形状・無効化に使います |
-| 計算モード | 手動 / 自動の切り替え（トグルを公開している実行入口のみ） |
+| 計算モード | Excel の自動 / 手動の設定。往復保存のために保持するだけで、モードに関係なく、エンジンはホストが `recalc()` か `partialRecalc()` を呼んだときだけ再計算します |
 
 <DiagramLayers :layers="[
   { title: '編集', nodes: [{ label: '編集 / set_cell' }, { label: '揮発性関数', note: 'NOW・RAND・INDIRECT・…' }] },
@@ -30,7 +34,7 @@
   { title: '完了', nodes: [{ label: '再計算済みに戻す', note: '全体再計算ならすべての待機セルを処理し、部分再計算なら要求範囲を最新にする' }] }
 ]" />
 
-この依存関係グラフは読み出すこともできます。WASM と Native Node の `precedents(sheet, row, col, depth)` は参照元のセルを、`dependents(...)` は参照先のセルを返します。下のパネルであらかじめ数式を並べたシートのセルを選ぶと、矢印はこの 2 つの呼び出しが返したアドレスだけから描かれます。`depth` を上げていくと、`D1` の背後にある依存の連鎖を 1 列ずつ遡り、最終的に A 列の定数まで辿れます。
+この依存関係グラフは読み出すこともできます。`precedents(sheet, row, col, depth)`（Python でも同じ名前）は参照元のセルを、`dependents(...)` は参照先のセルを返します。下のパネルであらかじめ数式を並べたシートのセルを選ぶと、矢印はこの 2 つの呼び出しが返したアドレスだけから描かれます。`depth` を上げていくと、`D1` の背後にある依存の連鎖を 1 列ずつ遡り、最終的に A 列の定数まで辿れます。
 
 <TraceDemo />
 
@@ -59,15 +63,11 @@ print(f"recomputed {recomputed} cell(s)")
 
 :::
 
-::: info 用語: 揮発性関数 (volatile function)
-引数以外のもの（時刻・乱数・外部参照など）に値が依存する関数。引数が変わらなくても再計算のたびに評価され、依存先のセルを毎回再計算待ち集合に引き込みます。
-:::
-
 ## 時計に依存する計算の固定
 
 ワークブックに固定した時計がない場合、`NOW()`、`TODAY()`、ピボットの相対期間フィルターはホストの時計を読み取ります。読み取りごとに別の時刻になる可能性があり、日付が変わる境界では 1 回の再計算の中でも結果が一致しないことがあります。固定時刻を設定すると、すべてが 1 つの現地時刻を共有して再現可能な再計算になります。
 
-WASM では `pinnedNow()`、`setPinnedNow(year, month, day, hour, minute, second)`、`clearPinnedNow()` を使います。Python では対応する `pinned_now()`、`set_pinned_now(...)`、`clear_pinned_now()` を使います。WASM の getter は `{ status, now }` を返すため、`now` を読む前に `status` を確認してください。`now` は `CivilTime`（`year`、`month`、`day`、`hour`、`minute`、`second`）またはホストの時計を使う状態で `null` です。Python は `CivilTime` または `None` を直接返します。
+WASM と Native Node では `pinnedNow()`、`setPinnedNow(year, month, day, hour, minute, second)`、`clearPinnedNow()` を使います。Python では対応する `pinned_now()`、`set_pinned_now(...)`、`clear_pinned_now()` を使い、CLI では `--now <date[Thh:mm:ss]>` を指定します。JavaScript の getter は `{ status, now }` を返すため、`now` を読む前に `status` を確認してください。`now` は `CivilTime`（`year`、`month`、`day`、`hour`、`minute`、`second`）またはホストの時計を使う状態で `null` です。Python は `CivilTime` または `None` を直接返します。
 
 ```ts
 const checkStatus = (status: { ok: boolean; message: string }) => {
@@ -85,11 +85,11 @@ checkStatus(wb.clearPinnedNow())
 
 ## ワークブック全体の無効化
 
-反復計算の設定、Excel 互換性プロファイル、1904 日付システム、固定時計を変更すると、すべての数式セルを再計算待ちにします。コンテキストに依存する変更では、それに依存する派生ピボット結果も消去します。数式と依存するピボット結果を更新するには `recalc()` を呼び出してください。実効値が同じ設定は何もしません。
+反復計算の設定、Excel 互換性プロファイル、固定時計を変更すると、すべての数式セルを再計算待ちにします。コンテキストに依存する変更では、それに依存する派生ピボット結果も消去します。数式と依存するピボット結果を更新するには `recalc()` を呼び出してください。実効値が同じ設定は何もしません。
 
 ## 計算設定の保存
 
-計算モードと反復計算の設定は、ワークブックを開いている間の状態です。XLSX は `<calcPr>` にこれらを保存しますが、XLSB ライターは計算設定を出力しません。手動計算または反復計算を有効にしたまま XLSB を保存すると、設定ごとに `deferredFeatureCount` が 1 件増えます。再度開くと自動計算になり、反復計算は無効です。その他の XLSB の省略とパススルーの規則は [ファイル形式](/ja/workbook/file-formats) を参照してください。
+計算モード（`calcMode()` / `setCalcMode()`。値は `CalcMode.Auto`、`Manual`、`AutoNoTable`。Python では `calc_mode()` / `set_calc_mode()`）と反復計算の設定は、ワークブックを開いている間の状態です。ホストの UI にモードを表示することはできますが、エンジンはモードに従って動作を変えません。XLSX は `<calcPr>` にこれらを保存しますが、XLSB ライターは計算設定を出力しません。手動計算または反復計算を有効にしたまま XLSB を保存すると、設定ごとに `deferredFeatureCount` が 1 件増えます。再度開くと自動計算になり、反復計算は無効です。その他の XLSB の省略とパススルーの規則は [ファイル形式](/ja/workbook/file-formats) を参照してください。
 
 ## 存在しないシートへの参照を回復する
 
@@ -103,7 +103,9 @@ checkStatus(wb.clearPinnedNow())
 
 利息計算や goal-seek のように意図的な循環参照を持つワークブックでは反復計算を有効にします。エンジンは循環部分を繰り返し評価し、前後の変化量が許容値を下回るか上限回数に達した時点で停止します。
 
-```ts
+::: code-group
+
+```ts [WASM / Native Node]
 const checkStatus = (status: { ok: boolean; message: string }) => {
   if (!status.ok) throw new Error(status.message)
 }
@@ -115,12 +117,20 @@ checkStatus(wb.setIterativeProgress((iteration, maxResidual) => {
 checkStatus(wb.recalc())
 ```
 
-`setIterativeProgress()` は、循環部分グラフを 1 回 Gauss-Seidel で走査するたびに呼ばれるコールバックを登録します。反復回数の上限を渡す引数ではありません — それは `setIterative()` の第 2・第 3 引数です。このコールバックは WASM と Native Node のみで使えます。Python の `set_iterative()` は同じ 3 引数を受け取りますが、1 走査ごとの進捗コールバックはバインドされていません（ネイティブ関数ポインタが必要で、Python ホスト側では合成できないためです）。
+```python [Python]
+wb.set_iterative(True, 100, 0.001)  # enabled, max iterations, max change
+wb.recalc()
+print(wb.get_iterative())
+```
+
+:::
+
+`setIterativeProgress()` は、循環しているセルを 1 回走査するたびに呼ばれるコールバックを登録します。上限そのものは `setIterative()` の第 2・第 3 引数で指定します。このコールバックは WASM と Native Node でのみ使えます。Python の `set_iterative()` は同じ 3 引数を受け取り、`set_iterative_enabled(enabled)` は保存済みの上限を保ったまま反復計算だけを切り替えます。
 
 WASM と Native Node の `getIterative()` は `{ status, enabled, maxIterations, maxChange }` を返します。Python の `get_iterative()` は `enabled`、`max_iterations`、`max_change` を持つ `IterativeSettings` レコードを直接返し、失敗時は `FormulonError` になります。`maxIterations` を設定すると値は `32767` までに制限され、getter は制限後の値を返します。読み込んだワークブックの `iterateCount` がそれを超えている場合も同じ上限が適用されます。ホスト UI に実際に使われる値を表示するときは、設定後に読み戻してください。
 
 ::: warning 反復計算を無効にした循環は要確認
-反復計算が無効な場合、通常の未解決循環は `#REF!` になります。`OFFSET` や `INDIRECT` などの動的参照を通る循環では、直前のキャッシュ値が残る場合があります。利用できる循環統計で対象セルを確認してください。いずれもホスト側の例外にはなりません。循環参照を意図する場合は反復計算を明示的に有効にしてください。
+反復計算が無効な場合、通常の未解決循環は `#REF!` になります。`OFFSET` や `INDIRECT` などの動的参照を通る循環では、直前のキャッシュ値が残る場合があります。いずれもホスト側の例外にはならず、`recalc()` は成功のステータスを返します。循環参照を意図する場合は反復計算を明示的に有効にしてください。
 :::
 
 下のパネルは、ここで説明した 3 つの引数をそのまま操作できる形で、2 セルの循環を解きます。`maxChange` を小さくするほど、そこへ収まるまでの走査回数は増えます。収束に必要な回数より小さい上限を選ぶと解が途中で打ち切られ、最終残差が判定線の上にあるまま未収束として報告されます。

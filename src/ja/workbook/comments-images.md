@@ -6,13 +6,13 @@
 
 `getThreadedComments(sheet)` はファイル内の順序で平坦化したリストを返します。各スレッドの開始コメントの直後に返信が並びます。`ThreadedComment` は ID、0 始まりのアンカー、人物 ID、時刻、本文、親 ID、解決状態、UTF-16 単位のメンション範囲を持ちます。`getPersons()` はワークブックの人物リストを読み取ります。`addThreadedComment` は `parentId` が空ならスレッドを開始し、それ以外なら返信を追加します。`editThreadedComment`、`setThreadResolved`、`removeThreadedComment` でコメントを更新・削除できます。開始コメントを削除するとスレッド全体を削除します。コメントやメンションが参照している人物は `removePerson` で削除できません。
 
-各スレッドは Excel の従来型ノートのスタブと同期します。行や列を挿入または削除すると、コメントのアンカーもセルと同じ規則で移動または削除されます。従来型ノートには `getComment`、`getComments`、`setComment` を使います。
+各スレッドは Excel の従来型ノートのスタブと同期します。行や列を挿入または削除すると、コメントのアンカーもセルと同じ規則で移動または削除されます。従来型ノートには `getComment`、`getComments`、`setComment` を使います。`setComment` に空の `text` を渡すとノートを削除します。`getComments(sheet)` は値のないセルに付いたノートも返し、Python には `comment_count(sheet)` もあります。`getComment()` はノートがない場合も不正なシートの場合も `null` を返します。WASM と Native Node では、`getCommentResult(sheet, row, col)` で両者を区別できます。
 
 C の呼び出しは `fm_sheet_threaded_comment_count`、`fm_sheet_threaded_comment_at`、`fm_sheet_add_threaded_comment`、`fm_sheet_edit_threaded_comment`、`fm_sheet_set_thread_resolved`、`fm_sheet_remove_threaded_comment`、`fm_workbook_person_count`、`fm_workbook_person_at`、`fm_workbook_add_person`、`fm_workbook_remove_person` です。WASM と Native Node は対応する camelCase、Python は snake_case のメソッドを使います。
 
 ## 画像のバイト列と描画アンカー
 
-`probeImage(bytes)` は PNG、JPEG、GIF、BMP のバイト列を判定し、ワークブックを変更せずに `ImageFormat` とピクセル寸法を返します。`listDrawingObjects(sheet)` は画像、グラフ、図形、グループ、コネクタなど、描画に含まれるアンカー付きオブジェクトを列挙します。画像のメタデータにはオブジェクト ID、アンカー種別、`AnchorEditAs`、セル座標、EMUs 単位のオフセットと寸法、名前、説明、メディアパス、画像形式が含まれます。`getImage(sheet, objectId)` は画像バイト列のコピーを返します。
+`probeImage(bytes)` は PNG、JPEG、GIF、BMP のバイト列を判定し、ワークブックを変更せずに `ImageFormat` とピクセル寸法を返します。`listDrawingObjects(sheet)` は画像、グラフ、図形、グループ、コネクタなど、描画に含まれるアンカー付きオブジェクトを列挙します。画像のメタデータにはオブジェクト ID、アンカー種別、`AnchorEditAs`、セル座標、EMU 単位（1 ポイント = 12,700 EMU）のオフセットと寸法、名前、説明、メディアパス、画像形式が含まれます。`getImage(sheet, objectId)` は画像バイト列のコピーを返します。
 
 `insertImage` は 1 セルまたは 2 セルのアンカーを受け取ります。既存の絶対位置アンカーは `listDrawingObjects` で読み取れますが、この API から絶対位置アンカーを挿入することはできません。2 セル画像が編集に追随する方法は `AnchorEditAs` で指定します。幅または高さが 0 の場合は、判定したピクセル寸法を EMU に変換して使います。`removeImage` は他の描画オブジェクトを残して画像を削除します。メディアを参照するオブジェクトがなくなれば、未使用のメディアも削除されます。1 セルおよび 2 セルの画像アンカーは、行や列の挿入・削除に追随します。
 

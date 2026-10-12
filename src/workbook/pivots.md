@@ -235,7 +235,25 @@ for cell in layout.cells:
 
 :::
 
-Use `pivotSetLayout()` / `set_pivot_report_layout()` for compact, tabular, or outline presentation. Field order, subtotals, filters, date grouping, and the aggregation / show-values-as settings are separate operations; the binding declarations are the exhaustive reference.
+## Configure an existing pivot
+
+Each setting is its own call on `(sheet, pivotIndex, …)`. Python uses the snake_case name unless the table shows otherwise.
+
+| Task | WASM / Native Node |
+| --- | --- |
+| Compact, tabular, or outline form | `pivotSetLayout`, `pivotGetLayout` (Python: `set_pivot_report_layout`) |
+| Grand totals, name, anchor | `pivotSetGrandTotals`, `pivotSetName`, `pivotSetAnchor` |
+| Field placement and order | `pivotFieldSetAxis`, `pivotSetRowFieldOrder`, `pivotSetColFieldOrder` |
+| Sort | `pivotFieldSetSort` |
+| Subtotals | `pivotFieldAddSubtotalFn`, `pivotFieldClearSubtotalFns`, `pivotFieldSetSubtotalTop` |
+| Show or hide items | `pivotFieldAddItem`, `pivotFieldAddItemAt`, `pivotFieldSetItemVisible`, `pivotFieldClearItems` |
+| Value fields | `pivotDataFieldAdd`, `pivotDataFieldSet`, `pivotDataFieldClear` |
+| Label and value filters | `pivotFilterAdd`, `pivotFilterAt`, `pivotFilterRemoveAt`, `pivotFilterClear` |
+| Date grouping | `pivotFieldSetDateGroup`, `pivotFieldClearDateGroup` |
+
+::: warning Label and value filters are not saved
+A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA` only while the workbook handle lives; `save()` does not write it. A `<filters>` block that Excel wrote is preserved on save but does not appear in `pivotFilterCount()`. Item visibility is the filter state that persists.
+:::
 
 ### Group dates by an explicit day interval
 

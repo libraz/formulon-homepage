@@ -6,13 +6,13 @@ Formulon は、レンダラーが必要とするワークブックの表示状�
 
 `getDisplayText(sheet, row, col)` は、セルの有効な表示形式を使って保存値を 1 つ表示用テキストに変換します。`displayStatus` は `DisplayStatus.Ok`、`Overflow`、`InvalidFormat` のいずれかで、オーバーフローはレンダラーの契約上 `########` になります。`formatValue(value, formatCode)` はセルを読まず、指定した形式で値を変換します。どちらも状態を含む結果を返します。
 
-`getSheetView(sheet)` は、ズーム、固定する行と列の数、タブの表示状態、枠線、行列見出し、ゼロ表示、右から左への表示、タブ選択、表示モードを読み取ります。対応する設定メソッドは `setSheetFreeze`、`setSheetVisibility`、`setSheetShowGridLines`、`setSheetViewMode` などです。シート保護はメタデータであり、計算エンジンはロックを強制しません。
+`getSheetView(sheet)` は、ズーム、固定する行と列の数、タブの表示状態、枠線、行列見出し、ゼロ表示、右から左への表示、タブ選択、表示モードを読み取ります。各項目には設定メソッドがあります。`setSheetZoom`、`setSheetFreeze`、`setSheetVisibility`、`setSheetShowGridLines`、`setSheetShowRowColHeaders`、`setSheetShowZeros`、`setSheetRightToLeft`、`setSheetTabSelected`、`setSheetViewMode` です。シート保護（`getSheetProtection` / `setSheetProtection`）はメタデータであり、計算エンジンはロックを強制しません。
 
 ## ジオメトリ
 
-`getCellRectPt` は A1 の左上を基準に、指定した包含範囲 `MergeRange` を覆う矩形を返します。`getColumnWidthPt` と `getRowHeightPt` は有効な寸法を返し、非表示の行と列の寸法は 0 になります。`GeometryMode.Display` は画面用の幅モデルを使い、`GeometryMode.Print` はページ分割に使う DPI に依存しないモデルを使います。`getWidthModel` は Normal フォントの補正値と文字単位からポイント単位への変換情報を返します。`columnCharsToPt` と `columnPtToChars` は 2 つの単位を相互変換します。
+`getCellRectPt(sheet, range, mode)` は、両端を含む `MergeRange` を覆う矩形を、A1 の左上隅を原点としたポイント単位で返します。`getColumnWidthPt` と `getRowHeightPt` は実際に使われる寸法を返し、非表示の行と列の寸法は 0 になります。`GeometryMode.Display` は画面用の幅モデルを使い、`GeometryMode.Print` はページ分割に使う DPI に依存しないモデルを使います。`getWidthModel` は Normal フォントの補正値と文字単位からポイント単位への変換情報を返します。`columnCharsToPt` と `columnPtToChars` は 2 つの単位を相互変換します。
 
-シートの既定値は `getSheetFormatDefaults`、列ごとの上書きは `getSheetColumns`、行ごとの上書きは `getSheetRowOverrides` で読み取ります。編集には `setSheetFormatDefaults`、`setColumnWidth`、`clearColumnWidth`、`setRowHeight`、`clearRowHeight` を使います。`clearColumnWidth` は指定した包含範囲の明示的な幅だけを削除し、非表示やアウトラインのメタデータを保持します。削除後の列は、その後にシートの既定値を変更した場合も現在の有効な既定値に従います。表示テキストは列幅に依存しません。狭い列でも `####` にはならず、繰り返し塗りつぶしも幅に加算されません。
+シートの既定値は `getSheetFormatDefaults` で読み取ります。その `effectiveDefaultColWidth`（文字数単位、未設定なら 8.43）と `effectiveDefaultRowHeight`（ポイント単位、未設定なら約 14.57）が、シートのレイアウトに実際に使われる値です。列ごとの上書きは `getSheetColumns`、行ごとの上書きは `getSheetRowOverrides` で読み取ります。編集には `setSheetFormatDefaults`、`setColumnWidth`、`clearColumnWidth`、`setRowHeight`、`clearRowHeight` を使います。`clearColumnWidth` は指定した包含範囲の明示的な幅だけを削除し、非表示やアウトラインのメタデータを保持します。削除後の列は、その後にシートの既定値を変更した場合も現在の有効な既定値に従います。表示テキストは列幅に依存しません。狭い列でも `####` にはならず、繰り返し塗りつぶしも幅に加算されません。
 
 ## テーマと有効なスタイル
 

@@ -49,28 +49,33 @@ with Workbook.create_for_profile("mac-365-ja_JP") as wb:
 
 ## Open
 
-The file-format layer reads workbook parts, relationships, shared strings, styles, worksheets, defined names, tables, comments, hyperlinks, merges, validations, conditional formats, pivot caches, external-link tables, and supported extension structures. Unparsed but expected parts are kept as passthrough so the file round-trips cleanly.
+Load `.xlsx` or `.xlsb` bytes and check the handle before using it. The format is detected from the package contents, not from a file name:
 
-Data validations now expose the dropdown-visibility flag (`show_dropdown`). OOXML stores that flag with inverted `showDropDown` semantics; Formulon normalizes it for host APIs and writes the correct package representation back out.
+::: code-group
 
-Loaded XLSB pivot-cache definitions, cache records, and pivot-table parts enter the same model used by the OOXML reader when their record encoding is supported. `pivotLayout()` and `GETPIVOTDATA` can aggregate or read supported cached records on demand; `recalc()` does not rebuild a pivot cache from worksheet source data. Phonetic annotations retain the UTF-16 span of each `<rPh>` run, and external-link tables retain the supporting-book index used by formulas such as `[1]Sheet1!A1`. Entered book-name and path references create or reuse those link records. External references resolve from cached values; the lifecycle does not open the source workbook, fetch a network target, or refresh the cache.
-
-Verify the load before using the workbook:
-
-```ts
+```ts [WASM]
 const wb = Module.Workbook.loadBytes(bytes)
-if (!wb.isValid()) {
-  throw new Error(Module.lastErrorMessage())
-}
+if (!wb.isValid()) throw new Error(Module.lastErrorMessage())
 ```
 
-```python
-with Workbook.load(blob) as wb:
+```ts [Native Node]
+import { lastErrorMessage, Workbook } from '@libraz/formulon-native'
+
+const wb = Workbook.loadBytes(bytes)
+if (!wb.isValid()) throw new Error(lastErrorMessage())
+```
+
+```python [Python]
+with Workbook.load(blob) as wb:  # raises FormulonError on failure
     ...
 ```
 
+:::
+
+The reader builds the model from cells, formulas, styles, defined names, tables, comments, hyperlinks, merges, validations, conditional formats, pivot caches, and external-link tables. Parts it does not model are kept as passthrough bytes so the file round-trips. Loading computes nothing: a pivot cache is not rebuilt from its source range, and an external reference such as `[1]Sheet1!A1` reads the values cached in the file. Formulon never opens the source workbook or fetches a network target. See [File formats](/workbook/file-formats) for what each format preserves.
+
 ::: warning WASM workbook handles wrap native memory
-WASM `Workbook` instances are *not* ordinary garbage-collected JS objects. They own C++ memory allocated inside the WASM heap and must be released with `wb.delete()` once you are done. Python's context manager and CLI processes handle this for you.
+WASM `Workbook` instances are *not* ordinary garbage-collected JS objects. They own C++ memory allocated inside the WASM heap and must be released with `wb.delete()` once you are done. Native Node releases its handle with `dispose()` or on garbage collection. Python's context manager and CLI processes handle this for you.
 :::
 
 ## Edit
@@ -115,7 +120,14 @@ Saved bytes contain coherent formula / cached-value pairs, so downstream consume
 
 ## Threading and reuse
 
-The default `@libraz/formulon` WASM package is single-threaded and does not require cross-origin isolation. Its `recalc()` is serial, and `recalcParallel()` remains a valid serial fallback with `workerThreadsStarted: 0`. To enable pthread workers, import `@libraz/formulon/threads`; a browser deployment then needs COOP/COEP headers. Python uses the serial path, while the native CLI is serial by default and opts into threads with `--threads`. A `Workbook` handle is **not safe to share across threads or workers**. If a host needs concurrent recalculation, give each worker its own `Workbook` instance:
+`recalc()` is serial on every surface. `recalcParallel(threadCount)` (WASM and Native Node) runs the same calculation on worker threads where the build has them: `threadCount` is `0` for automatic detection capped at 8, `1` for the caller thread only, or `2`–`8` for an explicit cap. Results match `recalc()` either way.
+
+- The default `@libraz/formulon` WASM package is single-threaded and needs no cross-origin isolation. `recalcParallel()` still works there and reports `workerThreadsStarted: 0`. Import `@libraz/formulon/threads` for pthread workers; a browser deployment then needs COOP/COEP headers.
+- `@libraz/formulon-native` is built with pthreads.
+- Python recalculates serially.
+- The CLI is serial unless `recalc` is given `--threads`.
+
+A `Workbook` handle is **not safe to share across threads or workers**. If a host needs concurrent recalculation, give each worker its own `Workbook` instance:
 
 <DiagramLayers :layers="[
   { title: 'Workers', nodes: ['Worker 1', 'Worker 2', 'Worker N'] },

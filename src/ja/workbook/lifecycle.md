@@ -49,28 +49,33 @@ with Workbook.create_for_profile("mac-365-ja_JP") as wb:
 
 ## 開く
 
-ファイル形式層がワークブックのパーツ、リレーションシップ、共有文字列、スタイル、ワークシート、定義名、テーブル、コメント、ハイパーリンク、結合、入力規則、条件付き書式、ピボットキャッシュ、外部リンク表、その他の拡張パーツを読み込みます。意味を解釈しないパーツも保持対象として扱い、保存時に欠落しないようにします。
+`.xlsx` または `.xlsb` のバイト列を読み込み、使う前にハンドルが有効か確認します。形式はファイル名ではなくパッケージの中身から判定します。
 
-入力規則はドロップダウン表示状態のフラグ（`show_dropdown`）を公開します。OOXML では `showDropDown` の意味が反転して保存されるため、Formulon はホスト API 向けに正規化し、保存時に正しいパッケージ表現へ戻します。
+::: code-group
 
-対応済みの XLSB レコード形式では、ピボットキャッシュ定義、キャッシュレコード、ピボットテーブルの各パーツを OOXML リーダーと同じモデルへ読み込みます。`pivotLayout()` と `GETPIVOTDATA` は対応するキャッシュのレコードを必要に応じて集計・取得しますが、`recalc()` が元シートからピボットキャッシュを再構築することはありません。ふりがな注釈は各 `<rPh>` 要素の UTF-16 範囲を保持します。また外部リンク表の参照元ブックのインデックスも保持するため、`[1]Sheet1!A1` のような数式を対応するキャッシュ値へ解決できます。ブック名やパスで入力した参照は、このリンクレコードを作成または再利用します。外部参照はキャッシュ値から解決しますが、この流れで参照元ワークブックを開いたりネットワーク先から取得したり、キャッシュを更新したりはしません。
-
-ロード後は必ず妥当性を確認します。
-
-```ts
+```ts [WASM]
 const wb = Module.Workbook.loadBytes(bytes)
-if (!wb.isValid()) {
-  throw new Error(Module.lastErrorMessage())
-}
+if (!wb.isValid()) throw new Error(Module.lastErrorMessage())
 ```
 
-```python
-with Workbook.load(blob) as wb:
+```ts [Native Node]
+import { lastErrorMessage, Workbook } from '@libraz/formulon-native'
+
+const wb = Workbook.loadBytes(bytes)
+if (!wb.isValid()) throw new Error(lastErrorMessage())
+```
+
+```python [Python]
+with Workbook.load(blob) as wb:  # raises FormulonError on failure
     ...
 ```
 
+:::
+
+リーダーは、セル、数式、スタイル、定義名、テーブル、コメント、ハイパーリンク、結合、入力規則、条件付き書式、ピボットキャッシュ、外部リンク表からモデルを組み立てます。モデル化していないパーツはバイト列のまま保持するので、ファイルを往復させても欠落しません。読み込みの時点では何も計算しません。ピボットキャッシュを元の範囲から作り直すことはなく、`[1]Sheet1!A1` のような外部参照はファイルに保存されたキャッシュ値を読みます。参照元ワークブックを開いたり、ネットワーク先から取得したりはしません。形式ごとに何が保持されるかは [ファイル形式](/ja/workbook/file-formats) を参照してください。
+
 ::: warning WASM の Workbook ハンドルはネイティブメモリを保持する
-WASM の `Workbook` インスタンスは通常の JS オブジェクトではなく、WASM ヒープ内の C++ メモリを所有します。使い終わったら必ず `wb.delete()` を呼んで解放してください。Python の context manager と CLI プロセスは自動で処理します。
+WASM の `Workbook` インスタンスは通常の JS オブジェクトではなく、WASM ヒープ内の C++ メモリを所有します。使い終わったら必ず `wb.delete()` を呼んで解放してください。Native Node は `dispose()` またはガベージコレクションでハンドルを解放します。Python の context manager と CLI プロセスは自動で処理します。
 :::
 
 ## 編集する
@@ -115,7 +120,14 @@ if (!saved.status.ok || saved.bytes === null) {
 
 ## スレッドと再利用
 
-標準の `@libraz/formulon` WASM パッケージは単一スレッドで動作し、クロスオリジン分離を必要としません。`recalc()` は直列実行で、`recalcParallel()` も `workerThreadsStarted: 0` の直列フォールバックとして利用できます。pthread ワーカーを有効にする場合は `@libraz/formulon/threads` をインポートし、ブラウザでは COOP/COEP ヘッダーが必要です。Python は直列経路を使い、ネイティブ CLI は標準では直列で、`--threads` を指定したときだけスレッドを選びます。`Workbook` ハンドル自体は **複数のスレッド / Worker で共有できません**。並行で再計算する場合は、Worker ごとに独立した `Workbook` インスタンスを用意してください。
+`recalc()` はどの実行入口でも直列に計算します。`recalcParallel(threadCount)`（WASM と Native Node）は、ビルドがワーカースレッドを持っていれば同じ計算をワーカーで実行します。`threadCount` は、`0` なら自動検出（上限 8）、`1` なら呼び出し元スレッドのみ、`2`〜`8` ならその数を上限にします。どちらの経路でも結果は `recalc()` と同じです。
+
+- 標準の `@libraz/formulon` WASM パッケージは単一スレッドで、クロスオリジン分離を必要としません。`recalcParallel()` も動作し、`workerThreadsStarted: 0` を返します。pthread ワーカーを使う場合は `@libraz/formulon/threads` をインポートします。ブラウザでは COOP/COEP ヘッダーが必要です。
+- `@libraz/formulon-native` は pthread 付きでビルドされています。
+- Python は直列に再計算します。
+- CLI は、`recalc` に `--threads` を指定しない限り直列です。
+
+`Workbook` ハンドルは **複数のスレッドや Worker で共有できません**。並行して再計算する場合は、Worker ごとに独立した `Workbook` インスタンスを用意してください。
 
 <DiagramLayers :layers="[
   { title: 'Worker', nodes: ['Worker 1', 'Worker 2', 'Worker N'] },

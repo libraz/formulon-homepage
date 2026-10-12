@@ -3,7 +3,7 @@
 The evaluator is designed to match Excel semantics for scalar values, ranges, arrays, errors, references, and locale-sensitive behavior. The function catalog is registered at startup; bindings expose enough of it to evaluate any registered function.
 
 ::: info Glossary: tree-walker
-The evaluator interprets the parsed AST directly; every build uses this tree-walker.
+The evaluator walks the parsed formula's syntax tree (AST) directly instead of compiling it to bytecode. Every build uses this one evaluator; there is no second fast path that results could drift from.
 :::
 
 ::: info Glossary: value kind
@@ -25,15 +25,9 @@ The catalog tracks 526 Excel function names across math, statistical, logical, t
 
 The catalog contains **511 real implementations, including 2 environment-bound functions (`CELL`, `INFO`), plus 15 unavailable stubs = 526 recognized names**. See [Formula coverage](/compatibility/formula-coverage) for the category and availability breakdown.
 
-## Evaluation modes
+## References and arrays
 
-All builds use the tree-walker. There is one evaluator and one evaluation path, so recalculation has no second evaluator or parity path.
-
-## Ad-hoc evaluation
-
-On top of the same evaluator, WASM and Native Node expose read-only scalar ad-hoc evaluation — `evaluateFormulaText()` and `evaluateConditionalFormula()`. Python exposes `evaluate_formula_array()` for whole-array results and `evaluate_cf_formula()`, but not general scalar `evaluate_formula_text()`.
-
-Range-shaped defined names evaluate as arrays, spill-phantom cells are enumerated, 1900/1904 date systems are carried through the evaluator, and whole-row/column and 3-D ranges resolve against the workbook model. Array broadcasting follows the function's Excel rules.
+Range-shaped defined names evaluate as arrays, spill-phantom cells are enumerated, 1900/1904 date systems are carried through the evaluator, and whole-row/column and 3-D ranges resolve against the workbook model. Array broadcasting follows the function's Excel rules. To evaluate a formula without writing it into a cell, see [Ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation).
 
 ### Reference-valued endpoints
 

@@ -235,7 +235,25 @@ for cell in layout.cells:
 
 :::
 
-表示形式には `pivotSetLayout()` / `set_pivot_report_layout()` を使います。compact、tabular、outline を選べます。フィールド順、集計行、フィルター、日付グループ化、集計方法、値の表示方法は別々に設定します。完全な一覧は各バインディングの宣言を確認してください。
+## 既存のピボットを設定する
+
+設定ごとに `(sheet, pivotIndex, …)` を受け取る個別のメソッドがあります。表に別名がない限り、Python では snake_case の名前を使います。
+
+| 作業 | WASM / Native Node |
+| --- | --- |
+| コンパクト・表形式・アウトライン形式 | `pivotSetLayout`、`pivotGetLayout`（Python は `set_pivot_report_layout`） |
+| 総計、名前、配置先 | `pivotSetGrandTotals`、`pivotSetName`、`pivotSetAnchor` |
+| フィールドの配置と順序 | `pivotFieldSetAxis`、`pivotSetRowFieldOrder`、`pivotSetColFieldOrder` |
+| 並べ替え | `pivotFieldSetSort` |
+| 小計 | `pivotFieldAddSubtotalFn`、`pivotFieldClearSubtotalFns`、`pivotFieldSetSubtotalTop` |
+| アイテムの表示・非表示 | `pivotFieldAddItem`、`pivotFieldAddItemAt`、`pivotFieldSetItemVisible`、`pivotFieldClearItems` |
+| 値フィールド | `pivotDataFieldAdd`、`pivotDataFieldSet`、`pivotDataFieldClear` |
+| ラベルフィルターと値フィルター | `pivotFilterAdd`、`pivotFilterAt`、`pivotFilterRemoveAt`、`pivotFilterClear` |
+| 日付のグループ化 | `pivotFieldSetDateGroup`、`pivotFieldClearDateGroup` |
+
+::: warning ラベルフィルターと値フィルターは保存されない
+`pivotFilterAdd()` で追加したフィルターが `pivotLayout()` と `GETPIVOTDATA` に効くのは、ワークブックのハンドルが生きている間だけです。`save()` はこのフィルターを書き出しません。Excel が書いた `<filters>` ブロックは保存時にそのまま残りますが、`pivotFilterCount()` には現れません。保存されるフィルター状態は、アイテムの表示・非表示です。
+:::
 
 ### 日付を明示した日数単位でグループ化する
 

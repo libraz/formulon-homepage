@@ -40,8 +40,6 @@ Spill behavior is most visible with:
 =LET(x, A1:A10, x * 2)
 ```
 
-Implicit intersection (`@`) is still supported for backward compatibility with workbooks authored in pre-dynamic-array Excel.
-
 Those formulas can be run below. The upper table comes from `evaluateFormulaArray()`, so the rows × columns printed beside it is the shape the engine computed, not a shape drawn to illustrate the idea; the sheet below it is a live `formulon-cell` grid holding the same formula written into `D2` and recalculated, with the selected rectangle read back from `spillInfo()`. Use *Block the spill range* to put a value inside that rectangle: the anchor turns into `#SPILL!` and not one result cell is written — the collision rule above, not a special case built into the demo.
 
 <SpillDemo />
@@ -49,8 +47,6 @@ Those formulas can be run below. The upper table comes from `evaluateFormulaArra
 ::: tip A short way to explore the demo
 Start with `=SEQUENCE(3,4)` and note the preview shape. Write it to the sheet, then block its far corner to observe that the anchor becomes `#SPILL!` without partially writing a result. Clear the blocker, switch to `=FILTER(A2:B6,B2:B6>4)`, and edit a source value in columns A or B. The preview changes immediately; the committed formula keeps its own spill range until it is recalculated.
 :::
-
-Computed anchors are evaluated by the tree-walker, as are all spill-reference formulas in release, development, and test artifacts.
 
 ## Recalculation interaction
 
@@ -66,12 +62,12 @@ The recalc engine stores per-anchor spill metadata:
 When the anchor recomputes to a different shape, dependents anywhere in the old or new spill rectangle are marked dirty.
 
 ::: tip Inspecting spill state
-WASM and Native Node expose `spillInfo(sheet, row, col)` and the MCP `formulon_trace` tool reads precedents, dependents, and spill info from a session. Use these when a workbook formula returns `#SPILL!` and you need to find what occupies the target cells.
+`spillInfo(sheet, row, col)` (`spill_info()` in Python) reports whether a cell anchors a spill and the anchor and size of that rectangle; the MCP `formulon_trace` tool reads precedents, dependents, and spill info from a session. Use these when a formula returns `#SPILL!` and you need to find what occupies the target cells.
 :::
 
 ## Compatibility caveats
 
-Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE (Ctrl+Shift+Enter) array formulas exist in the same sheet. For a mixed dynamic-array / CSE workbook, compare a fixture against the target Excel profile before relying on the results; internal golden fixtures are not required for that check.
+Dynamic-array semantics depend on workbook-level flags and on whether legacy CSE (Ctrl+Shift+Enter) array formulas exist in the same sheet. For a workbook that mixes the two, compare results against the same file calculated in the target Excel version before relying on them.
 
 ## Read next
 

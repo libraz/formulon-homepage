@@ -10,6 +10,10 @@ A directed graph the engine builds from formulas. Each formula cell points to th
 A cell whose computed value is no longer known to be up to date because something it depends on changed. Recalculation visits dirty cells, evaluates them, and marks them clean again.
 :::
 
+::: info Glossary: volatile function
+A function whose value depends on something other than its arguments (clock, randomness, workbook structure) and so must be re-evaluated on every recalc, even when no input has changed. Volatiles drag their dependents into the dirty set every time.
+:::
+
 ## What the engine tracks
 
 The recalculation engine keeps state across edits:
@@ -22,7 +26,7 @@ The recalculation engine keeps state across edits:
 | Workbook clock | An optional local civil-time reading shared by `NOW`, `TODAY`, and pivot relative-period filters |
 | Iterative settings | Iteration enabled / disabled, max iterations, max change for cyclic models |
 | Dynamic-array spill shapes | Per-anchor result shapes so dependents can be re-shaped or invalidated correctly |
-| Calc mode | Manual or automatic recalculation for hosts that expose the toggle |
+| Calc mode | Excel's automatic / manual setting, kept for round-trip; the engine recalculates only when the host calls `recalc()` or `partialRecalc()`, whatever the mode |
 
 <DiagramLayers :layers="[
   { title: 'Edit', nodes: [{ label: 'Edit / set_cell' }, { label: 'Volatile functions', note: 'NOW · RAND · INDIRECT · …' }] },
@@ -32,7 +36,7 @@ The recalculation engine keeps state across edits:
   { title: 'Done', nodes: [{ label: 'Mark clean', note: 'the requested cells are current; full recalc clears the whole dirty set' }] }
 ]" />
 
-That graph can also be read back. On WASM and Native Node, `precedents(sheet, row, col, depth)` returns the cells an address reads from and `dependents(...)` the cells that read it. Pick a cell in the seeded sheet below and the arrows are drawn from nothing but the addresses those two calls returned. Raise the depth and the chain behind `D1` unwinds a column at a time, back to the literals in column A.
+That graph can also be read back. `precedents(sheet, row, col, depth)` (the same name in Python) returns the cells an address reads from and `dependents(...)` the cells that read it. Pick a cell in the seeded sheet below and the arrows are drawn from nothing but the addresses those two calls returned. Raise the depth and the chain behind `D1` unwinds a column at a time, back to the literals in column A.
 
 <TraceDemo />
 
@@ -61,15 +65,11 @@ print(f"recomputed {recomputed} cell(s)")
 
 :::
 
-::: info Glossary: volatile function
-A function whose value depends on something other than its arguments (clock, randomness, external lookup) and so must be re-evaluated on every recalc, even when no input has changed. Volatiles drag their dependents into the dirty set every time.
-:::
-
 ## Pinning clock-dependent calculations
 
 When a workbook has no pinned clock, `NOW()`, `TODAY()`, and pivot relative-period filters read the host clock. Each read can observe a different instant, including across a midnight boundary. A pin gives all of them one local civil-time reading for a reproducible recalculation.
 
-WASM exposes `pinnedNow()`, `setPinnedNow(year, month, day, hour, minute, second)`, and `clearPinnedNow()`. Python exposes the matching `pinned_now()`, `set_pinned_now(...)`, and `clear_pinned_now()` methods. The WASM getter returns `{ status, now }`; check `status` before reading `now`, which is a `CivilTime` object (`year`, `month`, `day`, `hour`, `minute`, `second`) or `null` when the host clock is active. Python returns the `CivilTime` value or `None` directly.
+WASM and Native Node expose `pinnedNow()`, `setPinnedNow(year, month, day, hour, minute, second)`, and `clearPinnedNow()`. Python exposes the matching `pinned_now()`, `set_pinned_now(...)`, and `clear_pinned_now()` methods, and the CLI takes `--now <date[Thh:mm:ss]>`. The JavaScript getter returns `{ status, now }`; check `status` before reading `now`, which is a `CivilTime` object (`year`, `month`, `day`, `hour`, `minute`, `second`) or `null` when the host clock is active. Python returns the `CivilTime` value or `None` directly.
 
 ```ts
 const checkStatus = (status: { ok: boolean; message: string }) => {
@@ -87,11 +87,11 @@ The pin uses local civil fields rather than a timestamp, so it has no residual t
 
 ## Workbook-wide invalidation
 
-Changing iterative-calculation options, the Excel compatibility profile, the 1904 date system, or the pinned clock marks every formula cell dirty. Context-dependent changes also clear derived PivotTable results that depend on them. Call `recalc()` to refresh the formulas and any dependent pivot results; setting an identical effective value is a no-op.
+Changing iterative-calculation options, the Excel compatibility profile, or the pinned clock marks every formula cell dirty. Context-dependent changes also clear derived PivotTable results that depend on them. Call `recalc()` to refresh the formulas and any dependent pivot results; setting an identical effective value is a no-op.
 
 ## Calculation settings and file persistence
 
-Calc mode and iterative settings are workbook state while the workbook is open. XLSX stores them in `<calcPr>`, but the XLSB writer does not emit calculation settings. Saving an XLSB with manual calculation or iterative calculation enabled adds one `deferredFeatureCount` entry per setting; reopening uses automatic calculation with iteration disabled. See [File formats](/workbook/file-formats) for the other XLSB omissions and passthrough rules.
+Calc mode (`calcMode()` / `setCalcMode()`, with `CalcMode.Auto`, `Manual`, or `AutoNoTable`; `calc_mode()` / `set_calc_mode()` in Python) and iterative settings are workbook state while the workbook is open. A host UI can show the mode, but the engine does not act on it. XLSX stores both in `<calcPr>`, but the XLSB writer does not emit calculation settings. Saving an XLSB with manual calculation or iterative calculation enabled adds one `deferredFeatureCount` entry per setting; reopening uses automatic calculation with iteration disabled. See [File formats](/workbook/file-formats) for the other XLSB omissions and passthrough rules.
 
 ## Recovering a missing-sheet reference
 
@@ -105,7 +105,9 @@ A formula entered while a referenced sheet is absent initially evaluates to `#RE
 
 Workbooks with intentional cycles — interest accrual, goal-seek style fixed points — need iterative calculation. The engine evaluates the cyclic subgraph repeatedly until the change between iterations falls below the configured tolerance or the iteration cap is hit.
 
-```ts
+::: code-group
+
+```ts [WASM / Native Node]
 const checkStatus = (status: { ok: boolean; message: string }) => {
   if (!status.ok) throw new Error(status.message)
 }
@@ -117,12 +119,20 @@ checkStatus(wb.setIterativeProgress((iteration, maxResidual) => {
 checkStatus(wb.recalc())
 ```
 
-`setIterativeProgress()` registers a callback that fires after every Gauss-Seidel sweep over the cyclic subgraph; it does not take iteration-limit arguments — those are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only: Python's `set_iterative()` takes the same three arguments, but the per-sweep progress callback is not bound (it would need a native function pointer that the Python host cannot synthesize).
+```python [Python]
+wb.set_iterative(True, 100, 0.001)  # enabled, max iterations, max change
+wb.recalc()
+print(wb.get_iterative())
+```
+
+:::
+
+`setIterativeProgress()` registers a callback that fires after every sweep over the cyclic cells; the limits themselves are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only. Python's `set_iterative()` takes the same three arguments, and `set_iterative_enabled(enabled)` toggles iteration while keeping the stored limits.
 
 `getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes `get_iterative()` as an `IterativeSettings` record with `enabled`, `max_iterations`, and `max_change`; failures raise `FormulonError`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
 
 ::: warning Cycles outside iteration need inspection
-If iterative calculation is **off**, an ordinary unresolved cycle produces `#REF!`. A cycle that closes through dynamic references such as `OFFSET` or `INDIRECT` may retain its prior cached values instead. Cycle statistics identify the affected cells; neither case is a host exception. Turn iteration on explicitly when cycles are intentional.
+If iterative calculation is **off**, an ordinary unresolved cycle produces `#REF!`. A cycle that closes through dynamic references such as `OFFSET` or `INDIRECT` may retain its prior cached values instead. Neither case is a host exception: `recalc()` still returns an OK status. Turn iteration on explicitly when cycles are intentional.
 :::
 
 The panel below solves a two-cell cycle with those same three arguments exposed. Tighten `maxChange` and the solve takes more sweeps to get under it; set an iteration cap below what the tolerance needs and the solve stops early, reporting the run as not converged with its last residual still above the guide line.
