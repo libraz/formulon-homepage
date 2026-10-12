@@ -1,25 +1,26 @@
 # formulon-mcp
 
-`@libraz/formulon-mcp` は Formulon 用の stdio [MCP](https://modelcontextprotocol.io/) サーバーです。AI エージェントが型付きツールを使って `.xlsx` と `.xlsb` のワークブックを調べ、編集できます。サーバーは子プロセス内で Formulon の WASM エンジンを使い、開いたワークブックをセッションごとに分離して保持します。ワークブックの出力は保存ツールで書き込みます。プレビューツールは PNG や SVG のファイルも書き出せます。`formulon_image_operation` では描画オブジェクトの一覧と、画像の取得・挿入・移動・並べ替え・削除を扱います。
+`@libraz/formulon-mcp` は Formulon 用のローカル [MCP](https://modelcontextprotocol.io/) サーバーです。AI エージェントが `.xlsx` と `.xlsb` のワークブックを開き、セルを読み書きし、数式を再計算し、プレビュー画像を描画して保存するまでを、Excel なしで実行できます。Formulon エンジンはサーバープロセス内で WASM として動き、編集内容は保存ツールで書き出すまでメモリ上にだけ存在します。
 
-テンプレートへの入力、レポートの書式設定、計算シートの確認、表の集計など、ワークブック自体を変更する作業に使います。セッションでは値と数式の読み取り、セルや構造の変更、再計算、範囲のプレビュー、保存を Excel なしで実行できます。
+テンプレートへの入力、レポートの書式設定、計算シートの確認、表の集計など、ワークブック自体を変更する作業に使います。セットアップは `npx -y @libraz/formulon-mcp init` を実行し、[インストール](/ja/mcp/install)の手順に従ってください。
 
-::: info MCP と stdio
-MCP（Model Context Protocol）は JSON-RPC 経由で AI クライアントに型付きツールを提供します。stdio ではクライアントが `formulon-mcp` を子プロセスとして起動し、stdin と stdout でメッセージを交換します。サーバーは待ち受けポートを開きません。プロセス境界とサーバーのメソッド許可リストが制御の境界になります。
+::: info MCP、stdio、セッション
+MCP（Model Context Protocol）は、Claude Code などの AI クライアントが外部ツールを呼び出すためのプロトコルです。stdio 接続では、クライアントが `formulon-mcp` を子プロセスとして起動し、stdin と stdout でメッセージをやり取りします。サーバーはネットワークポートを開きません。セッションは、サーバーのメモリ上に開いた 1 つのワークブックで、`sessionId` で指定します。サーバーが停止するとセッションは消えます。プロセスがアクセスできる範囲は[セキュリティモデル](/ja/mcp/security)を参照してください。
 :::
 
 ## ガイドを選ぶ
 
 | ガイド | 用途 |
 | --- | --- |
-| [ワークフロー](/ja/mcp/workflow) | 開く、調べる、変更する、再計算する、プレビューする、保存する、終了する流れ、セッション状態、変更あり（dirty）フラグ、損失情報、エラー |
+| [インストール](/ja/mcp/install) | Claude Code、Codex CLI、Claude Desktop などの MCP クライアントにサーバーを登録する |
+| [ワークフロー](/ja/mcp/workflow) | 開く、調べる、変更する、再計算する、プレビューする、保存する、閉じるまでの流れ。コメント、リンク、入力規則。セッション状態、変更あり（dirty）フラグ、損失情報、エラー |
 | [作成](/ja/mcp/authoring) | ブロックから請求書、フォーム、レポートなどを作り、名前付き範囲を調整する |
 | [レイアウトとプレビュー](/ja/mcp/layout-preview) | 参照レイアウトの再現、画像の挿入、寸法と印刷設定、PNG または SVG プレビューの確認 |
 | [数式監査](/ja/mcp/formula-audit) | 繰り返し計算範囲の数式抜け、定数、外れ値、数式エラーの確認 |
 | [テーブルとピボット](/ja/mcp/tables-pivots) | 範囲からネイティブのワークシートテーブル（Table）とピボットテーブル（PivotTable）を作る |
+| [条件付き書式と入力規則](/ja/mcp/conditional-formats-validation) | 値や数式でセルを強調し、ドロップダウンや入力制限を付け、一致するセルを確かめる |
 | [高度な API](/ja/mcp/advanced) | インストール済みの `Workbook` API を調べてから許可リスト内の低レベル呼び出しを行う |
 | [ツールリファレンス](/ja/mcp/tools) | 登録済みツールの入力、既定値、上限、応答の形を確認する |
-| [インストール](/ja/mcp/install) | stdio サーバーを MCP クライアントに登録する |
 | [セキュリティモデル](/ja/mcp/security) | セッション分離、パス処理、低レベル API の許可リストを確認する |
 
 ## 典型的な依頼
@@ -42,6 +43,8 @@ MCP（Model Context Protocol）は JSON-RPC 経由で AI クライアントに�
 | 作業 | 最初に読むガイド |
 | --- | --- |
 | 数式と書式を保ったまま、毎月のテンプレートを埋める | [ワークフロー](/ja/mcp/workflow) |
+| テンプレートに確認用コメントやリンクを追加する | [ワークフロー](/ja/mcp/workflow#sheet-objects) |
+| しきい値を超えた金額を強調し、ステータスのドロップダウンを付ける | [条件付き書式と入力規則](/ja/mcp/conditional-formats-validation) |
 | 明細、税、合計から請求書を新規作成する | [作成](/ja/mcp/authoring) |
 | スクリーンショットからフォームを再現し、保存前に改ページを確認する | [レイアウトとプレビュー](/ja/mcp/layout-preview) |
 | 計算表の数式抜けや不一致を確認する | [数式監査](/ja/mcp/formula-audit) |

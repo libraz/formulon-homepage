@@ -24,26 +24,30 @@ The command above pins only the initializer. `init` writes `@libraz/formulon-mcp
 
 Re-running `init` rewrites the entry with the unpinned package name, so apply the runtime pin again afterward.
 
-Choose one or more target numbers, separated by commas. An empty selection defaults to Claude Code user scope.
+Choose one or more target numbers, separated by commas. An empty selection defaults to `1`, Claude Code user scope.
 
-| Target | Configuration file |
-| --- | --- |
-| Claude Code — user | `~/.claude.json` |
-| Claude Code — project | `.mcp.json` in the current directory |
-| Codex CLI | `~/.codex/config.toml` |
-| Claude Desktop — macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Claude Desktop — Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Claude Desktop — Linux | `~/.config/Claude/claude_desktop_config.json` |
+| Number | Target | Configuration file |
+| --- | --- | --- |
+| `1` | Claude Code — user | `~/.claude.json` |
+| `2` | Claude Code — project | `.mcp.json` in the current directory |
+| `3` | Codex CLI | `~/.codex/config.toml` |
+| `4` | Claude Desktop | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`<br>Windows: `%APPDATA%\Claude\claude_desktop_config.json`<br>Linux: `~/.config/Claude/claude_desktop_config.json` |
 
 After the targets, the installer asks for the default [Excel profile](/mcp/workflow#excel-profile) with two numbered menus:
 
 1. A locale menu. `0` is the engine default (English, Windows); `1` to `14` are the supported locales, labelled in English. Enter accepts the system locale detected from the OS or `LANG`, falling back to the same language, else `0`.
 2. A host menu: `1` Windows, `2` Mac. Enter accepts the current OS.
 
-Choice `0` skips the host question and writes no profile. The preview shows the chosen profile before confirmation. Pass `--profile <id>` (or `--profile=<id>`) to skip both menus; an unknown id stops with an error. Use `--profile` for scripted, non-terminal runs.
+Choice `0` skips the host question and writes no profile. The preview shows the chosen profile before confirmation. Pass `--profile <id>` (or `--profile=<id>`) to skip both menus; an unknown id stops with an error.
 
 ```sh
 npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
+```
+
+`--profile` skips only the profile menus. The target choice and the final confirmation are still read from standard input, one answer per line, so a scripted run pipes them in:
+
+```sh
+printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
 ```
 
 The profile is written as `FORMULON_MCP_PROFILE` in the server entry's environment. Re-running `init` rewrites the entry, so running it without a profile removes a previously written one.
@@ -102,6 +106,13 @@ args = ["-y", "@libraz/formulon-mcp@0.9.0"]
 env = { FORMULON_MCP_PROFILE = "win-365-ja_JP" }
 ```
 
+The server reads two environment variables:
+
+| Variable | Effect |
+| --- | --- |
+| `FORMULON_MCP_PROFILE` | Excel profile used by `formulon_open_workbook`, `formulon_inspect_workbook`, and `formulon_update_workbook` when the call passes no `profile` |
+| `FORMULON_MCP_PRETTY` | `1` pretty-prints JSON responses for debugging; the default compact JSON costs fewer tokens |
+
 Other stdio clients use the same command and arguments. When configuring a GUI client, ensure its environment can find `node` and `npx`; a terminal's PATH may differ. Use an absolute executable path when needed.
 
 ## First calculation
@@ -139,7 +150,7 @@ yarn run build
 }
 ```
 
-The checkout must have its engine dependency available. A website documenting the release candidate does not change the package selected by `npx`.
+The checkout must have its engine dependency available.
 
 ## Troubleshooting
 

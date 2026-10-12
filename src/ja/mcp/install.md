@@ -24,26 +24,30 @@ npx -y @libraz/formulon-mcp@0.9.0 init
 
 `init` を再実行すると、バージョンなしのパッケージ名でエントリが書き直されます。再実行後は実行時の固定をもう一度適用してください。
 
-対象の番号をカンマ区切りで指定します。空欄なら Claude Code のユーザースコープを選びます。
+対象の番号をカンマ区切りで指定します。空欄なら `1`（Claude Code のユーザースコープ）を選びます。
 
-| 対象 | 設定ファイル |
-| --- | --- |
-| Claude Code — ユーザー | `~/.claude.json` |
-| Claude Code — プロジェクト | 現在のディレクトリの `.mcp.json` |
-| Codex CLI | `~/.codex/config.toml` |
-| Claude Desktop — macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Claude Desktop — Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Claude Desktop — Linux | `~/.config/Claude/claude_desktop_config.json` |
+| 番号 | 対象 | 設定ファイル |
+| --- | --- | --- |
+| `1` | Claude Code — ユーザー | `~/.claude.json` |
+| `2` | Claude Code — プロジェクト | 現在のディレクトリの `.mcp.json` |
+| `3` | Codex CLI | `~/.codex/config.toml` |
+| `4` | Claude Desktop | macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`<br>Windows: `%APPDATA%\Claude\claude_desktop_config.json`<br>Linux: `~/.config/Claude/claude_desktop_config.json` |
 
 対象を選んだあと、既定の [Excel プロファイル](/ja/mcp/workflow#excel-profile)を番号付きの 2 つのメニューで尋ねます。
 
 1. ロケールのメニュー。`0` はエンジンの既定（英語、Windows）、`1` から `14` は対応ロケールで、英語のラベルが付きます。Enter を押すと、OS や `LANG` から検出したシステムロケールを選びます。一致するものがなければ同じ言語のロケール、それもなければ `0` です。
 2. ホストのメニュー。`1` が Windows、`2` が Mac です。Enter を押すと現在の OS を選びます。
 
-`0` を選ぶとホストの質問は省略され、プロファイルは書き込まれません。確認の前に、選んだプロファイルがプレビューに表示されます。`--profile <id>`（または `--profile=<id>`）を渡すと 2 つのメニューを省略できます。未知の ID はエラーで停止します。スクリプトなど端末を使わない実行では `--profile` を使ってください。
+`0` を選ぶとホストの質問は省略され、プロファイルは書き込まれません。確認の前に、選んだプロファイルがプレビューに表示されます。`--profile <id>`（または `--profile=<id>`）を渡すと 2 つのメニューを省略できます。未知の ID はエラーで停止します。
 
 ```sh
 npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
+```
+
+`--profile` で省略できるのはプロファイルのメニューだけです。対象の選択と最後の確認は引き続き標準入力から 1 行ずつ読むため、スクリプトから実行するときは回答をパイプで渡します。
+
+```sh
+printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
 ```
 
 プロファイルはサーバーエントリの環境変数 `FORMULON_MCP_PROFILE` として書き込まれます。`init` を再実行するとエントリが書き直されるため、プロファイルなしで実行すると、以前に書き込んだプロファイルは消えます。
@@ -102,6 +106,13 @@ args = ["-y", "@libraz/formulon-mcp@0.9.0"]
 env = { FORMULON_MCP_PROFILE = "win-365-ja_JP" }
 ```
 
+サーバーが読む環境変数は次の 2 つです。
+
+| 変数 | 効果 |
+| --- | --- |
+| `FORMULON_MCP_PROFILE` | `formulon_open_workbook`、`formulon_inspect_workbook`、`formulon_update_workbook` の呼び出しで `profile` を省略したときに使う Excel プロファイル |
+| `FORMULON_MCP_PRETTY` | `1` にすると、デバッグ用に JSON 応答を整形して返します。既定の圧縮 JSON のほうがトークン数は少なくなります |
+
 他の stdio クライアントでも同じコマンドと引数を使います。GUI クライアントから `node` と `npx` が見つかることを確認してください。ターミナルと PATH が異なる場合は実行ファイルを絶対パスで指定します。
 
 ## 最初の計算
@@ -139,9 +150,9 @@ yarn run build
 }
 ```
 
-依存するエンジンパッケージが取得できる必要があります。サイトにリリース予定の仕様が載っていても、`npx` が取得するパッケージは変わりません。
+依存するエンジンパッケージが取得できる必要があります。
 
-## トラブルシュート
+## トラブルシューティング
 
 | 症状 | 確認すること |
 | --- | --- |

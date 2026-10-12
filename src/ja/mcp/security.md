@@ -10,7 +10,9 @@ description: ファイル権限、セッションの分離、許可リストに�
 
 ワークブックの入力・出力パスとプレビューの出力パスは、サーバープロセス側で解決されます。相対パスの基準はサーバーの作業ディレクトリです。チャットで見えているディレクトリと異なる場合があるため、エージェントの作業手順では絶対パスを使ってください。
 
-作業ディレクトリを変えてもファイルアクセスは制限されません。ツールは、権限があるパスを読み書きできます。`formulon_preview_range` も `outputPath` を指定すると `.png` または `.svg` を書き出します。
+作業ディレクトリを変えてもファイルアクセスは制限されません。ツールは、権限があるパスを読み書きできます。ワークブックを開く・保存する以外にファイルへ触れる入力は 3 つあります。`formulon_preview_range` の `outputPath` は `.png` または `.svg` を書き出し、`formulon_image_operation` は挿入時に `path` のローカル画像を読み、`get` 操作では `outputPath` に取り出した画像を書き込みます。
+
+ワークブックの保存は、保存先と同じ場所の一時ファイルに書いてから名前を変更します。保存が失敗しても、そのパスにある既存ファイルが途中で切れることはありません。
 
 `formulon_save_session` は、明示的な `outputPath`、セッションの直前の保存先、元の入力パスの順で保存先を決めます。省略すると入力ファイルを上書きする場合があります。レビュー用の作業では別の出力パスを明示してください。保存応答にはバイト数と診断が含まれ、ワークブックのバイト列は含まれません。
 
@@ -28,9 +30,9 @@ description: ファイル権限、セッションの分離、許可リストに�
 
 ## 許可リストによる API アクセス
 
-`formulon_workbook_call` は、[`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts) にあるメソッドだけを呼び出します。JavaScript の評価や呼び出し元が渡したコードの実行は行いません。ワークブックの生成・解放と直接保存（`save`、`saveAs`、`saveWithDiagnostics`）は許可されていません。コールバックを取る `setIterativeProgress` と、バイナリ入力を取る `probeImage`、`insertImage` も対象外です。画像には `formulon_image_operation` を使います。`snapshotImage` / `restoreImage` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。これらは不透明なバイト列を往復させるもので、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないためです。`path` はローカル画像を読み、`outputPath` は抽出したバイト列を書き込むため、サーバープロセスのファイル権限が適用されます。
+`formulon_workbook_call` は、[`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts) にあるメソッドだけを呼び出します。JavaScript の評価や呼び出し元が渡したコードの実行は行いません。直接保存するメソッド、ワークブックの生成・解放、コールバックを取るメソッド、生のバイト列を受け渡すメソッドは許可されていません。対象のメソッドと代わりに使う高レベルツールは[許可されるメソッド](/ja/mcp/advanced#what-is-allowlisted)に記載しています。直接保存はセッションの管理情報も通らないため、ワークブックの書き込みはすべて `formulon_save_session` または `formulon_update_workbook` を経由します。
 
-位置引数を組み立てる前に、[API 探索](/ja/mcp/advanced)でインストール済みエンジンのシグネチャと読み取り／変更の区分を確認してください。許可リストは呼び出せるメソッドを制限します。個々の編集が業務上適切かどうかは判断しません。
+許可リストは呼び出せるメソッドを制限します。個々の編集が業務上適切かどうかは判断しません。
 
 ## 計算、プレビュー、外部コンテンツ
 

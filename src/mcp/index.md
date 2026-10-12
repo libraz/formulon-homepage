@@ -1,25 +1,26 @@
 # formulon-mcp
 
-`@libraz/formulon-mcp` is a stdio [MCP](https://modelcontextprotocol.io/) server for Formulon. It lets an AI agent inspect and edit `.xlsx` and `.xlsb` workbooks through typed tools. The server uses Formulon's WASM engine in a child process, keeps each open workbook in an isolated session, and writes workbook output when a save tool is called. Preview tools can also write PNG or SVG artifacts. `formulon_image_operation` lists drawing objects and retrieves, inserts, moves, reorders, or removes pictures.
+`@libraz/formulon-mcp` is a local [MCP](https://modelcontextprotocol.io/) server for Formulon. It lets an AI agent open `.xlsx` and `.xlsb` workbooks, read and edit cells, recalculate formulas, render a preview image, and save the result, all without Excel. The Formulon engine runs as WASM inside the server process, and edits stay in memory until a save tool writes them out.
 
-Use it when the workbook itself is the artifact to change: a template to fill, a report to format, a calculation sheet to review, or a table to summarize. A session can read values and formulas, mutate cells and structure, recalculate, render a bounded preview, and save the result without Excel.
+Use it when the workbook itself is the artifact to change: a template to fill, a report to format, a calculation sheet to review, or a table to summarize. To set it up, run `npx -y @libraz/formulon-mcp init` and follow [Install](/mcp/install).
 
-::: info MCP and stdio
-MCP (Model Context Protocol) gives an AI client typed tools over a JSON-RPC transport. With stdio, the client starts `formulon-mcp` as a child process and exchanges messages through stdin and stdout. The server does not open a listening port. The process boundary and the server's method allowlist are part of the control model.
+::: info MCP, stdio, and sessions
+MCP (Model Context Protocol) is the protocol an AI client such as Claude Code uses to call external tools. With the stdio transport, the client starts `formulon-mcp` as a child process and exchanges messages through its stdin and stdout; the server opens no network port. A *session* is one open workbook held in the server's memory and addressed by `sessionId`. Sessions disappear when the server stops. See the [security model](/mcp/security) for what the process can reach.
 :::
 
 ## Choose a guide
 
 | Guide | Use it for |
 | --- | --- |
-| [Workflow](/mcp/workflow) | The open, inspect, mutate, recalculate, preview, save, and close loop; session state; dirty flags; losses; and errors |
+| [Install](/mcp/install) | Registering the server with Claude Code, Codex CLI, Claude Desktop, or another MCP client |
+| [Workflow](/mcp/workflow) | The open, inspect, mutate, recalculate, preview, save, and close loop; comments, links, and validation; session state; dirty flags; losses; and errors |
 | [Authoring](/mcp/authoring) | Creating an invoice, form, report, or other workbook from blocks and then refining named ranges |
 | [Layout and preview](/mcp/layout-preview) | Matching a reference layout, inserting pictures, setting dimensions and print settings, and checking a PNG or SVG preview |
 | [Formula audit](/mcp/formula-audit) | Finding missing formulas, constants, outliers, and formula errors in a repeated calculation region |
 | [Tables and pivots](/mcp/tables-pivots) | Creating native worksheet Tables and PivotTables from a bounded source range |
+| [Conditional formats and validation](/mcp/conditional-formats-validation) | Highlighting cells by value or formula, adding dropdowns and input limits, and checking which cells match |
 | [Advanced API](/mcp/advanced) | Discovering the installed `Workbook` API before making an allowlisted low-level call |
 | [Tools](/mcp/tools) | The complete reference for all registered tools, with inputs, defaults, limits, and response shapes |
-| [Install](/mcp/install) | Registering the stdio server with an MCP client |
 | [Security model](/mcp/security) | Session isolation, path handling, and the low-level allowlist |
 
 ## Typical requests
@@ -42,6 +43,8 @@ The same server also supports these concrete tasks:
 | Task | First guide |
 | --- | --- |
 | Fill a recurring monthly template while preserving formulas and formatting | [Workflow](/mcp/workflow) |
+| Add a reviewer comment or a link to a template | [Workflow](/mcp/workflow#sheet-objects) |
+| Highlight amounts over a threshold and add a status dropdown | [Conditional formats and validation](/mcp/conditional-formats-validation) |
 | Build an invoice from line items, tax, and totals in a new workbook | [Authoring](/mcp/authoring) |
 | Reproduce a form from a screenshot and check page breaks before saving | [Layout and preview](/mcp/layout-preview) |
 | Review a calculation table for missing or inconsistent formulas | [Formula audit](/mcp/formula-audit) |

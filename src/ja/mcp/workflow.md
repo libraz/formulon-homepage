@@ -29,7 +29,7 @@
 }
 ```
 
-`formulon_inspect_session` は `session` と、`sheets`、`definedNames`、ネイティブ `tables` を含むワークブック概要を返します。`includeCells` を `true` にするとセルの疎な一覧を含めます。`maxCellsPerSheet` の既定値は 200、上限は 10,000 です。`cellCount` と `cells` はエンジンの書き込み済み座標を使い、書式付きセル、明示した空白セル、スピル先を含みます。`formulon_get_range` は値と数式を読むツールのため、書式だけの空白セルを含む数式のない空白を省略します。使用範囲、結合、寸法、表示、保護、数式、スタイルが必要な場合は `formulon_inspect_layout` を使います。既定ではセルを含め、選択したシートごとに 10,000 セルまで返します。`formulon_detect_regions` と `formulon_analyze_workbook` は、構造が分からないシートを調べるための一定の規則に基づく分類・検出結果を返します。同じ入力には同じ結果を返しますが、元データの意味を保証するものではありません。
+`formulon_inspect_session` は `session` と、`sheets`、`definedNames`、ネイティブ `tables` を含むワークブック概要を返します。`includeCells` を `true` にするとセルの疎な一覧を含めます。`maxCellsPerSheet` の既定値は 200、上限は 10,000 です。`cellCount` と `cells` はエンジンの書き込み済み座標を使い、書式付きセル、明示した空白セル、スピル先を含みます。`formulon_get_range` は値と数式を読むツールのため、書式だけの空白セルを含む数式のない空白を省略します。使用範囲、結合、寸法、表示、保護、数式、スタイルが必要な場合は `formulon_inspect_layout` を使います。既定ではセルを含め、選択したシートごとに 10,000 セルまで返します。解決済みのスタイル情報が必要なら `includeStyles: true` を指定します。`formulon_detect_regions` と `formulon_analyze_workbook` は、構造が分からないシートを調べるための一定の規則に基づく分類・検出結果を返します。同じ入力には同じ結果を返しますが、元データを読む代わりにはなりません。`formulon_list_sessions` は開いているセッションを一覧し、`formulon_session_metadata` は登録済みの関数名またはワークブックの外部リンクを返します。
 
 ## Excel プロファイル {#excel-profile}
 
@@ -64,6 +64,8 @@
 `formulon_get_range` は疎な一覧を返します。エンジンは指定範囲の値や数式があるセルとスピル先を列挙し、書式だけの空白セルは省略します。返す件数は `maxCells`（既定 10,000、最大 50,000）で制限し、それを超えるセルがある場合だけ `truncated` が真になります。矩形の走査面積には上限がありません。返されるセルには A1 参照、0 始まりの座標、`{kind, ...}` 形式の値が入ります。`includeFormulas` を指定すると `formula` が追加されます。日付、通貨、パーセント書式の数値セルには `numberFormat`、`formatKind`、`formatted` が付く場合があります。General 以外の数値書式では、取得できればエンジンの表示用 `text` も付きます。`textStatus` は `overflow` または `invalidFormat` を表します。
 
 `formulon_get_cell` は `sessionId` と `path` のどちらか一方だけを受け取ります。`a1`、または `row` と `col` を指定し、`sheet` の既定値は 0 です。既定の `recalc: true` はセッションを再計算してから読むため、セッションは変更あり（dirty）になります。計算キャッシュを変えずに読む場合は `false` を指定します。パス読み込みは 1 回限りで、セッションを作らず、`FORMULON_MCP_PROFILE` も適用しません。ロケールに依存する読み取りには `sessionId` を使います。`formulon_eval_formula` はセルを書き込まずに数式を評価し、セッション指定時はそのセッションのプロファイルで参照、定義名、`ROW()`、`COLUMN()` を解決します。`row` と `col` は既定値 0 です。グローバルモードはエンジンの既定プロファイルを使うため、ロケールに依存する数式にはプロファイル付きセッションを使ってください。
+
+`formulon_trace` は 1 つのセルの参照関係をたどります。`precedents` はそのセルが参照するセル、`dependents` はそのセルを参照するセル、`spillInfo` は動的配列数式のスピル範囲を返します。結果はシート名付きの A1 参照です。`depth`（既定 1、最大 32）を増やすと、さらに先までたどります。
 
 ## セルと構造を変更する
 
@@ -102,6 +104,20 @@
 
 `formulon_sheet_operation` は `add`、`remove`、`rename`、`move` を処理します。対応するフィールドは `name`、`index`、`newName`、`fromIndex`、`toIndex` です。`formulon_set_defined_name` は `sheet` を省略するとワークブックスコープ、指定するとシートローカルスコープになり、空の `formula` で名前を削除します。`_xlnm.Print_Area` と `_xlnm.Print_Titles` はシートローカルで指定します。`formulon_edit_structure` は行や列を挿入・削除し、`formulon_set_sheet_view` はズーム、固定行・列、`hidden` または `visibility` を設定します。固定行・列を変更するときは `freezeRows` と `freezeCols` の両方を指定してください。片方を省略すると、その固定数は以前の値ではなく `0` になります。
 
+## コメント、リンク、入力規則、結合 {#sheet-objects}
+
+シート単位のオブジェクトは 5 つのツールで編集します。どれも `sessionId`、任意の `sheet`（既定は最初のシート）、`operation` を受け取ります。セルツールと違い、セルは A1 参照ではなく 0 始まりの番号で指定します。
+
+| ツール | 操作 | 位置の指定 |
+| --- | --- | --- |
+| `formulon_comment_operation` | `list`、`get`、`set`、`remove` | `row`、`col`。`set` は `author` と `text` を受け取ります |
+| `formulon_hyperlink_operation` | `list`、`add`、`remove`、`removeAt`、`clear` | `row`、`col`、任意の `lastRow` / `lastCol`。`target` は URL です。ブック内リンクにするには `target` を空にして `location`（`Sheet2!A1` など）を指定します |
+| `formulon_validation_operation` | `list`、`add`、`removeAt`、`clear` | `validation.ranges` に `{firstRow, firstCol, lastRow, lastCol}` |
+| `formulon_conditional_format_operation` | `list`、`add`、`removeAt`、`clear`、`evaluate` | `rule.sqref` の範囲。`evaluate` は `firstRow`、`firstCol`、`lastRow`、`lastCol` |
+| `formulon_merge_operation` | `list`、`add`、`remove`、`removeAt`、`clear` | `range` に `{firstRow, firstCol, lastRow, lastCol}` |
+
+`removeAt` には、対応する `list` の結果にある `index` を渡します。応答はいずれも `{session, method, result}` で、`result` にエンジンの結果が入ります。入力規則と条件付き書式のルールの種類、スタイル、評価、作業例は[条件付き書式と入力規則](/ja/mcp/conditional-formats-validation)にまとめています。フィールドの一覧は[ツールリファレンス](/ja/mcp/tools#rich-workbook-objects)を参照してください。
+
 ## 意図的に再計算する
 
 ワークブックを開く操作とセルの変更操作は、既定で再計算します。読み取りと検査ツールの既定値は異なります。次の判断が現在の数式結果に依存するときは、明示的に再計算します。
@@ -130,7 +146,7 @@
 }
 ```
 
-応答には `results`、`count`、`truncated` が入り、各結果にはシート、A1 参照、対象種別、一致した文字列が入ります。`target` の既定値は `both`、`maxResults` の既定値は 1,000、上限は 10,000 です。`sheet` を省略すると全シートを検索します。`formulon_replace_cells` は `replacement` を追加します。置換できるのは文字列セルと数式の文字列で、数値・真偽値の定数は置換しません。`maxReplacements` を省略すると `maxResults` の値を使います。両方省略した場合は 1,000 件です。`maxReplacements` を指定した場合、その値が置換件数の上限になります。既定では置換後に再計算します。`wholeCell` は `regex: false` の場合だけ有効です。正規表現でセル全体に一致させるには、`^` と `$` を使います。
+応答には `results`、`count`、`truncated` が入り、各結果にはシート、A1 参照、対象種別、一致した文字列が入ります。`target` の既定値は `both`、`maxResults` の既定値は 1,000、上限は 10,000 です。`sheet` を省略すると全シートを検索します。`formulon_replace_cells` は `replacement` を追加します。置換できるのは文字列セルと数式の文字列で、数値・真偽値の定数は置換しません。`maxReplacements` を省略すると `maxResults` の値を使います。両方省略した場合は 1,000 件です。`maxReplacements` を指定した場合、その値が置換件数の上限になります。置換は元の文字列や数式をエンジン経由で書き戻し、置換ごとに `before`、`after`、ステータスを返します。既定では置換後に再計算します。正規表現はグローバル指定でコンパイルされ、大文字と小文字の区別は `matchCase` で決まります。`wholeCell` は `regex: false` の場合だけ有効です。正規表現でセル全体に一致させるには、`^` と `$` を使います。
 
 ## プレビューと保存
 

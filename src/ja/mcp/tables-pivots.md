@@ -40,7 +40,7 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 }
 ```
 
-作成結果には `session`、`table`、`status` が含まれます。`table` にはグローバルな `index`（インデックス）、`name`、`displayName`、A1 の `ref`、数値の `sheet`、`sheetName`、エンジンが返すテーブルの生データが含まれます。ワークブックで最初のテーブルなら、典型的には `index: 0`、`ref: "A1:C5"`、`sheetName: "Data"` になります。
+作成結果には `session`、`table`、`status` が含まれます。`table` にはワークブック全体で通し番号の `index`、`name`、`displayName`、A1 の `ref`、数値の `sheet`、`sheetName`、エンジンが返すテーブルの生データが含まれます。ワークブックで最初のテーブルなら、典型的には `index: 0`、`ref: "A1:C5"`、`sheetName: "Data"` になります。
 
 #### `formulon_table_operation`
 
@@ -56,7 +56,7 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 
 ### 更新と削除
 
-更新と削除にはグローバルな `index`（インデックス）が必要です。
+更新と削除にはワークブック全体で通し番号の `index`が必要です。
 
 更新では `range` または `ref`、`style` または `styleName`、`headerRow`、`totalsRow` のいずれかを指定します。新しい範囲は既存テーブルと同じシートにあり、列数を変えないでください。空文字列のスタイルは `TableStyle` を消します。更新と削除では、変更または削除されたテーブルが作成時と同じ表現で返ります。
 

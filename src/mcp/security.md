@@ -10,7 +10,9 @@ description: Filesystem permissions, session isolation, allowlisted API access, 
 
 Workbook input paths, workbook output paths, and preview artifact paths resolve in the server process. Relative paths use its working directory, which may differ from the directory visible in a chat. Use absolute paths when configuring an agent workflow.
 
-Changing the working directory does not restrict filesystem access. The server can read, create, or overwrite any accessible path accepted by its tools. `formulon_preview_range` can also write `.png` or `.svg` files through `outputPath`.
+Changing the working directory does not restrict filesystem access. The server can read, create, or overwrite any accessible path accepted by its tools. Besides workbook opens and saves, three tool inputs touch the filesystem: `formulon_preview_range` writes `.png` or `.svg` files through `outputPath`, `formulon_image_operation` reads a local image through `path` on insert, and its `get` operation writes extracted picture bytes through `outputPath`.
+
+A workbook save writes to a temporary file beside the destination and then renames it, so a failed save does not truncate an existing file at that path.
 
 `formulon_save_session` resolves its destination in this order: the explicit `outputPath`, the session's previous output path, then the original source path. Omitting the argument can overwrite the input workbook. Use a separate explicit output path for review workflows. Saving returns a byte count and diagnostics, not downloadable workbook bytes.
 
@@ -28,9 +30,9 @@ Validation is not a transaction. An engine failure during application can leave 
 
 ## Allowlisted API access
 
-`formulon_workbook_call` invokes only methods listed in [`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts). It does not evaluate JavaScript or execute caller-supplied code. Workbook lifecycle and raw save methods (`save`, `saveAs`, `saveWithDiagnostics`) are withheld, as is callback-based `setIterativeProgress`. Binary-input `probeImage` and `insertImage` are also withheld; use `formulon_image_operation` instead. So are `snapshotImage` / `restoreImage` and `snapshotRangeStyle` / `restoreRangeStyle`, which round-trip opaque bytes that a JSON result reduces to a length and a JSON argument cannot carry. Its `path` reads a local image and `outputPath` can write extracted bytes, using the server process's filesystem permissions.
+`formulon_workbook_call` invokes only methods listed in [`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts). It does not evaluate JavaScript or execute caller-supplied code. Raw save methods, workbook lifecycle methods, callback-taking methods, and methods that move raw bytes are withheld; [What is allowlisted](/mcp/advanced#what-is-allowlisted) lists them and names the high-level tool to use instead. A raw save would also bypass session bookkeeping, so every workbook write goes through `formulon_save_session` or `formulon_update_workbook`.
 
-Use [API discovery](/mcp/advanced) to read signatures and access classifications from the installed engine before constructing positional arguments. The allowlist controls which methods can be reached; it does not establish whether a requested edit is appropriate.
+The allowlist controls which methods can be reached; it does not establish whether a requested edit is appropriate.
 
 ## Calculation, previews, and external content
 

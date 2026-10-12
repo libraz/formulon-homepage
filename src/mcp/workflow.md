@@ -42,7 +42,7 @@ Inspect structure before addressing cells:
 
 `formulon_inspect_session` returns `session` and a workbook summary containing `sheets`, `definedNames`, and native `tables`. Set `includeCells` to `true` to include sparse cell entries; `maxCellsPerSheet` defaults to 200 and is capped at 10,000. Its `cellCount` and `cells` use the engine's written-coordinate inventory, including formatted cells, explicit blanks, and spill phantoms. `formulon_get_range` is a value/formula read and omits formula-free blanks, including styled blanks.
 
-Use `formulon_inspect_layout` when the task depends on used ranges, merges, dimensions, views, protection, formulas, or styles. Its default includes cells and allows 10,000 cells per selected sheet. Set `includeStyles: true` when the agent needs the resolved style records. `formulon_detect_regions` and `formulon_analyze_workbook` provide deterministic hints for unfamiliar sheets; they do not replace reading the source data.
+Use `formulon_inspect_layout` when the task depends on used ranges, merges, dimensions, views, protection, formulas, or styles. Its default includes cells and allows 10,000 cells per selected sheet. Set `includeStyles: true` when the agent needs the resolved style records. `formulon_detect_regions` and `formulon_analyze_workbook` provide deterministic hints for unfamiliar sheets; they do not replace reading the source data. `formulon_list_sessions` shows the sessions already open, and `formulon_session_metadata` returns the registered function names or the workbook's external links.
 
 ## Excel profile {#excel-profile}
 
@@ -79,6 +79,8 @@ Use a bounded A1 range for a table or a single cell for a spot check:
 `formulon_get_cell` accepts exactly one of `sessionId` or `path`. Pass `a1`, or pass `row` and `col`; `sheet` defaults to index `0`. Its default `recalc: true` recalculates a session before reading and therefore marks that session dirty. Set it to `false` for a read that must leave the cached calculation state untouched. A path read is one-shot, does not create a session, and loads without applying `FORMULON_MCP_PROFILE`; use `sessionId` for a locale-dependent read.
 
 `formulon_eval_formula` evaluates one formula without writing a cell. In session mode it resolves workbook references and defined names, and uses `row` and `col` (both default `0`) as the anchor for relative references and `ROW()` / `COLUMN()`; it uses that session's profile. In global mode it evaluates against the engine's default profile and cannot use `FORMULON_MCP_PROFILE`, so use a profiled session for locale-dependent formulas. A leading `=` is optional.
+
+`formulon_trace` follows one cell's references. `precedents` lists the cells it reads, `dependents` lists the cells that read it, and `spillInfo` reports the range a dynamic-array formula spills into. Results are A1 references with sheet names; `depth` (default 1, maximum 32) follows the chain further.
 
 ## Mutate cells and structure
 
@@ -118,6 +120,20 @@ The row-major `values` array accepts numbers, booleans, strings, `{"f":"=..."}` 
 Cell mutations validate every address before the first write. If the native engine fails after a write has started, earlier writes remain in the session and the session stays dirty. Review `applied` and `errorCells` on a successful response; after an MCP tool error, inspect the affected range before retrying.
 
 Use the structure tools for sheet order, defined names, rows, columns, and sheet view. `formulon_sheet_operation` supports `add`, `remove`, `rename`, and `move`; the corresponding fields are `name`, `index`, `newName`, `fromIndex`, and `toIndex`. `formulon_set_defined_name` uses workbook scope when `sheet` is omitted, sheet-local scope otherwise, and removes a name when `formula` is empty. `_xlnm.Print_Area` and `_xlnm.Print_Titles` must be sheet-local for Excel to apply them. `formulon_edit_structure` inserts or deletes rows or columns and lets the engine rewrite affected references. `formulon_set_sheet_view` accepts zoom from 10 to 400, freeze counts, and either two-state `hidden` or three-state `visibility` (`visible`, `hidden`, `veryHidden`). When changing frozen panes, pass both `freezeRows` and `freezeCols`: an omitted count becomes `0` instead of keeping its previous value.
+
+## Comments, links, validation, and merges {#sheet-objects}
+
+Five tools edit per-sheet objects. Each takes `sessionId`, an optional `sheet` (default: the first sheet), and an `operation`. Unlike the cell tools, they address cells with zero-based numbers rather than A1 references.
+
+| Tool | Operations | Addressing |
+| --- | --- | --- |
+| `formulon_comment_operation` | `list`, `get`, `set`, `remove` | `row`, `col`; `set` takes `author` and `text` |
+| `formulon_hyperlink_operation` | `list`, `add`, `remove`, `removeAt`, `clear` | `row`, `col`, optional `lastRow` / `lastCol`; `target` is a URL, or leave it empty and set `location` (such as `Sheet2!A1`) for an in-workbook link |
+| `formulon_validation_operation` | `list`, `add`, `removeAt`, `clear` | `validation.ranges` as `{firstRow, firstCol, lastRow, lastCol}` |
+| `formulon_conditional_format_operation` | `list`, `add`, `removeAt`, `clear`, `evaluate` | `rule.sqref` ranges; `evaluate` takes `firstRow`, `firstCol`, `lastRow`, `lastCol` |
+| `formulon_merge_operation` | `list`, `add`, `remove`, `removeAt`, `clear` | `range` as `{firstRow, firstCol, lastRow, lastCol}` |
+
+`removeAt` takes the `index` from the matching `list` result. Each response is `{session, method, result}` with the engine result under `result`. Rule types, styles, evaluation, and worked examples for validation and conditional formatting are in [Conditional formats and data validation](/mcp/conditional-formats-validation). The exact field lists are in the [tool reference](/mcp/tools#rich-workbook-objects).
 
 ## Recalculate deliberately
 

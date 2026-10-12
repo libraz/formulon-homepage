@@ -82,7 +82,7 @@ A practical agent prompt is:
 
 The agent should search for `getSheetView`, describe the returned method, then call it with the discovered arguments. This keeps a release that changes a TypeScript record or enum from silently receiving stale hand-written arguments.
 
-## What is allowlisted
+## What is allowlisted {#what-is-allowlisted}
 
 The server allowlist is explicit. It currently covers these method groups:
 
@@ -204,7 +204,7 @@ The low-level route exposes raw page-setting XML, worksheet display flags, prote
 
 ### Saving after an advanced call
 
-The low-level call never writes a file. Create the `out` directory in the server's working directory first; save and preview tools do not create parent directories. Open a session, check the returned status and any affected objects, then save through the session API:
+The low-level call never writes a file. Check the returned status and any affected objects, then save through the session API. Create the `out` directory in the server's working directory first; save and preview tools do not create parent directories.
 
 ```json
 {

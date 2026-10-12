@@ -38,41 +38,7 @@ The `style` object has `font` (`name`, `size`, `bold`, `italic`, `strike`, `unde
 
 The `base` field belongs to a layout `style` operation. `base: "existing"` applies the style delta to each cell's current style. `base: "default"` starts each cell from the workbook default. The standalone `formulon_style_range` tool calls the corresponding option `baseOn`, so its payload uses `baseOn`, not `base`.
 
-#### `formulon_apply_layout`
-
-```json
-{
-  "sessionId": "form-layout",
-  "sheet": "Sheet1",
-  "operations": [
-    { "type": "column", "first": 0, "last": 0, "size": 180, "unit": "px" },
-    { "type": "column", "first": 1, "last": 3, "size": 96, "unit": "px" },
-    { "type": "row", "first": 0, "size": 36, "unit": "px" },
-    { "type": "row", "first": 1, "last": 4, "size": 24, "unit": "px" },
-    { "type": "merge", "operation": "add", "range": "A1:D1" },
-    {
-      "type": "style",
-      "range": "A1:D1",
-      "base": "default",
-      "style": {
-        "font": { "name": "Yu Gothic", "size": 16, "bold": true, "color": "#FFFFFF" },
-        "fill": { "color": "#1F4E79" },
-        "align": { "horizontal": "center", "vertical": "center" },
-        "border": { "outline": "medium" }
-      }
-    },
-    {
-      "type": "style",
-      "range": "A2:D5",
-      "base": "existing",
-      "style": { "border": { "all": "thin" }, "align": { "vertical": "center" } }
-    },
-    { "type": "print", "settings": { "printArea": "A1:D5", "printOptions": { "gridLines": false } } }
-  ]
-}
-```
-
-The response contains one entry per operation. A column entry reports `storedUnits: "chars"`; a row entry reports `storedUnits: "pt"`; a style entry reports the resolved range, base, and affected style regions. A preflight error leaves the session unchanged and leaves the operations in that batch unapplied.
+A complete batch with all five operation types is in the [end-to-end example](#reproduce-a-form) below. The response contains one entry per operation. A column entry reports `storedUnits: "chars"`; a row entry reports `storedUnits: "pt"`; a style entry reports the resolved range, base, and affected style regions. A preflight error leaves the session unchanged and leaves the operations in that batch unapplied.
 
 ### Bounds and failure behavior
 
@@ -142,7 +108,7 @@ The inventory limit applies only when `range` is omitted and no print area suppl
 
 The preview is a worksheet-range render, not a print renderer. It uses installed system fonts and engine display geometry. The engine resolves effective styles, theme/indexed colors, and number-format display text. Missing or unreadable themes use the default Office theme with a warning; Excel can substitute a different font on another machine.
 
-The renderer does not apply conditional formatting or render headers, footers, or page margins. It renders cell display text, merges, fills, borders, alignment, and paginator page-break lines. PNG, JPEG, and GIF pictures are embedded within the payload budget; charts, shapes, BMP pictures, and unsupported or oversized pictures appear as dashed placeholders. Pattern fills, rotated text, shrink-to-fit, and diagonal borders remain approximations. Read `warnings` and each object's `rendered` flag before judging the result.
+The renderer does not apply conditional formatting or render headers, footers, or page margins. It renders cell display text, merges, fills, borders, alignment, and paginator page-break lines. PNG, JPEG, and GIF pictures are embedded within the payload budget; charts, shapes, BMP pictures, and unsupported or oversized pictures appear as dashed placeholders. Pattern fills, rotated text, shrink-to-fit, and diagonal borders remain approximations. Read `warnings` and each object's `rendered` flag before judging the result. To check conditional formatting, [evaluate the rules](/mcp/conditional-formats-validation#evaluate) instead.
 
 `recalc: true` obtains current formula values before rendering. Recalculation changes cached values and marks the session dirty, even though the preview itself is read-only afterward. Use `recalc: false` when the cached values are the intended comparison target.
 
@@ -209,7 +175,7 @@ The insert result reports `objectId`, source dimensions, and placement. List inc
 
 Insertion, movement, reordering, and removal mark the session dirty and preserve other drawing objects. Preview the affected range to check placement, then save explicitly as XLSX. OOXML drawings are omitted on XLSB save and reported in losses; see [File formats](/workbook/file-formats#xlsb). Preview itself does not insert or remove pictures.
 
-## End-to-end example: reproduce a form from a screenshot
+## End-to-end example: reproduce a form from a screenshot {#reproduce-a-form}
 
 This prompt tells an agent how to make the visual result editable and reviewable:
 
