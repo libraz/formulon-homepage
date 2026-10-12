@@ -33,7 +33,7 @@ const instance = await Spreadsheet.mount(host, {
 
 ## 組み込み機能を切り替える
 
-`ui.features` には、移動とレビュー、編集と書式、ワークブックの作成、ホスト側の状態表示に対応するスイッチがあります。低レベルの `FeatureFlags` では対応する組み込み ID を使います。スイッチの一覧は [オプション](/ja/cell/options) を参照してください。
+`ui.features` には、移動とレビュー、編集と書式、ワークブックの作成、ホスト側の状態表示、任意の `localeSwitcher` に対応するスイッチがあります。低レベルの `FeatureFlags` では対応する組み込み ID を使います。スイッチの一覧は [オプション](/ja/cell/options) を参照してください。
 
 ```ts
 import { presets, Spreadsheet } from '@libraz/formulon-cell'
@@ -53,6 +53,8 @@ instance.setFeatures({ ...presets.standard(), clipboard: false })
 profile を使う場合は `ui.features`、すでに `FeatureFlags` を組み立てている場合は `features` が便利です。両方に同じキーを渡した場合は明示した `features` が優先されます。
 
 インスタンスに `policy` を指定すると、ほかの機能フラグが有効でも組み込み UI はポリシーが対応する経路に限られます。ホスト側のコマンド用に拡張を追加する前に、[操作ポリシー](/ja/cell/options#operation-policy)を確認してください。
+
+`localeSwitcher` は full プロファイルを含めて初期状態では無効です。パッケージのセレクターを表示する場合は `ui.features.localeSwitcher` またはマウント後の `setFeatures()` で有効にします。セレクターは [言語を切り替える](/ja/cell/language-switching) の `instance.setLocale()` と同じホスト API を呼び出します。操作ポリシーが有効な場合はセレクターが抑止されるため、ホスト側のコントロールを用意してください。
 
 ## 組み込み拡張を選んで追加する
 
@@ -83,6 +85,7 @@ const instance = await Spreadsheet.mount(host, {
 - ワークブック作成: `conditionalDialog`、`namedRangeDialog`、`hyperlinkDialog`、`commentDialog`、`iterativeDialog`、`pageSetupDialog`
 - オブジェクトと集計: `charts`、`illustrations`、`pivotTableDialog`、`slicer`、`workbookObjects`
 - ホスト側のコントロール: `statusBar`、`wheel`
+- 言語: `localeSwitcher`（明示的な有効化が必要。ホスト側では `instance.setLocale()` を使います）
 
 これらのファクトリはパッケージ直下と `@libraz/formulon-cell/extensions` から利用できます。
 
@@ -157,3 +160,4 @@ instance.setExtensions([formatDialog()])
 - [API 一覧](/ja/cell/api#extensions) ─ マウントオプションとプリセット
 - [埋め込み](/ja/cell/embedding) ─ 実際の画面に合わせたオプションの組み合わせ
 - [テーマ](/ja/cell/theming) ─ 有効にした機能のスタイル
+- [言語を切り替える](/ja/cell/language-switching) ─ セレクター拡張とホスト側のロケールコントロール

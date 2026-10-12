@@ -48,24 +48,29 @@ jobs:
       - uses: actions/checkout@v7
       - name: コミット済み期待値を確認
         run: git ls-files --error-unmatch testdata/model.formulas.txt testdata/model.values.txt
-      - name: Install formulon CLI
+      - name: 現在の Formulon CLI をソースからビルド
         run: |
-          curl -L -o formulon.tar.gz "https://github.com/libraz/formulon/releases/download/v0.12.0/formulon-0.12.0-linux-x64.tar.gz"
-          tar -xzf formulon.tar.gz --strip-components=1
-          chmod +x formulon
-          sudo mv formulon /usr/local/bin/
+          git clone https://github.com/libraz/formulon.git formulon-src
+          git -C formulon-src checkout v0.15.1
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build
+          cmake -S formulon-src -B formulon-src/build-ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DFM_BUILD_TESTING=OFF
+          cmake --build formulon-src/build-ci --parallel --target formulon_cli
+          install -Dm755 formulon-src/build-ci/bin/formulon_cli "$RUNNER_TEMP/formulon-bin/formulon"
+          echo "$RUNNER_TEMP/formulon-bin" >> "$GITHUB_PATH"
       - name: Snapshot formulas
         run: |
-          formulon dump --formulas model.xlsx > testdata/model.formulas.txt
+          formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > testdata/model.formulas.txt
       - name: Snapshot values
         run: |
-          formulon dump --values model.xlsx > testdata/model.values.txt
+          formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values model.xlsx > testdata/model.values.txt
       - name: Fail on diff
         run: |
           git diff --exit-code testdata/
 ```
 
-揮発性の入力を固定し、ワークブックのプロファイルと Formulon のエンジンバージョンをそろえると、スナップショットの差分をワークブックやエンジンの変更として確認できます。アップグレードで出力が意図的に変わる場合もあるため、固定したバージョン自体もレビューしてください。
+揮発性の入力を固定し、プロファイル、時計、Formulon のソースリビジョンをそろえると、スナップショットの差分をワークブックやエンジンの変更として確認できます。CLI のフラグを明示するのは、プロファイルと時計がワークブックに保存されないためです。この例は固定したソースタグからビルドします。同じ版の GitHub Releases の CLI アーカイブでも `--profile` と `--now` を使えます。アップグレードで出力が意図的に変わる場合もあるため、固定したリビジョン自体もレビューしてください。
 
 ## レビュー方針
 
@@ -79,8 +84,8 @@ jobs:
 
 この分類を PR 本文（またはコミット末尾の注記）に書き残すと、将来同じ差分を見た人が「なぜ受け入れたのか」を追跡できます。期待値ファイルが意味の分からないバイナリ差分になるのを防ぎます。
 
-::: tip CI では Formulon バージョンを固定する
-Formulon のバージョン（または CLI バイナリ URL）を明示的に固定してください。エンジンを更新すると数式やファイル形式の挙動が意図的に変わる場合があるため、パッチリリースでも出力互換を前提にしません。
+::: tip CI では Formulon のソースリビジョンを固定する
+Formulon のソースリビジョン（または公開後に対応するリリースの CLI バイナリ URL）を明示的に固定してください。エンジンを更新すると数式やファイル形式の挙動が意図的に変わる場合があるため、パッチリリースでも出力互換を前提にしません。
 :::
 
 ## 次に読むもの

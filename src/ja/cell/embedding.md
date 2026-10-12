@@ -94,7 +94,7 @@ instance.applyChanges([
 
 <CellEmbedDemo scenario="form" />
 
-## ホスト更新とユーザー操作
+## ホスト更新とユーザー操作 {#host-updates-and-user-actions}
 
 `instance.applyChanges()` はホストが信頼して実行する更新です。事前入力、サーバーからの更新、ホスト側で適用を許可したインポートに使います。現在のビューポートの外側にあるワークブック内のセルも対象にでき、成功時の既定の履歴モードではユーザーの履歴をリセットします。
 

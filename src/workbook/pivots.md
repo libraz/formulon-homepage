@@ -4,6 +4,10 @@ A PivotTable has two separate parts: a **pivot cache** holding the source fields
 
 Formulon projects the configured cache into cells with `pivotLayout()`. It does not rebuild a pivot cache from a worksheet or run external connections. Populate a newly authored cache explicitly, and keep its declared worksheet source aligned with the source data.
 
+Pivot item grouping, labels, and order use the workbook's active Excel compatibility profile. Mac profiles use their measured locale collation; Windows profiles use case-insensitive byte ordering. The profile is runtime state and is not saved in the workbook. See [Text collation](/compatibility/text-collation).
+
+Caption filters (`LabelContains`, `LabelBeginsWith`, and authored begins / ends / contains predicates with their negations) use SEARCH-style wildcard matching under the active profile's compare collation. Case, width, and kana fold one character at a time; `*` matches a run, `?` matches one character, and `~` escapes the next wildcard. A loaded pivot matches the stored wildcard pattern when it refreshes, and API label filters use the same rule.
+
 ## Create a simple summary
 
 This example creates a `Region` / `Product` / `Sales` cache and configures a row hierarchy with a sum anchored at `E1`. The worksheet source and cache records contain the same header and data rows, so an Excel refresh has a consistent source. `pivotLayout()` returns the projected cells for host rendering; it does not write those values into worksheet cells. `PivotAxis.Row` is `0`, `PivotAxis.Value` is `2`, and `PivotAggregation.Sum` is `0` when a host uses the C ABI directly.
@@ -260,6 +264,14 @@ wb.pivot_field_set_date_group(
 :::
 
 Pivot field and data-field number formats use a decimal `numFmtId` string, not a format code. Use a built-in ID or register a code with `addNumFmt()` / `add_num_fmt()` first, as in the examples above; any other non-empty string is rejected and the ID is written to the pivot part.
+
+## Field names, grid bounds, and recalculation
+
+Field names must resolve to one distinct pivot field. If a name is shared by distinct fields, filter authoring rejects the ambiguous name without mutating the existing filter; value filters also reject an unknown field name at authoring. `GETPIVOTDATA` returns `#REF!` when a field name is ambiguous.
+
+Pivot anchors and their rendered spans must fit within the worksheet grid, so a new out-of-grid anchor is rejected. If a row or column insertion pushes an entire PivotTable off the grid, the engine removes that pivot. A `GETPIVOTDATA` formula that reads the removed pivot then returns `#REF!` after recalculation.
+
+Pivot authoring edits — including cache-record, field, layout, filter, data-field, add, and remove operations — dirty formula cells that depend on pivot results and invalidate derived layout. After `recalc()`, `GETPIVOTDATA` observes the edited result. Recreating a removed pivot at its anchor wakes a dependent formula so it can recover on the next recalculation.
 
 ## Boundaries
 

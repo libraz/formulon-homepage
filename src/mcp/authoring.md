@@ -165,7 +165,9 @@ Use `formulon_style_range` for targeted passes. Every property is a delta, so a 
 }
 ```
 
-The `style` object can contain `font` (`name`, `size`, `bold`, `italic`, `strike`, `underline`, `vertAlign`, `color`), `fill` (`color`, `bgColor`, `pattern`), `border` (`all`, `outline`, `left`, `right`, `top`, `bottom`), `numberFormat`, and `align` (`horizontal`, `vertical`, `wrapText`, `indent`, `textRotation`, `shrinkToFit`). Colors use `#RRGGBB` or `#AARRGGBB`. `border.all` rules every cell; `border.outline` draws only the outer box. Blank cells in a styled range are materialized so a ruled form renders.
+The `style` object can contain `font` (`name`, `size`, `bold`, `italic`, `strike`, `underline`, `vertAlign`, `color`), `fill` (`color`, `bgColor`, `pattern`), `border` (`all`, `outline`, `left`, `right`, `top`, `bottom`), `numberFormat`, and `align` (`horizontal`, `vertical`, `wrapText`, `indent`, `textRotation`, `shrinkToFit`). Colors use `#RRGGBB` or `#AARRGGBB`. `border.all` rules every cell; `border.outline` draws only the outer box. `range` also accepts whole columns (`C:C`, `B:D`) and whole rows (`1:1`, `3:5`), optionally sheet-qualified. These are styled as columns and rows: no blank cells are created, and values written there later take the style. A bounded range still materializes its blank cells so an empty ruled box renders, and is capped at 100,000 cells; whole rows and columns have no cap. An `outline` border on whole rows or columns is refused and needs a bounded range.
+
+The response lists `regions` as `{range, baseXfIndex, xfIndex}`. `range` is the band (the whole range, or an outline band), with one entry per distinct base style in that band.
 
 ## End-to-end example: a printable invoice
 
@@ -175,13 +177,14 @@ The following prompt gives an agent enough constraints to author a reviewable in
 Create a new workbook session named "invoice-demo" and author a printable invoice starting at B2. Use a four-column line-item table with Item, Qty, Unit, and Amount. Calculate Amount per row, Subtotal, Tax at 10 percent, and Total. Treat those as the caller's formulas; do not infer a tax jurisdiction or tax policy. Set a Japanese-capable default font, read the computed range with formulas, preview B2:E13 to a PNG artifact, save the final workbook as /tmp/invoice-demo.xlsx, inspect the save result, and close the session.
 ```
 
-Open a blank session:
+Open a blank session with the default Windows English profile so the later `Sheet1` ranges refer to the known first sheet. Use the sheet name returned by inspection when choosing another profile.
 
 #### `formulon_open_workbook`
 
 ```json
 {
-  "sessionId": "invoice-demo"
+  "sessionId": "invoice-demo",
+  "profile": "win-365-en_US"
 }
 ```
 

@@ -18,7 +18,7 @@ All surfaces use the same calculation core. Packaging and host differences can a
   { title: 'Surfaces', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'array + CF evaluation, comments, pagination' },
+      { label: 'Python (formulon)', note: 'geometry/theme, typed filters + validation, comments/images' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -38,16 +38,16 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 | WASM | broadest JS API | Full generated `formulon.d.ts`, browser and Node support |
 | Python | broad workbook API | wasmtime-backed wrapper, context-manager workbook lifecycle |
 | CLI | focused tools | `eval`, `recalc`, `dump`, `paginate` |
-| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; within the JavaScript bindings, table authoring, AutoFilter XML, and cell-style authoring remain WASM-only |
+| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including geometry and theme, typed AutoFilters, validation checks, comments and images, phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; within the JavaScript bindings, `createTable`, `updateTable`, `removeTable`, AutoFilter XML, and `addCellStyleXf` remain WASM-only |
 | C ABI | binding contract | Stable low-level contract for packaged surfaces |
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
 | `formulon-cell` | UI kit | Embeddable spreadsheet surface with TypeScript, React, and Vue entrypoints |
 
 ::: info Python parity boundary
-Python has broad workbook parity, including whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), `paginate()`, iterative-settings read-back, three-state sheet visibility, typed print-setting authoring, range XF assignment, and cache-index pivot items. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.
+Python has broad workbook parity, including geometry and effective-style/theme access, typed sheet and table AutoFilters, validation checks, whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), image and drawing-object access, `paginate()`, iterative-settings read-back, three-state sheet visibility, typed print-setting authoring, range XF assignment, and cache-index pivot items. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.
 :::
 
-Python also exposes visual conditional-format payloads, DXFs, pivot report layout, pivot-cache worksheet-source access, and the same `allow_blank=False` default for omitted data-validation input.
+Python also exposes visual conditional-format payloads, DXFs, pivot report layout, pivot-cache worksheet-source access, and the same `allow_blank=False` default for omitted data-validation input. See [presentation](/workbook/presentation), [filters and validation](/workbook/filters-validation), and [comments and images](/workbook/comments-images) for the typed workbook surfaces.
 
 ## When surfaces disagree
 

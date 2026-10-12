@@ -33,7 +33,7 @@ const instance = await Spreadsheet.mount(host, {
 
 ## Turn built-in features on or off
 
-The `ui.features` switches cover navigation and review, editing and formatting, workbook authoring, and host status. The lower-level `FeatureFlags` object uses the corresponding built-in ids; see [Options](/cell/options) for the complete switch list.
+The `ui.features` switches cover navigation and review, editing and formatting, workbook authoring, host status, and the optional `localeSwitcher`. The lower-level `FeatureFlags` object uses the corresponding built-in ids; see [Options](/cell/options) for the complete switch list.
 
 ```ts
 import { presets, Spreadsheet } from '@libraz/formulon-cell'
@@ -53,6 +53,8 @@ instance.setFeatures({ ...presets.standard(), clipboard: false })
 Use `ui.features` for readable profile configuration and `features` when an already-built `FeatureFlags` object is convenient. The explicit `features` option wins for keys supplied in both places.
 
 If the instance has a `policy`, built-in UI is limited to the policy-supported routes even when other feature flags are true. See [Interaction policy](/cell/options#interaction-policy) before adding extensions for host-owned commands.
+
+`localeSwitcher` is disabled by default, including in the full profile. Enable it through `ui.features.localeSwitcher` or `setFeatures()` when the package should render the selector; it calls the same `instance.setLocale()` host API described in [Language switching](/cell/language-switching). An active interaction policy suppresses this selector, so policy-bound hosts should provide their own control.
 
 ## Add a built-in extension selectively
 
@@ -83,6 +85,7 @@ The factory and feature id share the same name in most cases. The public factori
 - Workbook authoring: `conditionalDialog`, `namedRangeDialog`, `hyperlinkDialog`, `commentDialog`, `iterativeDialog`, `pageSetupDialog`.
 - Visual objects and summaries: `charts`, `illustrations`, `pivotTableDialog`, `slicer`, `workbookObjects`.
 - Host-facing controls: `statusBar`, `wheel`.
+- Language: `localeSwitcher` (opt-in; use `instance.setLocale()` for a host-owned control).
 
 The package root exports these factories. They are also available from `@libraz/formulon-cell/extensions`.
 
@@ -157,3 +160,4 @@ instance.setExtensions([formatDialog()])
 - [API surface](/cell/api#extensions) — mount options and presets.
 - [Embedding](/cell/embedding) — compose options for a concrete application layout.
 - [Theming](/cell/theming) — style the grid and whichever extensions are enabled.
+- [Language switching](/cell/language-switching) — use the selector extension or a host-owned locale control.

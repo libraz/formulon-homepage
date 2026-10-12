@@ -30,14 +30,14 @@ Native Node avoids WASM heap-copy costs and browser isolation concerns, but it n
   label="Decision: if the deployment can build or stage a platform-specific native binary today, choose Native Node for operational throughput; otherwise choose WASM for portability"
 />
 
-Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table, AutoFilter XML, or cell-style authoring. The [Native Node integration](/runtimes/node-native) page shows status checks and explicit disposal for the service path. The choice above is otherwise operational: binary staging and deployment portability, not a difference in formula evaluation.
+Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table authoring, AutoFilter XML, or `addCellStyleXf`; typed AutoFilters and `setCellStyle` are available on both. The [Native Node integration](/runtimes/node-native) page shows status checks and explicit disposal for the service path. The choice above is otherwise operational: binary staging and deployment portability, not a difference in formula evaluation.
 
 ## Service boundary
 
 At the API boundary, make the conditions for reproducible recalculation explicit:
 
 - reject files that exceed the byte-size policy before loading, then enforce the cell-count policy after loading;
-- pin the engine version and compatibility profile, usually `win-365-ja_JP`;
+- pin the engine version and compatibility profile, for example `win-365-en_US` (the default);
 - control volatile inputs such as the clock and random values when reproducible output is required;
 - separate host failures from cell-level Excel errors;
 - keep the original bytes until `save()` succeeds;
@@ -45,7 +45,7 @@ At the API boundary, make the conditions for reproducible recalculation explicit
 
 ## Compatibility gate
 
-Not every Microsoft 365 function can execute inside a Node service. Formulon has **508 real implementations among 523** recognized names, including state-dependent `CELL` and `INFO`. Functions that need external services or live connections, including `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE functions, are recognized but return deterministic unavailable errors.
+Not every Microsoft 365 function can execute inside a Node service. Formulon has **511 real implementations among 526** recognized names, including state-dependent `CELL` and `INFO`. Functions that need external services or live connections, including `COPILOT`, `PY`, `IMAGE`, `WEBSERVICE`, `STOCKHISTORY`, `RTD`, and CUBE functions, are recognized but return deterministic unavailable errors.
 
 For user-uploaded workbooks, surface this as a workbook compatibility issue. For internal templates, fail CI when those functions appear in the formula snapshot unless an explicit exception exists.
 
@@ -60,5 +60,5 @@ For user-uploaded workbooks, surface this as a workbook compatibility issue. For
 
 - [Native Node integration](/runtimes/node-native) — native service deployment.
 - [WASM integration](/runtimes/wasm) — portable Node and browser-compatible deployment.
-- [Formula coverage](/compatibility/formula-coverage) — 508 / 523 real implementations and unavailable stubs.
+- [Formula coverage](/compatibility/formula-coverage) — 511 / 526 real implementations and unavailable stubs.
 - [CI workbook regression](/scenarios/ci-regression) — catching upgrade drift before deploy.

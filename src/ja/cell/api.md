@@ -78,7 +78,8 @@ instance.dispose()
 | `setContextMenu()`、`setOverlayOptions()` | メニューやダイアログをホストのレイアウトに合わせます。 |
 | `setUi()`、`setFeatures()`、`setExtensions()` | マウント中の UI を調整します。 |
 | `openFunctionArguments()` | 関数ピッカーまたは Mac の関数の引数パレットを開きます。 |
-| `i18n`、`setTheme()` | ラベルとテーマを切り替えます。 |
+| `locale`、`setLocale()` | マウント済み UI のロケール、ワークブックプロファイル、数式編集プロファイルを読み書きします。`setLocale()` は切り戻したときに `false` を返します。 |
+| `i18n`、`setTheme()` | 辞書を操作し、表示テーマを切り替えます。 |
 | `on()` | 型付きの名前付きイベントを購読します。 |
 | `print()`、`captureScreenClip()` | 印刷とキャプチャのホスト処理を呼び出します。 |
 | `dispose()` | UI とイベント購読を解放します。 |
@@ -172,6 +173,8 @@ const tabs = buildRibbonModel('ja', { profile })
 
 書式コマンドは主選択範囲と `selection.extraRanges` のすべてを対象にします。名前付きスタイルは、`includedGroups` に含まれる書式グループを選択したすべての範囲に適用します。セルの書式設定ダイアログには下線スタイルのセレクターがあります。書式変更前にすべての範囲をポリシーで確認し、拒否された場合は操作全体を中止します。セルの保護によって、書式を適用できるセルが別途制限されることがあります。
 
+リボンのオートフィットは、`selection.extraRanges` を含む非連続の選択範囲全体を使います。各範囲は固有の反対軸のスパンを保ちます。同じ行または列が複数の範囲に含まれる場合は、測定値が最大のサイズを採用します。操作全体が 1 つの Undo 単位になります。
+
 `formatA1Cell()` は 0 始まりの行と列をホスト表示用の A1 形式にします。
 
 ```ts
@@ -189,7 +192,7 @@ const width = autofitColWidth(instance, 1, 0, 8, instance.i18n.locale)
 const height = autofitRowHeight(instance, 3, 0, 3, instance.i18n.locale)
 ```
 
-`autofitColsWidth()` と `autofitRowsHeight()` は、指定した列または行のサイズを変更します。公開型 `AutofitOptions` の `span` で、列幅の計測対象となる行、または行高の計測対象となる列を両端を含む範囲で指定できます。`locale` は数値の表示形式、`theme` はセルの既定フォントを選びます。サイズをエンジンにも反映するにはワークブックを渡し、元に戻せるようにするにはインスタンスの履歴を渡します。これらの低レベルのサイズ変更はホスト側で認可してください。[埋め込み](/ja/cell/embedding#ホスト更新とユーザー操作) で認可の境界を説明しています。
+`autofitColsWidth()` と `autofitRowsHeight()` は、指定した列または行のサイズを変更します。公開型 `AutofitOptions` の `span` で、列幅の計測対象となる行、または行高の計測対象となる列を両端を含む範囲で指定できます。`locale` は数値の表示形式、`theme` はセルの既定フォントを選びます。サイズをエンジンにも反映するにはワークブックを渡し、元に戻せるようにするにはインスタンスの履歴を渡します。これらの低レベルのサイズ変更はホスト側で認可してください。[埋め込み](/ja/cell/embedding#host-updates-and-user-actions) で認可の境界を説明しています。
 
 ```ts
 import { autofitColsWidth, type AutofitOptions } from '@libraz/formulon-cell'
@@ -201,6 +204,30 @@ const options: AutofitOptions = {
 autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, options)
 ```
 
+## セルとシートのレイアウト単位
+
+`CellFormat.fontSize`、`WorkbookHandle.setRowHeight()`、`WorkbookHandle.setColumnWidth()`、オートフィットの結果は CSS ピクセルを使います。ネイティブの `FontRecord.size` とリボンのフォントサイズは組版上のポイントを使います。変換式は `px = pt * 96 / 72` です。Formulon は行の高さをポイント、列の幅を文字数で保存し、cell 層がエンジンとの境界で変換します。
+
+## CSV のインポートとエクスポート
+
+パッケージ直下から `exportCSV()`、`importCSV()` と、`ExportOptions`、`ImportCSVOptions` の型を利用できます。
+
+```ts
+import {
+  exportCSV,
+  importCSV,
+  type ExportOptions,
+  type ImportCSVOptions,
+} from '@libraz/formulon-cell'
+
+const exportOptions: ExportOptions = { locale: 'de-DE', delimiter: ';' }
+const csv = exportCSV(instance.store.getState(), exportOptions)
+const importOptions: ImportCSVOptions = { locale: 'de-DE', delimiter: ';' }
+importCSV(instance.store.getState(), instance.workbook, csv, undefined, instance.history, importOptions)
+```
+
+`delimiter` は `,` または `;` を受け取り、既定値は `,` です。`locale` を省略したインポートでは、ワークブックのアクティブなプロファイルを使います。エクスポートで `locale` を省略すると正規のテキストを保持します。地域向けの CSV で数値と真偽値を整形する場合は `locale` を指定します。
+
 ## ストアへのアクセス
 
 `instance.store` は、選択範囲、レイアウト、セル状態を購読する必要があるホスト連携で使えます。ストアはインスタンスごとに作られます。React / Vue ではコンポーネントの寿命と購読解除が連動する `useSelection()` や `useSpreadsheet()` が使いやすくなります。
@@ -208,13 +235,15 @@ autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, opti
 ## i18n コントローラ {#i18n-controller}
 
 ```ts
-instance.i18n.setLocale('ja')
+if (!instance.setLocale('ja')) {
+  showLanguageError()
+}
 instance.i18n.extend('ja', {
   contextMenu: { copy: 'コピー' },
 })
 ```
 
-`i18n` は `setLocale()`、`extend()`、`register()`、`subscribe()`、解決済みの `strings` を公開します。実行時の切り替えは [国際化](/ja/cell/i18n) を参照してください。
+`instance.locale` は確定済みのロケールです。`instance.setLocale()` はホスト側から使う実行時 API で、ワークブックのプロファイルも同期し、変更を受け付けたかを返します。`i18n` は低レベルの辞書操作として `setLocale()`、`extend()`、`register()`、`subscribe()`、解決済みの `strings` を提供します。プロファイルの結果が不要な辞書や拡張のコードから使ってください。セレクター、数式文字列、編集の確定、切り戻しは [言語を切り替える](/ja/cell/language-switching)、辞書の登録と購読は [国際化](/ja/cell/i18n) を参照してください。
 
 ## テーマコントローラ {#theme-controller}
 
@@ -230,6 +259,7 @@ instance.setTheme('brand') // 独自パレットの定義が必要です
 ## 次に読むページ
 
 - [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
+- [言語を切り替える](/ja/cell/language-switching) — セレクター、実行時 API、ワークブックプロファイル、数式、拒否される場合を説明します。
 - [埋め込み](/ja/cell/embedding) ─ full、minimal、embedded の使い分け
 - [プラットフォームと Mac UI](/ja/cell/platform) ─ プラットフォーム解決、Mac ダイアログ、引数ヘルプ
 - [React / Vue アダプター](/ja/cell/frameworks) ─ コンポーネントのプロパティ、イベント、フック、コンポーザブル

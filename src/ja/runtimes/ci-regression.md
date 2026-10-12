@@ -11,7 +11,7 @@
 `model.formulas.txt` と `model.values.txt` をリポジトリ内に作成してコミットしてから、この検査を有効にしてください。`git diff` は未追跡ファイルを比較しません。CI では `git ls-files --error-unmatch model.formulas.txt model.values.txt` で期待値ファイルの存在を先に確認できます。
 
 ```sh
-formulon dump --formulas model.xlsx > model.formulas.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > model.formulas.txt
 git diff --exit-code model.formulas.txt
 ```
 
@@ -20,7 +20,7 @@ git diff --exit-code model.formulas.txt
 ## 計算値スナップショット
 
 ```sh
-formulon dump --values model.xlsx > model.values.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
@@ -56,7 +56,7 @@ make parity-test
 
 `NOW` / `TODAY` / `RAND` / `RANDBETWEEN` のような揮発性関数を含む数式は、検証データ側で揺らぎを制御または明文化しない限り、直接スナップショットには向きません。`WEBSERVICE`、CUBE 関数、`STOCKHISTORY` など外部サービス依存の関数は、このエンジンではネットワークへアクセスせず、利用不可を表す固定の Excel エラーを返します。[数式カバレッジ](/ja/compatibility/formula-coverage) の一覧を確認し、そのエラーを互換性上の仕様として記録するか、対象セルを除外してください。
 
-そうしたワークブックでは数式のみスナップショット（`dump --formulas`）し、代表セルの値は「範囲 / 形状の assertion」で検査するスクリプトに分けると安定します。
+そうしたワークブックでは数式のみスナップショット（`dump --formulas`）し、代表セルの値は「範囲 / 形状の assertion」で検査するスクリプトに分けると安定します。固定した `--profile` と `--now` によりロケールと時計の入力も明示できます。時計の指定は数式だけの出力には影響しません。
 
 ## 次に読むもの
 

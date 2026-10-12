@@ -6,12 +6,31 @@
 ビルド成果物を各実行環境のパッケージレイアウトへ配置する作業（ステージング）です。`packages/npm/dist/`、`packages/python/formulon/_wasm/`、Native Node アドオン用ディレクトリなどが対象です。`npm test`、`unittest`、`node --test` がビルドしたばかりのコアに届くようにします。
 :::
 
+## ホームページのデモ用スナップショット {#homepage-demo-snapshots}
+
+通常のホームページのインストールは、`package.json` と `yarn.lock` で固定したレジストリのパッケージを使い、兄弟リポジトリや生成済みアーカイブを必要としません。未公開の機能は、コア WASM、`formulon-cell`、Vue アダプターのローカルスナップショットで確認できます。生成ファイルを置く `vendor/` は Git 管理外です。先に `../formulon` で `make npm-package` を実行して両方の WASM をステージし、`../formulon-cell` のワークスペース依存をインストールしてから、ホームページで次を実行します。
+
+```sh
+yarn demos:prepare
+yarn check:demos
+yarn test:local
+yarn build:local
+yarn dev:local
+```
+
+`yarn demos:prepare` は兄弟の `../formulon-cell` から cell パッケージをビルドし、`../formulon` のステージ済みコアをコピーして、`vendor/manifest.json` を書き出します。manifest は各パッケージのバージョン、ソースコミット、入力と差分の SHA-256、アーカイブの SHA-256 を記録します。ローカル用コマンドは `FORMULON_DEMO_SOURCE=local` を設定し、アーカイブを検証・展開して Vite の別名参照で読み込みます。レジストリ依存と lockfile は変更せず、スナップショットの欠落や破損では失敗します。準備処理も、古い WASM やパッケージと実行時バージョンの不一致を拒否します。
+
+レジストリとローカルのテストは、どちらも 7 言語切り替えデモを実行します。プロファイルの切り替え、編集値の保持、テーマの更新、破棄処理を確認します。レジストリのテストは固定した公開パッケージ、ローカルのテストは準備済みスナップショットを使います。デプロイ前にレジストリの成果物で一連の動作を検証してください。
+
 リポジトリを取得します。
 
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
+git checkout v0.15.1
 ```
+
+リリースタグ `v0.15.1` は、公開済みの npm・Python パッケージと、ここで説明するワークブック API に対応します。プロファイルに合わせたワークブックの作成、文字列比較ヘルパー、行・列・範囲のスタイル API が含まれます。
 
 ネイティブビルドには CMake と C++17 のコンパイラが必要です。WASM ビルドには `tools/wasm/emsdk-version.txt` で固定している Emscripten SDK が必要です。npm パッケージには Node 22 以降が必要です。サイズ検査を完全に実行するには `brotli` もインストールしてください。
 

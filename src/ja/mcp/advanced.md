@@ -1,6 +1,30 @@
 # 高度な Workbook API
 
-専用の MCP ツールで一般的なワークブック操作を行えます。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
+専用の MCP ツールで一般的なワークブック操作を行えます。サーバーは `@libraz/formulon` に `^0.15.1` の依存範囲を指定しています。実際に読み込まれたエンジンのバージョンは、各カタログ応答で確認してください。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
+
+## 関数検索と Excel プロファイル
+
+関数名、メタデータ、ロケール変換には `formulon_function_lookup` を使います。`operation` は `names`、`metadata`、`localize`、`canonicalize`、`localizeFormula`、`canonicalizeFormula`、`localeFacts` のいずれかです。`profile` は `win-365-de_DE` のような [Excel プロファイル](/ja/mcp/workflow#excel-profile)の ID で、変換先を決めます。省略するとセッションのプロファイルを使います。`metadata` はロケールに依存しません。`names` は保存用の関数名を列挙します。
+
+| 操作 | 入力 | 結果 |
+| --- | --- | --- |
+| `localize`、`canonicalize` | `name` | 関数名 1 件を、プロファイルの表記へ、またはプロファイルの表記から変換します。Excel が関数名をローカライズするのは de_DE、fr_FR、es_ES、es_MX、pt_BR、ru_RU、it_IT、nl_NL です。他のプロファイルでは英語名のままです。 |
+| `localizeFormula`、`canonicalizeFormula` | `formula` | 数式全体を、保存用の英語形式とプロファイルの表記の間で書き換えます。区切り文字や小数点も含みます。 |
+| `localeFacts` | なし | 区切り文字、真偽値の名前、日付の順序、通貨の配置、ローカライズされたエラー名、`measured`、`collationMeasured` を返します。 |
+
+```json
+{
+  "name": "formulon_function_lookup",
+  "arguments": {
+    "sessionId": "work",
+    "operation": "localizeFormula",
+    "formula": "=SUM(A1,1.5)",
+    "profile": "win-365-de_DE"
+  }
+}
+```
+
+`de_DE` では `=SUM(A1,1.5)` が `=SUMME(A1;1,5)` になり、`canonicalizeFormula` で元に戻ります。
 
 ## 検索、説明、呼び出し
 
@@ -67,8 +91,14 @@
 - ワークブック時計の固定、Excel プロファイル、読み込み診断、ページネーション、ページ設定、余白、印刷オプション、ヘッダー・フッター、印刷範囲、印刷タイトル、手動改ページ
 - ワークシートテーブル、AutoFilter、ピボットキャッシュ、ピボットテーブル、フィールド軸と順序、データフィールド、フィルター、日付グループ、ネイティブピボットテーブルのレイアウト
 - シート表示、保護、グリッド線、表示フラグ
-- フォント、塗りつぶし、罫線、表示形式、セルスタイル、差分書式、セル XF、範囲 XF
+- フォント、塗りつぶし、罫線、表示形式、セルスタイル、差分書式、セル XF、範囲 XF。行・列スタイル（`setColumnStyle`、`clearColumnStyle`、`setRowStyle`、`clearRowStyle`）、属性だけの範囲書式（`rangeStyleBases`、`remapRangeStyle`）、`clearCellXfIndex`、`clearColumnWidth` を含みます
+- テーマのスクリプトフォントとリセット（`setThemeScriptFont`、`resetTheme`）、画像の配置と重なり順（`setImageAnchor`、`setImageZOrder`）
+- ロケールと照合順序の取得（`localizeFormula`、`canonicalizeFormula`、`localeFacts`、`compareText`、`collationClasses`）。読み取り専用で、セッションを変更ありにしません。照合クラス ID は単純な JSON 配列で返ります
 - 結合、コメント、ハイパーリンク、入力規則、条件付き書式、ふりがな、外部リンク
+
+疎なセル・結合範囲の取得（`getCellsInRange`、`getMergesInRange`）、A1 / R1C1 数式の取得、表示テキストと値の書式変換、ジオメトリと列幅モデル、テーマの色・フォント、有効なスタイル、シート・テーブルの型付き AutoFilter、入力規則の検査、スレッドコメントと人物、描画・画像の取得と削除も許可されています。呼び出す前に、正確なメソッドとレコードの項目を確認してください。フィルターの適用は行の表示状態を変え、依存する数式を再計算待ちにします。更新後の `SUBTOTAL` や `AGGREGATE` の値を読む前に `formulon_recalc_session` を呼んでください。
+
+`probeImage` と `insertImage` はバイナリ入力を取るため、低レベルの JSON 呼び出しでは使えません。ファイルの挿入や画像バイトの取得には、[画像操作](/ja/mcp/layout-preview#images) の `formulon_image_operation` を使います。`snapshotImage` / `restoreImage` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。不透明なバイト列を往復させるため、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないからです。
 
 `save`、`saveAs`、`saveWithDiagnostics` はセッション管理を迂回するため許可されません。保存は `outputPath` を明示した `formulon_save_session` を使います。`delete`、`isValid`、JavaScript コールバックを受け取る `setIterativeProgress` も JSON 呼び出しには適さないため許可されません。
 

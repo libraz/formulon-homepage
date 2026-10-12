@@ -33,7 +33,9 @@ Oracle データは **Excel 365**（Microsoft 365 サブスクリプション）
 
 ターゲット名は `<host>-<excel-major>-<locale>` の形式です（例: `mac-365-ja_JP` / `win-365-ja_JP`）。ターゲット一覧は `tools/oracle/targets.yaml` にあります。
 
-現在募集中のロケールは英語・ドイツ語・フランス語・中国語・韓国語・タイ語の Excel 環境です。これらのターゲットを 1 つでも提供すると、推測ではなく実測のロケール挙動を確認できる範囲が広がります。
+数式トラックには Mac の Excel ゲートが 14 個あります。プライマリの `mac-365-ja_JP` と 13 個のロケールゲート（`mac-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`）です。ワークブックトラックには実測済みの `win-365-ja_JP` もあります。残り 13 個の Windows プロファイル（`win-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`）は、実際の Windows 取得で置き換わるまで寄贈ロケールからの推定値です。合計で 14 ロケール、28 個のプロファイル ID です。
+
+Mac のロケールを取得するには、`defaults write com.microsoft.Excel AppleLanguages -array <lang>` と `defaults write com.microsoft.Excel AppleLocale <locale>` を設定して Excel を再起動し、`make oracle-gen TARGET=<target>`（または `tools/oracle/oracle_gen.py --target <target> --incremental`）を実行します。終わったら両方のキーに `defaults delete` を実行して、システムのロケールに戻します。ローカライズされたエラー名は `ERROR.TYPE` で解決します。
 
 ::: tip 提供範囲は完全でなくてよい
 全関数を網羅する必要はありません。1 ロケールの 1 関数族（テキスト / 日付 / 検索など）を対象にしたゴールデンデータでも、互換性を確認できる範囲が広がります。
@@ -44,7 +46,7 @@ Oracle データは **Excel 365**（Microsoft 365 サブスクリプション）
 ```sh
 make oracle-setup
 make oracle-contribute
-make oracle-contribute TARGET=mac-365-en_US
+make oracle-contribute TARGET=win-365-de_DE
 make oracle-gen TARGET=win-365-ja_JP SUITE=count
 make oracle-gen-cf SUITE=<category>
 make oracle-gen-workbook TARGET=<name> SUITE=<category>

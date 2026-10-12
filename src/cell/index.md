@@ -11,6 +11,8 @@ The documentation focuses on integration decisions that stay useful as the UI gr
 
 The demos on this page show that UI controls, editing permissions, and viewport bounds can be configured independently.
 
+The current cell package release is `0.9.0`. Install the core and adapter packages at the same version; the release uses `@libraz/formulon@0.15.1` and requires Node.js 22 or later. See [Install](/cell/install) for pinned commands.
+
 ## Packages
 
 | Package | Use it when |
@@ -83,6 +85,7 @@ Use `presets.minimal()` or the `embedded` profile when the surrounding applicati
 - [Bundler setup](/cell/bundler) — current Vite setup and asset checks.
 - [Options](/cell/options) — UI profiles, feature switches, policies, viewport, menus, and runtime changes.
 - [Platform and Mac UI](/cell/platform) — choose `default`, `mac`, or `auto` and use Mac-specific surfaces.
+- [Language switching](/cell/language-switching) — coordinate UI dictionaries, workbook profiles, formula text, and host controls.
 - [Embedding](/cell/embedding) — viewer, form, host-owned controls, and host-owned updates.
 - [Modals and dialogs](/cell/modals) — overlay placement and direct dialog entry points.
 - [Framework adapters](/cell/frameworks) — React and Vue component usage.

@@ -14,11 +14,11 @@ Excel is used during development and verification to capture *oracle data*: refe
 
 ### Which compatibility profile is the default?
 
-The default profile is `win-365-ja_JP`, modelled on Excel 365 for Windows with the Japanese locale. Mac Excel 365 ja-JP is also tracked through oracle data. English-locale profiles are not exposed until matching oracle data exists. See [Locale profiles](/compatibility/locale-profiles).
+The default profile is `win-365-en_US`, modelled on Excel 365 for Windows with the US English locale. There are 28 profiles across 14 locales on Mac and Windows. See [Locale profiles](/compatibility/locale-profiles) for the full list and the measured or estimated status of each.
 
 ### How many Excel functions can it run?
 
-Formulon recognizes **523** Excel function names. **508** are real implementations, including 2 environment-bound functions (`CELL`, `INFO`), and 15 are unavailable service stubs.
+Formulon recognizes **526** Excel function names. **511** are real implementations, including 2 environment-bound functions (`CELL`, `INFO`), and 15 are unavailable service stubs.
 
 The unavailable stubs include `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, `TRANSLATE`, `DETECTLANGUAGE`, and the CUBE functions. These names are recognized so failures are deterministic. See [Formula coverage](/compatibility/formula-coverage).
 
@@ -56,11 +56,9 @@ Unqualified Excel compatibility is too broad to be useful. Formulon avoids that 
 
 That still leaves hard cases: volatile functions, undocumented coercions, locale-sensitive formatting, floating-point edges, external services, and file features that are preserved but not semantically evaluated. Compatibility should be validated against the actual workbook set you plan to run.
 
-### Why is the default profile Japanese Excel?
+### Which locales are measured, and which are estimated?
 
-The first checked-in formula oracle was captured on Mac Excel 365 ja-JP; `win-365-ja_JP` is the runtime default and is verified through variant goldens. It is also the primary profile for the separate pivot/print workbook-oracle data captured through the Windows COM bridge. Locale affects real spreadsheet behavior: function names, separators, date parsing, text formatting, collation, and error surfaces can differ.
-
-English-locale profiles are intentionally not exposed until matching oracle data exists. That is a coverage gap, not a claim that Japanese Excel is globally representative.
+The formula oracle is captured on Mac Excel 365 in all 14 supported locales, each gating CI; `mac-365-ja_JP` is the primary. `win-365-ja_JP` is measured on Windows and is the primary of the pivot/print workbook oracle captured through the Windows COM bridge. The other 13 Windows profiles are estimated from the Mac capture plus known host differences. Locale affects separators, boolean and error text, date parsing, text formatting, code pages, function-name display and [text comparison](/compatibility/text-collation).
 
 ## Files and Workbook Features
 
@@ -68,9 +66,9 @@ English-locale profiles are intentionally not exposed until matching oracle data
 
 WASM, Python, Native Node, CLI, and MCP can load `.xlsx` and `.xlsb`. Loaders detect the format from the file contents. Use `saveAs` / `save_as` to select the output format explicitly. CLI selects XLSB for a `.xlsb` output extension and XLSX otherwise. MCP accepts only `.xlsx` or `.xlsb` output paths and selects the corresponding format.
 
-`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Existing worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, drawing/table references, and relationships are preserved verbatim. Preservation is not editable or evaluated support; unsupported formulas may downgrade to cached literals. `saveWithDiagnostics` / `save_with_diagnostics` report documented write losses. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
+`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. Conditional-format rules use the shared model and supported rules can be evaluated; `validateValue` / `validate_value` and `listInvalidCells` / `list_invalid_cells` perform explicit checks against modeled validation rules. Other worksheet tails such as print setup/breaks, drawing/table references, and relationships use their documented passthrough behavior. Typed AutoFilter edits, classic notes, threaded comments, OOXML drawings (loaded or inserted), page setup, margins, print options, header/footer, manual breaks, tables, and nondefault calculation settings remain deferred for XLSB writes; `saveWithDiagnostics` / `save_with_diagnostics` report deferred or dropped losses through `deferredFeatureCount` and related counters. Unsupported formulas may downgrade to cached literals. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
 
-XLSB pivot cache definitions, cache records, and PivotTable parts are evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. External-link formulas use the index-spelled forms bound to the package link table, such as `[1]Sheet1!A1`; path-spelled `[Book1.xlsx]Sheet1!A1` references remain unsupported. Phonetic annotations preserve the span of each run.
+XLSB pivot cache definitions, cache records, and PivotTable parts are evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. External references accept book names and paths, such as `[Book1.xlsx]Sheet1!A1`, and survive XLSX and XLSB saves with their link parts. Evaluation uses available cached external values; it does not fetch the linked file. Phonetic annotations preserve the span of each run.
 
 Macro-enabled OOXML packages such as `.xlsm` / `.xltm` have tests for preserving `vbaProject.bin` byte-for-byte, but VBA is never executed. Legacy `.xls` / BIFF is out of scope.
 
@@ -99,6 +97,10 @@ Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs
 The Formulon engine is headless. Grid rendering and interactive spreadsheet UI are not part of the core engine.
 
 [`@libraz/formulon-cell`](/cell/) is a browser spreadsheet UI kit with React and Vue adapters. See its guides for [embedding](/cell/embedding), [options](/cell/options), and [modals](/cell/modals).
+
+### Can I change the language without rebuilding the sheet?
+
+Yes. Cell provides seven built-in UI dictionaries and `instance.setLocale()` switches the mounted UI and its calculation profile together. The [language switching demo](/cell/language-switching) shows the stored and displayed formulas on the same workbook. Engine hosts can convert formula text for all supported profiles through [the formula language APIs](/workbook/language).
 
 ### Can I safely run arbitrary `.xlsx` files from users?
 
@@ -147,11 +149,17 @@ No. The `formulon` wheel is `py3-none-any` and ships `formulon_capi.wasm` plus a
 
 ### Does Native Node expose the full WASM API?
 
-The shared Workbook methods are available, with some differences. The source-tree Native Node package under `packages/npm-native` exposes the three static factories (`createDefault` / `createEmpty` / `loadBytes`), phonetic guides, iterative settings, three-state sheet visibility, print settings, range XF assignment, and cache-index pivot items. Table authoring, AutoFilter XML, and cell-style authoring remain WASM-only.
+The shared Workbook methods are available, with some differences. The source-tree Native Node package under `packages/npm-native` exposes the four static factories (`createDefault` / `createEmpty` / `createForProfile` / `loadBytes`), phonetic guides, iterative settings, three-state sheet visibility, print settings, range XF assignment, cache-index pivot items, typed AutoFilters, geometry and theme access, validation checks, comments, images, and `setCellStyle`. Table authoring, AutoFilter XML, and `addCellStyleXf` remain WASM-only.
 
 Native Node adds `dispose()` for explicit release and `memoryUsage()` for an estimated footprint covering cells, shared strings, passthrough parts, and workbook metadata; the estimate refreshes V8 external-memory reporting. Garbage collection remains a fallback. WASM uses `delete()` for its native handle.
 
 Choose Native Node when you build or stage the source-tree package and can deploy a platform-specific `.node` binary. It is useful for native threads and fewer heap copies on `loadBytes` / `save`. Choose WASM for browsers or Node deployments that cannot ship native addons.
+
+### How do WASM and Native Node report invalid JavaScript arguments?
+
+Where the binding performs strict argument validation, a wrong primitive type or nested field type raises `TypeError`; a non-finite, fractional, or out-of-range integer raises `RangeError`. The checks cover positional and nested arguments and run before the workbook mutation. Positional 64-bit cursor and offset arguments are limited to `Number.MAX_SAFE_INTEGER`; omitted or nullish optional fields keep their declared defaults.
+
+Byte inputs such as `loadBytes` and image APIs require a `Uint8Array`. A Node `Buffer` qualifies because it is a `Uint8Array`; a string does not. Nested string fields accept a JavaScript string or a one-byte buffer, including a `Buffer` on Native Node, but arbitrary coercible objects are not accepted. These binding-input failures are separate from status envelopes, host failures, and Excel cell-error values.
 
 ### Does it work offline?
 
@@ -218,7 +226,7 @@ Excel is Microsoft's product and trademark. Formulon is an independent Apache-2.
 
 ### What is `formulon-mcp`?
 
-`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides {{ MCP_TOOL_COUNT }} tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, building and styling documents, configuring printing, recalculating, and saving. Node.js 22 or newer is required.
+`@libraz/formulon-mcp` is a stdio MCP server exposing Formulon workbook operations to AI agents. It provides {{ MCP_TOOL_COUNT }} tools for opening `.xlsx` or `.xlsb` files, inspecting workbook structure, editing cells and sheets, building and styling documents, configuring printing, recalculating, and saving. [Image operations](/mcp/layout-preview#images) retrieve, insert, and remove pictures; previews render supported pictures and report drawing and page metadata. Node.js 22 or newer is required.
 
 ```sh
 npx -y @libraz/formulon-mcp

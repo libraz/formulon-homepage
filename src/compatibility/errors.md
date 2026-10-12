@@ -59,6 +59,26 @@ The panel below reads that set out of the running engine and runs both channels 
 | MCP | MCP error response with structured payload |
 | Native Node | `status.ok === false` on the returned envelope |
 
+## Binding argument validation
+
+The WASM and Native Node JavaScript bindings validate the arguments that have a strict reader before calling the C ABI. For those entry points, a wrong primitive type or nested field type raises `TypeError`; a non-finite, fractional, or out-of-range integer raises `RangeError`. The checks cover both positional arguments and nested records, and run before a workbook mutation. Positional 64-bit cursor and offset arguments are limited to `Number.MAX_SAFE_INTEGER`; omitted or nullish optional fields keep their declared defaults.
+
+Byte inputs such as `loadBytes` and image APIs require a `Uint8Array`. A Node `Buffer` qualifies because it is a `Uint8Array`; a string does not. Nested string fields accept a JavaScript string or a one-byte buffer, including a `Buffer` on Native Node. These binding-input results are separate from the `Status` envelopes and from Excel cell-error values. When an entry point reports a binding-rejected shape through its documented status result, inspect that status before reading the result fields.
+
+## Formula text entry paths
+
+Malformed formula text has different outcomes depending on where it enters the engine. Keep these paths separate when reporting an error:
+
+| Entry path | Result | Workbook mutation |
+| --- | --- | --- |
+| `setFormula()` / `set_formula()` | Host status `kParserUnexpectedToken` | The existing cell formula and cached value remain unchanged. |
+| Imported workbook containing malformed stored formula text | The stored text is retained; after `recalc()`, the cell evaluates to `#NAME?` | Loading preserves the workbook record so it can be inspected or rewritten. |
+| `evaluateFormulaText()` / `evalFormula()` / `eval_formula()` | A successful evaluation envelope whose value is `#NAME?` | Read-only; no cell or dependency graph is changed. |
+
+For example, `=SUM(` is rejected by a strict formula setter with `kParserUnexpectedToken`. The same malformed text can be retained when it arrives in an imported file, and an ad-hoc evaluation reports the cell error `#NAME?`; neither case should be converted into a generic host exception. The setter status is a host-side failure because the requested mutation did not happen, while `#NAME?` is a cell value returned by the imported or ad-hoc evaluation path.
+
+The setter, imported-formula, and ad-hoc cases are covered by `tests/c_api/formulon_c_formula_entry_test.cpp` and the evaluator in `src/eval/adhoc_eval.cpp` in the Formulon source tree.
+
 ## C ABI value kinds
 
 | Kind | Meaning |

@@ -28,7 +28,7 @@ Validation is not a transaction. An engine failure during application can leave 
 
 ## Allowlisted API access
 
-`formulon_workbook_call` invokes only methods listed in [`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts). It does not evaluate JavaScript or execute caller-supplied code. Workbook lifecycle and raw save methods (`save`, `saveAs`, `saveWithDiagnostics`) are withheld, as is callback-based `setIterativeProgress`.
+`formulon_workbook_call` invokes only methods listed in [`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts). It does not evaluate JavaScript or execute caller-supplied code. Workbook lifecycle and raw save methods (`save`, `saveAs`, `saveWithDiagnostics`) are withheld, as is callback-based `setIterativeProgress`. Binary-input `probeImage` and `insertImage` are also withheld; use `formulon_image_operation` instead. So are `snapshotImage` / `restoreImage` and `snapshotRangeStyle` / `restoreRangeStyle`, which round-trip opaque bytes that a JSON result reduces to a length and a JSON argument cannot carry. Its `path` reads a local image and `outputPath` can write extracted bytes, using the server process's filesystem permissions.
 
 Use [API discovery](/mcp/advanced) to read signatures and access classifications from the installed engine before constructing positional arguments. The allowlist controls which methods can be reached; it does not establish whether a requested edit is appropriate.
 

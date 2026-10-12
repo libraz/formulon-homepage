@@ -40,7 +40,9 @@ The detailed API pages are grouped under this runtime section instead of being a
 | API page | Purpose |
 | --- | --- |
 | [Surface matrix](/api/surfaces) | Compare package surfaces and host responsibilities |
+| [C API](/api/c) | C11 ABI, ownership, and custom bindings |
 | [WASM API](/api/wasm) | Browser / worker usage and lifetime management |
+| [Native Node](/runtimes/node-native) | N-API addon integration and workbook lifetime management |
 | [Python API](/api/python) | Batch recalculation and workbook inspection |
 | [CLI reference](/api/cli) | Shell automation and CI usage |
 

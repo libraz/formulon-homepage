@@ -88,7 +88,7 @@ export function SheetWithInspector() {
             <strong>{readyLabel}</strong>
             <label>
               言語
-              <select value={locale} onChange={(event) => instance.i18n.setLocale(event.target.value)}>
+              <select value={locale} onChange={(event) => instance.setLocale(event.target.value)}>
                 <option value="en">English</option>
                 <option value="ja">日本語</option>
               </select>
@@ -195,7 +195,7 @@ const onError = (error: unknown) => {
   mountError.value = error instanceof Error ? error.message : String(error)
 }
 const changeLocale = (event: Event) => {
-  instance.value?.i18n.setLocale((event.target as HTMLSelectElement).value)
+  instance.value?.setLocale((event.target as HTMLSelectElement).value)
 }
 const readyLabel = computed(() => strings.value.statusBar?.ready ?? 'スプレッドシートを読み込んでいます…')
 
@@ -294,7 +294,7 @@ Vue では、上の SFC と同じように `watchEffect` と `onCleanup` を使�
 
 ## ユースケース: ホスト側のコントロールをローカライズする
 
-ホスト側のパネルを `instance.i18n.setLocale()` やラベル拡張に追従させる場合は `useI18n` を使います。返される辞書はスプレッドシート UI と同じものなので、ホスト側で別のロケール購読を管理する必要がありません。
+ホスト側のパネルを `instance.setLocale()` やラベル拡張に追従させる場合は `useI18n` を使います。返される辞書はスプレッドシート UI と同じものなので、ホスト側で別のロケール購読を管理する必要がありません。`setLocale()` の戻り値を確認し、プロファイルや編集中の編集が切り替えを拒否したときは、元の選択を表示したままにします。詳しい流れは [言語を切り替える](/ja/cell/language-switching) を参照してください。
 
 ```tsx
 const { locale, strings } = useI18n(instance)
@@ -305,7 +305,7 @@ return (
     <select
       disabled={!instance}
       value={locale}
-      onChange={(event) => instance?.i18n.setLocale(event.target.value)}
+      onChange={(event) => instance?.setLocale(event.target.value)}
     >
       <option value="en">English</option>
       <option value="ja">日本語</option>

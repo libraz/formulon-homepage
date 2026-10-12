@@ -46,6 +46,28 @@ value = formulon.eval_formula("=SUM(1,2,3)")
 print(value.to_python())
 ```
 
+## ユーザーの Excel ロケールで数式を表示する
+
+保存する数式は、英語の関数名と区切り文字による正規形です。UI では完全な Excel プロファイル ID を `localizeFormula()` に渡して表示上のロケールへ変換できます。編集後の文字列は保存前に `canonicalizeFormula()` で戻し、評価するワークブックにも同じプロファイルを選択してください。
+
+```ts
+import createFormulon from '@libraz/formulon'
+
+const LocaleModule = await createFormulon()
+const profile = 'mac-365-de_DE'
+const localeWorkbook = LocaleModule.Workbook.createDefault()
+try {
+  const displayed = localeWorkbook.localizeFormula('=SUM(1.5,TRUE)', profile)
+  if (!displayed.status.ok) throw new Error(displayed.status.message)
+  const canonical = localeWorkbook.canonicalizeFormula(displayed.value, profile)
+  if (!canonical.status.ok) throw new Error(canonical.status.message)
+} finally {
+  localeWorkbook.delete()
+}
+```
+
+`localizeFormula()` はテキスト変換です。関数名、区切り文字、小数点、真偽値名、エラー名を変換し、文字列、引用符付きシート名、外部修飾子、構造化参照の角括弧は保持します。カスタムエディターに必要な区切り文字、名前、日付順、通貨、ローカライズ済みエラー名は `localeFacts(profile)` から取得できます。エンジンのプロファイルは 28 個あり、`mac-*` と `win-365-ja_JP` は Excel との実測値、残りの Windows プロファイルは推定ロケールデータです。
+
 ## CLI
 
 ```sh

@@ -40,7 +40,9 @@ WASM、Python、Native Node、CLI は共通の計算処理を使います。変�
 | API ページ | 目的 |
 | --- | --- |
 | [API とパッケージの一覧](/ja/api/surfaces) | パッケージごとの役割とホスト側の責務を比較 |
+| [C API](/ja/api/c) | C11 ABI、所有権、独自バインディング |
 | [WASM API](/ja/api/wasm) | ブラウザ / ワーカーでの使い方とライフタイム管理 |
+| [Native Node](/ja/runtimes/node-native) | N-API アドオンの統合とワークブックのライフタイム管理 |
 | [Python API](/ja/api/python) | 一括再計算とワークブック検査 |
 | [CLI リファレンス](/ja/api/cli) | シェル自動化と CI での利用 |
 

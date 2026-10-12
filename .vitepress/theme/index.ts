@@ -27,6 +27,9 @@ const StructureDemo = defineAsyncComponent(() => import('@/components/demos/Stru
 const FormatDemo = defineAsyncComponent(() => import('@/components/demos/FormatDemo.vue'))
 const ErrorsDemo = defineAsyncComponent(() => import('@/components/demos/ErrorsDemo.vue'))
 const CellEmbedDemo = defineAsyncComponent(() => import('@/components/demos/CellEmbedDemo.vue'))
+const LocaleSwitchDemo = defineAsyncComponent(
+  () => import('@/components/demos/LocaleSwitchDemo.vue')
+)
 const DemoFrame = defineAsyncComponent(() => import('@/components/demos/DemoFrame.vue'))
 
 // Bespoke figures: one page each, so they are code-split like the demos.
@@ -55,6 +58,7 @@ export default {
     app.component('FormatDemo', FormatDemo)
     app.component('ErrorsDemo', ErrorsDemo)
     app.component('CellEmbedDemo', CellEmbedDemo)
+    app.component('LocaleSwitchDemo', LocaleSwitchDemo)
     app.component('CellTokenCascade', CellTokenCascade)
   }
 } satisfies Theme

@@ -28,7 +28,7 @@ description: ファイル権限、セッションの分離、許可リストに�
 
 ## 許可リストによる API アクセス
 
-`formulon_workbook_call` は、[`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts) にあるメソッドだけを呼び出します。JavaScript の評価や呼び出し元が渡したコードの実行は行いません。ワークブックの生成・解放と直接保存（`save`、`saveAs`、`saveWithDiagnostics`）は許可されていません。コールバックを取る `setIterativeProgress` も対象外です。
+`formulon_workbook_call` は、[`src/session/workbook-call.ts`](https://github.com/libraz/formulon-mcp/blob/main/src/session/workbook-call.ts) にあるメソッドだけを呼び出します。JavaScript の評価や呼び出し元が渡したコードの実行は行いません。ワークブックの生成・解放と直接保存（`save`、`saveAs`、`saveWithDiagnostics`）は許可されていません。コールバックを取る `setIterativeProgress` と、バイナリ入力を取る `probeImage`、`insertImage` も対象外です。画像には `formulon_image_operation` を使います。`snapshotImage` / `restoreImage` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。これらは不透明なバイト列を往復させるもので、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないためです。`path` はローカル画像を読み、`outputPath` は抽出したバイト列を書き込むため、サーバープロセスのファイル権限が適用されます。
 
 位置引数を組み立てる前に、[API 探索](/ja/mcp/advanced)でインストール済みエンジンのシグネチャと読み取り／変更の区分を確認してください。許可リストは呼び出せるメソッドを制限します。個々の編集が業務上適切かどうかは判断しません。
 

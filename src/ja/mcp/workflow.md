@@ -17,7 +17,7 @@
 }
 ```
 
-`formulon_open_workbook` は `{ "session": ... }` を返します。セッションには ID、入力と出力のパス、作成・更新時刻、`dirty`、任意の `loadLosses` が入ります。ファイルを開くと 1 度再計算します。新規セッションには既定の `Sheet1` があり、`sourcePath` はありません。
+`formulon_open_workbook` は `{ "session": ... }` を返します。セッションには ID、入力と出力のパス、作成・更新時刻、`dirty`、任意の `loadLosses` が入ります。ファイルを開くと 1 度再計算します。新規セッションの最初のシート名は Excel プロファイルで決まり、`sourcePath` はありません。`Sheet1` を使う手順では `profile: "win-365-en_US"` を明示し、それ以外のプロファイルでは調査結果からシート名を取得してください。
 
 セルの位置を指定する前に構造を調べます。
 
@@ -29,7 +29,24 @@
 }
 ```
 
-`formulon_inspect_session` は `session` と、`sheets`、`definedNames`、ネイティブ `tables` を含むワークブック概要を返します。`includeCells` を `true` にするとセルの疎な一覧を含めます。`maxCellsPerSheet` の既定値は 200、上限は 10,000 です。使用範囲、結合、寸法、表示、保護、数式、スタイルが必要な場合は `formulon_inspect_layout` を使います。既定ではセルを含め、選択したシートごとに 10,000 セルまで返します。`formulon_detect_regions` と `formulon_analyze_workbook` は、構造が分からないシートを調べるための一定の規則に基づく分類・検出結果を返します。同じ入力には同じ結果を返しますが、元データの意味を保証するものではありません。
+`formulon_inspect_session` は `session` と、`sheets`、`definedNames`、ネイティブ `tables` を含むワークブック概要を返します。`includeCells` を `true` にするとセルの疎な一覧を含めます。`maxCellsPerSheet` の既定値は 200、上限は 10,000 です。`cellCount` と `cells` はエンジンの書き込み済み座標を使い、書式付きセル、明示した空白セル、スピル先を含みます。`formulon_get_range` は値と数式を読むツールのため、書式だけの空白セルを含む数式のない空白を省略します。使用範囲、結合、寸法、表示、保護、数式、スタイルが必要な場合は `formulon_inspect_layout` を使います。既定ではセルを含め、選択したシートごとに 10,000 セルまで返します。`formulon_detect_regions` と `formulon_analyze_workbook` は、構造が分からないシートを調べるための一定の規則に基づく分類・検出結果を返します。同じ入力には同じ結果を返しますが、元データの意味を保証するものではありません。
+
+## Excel プロファイル {#excel-profile}
+
+プロファイルは、数値・日付・真偽値のテキスト、`TEXT` の書式コード、照合順序（比較、検索、並べ替え）、`CHAR` / `CODE` のコードページ、2 バイト系関数（`*B`、`ASC`、`DBCS`）を決めます。プロファイル ID は `{mac|win}-365-<locale>` の形で、ロケールは `en_US`、`ja_JP`、`de_DE`、`fr_FR`、`es_ES`、`es_MX`、`pt_BR`、`it_IT`、`nl_NL`、`ru_RU`、`zh_CN`、`zh_TW`、`ko_KR`、`th_TH` です。`mac-*` は Mac 版 Excel から実測した値、`win-*` はそれと Windows ホストの規則から推定した値です。既定は `win-365-en_US` です。
+
+`formulon_open_workbook`、`formulon_inspect_workbook`、`formulon_update_workbook` は任意の `profile` を受け取ります。新規ワークブックでは、そのロケールで Excel が作るとおりに本文フォント、Normal スタイル、シート名、余白を設定します。読み込んだファイルでは、オープン時の再計算の前に評価プロファイルを設定します。`profile` を省略すると、サーバーの環境変数 `FORMULON_MCP_PROFILE`、なければ `win-365-en_US` を使います。未知の ID はエラーです。環境変数の値が原因のときは、メッセージにそのことが示されます。
+
+```json
+{
+  "sessionId": "ja-book",
+  "profile": "mac-365-ja_JP"
+}
+```
+
+プロファイルは実行時の設定で、`.xlsx` には保存されません。`formulon_open_workbook`、`formulon_inspect_workbook`、`formulon_update_workbook` では、指定したプロファイル、`FORMULON_MCP_PROFILE`、`win-365-en_US` の順で決まります。パス指定の `formulon_get_cell` は `loadWorkbook` を直接呼ぶため、`FORMULON_MCP_PROFILE` を適用しません。ロケールに依存する読み取りには、必要なプロファイルでセッションを開いてください。
+
+セッションの途中で切り替えるには、`formulon_workbook_call` で `setExcelProfileId` を `args` に `["mac-365-ja_JP"]` を渡して呼び、続けて `formulon_recalc_session` を呼びます。変わるのは評価だけで、フォントやシート名は変わりません。現在の値は `excelProfileId` で読めます。
 
 ## 値と数式を読む
 
@@ -44,9 +61,9 @@
 }
 ```
 
-`formulon_get_range` は疎な一覧を返します。空白かつ数式のないセルは省略され、要求した矩形はシートの使用範囲に切り詰められ、`maxCells`（既定 10,000、最大 50,000）で上限が決まります。使用範囲に切り詰めた後の走査範囲は 100,000 セルまでです。返されるセルには A1 参照、0 始まりの座標、`{kind, ...}` 形式の値が入ります。`includeFormulas` を指定すると `formula` が追加されます。日付、通貨、パーセント書式の数値セルには `numberFormat`、`formatKind`、`formatted` が付く場合があります。
+`formulon_get_range` は疎な一覧を返します。エンジンは指定範囲の値や数式があるセルとスピル先を列挙し、書式だけの空白セルは省略します。返す件数は `maxCells`（既定 10,000、最大 50,000）で制限し、それを超えるセルがある場合だけ `truncated` が真になります。矩形の走査面積には上限がありません。返されるセルには A1 参照、0 始まりの座標、`{kind, ...}` 形式の値が入ります。`includeFormulas` を指定すると `formula` が追加されます。日付、通貨、パーセント書式の数値セルには `numberFormat`、`formatKind`、`formatted` が付く場合があります。General 以外の数値書式では、取得できればエンジンの表示用 `text` も付きます。`textStatus` は `overflow` または `invalidFormat` を表します。
 
-`formulon_get_cell` は `sessionId` と `path` のどちらか一方だけを受け取ります。`a1`、または `row` と `col` を指定し、`sheet` の既定値は 0 です。既定の `recalc: true` はセッションを再計算してから読むため、セッションは変更あり（dirty）になります。計算キャッシュを変えずに読む場合は `false` を指定します。パス読み込みは 1 回限りで、セッションを作りません。`formulon_eval_formula` はセルを書き込まずに数式を評価し、セッション指定時は参照、定義名、`ROW()`、`COLUMN()` を解決します。`row` と `col` は既定値 0 です。
+`formulon_get_cell` は `sessionId` と `path` のどちらか一方だけを受け取ります。`a1`、または `row` と `col` を指定し、`sheet` の既定値は 0 です。既定の `recalc: true` はセッションを再計算してから読むため、セッションは変更あり（dirty）になります。計算キャッシュを変えずに読む場合は `false` を指定します。パス読み込みは 1 回限りで、セッションを作らず、`FORMULON_MCP_PROFILE` も適用しません。ロケールに依存する読み取りには `sessionId` を使います。`formulon_eval_formula` はセルを書き込まずに数式を評価し、セッション指定時はそのセッションのプロファイルで参照、定義名、`ROW()`、`COLUMN()` を解決します。`row` と `col` は既定値 0 です。グローバルモードはエンジンの既定プロファイルを使うため、ロケールに依存する数式にはプロファイル付きセッションを使ってください。
 
 ## セルと構造を変更する
 

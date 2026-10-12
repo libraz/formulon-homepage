@@ -33,7 +33,9 @@ Each contribution should include the OS, Excel build, locale, and profile identi
 
 Target names have the shape `<host>-<excel-major>-<locale>`, for example `mac-365-ja_JP` or `win-365-ja_JP`. The manifest lives at `tools/oracle/targets.yaml`.
 
-Current wanted locales include English, German, French, Chinese, Korean, and Thai Excel environments. Each target adds locale-specific observations to the compatibility tests.
+The formula track has 14 Mac Excel gates: the primary `mac-365-ja_JP` plus 13 locale gates (`mac-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`). The workbook track also has the measured `win-365-ja_JP` target. The remaining 13 Windows profiles (`win-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`) use estimated donor-locale data until real Windows captures replace those estimates. Together these are 28 profile ids across 14 locales.
+
+To capture a Mac locale, set `defaults write com.microsoft.Excel AppleLanguages -array <lang>` and `defaults write com.microsoft.Excel AppleLocale <locale>`, relaunch Excel, and run `make oracle-gen TARGET=<target>` (or `tools/oracle/oracle_gen.py --target <target> --incremental`). Afterwards run `defaults delete` on both keys to return to the system locale. Localized error names are resolved through `ERROR.TYPE`.
 
 ::: tip Contribution scope
 A useful contribution does not have to cover every function. A complete golden run for one function family in one locale (text, dates, or lookup) expands the compatibility coverage that can be checked.
@@ -44,7 +46,7 @@ A useful contribution does not have to cover every function. A complete golden r
 ```sh
 make oracle-setup
 make oracle-contribute
-make oracle-contribute TARGET=mac-365-en_US
+make oracle-contribute TARGET=win-365-de_DE
 make oracle-gen TARGET=win-365-ja_JP SUITE=count
 make oracle-gen-cf SUITE=<category>
 make oracle-gen-workbook TARGET=<name> SUITE=<category>

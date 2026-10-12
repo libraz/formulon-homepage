@@ -29,7 +29,7 @@ Oracle tests recalculate fixture workbooks and compare their results with captur
 
 ## Profiles
 
-The main profile today is `win-365-ja_JP`. The repository also tracks Mac Excel 365 ja-JP data where that data is available. English-locale profiles remain hidden until they have their own locale-specific oracle coverage.
+Formulon has 28 profiles, `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`, and the default is `win-365-en_US`. All 14 Mac profiles are measured against Mac Excel 365 formula oracles that gate CI: `mac-365-ja_JP` is primary and the other 13 locales each retain their own goldens. `win-365-ja_JP` is measured on Windows and is the workbook oracle profile; the other 13 Windows profiles are estimated from their Mac captures plus the measured Mac/Windows host differences.
 
 See [Locale profiles](/compatibility/locale-profiles) for the public list and pinning behavior.
 
@@ -56,5 +56,8 @@ Each accepted divergence carries a reason and a *last-verified Excel build* so f
 ## Read next
 
 - [Locale profiles](/compatibility/locale-profiles) — the profile catalog.
+- [Text collation](/compatibility/text-collation) — comparison, sorting, and lookup strength by profile.
+- [Workbook language](/workbook/language) — formula text and function-name localization.
+- [Cell language switching](/cell/language-switching) — changing an editor language at runtime.
 - [Oracle testing](/compatibility/oracle-testing) — how a profile is verified.
 - [Non-goals](/compatibility/non-goals) — what compatibility deliberately does not cover.

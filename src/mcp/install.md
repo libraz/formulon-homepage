@@ -8,11 +8,21 @@ The npm package `@libraz/formulon-mcp` runs as a stdio MCP server. Use a Node.js
 
 ## Interactive setup
 
+The current published server is `0.9.0`, with `@libraz/formulon` declared as `^0.15.1`. The command below selects this release's initializer. Omit `@0.9.0` to run the latest published initializer.
+
 Run the bundled installer in a terminal:
 
 ```sh
-npx -y @libraz/formulon-mcp init
+npx -y @libraz/formulon-mcp@0.9.0 init
 ```
+
+The command above pins only the initializer. `init` writes `@libraz/formulon-mcp` without a version into client configuration. To pin the runtime, edit each generated entry to use these arguments:
+
+```json
+{ "args": ["-y", "@libraz/formulon-mcp@0.9.0"] }
+```
+
+Re-running `init` rewrites the entry with the unpinned package name, so apply the runtime pin again afterward.
 
 Choose one or more target numbers, separated by commas. An empty selection defaults to Claude Code user scope.
 
@@ -25,12 +35,25 @@ Choose one or more target numbers, separated by commas. An empty selection defau
 | Claude Desktop — Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 | Claude Desktop — Linux | `~/.config/Claude/claude_desktop_config.json` |
 
+After the targets, the installer asks for the default [Excel profile](/mcp/workflow#excel-profile) with two numbered menus:
+
+1. A locale menu. `0` is the engine default (English, Windows); `1` to `14` are the supported locales, labelled in English. Enter accepts the system locale detected from the OS or `LANG`, falling back to the same language, else `0`.
+2. A host menu: `1` Windows, `2` Mac. Enter accepts the current OS.
+
+Choice `0` skips the host question and writes no profile. The preview shows the chosen profile before confirmation. Pass `--profile <id>` (or `--profile=<id>`) to skip both menus; an unknown id stops with an error. Use `--profile` for scripted, non-terminal runs.
+
+```sh
+npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
+```
+
+The profile is written as `FORMULON_MCP_PROFILE` in the server entry's environment. Re-running `init` rewrites the entry, so running it without a profile removes a previously written one.
+
 The installer previews whether each file will be created, merged, or have its existing `formulon` entry replaced, then asks before writing. It preserves other server entries. For project scope, run it from the project root. Restart the client after registration.
 
 To remove registration, run:
 
 ```sh
-npx -y @libraz/formulon-mcp uninstall
+npx -y @libraz/formulon-mcp@0.9.0 uninstall
 ```
 
 The removal menu defaults to all four client targets. It removes the `formulon` entry from selected configuration files; it does not uninstall Node.js or other MCP servers.
@@ -44,18 +67,39 @@ For clients using JSON configuration, add this server entry inside the existing 
   "mcpServers": {
     "formulon": {
       "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp"]
+      "args": ["-y", "@libraz/formulon-mcp@0.9.0"]
     }
   }
 }
 ```
 
-For Codex CLI, the installer writes this TOML section:
+For Codex CLI, add this pinned TOML section:
 
 ```toml
 [mcp_servers.formulon]
 command = "npx"
-args = ["-y", "@libraz/formulon-mcp"]
+args = ["-y", "@libraz/formulon-mcp@0.9.0"]
+```
+
+To set a default Excel profile, add an `env` object to the entry:
+
+```json
+{
+  "mcpServers": {
+    "formulon": {
+      "command": "npx",
+      "args": ["-y", "@libraz/formulon-mcp@0.9.0"],
+      "env": { "FORMULON_MCP_PROFILE": "win-365-ja_JP" }
+    }
+  }
+}
+```
+
+```toml
+[mcp_servers.formulon]
+command = "npx"
+args = ["-y", "@libraz/formulon-mcp@0.9.0"]
+env = { FORMULON_MCP_PROFILE = "win-365-ja_JP" }
 ```
 
 Other stdio clients use the same command and arguments. When configuring a GUI client, ensure its environment can find `node` and `npx`; a terminal's PATH may differ. Use an absolute executable path when needed.
@@ -76,7 +120,7 @@ The formula response has a `value` envelope with `kind: "number"` and `value: 60
 
 ## Working with an unreleased checkout
 
-The unpinned `npx` command runs the published npm package. To use local changes before publication, build the checkout and register its absolute entry path:
+An `npx` command without a version selects the published npm package. To use local changes before publication, build the checkout and register its absolute entry path:
 
 ```sh
 cd /absolute/path/to/formulon-mcp

@@ -24,6 +24,8 @@ try {
     throw new Error(Module.lastErrorMessage())
   }
 
+  check(workbook.setExcelProfileId('win-365-en_US'))
+  check(workbook.setPinnedNow(2026, 10, 9, 9, 30, 0))
   check(workbook.setNumber(0, 3, 1, 125000)) // sheet 0, B4
   check(workbook.recalc())
 
@@ -34,6 +36,7 @@ try {
 
   await upload(saved.bytes)
 } finally {
+  workbook.clearPinnedNow()
   workbook.delete()
 }
 ```
@@ -47,6 +50,8 @@ with open("input.xlsx", "rb") as f:
     blob = f.read()
 
 with Workbook.load(blob) as wb:
+    wb.set_excel_profile_id("win-365-en_US")
+    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
     wb.set_number(0, 3, 1, 125000.0)
     wb.recalc()
     output = wb.save()
@@ -58,11 +63,11 @@ with open("output.xlsx", "wb") as f:
 ## CLI
 
 ```sh
-formulon recalc input.xlsx -o output.xlsx
-formulon dump --values output.xlsx
+formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 input.xlsx -o output.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.xlsx
 ```
 
-The engine updates calculated values while preserving supported workbook structures and passing through parts it does not model. The preservation and conversion boundary depends on the container and feature; check [file format support](/compatibility/file-format-support) and save diagnostics. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks.
+The engine updates calculated values while preserving supported workbook structures and passing through parts it does not model. The preservation and conversion boundary depends on the container and feature; check [file format support](/compatibility/file-format-support) and save diagnostics. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks. Profiles and pinned clocks are runtime state, so reapply them after loading; neither is saved in the output file.
 
 ## Run the round trip here
 

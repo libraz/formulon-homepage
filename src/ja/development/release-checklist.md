@@ -14,6 +14,7 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 - [ ] JavaScript / Python / CLI / ネイティブ成果物を同一リビジョンからビルド
 - [ ] 各パッケージ API のスモークテスト
 - [ ] 利用可能な実行環境をステージ後に `make parity-test` で比較
+- [ ] 兄弟チェックアウトからコア WASM と cell パッケージをステージングした後、`yarn demos:prepare` でホームページのデモ用スナップショットを更新し、`vendor/manifest.json` のソースコミット、ソース差分 SHA-256、アーカイブ SHA-256 を確認する。その後 `yarn check:demos` と、兄弟チェックアウトなしの通常のホームページビルドを実行する
 - [ ] `RegistryCatalog.CoverageReport` を実行し（`ctest -R RegistryCatalog.CoverageReport -V` を build ディレクトリで ─ 診断専用で常に成功し、カバレッジ比率は標準出力に出ます）、変化があれば [数式カバレッジ](/ja/compatibility/formula-coverage) を更新
 - [ ] [互換性](/ja/compatibility/) のステータス表現を確認
 - [ ] 変更履歴とドキュメントバージョンの更新
@@ -40,7 +41,7 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 
 - [ ] タグを付けて push します（`git tag vX.Y.Z && git push origin vX.Y.Z`）。タグで `release.yml` が起動し、Trusted Publishing で npm と PyPI を公開し、GitHub Actions のワークフロー認証情報で GitHub Release と CLI アセットを作成します。
 - [ ] 同じタグで別に起動する `prebuild.yml` の Native Node マトリクスと `release-bundle` を確認します。ネイティブ成果物は個別に検証します。
-- [ ] ドキュメントサイトの対象バージョンに合わせてホームページリポジトリの `docsVersion` を更新します。npm 公開後にデモ用のルート依存を更新し、`@libraz/formulon` に対するルート `package.json` の `resolutions` 指定を削除して lockfile を再生成します。画面に表示される実行バージョンを確認します。`formulon-cell` のアダプターが新しいアクセサの戻り値に対応するまでは、同パッケージが対応するエンジンの依存指定を維持します。
+- [ ] ホームページの `docsVersion` をドキュメントが対象とするソースのバージョンに合わせます。未公開の機能は Git 管理外のローカルスナップショットで確認します（`yarn test:local` と `yarn build:local`）。コア、`formulon-cell`、`formulon-cell-vue` の公開後にレジストリ依存を更新し、lockfile を再生成して、ローカルの別名参照を使わずにテストとビルドを実行します。デプロイ前に、画面に表示される実行バージョンと言語切り替えデモを公開パッケージで確認してください。
 - [ ] 互換性報告を監視し、適切な Oracle データ / プロファイルに振り分けます
 
 <DiagramFlow steps="develop で作業 → main への PR → CI 成功 → merge → vX.Y.Z タグを push → release.yml + prebuild.yml → 成果物を確認" />

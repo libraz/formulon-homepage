@@ -21,6 +21,8 @@ A thin per-host layer that translates host types (`Uint8Array`, `bytes`, `bytear
 - Surface calculation and IO errors without losing spreadsheet error values.
 - Expose the function and structural API documented under [API](/api/) per host.
 
+Locale behavior stays in the core. The C ABI and the JS/Python bindings pass full Excel profile ids for profile selection, function-name translation, formula localization, and locale facts. Human-readable function metadata remains a host concern and is locale-invariant in the engine catalog.
+
 ## Non-responsibilities
 
 Bindings should not:

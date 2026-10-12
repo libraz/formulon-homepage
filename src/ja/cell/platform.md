@@ -66,7 +66,7 @@ Mac の関数の引数パレットはモーダルではありません。開く�
 
 ホスト UI から開くには `openFunctionArguments(seedName?, { category })` を使います。`seedName` が関数名の場合は `category` を無視します。利用できるカテゴリは `all`、`recent`、`logical`、`lookup`、`text`、`datetime`、`math`、`financial`、`dynamicArray`、`statistical`、`engineering`、`information`、`database`、`compatibility`、`cube`、`web` です。
 
-`getFunctionArgumentHelp` には関数の正規名、0 始まりの引数インデックス、現在のロケールが渡されます。`label` を省略するとカタログの引数ラベルを使います。説明と参照リンクはホスト側のプロバイダーから取得します。パレットは引数インデックス `0` の戻り値からヘルプリンクを読みます。オブジェクト内のプロパティの順序は関係ありません。
+`getFunctionArgumentHelp` には関数の正規名、0 始まりの引数インデックス、現在のロケールが渡されます。`label` を省略するとカタログの引数ラベルを使います。説明と参照リンクはホスト側のプロバイダーから取得します。パレットは引数インデックス `0` の戻り値からヘルプリンクを読みます。オブジェクト内のプロパティの順序は関係ありません。参照 URL は許可されたスキーム（`http:`、`https:`、`mailto:`、`tel:`）を使ってください。相対パスはリンクとして表示されません。
 
 ```ts
 import { Spreadsheet, type FunctionArgumentHelpProvider } from '@libraz/formulon-cell'
@@ -79,7 +79,9 @@ const getFunctionArgumentHelp: FunctionArgumentHelpProvider = (
   if (functionName.toUpperCase() !== 'SUM' || argumentIndex !== 0) return null
   const japanese = locale.toLowerCase().startsWith('ja')
   return {
-    url: japanese ? '/ja/workbook/formula-engine' : '/workbook/formula-engine',
+    url: japanese
+      ? 'https://formulon.libraz.net/ja/workbook/formula-engine'
+      : 'https://formulon.libraz.net/workbook/formula-engine',
     label: japanese ? '数値' : 'numbers',
     description: japanese ? '加算する値または範囲です。' : 'The values or range to add.',
   }

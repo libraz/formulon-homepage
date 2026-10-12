@@ -12,7 +12,11 @@
 
 - [ライフサイクル](/ja/workbook/lifecycle) ─ バイト列とモデルの往復
 - [数式エンジン](/ja/workbook/formula-engine) ─ 値の種類・座標・関数挙動
+- [数式の言語](/ja/workbook/language) ─ 数式の入力・表示の言語と計算プロファイル
 - [ワークブック操作](/ja/workbook/operations) ─ シート / セル / 書式 / メタデータ
+- [表示とレイアウト](/ja/workbook/presentation) ─ 表示文字列、テーマ、実効書式、寸法、ページ分割
+- [フィルターと入力規則](/ja/workbook/filters-validation) ─ 表示行の判定と入力候補の検証
+- [コメントと画像](/ja/workbook/comments-images) ─ スレッドでの会話と画像の配置
 - [再計算](/ja/workbook/recalculation) ─ 再計算待ちセル・依存関係・反復計算・部分再計算
 - [動的配列](/ja/workbook/dynamic-arrays) ─ スピルと形状に応じた再計算
 - [ファイル形式](/ja/workbook/file-formats) ─ OOXML、XLSB、保持境界

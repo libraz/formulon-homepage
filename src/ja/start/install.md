@@ -6,10 +6,12 @@
 実験や社内ツールでは、正確なパッケージバージョンを指定してください。API とパッケージ構成が安定するまでは、`latest` に追従しないほうが安全です。
 :::
 
+以下のインストール例は、ここで説明する API を含む Formulon 0.15.1 と formulon-cell 0.9.0 を固定しています。同じリリースを自分でビルドする場合は、[ソースからビルドする](/ja/development/build-from-source)を参照してください。cell パッケージは別のリリース周期です。実行時のロケールと計算プロファイルの操作は [言語切り替え](/ja/cell/language-switching)にまとめています。
+
 ## JavaScript / WebAssembly
 
 ```sh
-yarn add @libraz/formulon@0.12.0
+yarn add @libraz/formulon@0.15.1
 ```
 
 ブラウザ、ワーカー、Node サービスで WASM ビルドを使う場合はこのパッケージを使います。ESM 専用で、Node で使う場合は Node 22 以降が必要です。
@@ -24,7 +26,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ## Python
 
 ```sh
-python -m pip install formulon==0.12.0
+python -m pip install formulon==0.15.1
 ```
 
 スクリプト、ノートブック、バッチジョブで使います。wheel は Python 3.9 以降を対象とし、Formulon C ABI の単独の WebAssembly モジュールと、それを `wasmtime` 経由で呼び出す純 Python ラッパーを同梱しています。NumPy、Cython、pybind11 は実行時には不要です。
@@ -39,10 +41,12 @@ formulon eval '=SUM(1,2,3)'
 formulon recalc input.xlsx -o output.xlsx
 ```
 
+CLI は計算プロファイルを指定する `--profile` と、評価時刻を固定する `--now` を受け付けます。このドキュメントと同じソースからビルドする場合は、下記の手順を使ってください。
+
 ## formulon-cell
 
 ```sh
-yarn add @libraz/formulon-cell@0.8.0 @libraz/formulon-cell-vue@0.8.0
+yarn add @libraz/formulon-cell@0.9.0 @libraz/formulon-cell-vue@0.9.0
 ```
 
 Vue アダプターを使う場合は `@libraz/formulon-cell-vue` を追加します。フレームワーク用アダプターは共通のコアパッケージを使います。
@@ -52,8 +56,11 @@ Vue アダプターを使う場合は `@libraz/formulon-cell-vue` を追加し�
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
+git checkout v0.15.1
 make build
 make test
 ```
+
+`make build` は `build/bin/formulon_cli` を生成します。このリビジョンには、ここで説明する最新のワークブック API も含まれます。JavaScript や Python で使う場合は、対応するバインディングもビルドしてステージしてください。
 
 パッケージビルドは [ソースからビルド](/ja/development/build-from-source) を参照してください。Native Node の配置手順は [Native Node 連携](/ja/runtimes/node-native) にあります。

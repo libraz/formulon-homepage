@@ -6,12 +6,31 @@ Most contributors only need `make build` and `make test`. The other targets exis
 Staging places built artifacts in the package layout each surface expects — `packages/npm/dist/`, `packages/python/formulon/_wasm/`, and the Native Node addon directory. It is what makes `npm test`, `unittest`, and `node --test` reach the freshly built core.
 :::
 
+## Homepage demo snapshots
+
+Normal homepage installs use the registry versions pinned in `package.json` and `yarn.lock`; they do not need sibling checkouts or generated archives. Unreleased features can be previewed with local snapshots of the core WASM package, `formulon-cell`, and the Vue adapter. `vendor/` holds these generated files and is ignored by Git. Stage both core WASM variants first with `make npm-package` in `../formulon`, install the cell workspace dependencies in `../formulon-cell`, then run from the homepage checkout:
+
+```sh
+yarn demos:prepare
+yarn check:demos
+yarn test:local
+yarn build:local
+yarn dev:local
+```
+
+`yarn demos:prepare` builds the cell packages from the sibling `../formulon-cell` checkout, copies the staged core from `../formulon`, and writes `vendor/manifest.json`. The manifest records each package version, source commit, source input and diff SHA-256, and archive SHA-256. Local commands set `FORMULON_DEMO_SOURCE=local`, verify and unpack the archives, and resolve package imports through Vite aliases. They leave registry pins and the lockfile unchanged and fail if a snapshot is missing or corrupt. Preparation also rejects stale WASM or a runtime version that differs from its package manifest.
+
+The registry and local test suites both exercise the seven-language switching demo, including live profile changes, preserved edits, theme updates, and disposal. Registry tests use the pinned published packages; local tests use the prepared snapshots. Verify the registry artifacts before deploying.
+
 Clone the repository:
 
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
+git checkout v0.15.1
 ```
+
+The `v0.15.1` release tag matches the published npm and Python packages and the workbook APIs described here. It includes profile-shaped new workbooks, text comparison helpers, and the row, column, and range-style APIs.
 
 Native builds require CMake and a C++17 toolchain. WASM builds require the Emscripten SDK pinned in `tools/wasm/emsdk-version.txt`. The npm package requires Node 22 or newer. Install `brotli` to run the complete size check.
 

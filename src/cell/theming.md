@@ -25,6 +25,12 @@ instance.setTheme('contrast')
 
 <CellEmbedDemo scenario="theme-locale" />
 
+## Application and workbook themes
+
+`paper`, `ink`, and `contrast` are application themes. `instance.setTheme()` changes the grid, ribbon, formula bar, menus, and dialogs for the mounted surface; it does not edit workbook metadata.
+
+The Page Layout ribbon has separate workbook theme presets, `office` and `gray`. They edit the workbook's theme colors and major/minor fonts, persist through workbook save, and each preset action has its own undo/redo entry. A workbook theme therefore can change while the application remains on `paper`, `ink`, or `contrast`.
+
 ## Use a brand theme
 
 Any string can be used as a theme name. A custom name requires a complete CSS palette; it does not inherit `paper`, `ink`, or `contrast`. The common recipe keeps the built-in `paper` theme and scopes brand overrides to a host-owned wrapper:

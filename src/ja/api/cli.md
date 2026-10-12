@@ -8,6 +8,8 @@ formulon --version
 formulon --help
 ```
 
+`eval`、`recalc`、`dump`、`paginate` は共通して `--profile <id>` と `--now <date[Thh:mm:ss]>` を受け付けます。既定のプロファイルは `win-365-en_US` です。`--now` はホストのローカルな年月日・時分秒を固定し、時刻を省略すると 00:00:00 になります。プロファイルは 28 個の ID から選び、どちらの値も保存ファイルには記録されません。CI では両方を明示して結果を固定してください。`--` でオプション解析を終える前なら、共有オプションは位置引数の前後に置けます。
+
 ::: info 用語: 終了コード
 CLI は 2 層の規約に従います。セル単位の Excel エラー（`#DIV/0!`、`#VALUE!` など）は stdout に出力し、プロセスは 0 を返します。コマンド自体は成功しており、数式がエラー値を返しただけです。構造的失敗（ファイルが見つからない・バイト列不正・エンジン内部失敗）は非ゼロを返し、シェルスクリプトから `$?` で分岐できます。
 :::
@@ -25,7 +27,7 @@ CLI は 2 層の規約に従います。セル単位の Excel エラー（`#DIV/
 ## `eval`
 
 ```sh
-formulon eval [--json] [--repeat N] <formula>
+formulon eval [--json] [--repeat N] [--profile ID] [--now DATE] <formula>
 ```
 
 `Sheet1!A1` を評価の基準とする新規ワークブックで、1 つの数式を評価します。先頭の `=` の有無は問いません。`--repeat` には正の整数を指定してください。
@@ -39,6 +41,7 @@ formulon eval [--json] [--repeat N] <formula>
 formulon eval '=SUM(1,2,3)'        # → 6
 formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
 formulon eval '=SUM('               # → #NAME?（stdout、exit 0）
+formulon eval --profile mac-365-de_DE --now 2026-10-09T09:30:00 '=NOW()'
 formulon eval '=SEQUENCE(2,2)'       # → タブ区切りの 2 行: 1\t2 と 3\t4
 formulon eval --json '=SEQUENCE(2,2)' # → 型付き値オブジェクトの入れ子配列
 ```
@@ -47,10 +50,12 @@ formulon eval --json '=SEQUENCE(2,2)' # → 型付き値オブジェクトの入
 
 セル単位エラーは stdout、exit 0 です。`eval` の構文が不正な場合も同じで、Excel の `#NAME?` エラー値を stdout に出力して 0 で終了します。数式の typo を終了コードで検出せず、出力値を確認してください。使い方エラーは 64、エンジン / I/O 失敗は 1 です。
 
+この境界は入力方法で異なります。WASM / Python の `setFormula()` / `set_formula()` は不正な数式を `kParserUnexpectedToken` として拒否し、既存セルを変更しません。保存済みファイルに不正な数式文字列が含まれる場合は読み込み自体は成功しますが、再計算後のセル値は文字どおりの `#NAME?` になります。CLI の `eval` はアドホック評価のため、同じ入力を `#NAME?` として出力し、終了コードは 0 のままです。
+
 ## `recalc`
 
 ```sh
-formulon recalc [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
+formulon recalc [--iterative] [--threads N] [--quiet] [--profile ID] [--now DATE] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
 ```
 
 ワークブックをロードして再計算し、新しいワークブックを書き出します。
@@ -77,7 +82,7 @@ formulon recalc [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.
 ## `dump`
 
 ```sh
-formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
+formulon dump [--formulas|--values|--sheets|--metadata] [--profile ID] [--now DATE] <in.xlsx-or-xlsb>
 ```
 
 | モード | 出力 |
@@ -92,7 +97,7 @@ formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
 ## `paginate`
 
 ```sh
-formulon paginate [--sheet INDEX] <in.xlsx-or-xlsb>
+formulon paginate [--sheet INDEX] [--profile ID] [--now DATE] <in.xlsx-or-xlsb>
 ```
 
 指定したシートの印刷範囲、自動改ページ、物理ページ数を解決します。`INDEX` の既定値は `0` で、シート番号と出力座標はすべて 0 始まりです。印刷範囲は両端を含みます。成功は終了コード `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。

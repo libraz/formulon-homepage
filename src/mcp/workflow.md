@@ -28,7 +28,7 @@ Open an existing workbook with a stable id when the agent will make several call
 | `dirty` | The in-memory workbook may differ from its last successful lossless save |
 | `loadLosses` | Non-zero reader diagnostics, when part of the input could not be decoded |
 
-Opening a file recalculates it once. This makes the first formula read use calculated values rather than a stale cached blank. A newly created session has a default `Sheet1` and no `sourcePath`.
+Opening a file recalculates it once. This makes the first formula read use calculated values rather than a stale cached blank. A newly created session has the first-sheet name selected by its Excel profile and no `sourcePath`. Workflows that refer to `Sheet1` should pass `profile: "win-365-en_US"` explicitly; otherwise use the name returned by inspection for the selected profile.
 
 Inspect structure before addressing cells:
 
@@ -40,9 +40,26 @@ Inspect structure before addressing cells:
 }
 ```
 
-`formulon_inspect_session` returns `session` and a workbook summary containing `sheets`, `definedNames`, and native `tables`. Set `includeCells` to `true` to include sparse cell entries; `maxCellsPerSheet` defaults to 200 and is capped at 10,000.
+`formulon_inspect_session` returns `session` and a workbook summary containing `sheets`, `definedNames`, and native `tables`. Set `includeCells` to `true` to include sparse cell entries; `maxCellsPerSheet` defaults to 200 and is capped at 10,000. Its `cellCount` and `cells` use the engine's written-coordinate inventory, including formatted cells, explicit blanks, and spill phantoms. `formulon_get_range` is a value/formula read and omits formula-free blanks, including styled blanks.
 
 Use `formulon_inspect_layout` when the task depends on used ranges, merges, dimensions, views, protection, formulas, or styles. Its default includes cells and allows 10,000 cells per selected sheet. Set `includeStyles: true` when the agent needs the resolved style records. `formulon_detect_regions` and `formulon_analyze_workbook` provide deterministic hints for unfamiliar sheets; they do not replace reading the source data.
+
+## Excel profile {#excel-profile}
+
+A profile governs number, date, and boolean text, `TEXT` format codes, collation (comparison, lookups, sorting), `CHAR` / `CODE` code pages, and the double-byte functions (`*B`, `ASC`, `DBCS`). Profile ids are `{mac|win}-365-<locale>`, where the locale is one of `en_US`, `ja_JP`, `de_DE`, `fr_FR`, `es_ES`, `es_MX`, `pt_BR`, `it_IT`, `nl_NL`, `ru_RU`, `zh_CN`, `zh_TW`, `ko_KR`, or `th_TH`. The `mac-*` profiles are measured from Mac Excel; the `win-*` profiles are estimated from them plus Windows host rules. The default is `win-365-en_US`.
+
+`formulon_open_workbook`, `formulon_inspect_workbook`, and `formulon_update_workbook` accept an optional `profile`. For a new workbook it creates the workbook as Excel creates it in that locale: body font, Normal style, sheet names, and margins. For a loaded file it sets the evaluation profile before the open-time recalculation. When `profile` is omitted, the server environment variable `FORMULON_MCP_PROFILE` applies, then `win-365-en_US`. An unknown id is an error; when it comes from the environment variable, the message says so.
+
+```json
+{
+  "sessionId": "ja-book",
+  "profile": "mac-365-ja_JP"
+}
+```
+
+The profile is a runtime setting and is not stored in the `.xlsx`. For `formulon_open_workbook`, `formulon_inspect_workbook`, and `formulon_update_workbook`, the requested profile wins, followed by `FORMULON_MCP_PROFILE`, then `win-365-en_US`. A path-mode `formulon_get_cell` read calls `loadWorkbook` directly and does not apply `FORMULON_MCP_PROFILE`; use a session opened with the required profile for locale-dependent reads.
+
+To switch within a session, call `formulon_workbook_call` with `setExcelProfileId` and `args` of `["mac-365-ja_JP"]`, then `formulon_recalc_session`. This changes evaluation only, not fonts or sheet names. `excelProfileId` reads the current value.
 
 ## Read values and formulas
 
@@ -57,11 +74,11 @@ Use a bounded A1 range for a table or a single cell for a spot check:
 }
 ```
 
-`formulon_get_range` returns a sparse list. Blank, formula-free cells are omitted, the requested rectangle is clipped to the sheet's used extent, and the result is capped by `maxCells` (default 10,000, maximum 50,000). The scan rectangle may span at most 100,000 cells after clipping to the used extent. Each returned cell has its A1 address, zero-based coordinates, and a `{kind, ...}` value envelope. `includeFormulas` adds a `formula` string, empty for constants. Numeric cells with a date, currency, or percent format can also carry `numberFormat`, `formatKind`, and a decoded `formatted` value.
+`formulon_get_range` returns a sparse list. The engine enumerates populated cells in the requested rectangle, including formulas and spill cells, and omits styled blanks. The result is capped by `maxCells` (default 10,000, maximum 50,000), with `truncated` only when additional cells exist. The rectangle has no scan-area cap. Each returned cell has its A1 address, zero-based coordinates, and a `{kind, ...}` value envelope. `includeFormulas` adds a `formula` string, empty for constants. Numeric cells with a date, currency, or percent format can also carry `numberFormat`, `formatKind`, and a decoded `formatted` value. Non-General numeric formats include engine display `text` when available; `textStatus` identifies `overflow` or `invalidFormat`.
 
-`formulon_get_cell` accepts exactly one of `sessionId` or `path`. Pass `a1`, or pass `row` and `col`; `sheet` defaults to index `0`. Its default `recalc: true` recalculates a session before reading and therefore marks that session dirty. Set it to `false` for a read that must leave the cached calculation state untouched. A path read is one-shot and does not create a session.
+`formulon_get_cell` accepts exactly one of `sessionId` or `path`. Pass `a1`, or pass `row` and `col`; `sheet` defaults to index `0`. Its default `recalc: true` recalculates a session before reading and therefore marks that session dirty. Set it to `false` for a read that must leave the cached calculation state untouched. A path read is one-shot, does not create a session, and loads without applying `FORMULON_MCP_PROFILE`; use `sessionId` for a locale-dependent read.
 
-`formulon_eval_formula` evaluates one formula without writing a cell. In session mode it resolves workbook references and defined names, and uses `row` and `col` (both default `0`) as the anchor for relative references and `ROW()` / `COLUMN()`. In global mode it evaluates against a fresh default workbook. A leading `=` is optional.
+`formulon_eval_formula` evaluates one formula without writing a cell. In session mode it resolves workbook references and defined names, and uses `row` and `col` (both default `0`) as the anchor for relative references and `ROW()` / `COLUMN()`; it uses that session's profile. In global mode it evaluates against the engine's default profile and cannot use `FORMULON_MCP_PROFILE`, so use a profiled session for locale-dependent formulas. A leading `=` is optional.
 
 ## Mutate cells and structure
 

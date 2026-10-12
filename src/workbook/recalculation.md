@@ -38,7 +38,7 @@ That graph can also be read back. On WASM and Native Node, `precedents(sheet, ro
 
 ## Full vs partial recalculation
 
-`recalc()` walks every dirty cell in topological order. `partialRecalc()` — available on WASM, Native Node, and Python — recomputes dirty formula cells needed to make the requested viewport current, including their transitive precedents. Dirty cells outside that dependency closure remain pending. Pass the output cells you want to display; use `recalc()` to update the whole workbook.
+`recalc()` walks every dirty cell in topological order. `partialRecalc()` — available on WASM, Native Node, and Python — recomputes dirty formula cells needed to make the requested viewport current, including their transitive precedents. Dirty cells outside that dependency closure, including dependents of cells just recomputed, remain dirty and keep their previous cached values. A later full recalc or a partial recalc whose closure includes them refreshes them. Pass the output cells you want to display; use `recalc()` to update the whole workbook.
 
 The viewport bounds are inclusive. For example, if `B1` refers to `A1` and `C1` refers to `B1`, pass `B1:C1` after changing `A1` so both displayed results become current:
 
@@ -83,7 +83,19 @@ const now = pin.now
 checkStatus(wb.clearPinnedNow())
 ```
 
-The pin uses local civil fields rather than a timestamp, so it has no residual timezone interpretation. `setPinnedNow()` rejects a year outside 1900–9999, a month outside 1–12, an invalid day for that month, an hour outside 0–23, or a minute / second outside 0–59; it does not roll invalid fields into another date. Setting or clearing the pin does not recompute cached formula values, so call `recalc()` after changing it. The pin is model state, not file state: saving does not record it and a reloaded workbook follows the host clock until pinned again.
+The pin uses local civil fields rather than a timestamp, so it has no residual timezone interpretation. `setPinnedNow()` rejects a year outside 1900–9999, a month outside 1–12, an invalid day for that month, an hour outside 0–23, or a minute / second outside 0–59; it does not roll invalid fields into another date. Setting or clearing the pin marks every formula cell dirty and clears affected derived PivotTable results, but does not recompute cached values until `recalc()` runs. The pin is model state, not file state: saving does not record it and a reloaded workbook follows the host clock until pinned again.
+
+## Workbook-wide invalidation
+
+Changing iterative-calculation options, the Excel compatibility profile, the 1904 date system, or the pinned clock marks every formula cell dirty. Context-dependent changes also clear derived PivotTable results that depend on them. Call `recalc()` to refresh the formulas and any dependent pivot results; setting an identical effective value is a no-op.
+
+## Calculation settings and file persistence
+
+Calc mode and iterative settings are workbook state while the workbook is open. XLSX stores them in `<calcPr>`, but the XLSB writer does not emit calculation settings. Saving an XLSB with manual calculation or iterative calculation enabled adds one `deferredFeatureCount` entry per setting; reopening uses automatic calculation with iteration disabled. See [File formats](/workbook/file-formats) for the other XLSB omissions and passthrough rules.
+
+## Recovering a missing-sheet reference
+
+A formula entered while a referenced sheet is absent initially evaluates to `#REF!`. Adding that sheet, or renaming an existing sheet into the referenced name, reparses the affected formulas and rebuilds their dependencies. After values are written, the next `recalc()` produces the result and later edits continue to propagate. Recovery covers direct references, ranges, 3-D spans, defined-name aliases, and spill references; unrelated spills remain intact.
 
 ## `INDIRECT` and R1C1 references
 
@@ -107,7 +119,7 @@ checkStatus(wb.recalc())
 
 `setIterativeProgress()` registers a callback that fires after every Gauss-Seidel sweep over the cyclic subgraph; it does not take iteration-limit arguments — those are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only: Python's `set_iterative()` takes the same three arguments, but the per-sweep progress callback is not bound (it would need a native function pointer that the Python host cannot synthesize).
 
-`getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes the same read-back as `get_iterative()`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
+`getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes `get_iterative()` as an `IterativeSettings` record with `enabled`, `max_iterations`, and `max_change`; failures raise `FormulonError`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
 
 ::: warning Cycles outside iteration need inspection
 If iterative calculation is **off**, an ordinary unresolved cycle produces `#REF!`. A cycle that closes through dynamic references such as `OFFSET` or `INDIRECT` may retain its prior cached values instead. Cycle statistics identify the affected cells; neither case is a host exception. Turn iteration on explicitly when cycles are intentional.

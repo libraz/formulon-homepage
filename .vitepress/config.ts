@@ -2,13 +2,16 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+import { loadDemoPackageAliases } from '../scripts/demo-package-aliases.mjs'
+import facts from '../src/data/facts.json'
 import { generateLlmsTxt, type LlmsLocale, llmsDevPlugin } from './llms'
 
 const siteUrl = 'https://formulon.libraz.net'
 const githubUrl = 'https://github.com/libraz/formulon'
-const docsVersion = '0.12.0'
+const docsVersion = facts.docsVersion
 const docsVersionTag = `v${docsVersion}`
 const changelogUrl = `${githubUrl}/blob/main/CHANGELOG.md`
+const demoPackageConfig = loadDemoPackageAliases()
 
 const applyCrossOriginIsolationHeaders = (
   _req: unknown,
@@ -21,18 +24,30 @@ const applyCrossOriginIsolationHeaders = (
 }
 
 // Rollup cannot statically analyse the Emscripten pthread spawn site, so the
-// options argument is marked with @vite-ignore. The spawn site moved between
+// options arguments are marked with @vite-ignore. The spawn site moved between
 // engine versions: older builds used dist/formulon.js, while newer builds use
-// that file as a thin ESM shim and place the generated module in dist/formulon_core.js.
-// Both filenames are patched so either layout — including the nested copy
-// formulon-cell may carry — is covered.
+// thin ESM shims and place generated modules in dist/*_core.js. Include both
+// registry installs and unpacked local snapshots.
 const patchFormulonWorkerOptions = () => {
   const distFiles = [
     'node_modules/@libraz/formulon/dist/formulon.js',
     'node_modules/@libraz/formulon/dist/formulon_core.js',
+    'node_modules/@libraz/formulon/dist/formulon_threads.js',
+    'node_modules/@libraz/formulon/dist/formulon_threads_core.js',
     'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon.js',
-    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_core.js'
+    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_core.js',
+    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_threads.js',
+    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_threads_core.js'
   ]
+  const localFormulonRoot = demoPackageConfig.packageRoots.get('@libraz/formulon')
+  if (localFormulonRoot)
+    for (const file of [
+      'formulon.js',
+      'formulon_core.js',
+      'formulon_threads.js',
+      'formulon_threads_core.js'
+    ])
+      distFiles.push(resolve(localFormulonRoot, 'dist', file))
   const files = distFiles.map((file) => resolve(process.cwd(), file))
 
   for (const file of files) {
@@ -47,6 +62,10 @@ const patchFormulonWorkerOptions = () => {
       .replaceAll(
         'new Worker(new URL("formulon.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
         'new Worker(new URL("formulon.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
+      )
+      .replaceAll(
+        'new Worker(new URL("formulon_threads_core.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
+        'new Worker(new URL("formulon_threads_core.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
       )
     // In the shim layout the pthread worker must boot the generated module
     // itself: bundled through the side-effect-free shim, the worker is empty.
@@ -189,6 +208,7 @@ const compatibilitySidebar = [
       { text: 'Overview', link: '/compatibility/' },
       { text: 'Compatibility model', link: '/compatibility/model' },
       { text: 'Locale profiles', link: '/compatibility/locale-profiles' },
+      { text: 'Text comparison and sorting', link: '/compatibility/text-collation' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
       { text: 'File format support', link: '/compatibility/file-format-support' },
       { text: 'Error model', link: '/compatibility/errors' },
@@ -204,8 +224,12 @@ const workbookSidebar = [
     items: [
       { text: 'Overview', link: '/workbook/' },
       { text: 'Formula engine', link: '/workbook/formula-engine' },
+      { text: 'Formula language', link: '/workbook/language' },
       { text: 'Recalculation', link: '/workbook/recalculation' },
       { text: 'Operations', link: '/workbook/operations' },
+      { text: 'Presentation and geometry', link: '/workbook/presentation' },
+      { text: 'Filters and validation', link: '/workbook/filters-validation' },
+      { text: 'Comments and images', link: '/workbook/comments-images' },
       { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' },
       { text: 'File formats', link: '/workbook/file-formats' },
       { text: 'PivotTables', link: '/workbook/pivots' },
@@ -224,6 +248,7 @@ const cellSidebar = [
       { text: 'Bundler setup', link: '/cell/bundler' },
       { text: 'Options', link: '/cell/options' },
       { text: 'Platform and Mac UI', link: '/cell/platform' },
+      { text: 'Language switching', link: '/cell/language-switching' },
       { text: 'Embedding guide', link: '/cell/embedding' },
       { text: 'Modals and fullscreen', link: '/cell/modals' },
       { text: 'Extensions', link: '/cell/extensions' },
@@ -341,6 +366,7 @@ const jaCompatibilitySidebar = [
       { text: '概要', link: '/ja/compatibility/' },
       { text: '互換性モデル', link: '/ja/compatibility/model' },
       { text: 'ロケールプロファイル', link: '/ja/compatibility/locale-profiles' },
+      { text: '文字列の比較と並べ替え', link: '/ja/compatibility/text-collation' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'エラーモデル', link: '/ja/compatibility/errors' },
@@ -356,8 +382,12 @@ const jaWorkbookSidebar = [
     items: [
       { text: '概要', link: '/ja/workbook/' },
       { text: '数式エンジン', link: '/ja/workbook/formula-engine' },
+      { text: '数式の言語', link: '/ja/workbook/language' },
       { text: '再計算', link: '/ja/workbook/recalculation' },
       { text: '操作', link: '/ja/workbook/operations' },
+      { text: '表示とレイアウト', link: '/ja/workbook/presentation' },
+      { text: 'フィルターと入力規則', link: '/ja/workbook/filters-validation' },
+      { text: 'コメントと画像', link: '/ja/workbook/comments-images' },
       { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
       { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
       { text: 'ピボットテーブル', link: '/ja/workbook/pivots' },
@@ -376,6 +406,7 @@ const jaCellSidebar = [
       { text: 'バンドラ設定', link: '/ja/cell/bundler' },
       { text: '設定オプション', link: '/ja/cell/options' },
       { text: 'プラットフォームと Mac UI', link: '/ja/cell/platform' },
+      { text: '言語切り替え', link: '/ja/cell/language-switching' },
       { text: '埋め込みガイド', link: '/ja/cell/embedding' },
       { text: 'モーダルと全画面表示', link: '/ja/cell/modals' },
       { text: '拡張機能', link: '/ja/cell/extensions' },
@@ -501,9 +532,10 @@ export default defineConfig({
       // `@` points at the content root, so app-level code (the live-engine
       // demo components) sits beside the pages that embed it while
       // .vitepress/theme keeps only theme integration and presentation.
-      alias: {
-        '@': fileURLToPath(new URL('../src', import.meta.url))
-      }
+      alias: [
+        ...demoPackageConfig.aliases,
+        { find: '@', replacement: fileURLToPath(new URL('../src', import.meta.url)) }
+      ]
     },
     plugins: [
       llmsDevPlugin({ siteUrl, locales: LLMS_LOCALES }),
@@ -533,6 +565,7 @@ export default defineConfig({
       }
     },
     optimizeDeps: {
+      include: ['zustand/vanilla'],
       exclude: ['@libraz/formulon', '@libraz/formulon-cell']
     },
     build: {

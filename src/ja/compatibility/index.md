@@ -10,10 +10,11 @@ Formulon は互換性を、確認して再現できる性質として扱いま�
 
 1. [数式カバレッジ](/ja/compatibility/formula-coverage) と数式を照合する。
 2. [ファイル形式サポート](/ja/compatibility/file-format-support) でワークブック構造を確認する。
-3. [エラーモデル](/ja/compatibility/errors) でセルエラーとホスト側エラーの扱いを確認する。
+3. [ロケールプロファイル](/ja/compatibility/locale-profiles) を固定し、比較・並べ替え・検索が重要なら [テキスト照合](/ja/compatibility/text-collation) を確認する。
+4. [エラーモデル](/ja/compatibility/errors) でセルエラーとホスト側エラーの扱いを確認する。
 
 ::: info 現在の状態
-Formulon はまだ pre-1.0 です。関数カタログは 523 件を認識し、**508** 件が実装済み（環境依存の `CELL` と `INFO` を含む）、残り **15** 件が意図的な外部サービススタブです。API は変わる可能性があるため、結果が重要な場合はバージョンを固定し、小さなワークブック検証ファイルを持ってください。
+Formulon はまだ pre-1.0 です。関数カタログは 526 件を認識し、**511** 件が実装済み（環境依存の `CELL` と `INFO` を含む）、残り **15** 件が意図的な外部サービススタブです。API は変わる可能性があるため、結果が重要な場合はバージョンを固定し、小さなワークブック検証ファイルを持ってください。
 :::
 
 ## 確認領域
@@ -22,5 +23,7 @@ Formulon はまだ pre-1.0 です。関数カタログは 523 件を認識し、
 | --- | --- |
 | 数式関数 | ローカル実装数、外部サービススタブ、検証ガイダンスを [数式カバレッジ](/ja/compatibility/formula-coverage) で確認 |
 | ファイル | 読み込み / 書き出し / 保持の境界を [ファイル形式サポート](/ja/compatibility/file-format-support) で確認 |
+| ロケールと言語 | 28 個のプロファイル ID、ロケール事実、数式ローカライズ、実行時エディターリンクを [ロケールプロファイル](/ja/compatibility/locale-profiles) と [ワークブックの言語](/ja/workbook/language) で確認 |
+| テキスト挙動 | Mac の実測照合、Windows のバイト順、関数ごとの強度を [テキスト照合](/ja/compatibility/text-collation) で確認 |
 | エラー | `#VALUE!`、`#REF!`、パーサー失敗、ホスト例外の扱いを [エラーモデル](/ja/compatibility/errors) で確認 |
-| 現在の状態 | Pre-1.0 の API、508 / 523 件の実装済み関数、数式レベルおよびワークブック単位の Oracle 検証 |
+| 現在の状態 | Pre-1.0 の API、511 / 526 件の実装済み関数、ロケール別の数式 Oracle、ワークブック単位の Oracle 検証 |

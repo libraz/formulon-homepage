@@ -66,7 +66,7 @@ The Mac Function Arguments palette is nonmodal. Opening it suspends an inline or
 
 Use `openFunctionArguments(seedName?, { category })` to open it from host UI. `category` is ignored when `seedName` names a function; supported categories include `all`, `recent`, `logical`, `lookup`, `text`, `datetime`, `math`, `financial`, `dynamicArray`, `statistical`, `engineering`, `information`, `database`, `compatibility`, `cube`, and `web`.
 
-`getFunctionArgumentHelp` receives the canonical function name, a zero-based argument index, and the active locale. An omitted `label` uses the catalog argument label. Descriptions and reference links come from the host provider. The palette reads the help link from the result for argument index `0`; object property order has no effect.
+`getFunctionArgumentHelp` receives the canonical function name, a zero-based argument index, and the active locale. An omitted `label` uses the catalog argument label. Descriptions and reference links come from the host provider. The palette reads the help link from the result for argument index `0`; object property order has no effect. Reference URLs must use an allowed scheme (`http:`, `https:`, `mailto:`, or `tel:`); relative paths are not shown as links.
 
 ```ts
 import { Spreadsheet, type FunctionArgumentHelpProvider } from '@libraz/formulon-cell'
@@ -79,7 +79,9 @@ const getFunctionArgumentHelp: FunctionArgumentHelpProvider = (
   if (functionName.toUpperCase() !== 'SUM' || argumentIndex !== 0) return null
   const japanese = locale.toLowerCase().startsWith('ja')
   return {
-    url: japanese ? '/ja/workbook/formula-engine' : '/workbook/formula-engine',
+    url: japanese
+      ? 'https://formulon.libraz.net/ja/workbook/formula-engine'
+      : 'https://formulon.libraz.net/workbook/formula-engine',
     label: japanese ? '数値' : 'numbers',
     description: japanese ? '加算する値または範囲です。' : 'The values or range to add.',
   }

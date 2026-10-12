@@ -11,7 +11,7 @@ A repo-internal test runner that evaluates shared fixtures across every availabl
 Create `model.formulas.txt` and `model.values.txt` in the repository, then commit them before enabling this check. `git diff` does not compare untracked files. A CI job can fail fast with `git ls-files --error-unmatch model.formulas.txt model.values.txt`.
 
 ```sh
-formulon dump --formulas model.xlsx > model.formulas.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > model.formulas.txt
 git diff --exit-code model.formulas.txt
 ```
 
@@ -20,7 +20,7 @@ This catches formula edits without depending on cached calculated values. The du
 ## Snapshot recalculated values
 
 ```sh
-formulon dump --values model.xlsx > model.values.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
@@ -56,7 +56,7 @@ The parity runner checks that *our own* surfaces agree with each other. The [ora
 
 Avoid direct snapshots for formulas that include volatile functions such as `NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` unless the fixture controls or documents the volatility. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O in this engine; they return a fixed unavailable Excel error. See [formula coverage](/compatibility/formula-coverage) for the list. Snapshot those errors as intentional compatibility behavior or exclude the cells.
 
-For volatile-heavy workbooks, snapshot the formulas only (`dump --formulas`) and verify representative cells through a script that asserts ranges or shapes rather than exact values.
+For volatile-heavy workbooks, snapshot the formulas only (`dump --formulas`) and verify representative cells through a script that asserts ranges or shapes rather than exact values. The fixed `--profile` and `--now` flags still make the command's locale and clock inputs explicit; the clock does not affect formula-only output.
 
 ## Read next
 

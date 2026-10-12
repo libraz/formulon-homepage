@@ -11,6 +11,8 @@ description: ブラウザアプリケーションに Excel 風の表計算 UI �
 
 このページのデモでは、表示する周辺 UI、操作権限、表示・移動できるセル範囲を個別に設定できます。
 
+cell パッケージの現行リリースは `0.9.0` です。コアとアダプターは同じバージョンでインストールしてください。このリリースは `@libraz/formulon@0.15.1` を使い、Node.js 22 以降が必要です。固定したインストールコマンドは [インストール](/ja/cell/install) にあります。
+
 ## パッケージ
 
 | パッケージ | 用途 |
@@ -83,6 +85,7 @@ const instance = await Spreadsheet.mount(host, {
 - [バンドラ設定](/ja/cell/bundler) — 現在の Vite 設定とアセット確認。
 - [オプション](/ja/cell/options) — UI プロファイル、機能スイッチ、ポリシー、ビューポート、メニュー、実行時変更。
 - [プラットフォームと Mac UI](/ja/cell/platform) — `default`、`mac`、`auto` の選択と Mac 専用 UI。
+- [言語を切り替える](/ja/cell/language-switching) — UI 辞書、ワークブックプロファイル、数式文字列、ホスト側コントロールを同期します。
 - [埋め込み](/ja/cell/embedding) — ビューアー、フォーム、カスタム UI、ホスト更新。
 - [モーダルとダイアログ](/ja/cell/modals) — オーバーレイの配置とダイアログ起動メソッド。
 - [フレームワークアダプター](/ja/cell/frameworks) — React と Vue の利用方法。

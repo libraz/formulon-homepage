@@ -38,7 +38,9 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-`ui.features` では `ribbon`、`formulaBar`、`sheetTabs`、`statusBar`、`contextMenu`、`formatDialog`、`comments`、`charts`、`print`、`clipboard` などの UI スイッチを指定します。低レベルの機能フラグ名を指定する場合は `ui.advancedFeatures` またはトップレベルの `features` を使います。`openDataValidationDialog()` を使うには `formatDialog: true` が必要です。`validation` はセル入力の検証補助やリストのドロップダウンを制御します。
+`ui.features` では `ribbon`、`formulaBar`、`sheetTabs`、`statusBar`、`contextMenu`、`formatDialog`、`comments`、`charts`、`print`、`clipboard`、`localeSwitcher` などの UI スイッチを指定します。低レベルの機能フラグ名を指定する場合は `ui.advancedFeatures` またはトップレベルの `features` を使います。`openDataValidationDialog()` を使うには `formatDialog: true` が必要です。`validation` はセル入力の検証補助やリストのドロップダウンを制御します。
+
+`localeSwitcher` はホスト側が言語メニューを管理できるように、full UI プロファイルを含めて初期状態では無効です。`ui.features.localeSwitcher: true`、またはマウント後の `instance.setFeatures({ localeSwitcher: true })` で有効にできます。`policy` が有効な場合、組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに制限されるため、組み込みの言語セレクターも無効になります。ホスト側のコントロールから `instance.setLocale()` を呼んでください。セレクターと切り戻しの流れは [言語を切り替える](/ja/cell/language-switching) にまとめています。
 
 初回マウント時の解決順序は次のとおりです。
 
@@ -213,6 +215,6 @@ instance.setToolbar(nextToolbar)
 instance.setTheme(nextTheme)
 ```
 
-ラベルはマウント時の `locale` と `strings` で設定し、マウント後のロケール変更には `instance.i18n` を使います。ホスト側のエラー画面には `onError` を使い、ホストやフレームワーク側でフォールバックを描画する場合は `renderError: false` を指定します。
+ラベルはマウント時の `locale` と `strings` で設定し、マウント後のロケール変更には `instance.setLocale()` を使います。辞書の登録とラベルの更新には `instance.i18n` を使います。戻り値とプロファイル同期は [言語を切り替える](/ja/cell/language-switching) を参照してください。ホスト側のエラー画面には `onError` を使い、ホストやフレームワーク側でフォールバックを描画する場合は `renderError: false` を指定します。
 
 オプションの全項目は、配布パッケージの型宣言を参照してください。このページでは埋め込みでよく使う組み合わせを説明します。

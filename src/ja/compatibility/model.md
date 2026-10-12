@@ -29,7 +29,7 @@ Oracle テストでは、検証用ワークブックを再計算し、Excel か�
 
 ## プロファイル
 
-主要プロファイルは `win-365-ja_JP` です。データが揃っている範囲で Mac Excel 365 ja-JP も追跡します。英語ロケールのプロファイルは、対応するゴールデンデータを備えるまで公開しません。
+Formulon のプロファイルは `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}` の 28 種類で、既定は `win-365-en_US` です。14 個の Mac プロファイルは、CI のゲートになる Mac Excel 365 の数式 Oracle で実測しています。`mac-365-ja_JP` が主プロファイルで、ほかの 13 ロケールにも専用ゴールデンがあります。`win-365-ja_JP` は Windows で実測したワークブック Oracle のプロファイルで、ほかの 13 個の Windows プロファイルは Mac の取得結果と測定済みの Mac / Windows ホスト差から推定しています。
 
 公開リストと固定方法は [ロケールプロファイル](/ja/compatibility/locale-profiles) を参照してください。
 
@@ -56,5 +56,8 @@ Oracle テストでは、検証用ワークブックを再計算し、Excel か�
 ## 次に読むもの
 
 - [ロケールプロファイル](/ja/compatibility/locale-profiles) ─ プロファイル一覧
+- [テキスト照合](/ja/compatibility/text-collation) ─ 比較、並べ替え、検索の強度
+- [ワークブックの言語](/ja/workbook/language) ─ 数式テキストと関数名のローカライズ
+- [セルの言語切り替え](/ja/cell/language-switching) ─ エディター言語の実行時切り替え
 - [Oracle テスト](/ja/compatibility/oracle-testing) ─ プロファイルをどう検証するか
 - [対象外の機能](/ja/compatibility/non-goals) ─ 互換性が意図的にカバーしない範囲

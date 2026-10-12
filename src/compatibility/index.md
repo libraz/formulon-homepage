@@ -10,10 +10,11 @@ Formulon treats compatibility as something you can inspect and reproduce. Use th
 
 1. Compare formulas against [Formula coverage](/compatibility/formula-coverage).
 2. Check workbook structures in [File format support](/compatibility/file-format-support).
-3. Review [Error model](/compatibility/errors) so spreadsheet errors and host failures are handled separately.
+3. Pin the target in [Locale profiles](/compatibility/locale-profiles), then check [Text collation](/compatibility/text-collation) when comparisons, sorting, or lookup results matter.
+4. Review [Error model](/compatibility/errors) so spreadsheet errors and host failures are handled separately.
 
 ::: info Current status
-Formulon remains pre-1.0. Of the **523** recognized names, **508** are real implementations, including the 2 environment-bound functions (`CELL`, `INFO`), and **15** are intentional unavailable service stubs. APIs can still change, so pin versions and keep a small workbook fixture set when results matter.
+Formulon remains pre-1.0. Of the **526** recognized names, **511** are real implementations, including the 2 environment-bound functions (`CELL`, `INFO`), and **15** are intentional unavailable service stubs. APIs can still change, so pin versions and keep a small workbook fixture set when results matter.
 :::
 
 ## Coverage areas
@@ -22,5 +23,7 @@ Formulon remains pre-1.0. Of the **523** recognized names, **508** are real impl
 | --- | --- |
 | Formula functions | Local implementation count, service stubs, and validation guidance in [Formula coverage](/compatibility/formula-coverage) |
 | Files | Read / write / preserve boundaries in [File format support](/compatibility/file-format-support) |
+| Locale and language | The 28 profile IDs, locale facts, formula localization, and runtime editor links in [Locale profiles](/compatibility/locale-profiles) and [Workbook language](/workbook/language) |
+| Text behavior | Mac measured collation, Windows byte order, and per-function strength in [Text collation](/compatibility/text-collation) |
 | Errors | `#VALUE!`, `#REF!`, parser failures, and host exceptions in [Error model](/compatibility/errors) |
-| Status | Pre-1.0 APIs, 508 / 523 real function implementations, formula plus workbook oracle verification |
+| Status | Pre-1.0 APIs, 511 / 526 real function implementations, locale-specific formula oracles, and workbook oracle verification |

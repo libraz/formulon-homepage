@@ -96,9 +96,25 @@ with Workbook.create_default() as wb:
 `setFormula()` only mutates the model. The result is `Blank` until `recalc()` (or `partialRecalc()`) is called. Hosts that read values after edits should always trigger a recalc.
 :::
 
+## Inspect a range
+
+`getFormula(sheet, row, col)` returns the stored A1 text verbatim; a leading `=` is included only when it is present in the stored text. `getFormulaR1C1()` parses the stored formula and formats it relative to the cell without a leading `=`. Both JavaScript bindings return `{ status, formula }`, with `formula: null` when no formula is stored. Python uses `get_formula()` and `get_formula_r1c1()` and returns the string or `None`.
+
+Public formula setters reject a malformed non-empty formula before mutating the workbook. Cell formulas, defined names, conditional-format formulas, and data-validation formulas report `kParserUnexpectedToken` (1000) through the C and JavaScript status result; Python raises its host-side error. A malformed formula that was already stored in an input file is preserved verbatim for round-trip, evaluates to `#NAME?`, and makes `getFormulaR1C1()` return `kParserUnexpectedToken`; formula setters never create that state.
+
+`getCellsInRange(sheet, range, cursor, limit)` returns `{ status, cells, nextCursor }` in row-major order. Each entry has `row`, `col`, `formula`, and the current cached `value`. The inclusive `range` has `firstRow`, `firstCol`, `lastRow`, and `lastCol`. Omit the cursor for the first page, then pass back `nextCursor` until it is `null`. Omitted or zero `limit` means at most 65,536 entries. Populated cells include formulas, non-blank values, and spill phantoms; styled blanks are not included. Recalculate before enumeration when current formula values are needed.
+
+Python's `get_cells_in_range(sheet, cell_range, cursor=None, limit=None)` takes a `MergeRange` and returns `(cells, next_cursor)`; completion is `None`. Treat cursors as continuation tokens, not page numbers. JavaScript cursors must be non-negative safe integers. `getMergesInRange()` / `get_merges_in_range()` lists merges intersecting a rectangle.
+
+`getExternalLinks()` / `get_external_links()` enumerate the external-link records in document order; the C layer exposes `fm_workbook_external_link_count` and `fm_workbook_external_link_at`. Entering a bracket- or path-spelled reference to an unregistered external book from a cell, defined name, conditional-format rule, or data-validation rule appends a record without renumbering existing links. A book already present in any letter case is reused.
+
+`cellCount(sheet)` and `cellAt(sheet, idx)` enumerate written coordinates, including cells written by value, formula, or format setters and `setBlank`, plus spill phantoms. Clearing a cell keeps its slot; unwritten gaps are not counted. Indices are dense in `[0, cellCount)` and ordered by `(row, col)`. Python's `iter_cells()` and the C functions `fm_workbook_cell_count` / `fm_workbook_cell_at` follow the same contract. Do not mutate the sheet during enumeration.
+
 ## Structure
 
 Row and column insert / delete operations rewrite affected formulas automatically:
+
+Inserting columns shifts existing coordinates without creating stored blank cells in the new columns, so the inserted gaps do not increase `cellCount`.
 
 ```ts
 wb.insertRows(/*sheet*/ 0, /*startRow*/ 5, /*count*/ 2)
@@ -134,9 +150,15 @@ WASM, Native Node, and Python expose workbook operations such as:
 
 Conditional-format rule creation (`addConditionalFormat()` / `fm_sheet_cf_add_rule`) also returns the new rule's flattened index, which makes host-side UI selection and follow-up edits easier.
 
-A newly created workbook starts with Excel's minimum style table: font, border, and cell-style index `0`, plus fill index `0` (`none`) and `1` (`gray125`). The first `addFont()` or `addBorder()` therefore returns `1`, and the first `addFill()` returns `2`. Always use the returned index instead of assuming a new style table starts empty.
+`Workbook.createDefault()` (and `fm_workbook_create`) starts with Excel's minimum style table: font, border, and cell-style index `0`, plus fill index `0` (`none`) and `1` (`gray125`). The first non-duplicate `addFont()` or `addBorder()` then returns `1`, and the first new `addFill()` returns `2`. `createForProfile()` may already have a phonetic font at index `1` for a CJK locale, so always use the returned index instead of assuming a new style table starts empty.
 
-`setDefaultFont()` replaces font slot `0`, which every unstyled cell uses. `setFont()` replaces any existing font slot in place. `FontRecord.scheme` preserves its theme-font link on load and save.
+`setDefaultFont()` replaces font slot `0`. `setFont()` replaces any existing font slot in place. `FontRecord.scheme` preserves its theme-font link on load and save. A cell's effective formatting can also come from its row or column; an explicit cell style `0` overrides those defaults and is distinct from an unstyled cell.
+
+`setColumnStyle()` / `set_column_style()` and `setRowStyle()` / `set_row_style()` replace the style XF over an inclusive span. Their `clear` counterparts remove only that style assignment and retain the span's width or height, hidden, and outline attributes. A later value in an unstyled cell can take the column or row style; a row style wins when both cover the cell.
+
+`setCellXfIndex(..., 0)` is an explicit Normal style and still wins over row and column styles. `clearCellXfIndex()` / `clear_cell_xf_index()` removes that direct assignment so a blank cell can inherit its row or column style again; it keeps the value, formula, and comments, and an absent cell stays absent. A non-blank cell keeps owning the default XF. Use `getEffectiveStyle().source` / `get_effective_style().source` to distinguish an inherited style from a direct cell assignment.
+
+`setCellStyle(record)` on WASM and Native Node takes `name`, `xfId`, `builtinId`, `iLevel`, `hidden`, and `customBuiltin`. Python uses `set_cell_style(CellStyle(...))` with snake-case fields. The XF identifies a named-style base, not a cell XF. `removeCellStyle(name)` / `remove_cell_style(name)` removes a named style. See [Presentation and geometry](/workbook/presentation) for themes, resolved colors, effective styles, and display text.
 
 Phonetic guides can be read and written as an ordered set of UTF-16 text spans with `getCellPhoneticRuns()` / `setCellPhoneticRuns()`. `getCellPhoneticProperties()` / `setCellPhoneticProperties()` separately control the ruby font, kana form, and alignment. Writing a cell value clears both its readings and its properties.
 
@@ -146,7 +168,9 @@ WASM and Python can author worksheet tables. WASM uses `createTable()` / `update
 
 Worksheet-level AutoFilter XML is available as an opaque, complete `<autoFilter>` fragment. WASM exposes `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` and Python exposes `get_auto_filter_xml()` / `set_auto_filter_xml()`. Filter criteria, sort state, and extension payloads are preserved verbatim. An empty fragment clears the AutoFilter; a non-empty replacement must be a complete `<autoFilter>` element.
 
-Row and column insert/delete operations move an AutoFilter's `ref` rectangle with the cells it filters and remove the AutoFilter if an edit consumes its entire range. Filter-column criteria offsets are not remapped, so an edit inside the filtered range can leave criteria attached to the old column positions.
+WASM, Native Node, and Python also expose typed sheet and table AutoFilters. Setting criteria does not change row visibility; evaluate them to inspect the result or apply them to hide and unhide rows. See [Filters and validation](/workbook/filters-validation) for the distinction between setting, applying, clearing, and removing filters.
+
+Row and column insert/delete operations move sheet and table AutoFilter ranges with their cells and remove a filter if an edit consumes its entire range. Filter-column offsets shift when columns are inserted or deleted inside the filtered range.
 
 Sheet visibility is a three-state value. WASM and Native Node use `SheetVisibility.Visible`, `Hidden`, and `VeryHidden` with `setSheetVisibility(sheet, visibility)`; Python uses `set_sheet_visibility(sheet, visibility)`. `getSheetView()` / `get_sheet_view()` returns the authoritative `visibility` alongside the legacy two-state `tabHidden`. `setSheetTabHidden(true)` does not demote an already very-hidden sheet; use the three-state setter to make that transition explicit.
 
@@ -156,9 +180,17 @@ WASM and Native Node expose typed setters for page setup, margins, print options
 
 `setRangeXfIndex()` (WASM / Native Node) and `set_range_xf_index()` (Python) apply a cell-style XF index across an inclusive rectangle in one call. Missing cells are materialized as styled blanks, which is useful for ruling an empty report area.
 
+### Attribute-only range styles
+
+`rangeStyleBases()` / `range_style_bases()` lists, in ascending order, every cell XF that some cell of the selection resolves to: the XF of each cell that carries its own, and the row, column, or default (`0`) style of the rest. A selection wholly covered by styled cells does not list `0`, and a column style shadowed everywhere by row styles is not listed. For an attribute-only change, read those bases, build the patched XFs with `addFont()` / `addXf()` (Python: `add_font()` / `add_cell_xf()`), then pass the pairs to `remapRangeStyle()` / `remap_range_style()`. Take a `snapshotRangeStyle()` / `snapshot_range_style()` first when the operation needs an undo path, and pass its bytes to `restoreRangeStyle()` / `restore_range_style()` to restore the style state.
+
+The remap rewrites covered row and column styles and existing cell XFs while leaving values and formulas untouched. A plain finite range materializes every cell; a row, column, or whole-sheet selection materializes only cells whose row-over-column precedence would otherwise change and does not enumerate blank cells on a covered axis. The operation fails without mutation when the mapping arrays differ in length, a source XF repeats, a target is outside the cell-XF table, or more than `1,048,576` cells would be written.
+
 ### Data-validation defaults
 
 When `addValidation()` / `add_validation()` omits `allowBlank`, it defaults to `false` on WASM and Native Node, matching Python. Set `allowBlank: true` (or `allow_blank=True`) when empty cells should be accepted. `showDropDown` (Python: `show_dropdown`) remains the one boolean option whose OOXML meaning is inverted; the host-facing field is normalized.
+
+Use `validateValue()` / `validate_value()` to check a proposed value without storing it, and `listInvalidCells()` / `list_invalid_cells()` to inspect existing violations. The host decides whether to accept an edit; value setters do not enforce validation. See [Filters and validation](/workbook/filters-validation).
 
 ### Conditional-format visuals
 
@@ -179,6 +211,8 @@ Host applications can merge localized function metadata with `mergeFunctionMetad
 ### Pagination
 
 All binding coordinates and output ranges are zero-based. Print-area coordinates are inclusive.
+
+The result also reports paper, margins, printable area, scale, page order, print titles, per-page layouts, and manual-break flags. See [Presentation and geometry](/workbook/presentation) for units and layout behavior.
 
 ::: code-group
 
@@ -242,5 +276,6 @@ The CLI is intentionally narrower. It is a command surface for `eval`, `recalc`,
 ## Read next
 
 - [Recalculation](/workbook/recalculation) — when edits become visible values.
+- [Comments and images](/workbook/comments-images) — threaded comments, persons, drawing objects, and picture anchors.
 - [Surface matrix](/api/surfaces) — what each binding exposes.
 - [Compatibility / Errors](/compatibility/errors) — what edits to expect on malformed input.

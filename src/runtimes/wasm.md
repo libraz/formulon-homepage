@@ -2,7 +2,7 @@
 
 The npm package ships two WASM entry points with the same API. `@libraz/formulon` is the default single-threaded build. It uses ordinary memory and loads in a browser without cross-origin isolation. `@libraz/formulon/threads` is the optional pthread build for parallel recalculation; its browser host needs `SharedArrayBuffer` and cross-origin isolation. The default `formulon-cell` loader uses the serial entry; use the threads entry explicitly when an integration needs workers.
 
-The npm WASM build parses worksheet XML with a DOM parser. It parses one worksheet at a time, so peak parse memory follows the largest worksheet XML part rather than the whole package. The working set must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
+The npm WASM build parses worksheet XML with a DOM parser. It parses one worksheet at a time, so peak parse memory follows the largest worksheet XML part rather than the whole package. The working set must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB. Every surface first inflates the worksheet part into memory whole (the zip reader caps this at 100 MiB per entry and 256 MiB per load), so the CLI's streaming parser skips the DOM tree but not that buffer.
 
 ::: warning Hosting matters
 Browser success depends on server headers, worker format, and bundler behavior. Verify the deployed environment, not only local development.
@@ -37,6 +37,10 @@ const result = Module.evalFormula('=SUM(1,2,3)')
 ```
 
 `createFormulon()` is async. The default entry loads `formulon.wasm`; the threads entry loads `formulon_threads.wasm` and starts its worker pool. Keep the `Module` reference long-lived.
+
+## Select a profile and localize formula text
+
+`Workbook.setExcelProfileId()` controls profile-sensitive evaluation and display behavior. Stored formulas use the English canonical spelling; `localizeFormula()` and `canonicalizeFormula()` convert formula-bar text for a full Excel profile id, and `localeFacts()` exposes the separators, names, date order, currency, and localized error names a UI needs. The profile is runtime workbook state and is not saved into the file, so reapply it after loading. The catalog has 28 ids; all Mac profiles and `win-365-ja_JP` are measured against Excel, while the other 13 Windows profiles use estimated locale data. See the [WASM API](/api/wasm) page for the complete example and result shapes.
 
 ```ts
 import createFormulon from '@libraz/formulon/threads'

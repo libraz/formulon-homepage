@@ -38,7 +38,9 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-Use `ui.features` for named UI switches such as `ribbon`, `formulaBar`, `sheetTabs`, `statusBar`, `contextMenu`, `formatDialog`, `comments`, `charts`, `print`, and `clipboard`. Use `ui.advancedFeatures` or the top-level `features` option when the host needs the lower-level feature flag names.
+Use `ui.features` for named UI switches such as `ribbon`, `formulaBar`, `sheetTabs`, `statusBar`, `contextMenu`, `formatDialog`, `comments`, `charts`, `print`, `clipboard`, and `localeSwitcher`. Use `ui.advancedFeatures` or the top-level `features` option when the host needs the lower-level feature flag names.
+
+`localeSwitcher` is off by default, including in the full UI profile, because a host may own its language menu. Enable it with `ui.features.localeSwitcher: true`, or toggle it after mount with `instance.setFeatures({ localeSwitcher: true })`. An active `policy` restricts built-in UI to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu, so it also disables the built-in language selector; keep a host-owned control and call `instance.setLocale()` instead. The complete selector and rollback flow is in [Language switching](/cell/language-switching).
 
 `openDataValidationDialog()` requires `formatDialog: true`; `validation` controls cell validation assistance and list dropdowns.
 
@@ -215,6 +217,6 @@ instance.setToolbar(nextToolbar)
 instance.setTheme(nextTheme)
 ```
 
-Use `locale` and `strings` at mount time for labels, and `instance.i18n` for locale changes after mount. Use `onError` for a host error surface; set `renderError: false` when the host or framework renders the fallback itself.
+Use `locale` and `strings` at mount time for labels, and `instance.setLocale()` for locale changes after mount. Use `instance.i18n` for dictionary registration and label updates. The return value and profile synchronization are covered in [Language switching](/cell/language-switching). Use `onError` for a host error surface; set `renderError: false` when the host or framework renders the fallback itself.
 
 The shipped package type declarations remain the complete option reference. These pages describe the combinations that are useful when embedding the UI and avoid duplicating every feature flag.

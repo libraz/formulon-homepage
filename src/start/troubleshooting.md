@@ -69,6 +69,8 @@ Excel errors are values. `#DIV/0!`, `#VALUE!`, and `#NAME?` do not mean the host
 
 The CLI follows the same rule for malformed `eval` syntax: `formulon eval '=SUM('` prints `#NAME?` to stdout and exits `0`. Check stdout when a script must reject malformed formula text; a non-zero exit is reserved for usage, IO, or engine failures.
 
+Workbook mutation has a separate parse boundary. `setFormula()` rejects malformed text with the `kParserUnexpectedToken` status and leaves the existing formula and cached value unchanged. A malformed formula already stored in an XLSX or XLSB file can still be loaded; after `recalc()` its cell value is `#NAME?`. This lets a file round-trip while exposing the bad formula to a compatibility check.
+
 ## A validation unexpectedly rejects blank cells
 
 `allowBlank` defaults to `false` when omitted on WASM and Native Node, matching Python. Set `allowBlank: true` (or Python's `allow_blank=True`) when the validation should accept an empty cell.
@@ -88,7 +90,8 @@ The source-tree import expects the staged C-ABI WASM module under `packages/pyth
 Check these first:
 
 - whether the function is an unavailable service stub — registered, but intentionally returning an Excel error, such as `PY` or CUBE connection functions,
-- whether the workbook depends on locale behavior outside `win-365-ja_JP`,
+- whether the workbook depends on locale behavior outside the selected profile (the default is `win-365-en_US`),
+- whether the CLI or host applied the intended full profile id (locale translation uses the profile id, not a numeric locale code),
 - whether volatile functions are involved,
 - whether the workbook structure is preserved but not evaluated.
 

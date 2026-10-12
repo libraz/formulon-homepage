@@ -61,6 +61,8 @@ export function OrderForm() {
 
 アダプターはマウント後のプロパティ変更を動作中のインスタンスへ反映します。`theme`、`locale`、`strings`、`ui`、`features`、`extensions`、`policy`、`viewport`、`contextMenu`、`overlays`、ホスト側のステータスプロパティを変更しても再マウントは必要ありません。`policy` が有効な間は、ほかの機能フラグが有効でも組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに限られます。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。
 
+ホスト側の言語メニューでは、`onReady` で受け取ったインスタンスを保持して `instance.setLocale(next)` を呼びます。UI とワークブックプロファイルをまとめて更新し、編集、表示中のモーダル、検索と置換、コメント編集、フィルターメニュー、プロファイル書き込み、Mac の関数の引数パレットによって切り替えられない場合は `false` を返します。拒否された画面は下書きを保持したまま開いた状態になり、現在のロケールも維持されます。受け付けた変更の後に `onLocaleChange` が発生します。組み込みセレクターは `ui.features.localeSwitcher` で明示的に有効にします。数式、値、失敗時の流れは [言語を切り替える](/ja/cell/language-switching) を参照してください。
+
 ## Vue でのマウント例
 
 Vue パッケージは同じオプションをプロパティとして渡せます。テンプレート内のイベント名は `@cell-change` のようにケバブケースで記述します。
@@ -118,7 +120,8 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 | `contextMenu` | 組み込みメニュー、変換したメニュー、ホスト側メニューを選びます。 |
 | `overlays` | モーダルや全画面表示の中にメニューとダイアログを置きます。 |
 | `workbook` | ホストが読み込んだワークブックを渡します。 |
-| `locale`、`strings` | UI 言語とラベルの上書きを設定します。 |
+| `getWorkbookName` | Watch Window に表示する現在のワークブック名を返します。コールバックはライブに読み取られ、`string`、`null`、`undefined` を返せます。 |
+| `locale`、`strings` | UI 言語とラベルの上書きを設定します。組み込みセレクターは `ui.features.localeSwitcher` で有効にします。 |
 | `features`、`extensions` | 組み込み UI の切り替えと追加機能を設定します。 |
 | `getFunctionArgumentHelp` | Mac のパレットに型付きの引数ラベル、説明、参照 URL を渡します。 |
 | `functions` | マウント前にホスト側の数式関数を登録します。 |
@@ -201,6 +204,7 @@ const activeTab = ref<RibbonTab>('home')
 ## 次に読むページ
 
 - [フックとコンポーザブル](/ja/cell/hooks) — 選択状態、変更通知、言語設定を利用する具体例です。
+- [言語を切り替える](/ja/cell/language-switching) — ホスト API、任意のセレクター、数式プロファイル、切り戻しを説明します。
 - [埋め込み](/ja/cell/embedding) ─ vanilla のマウント、オプション、モーダル配置
 - [プラットフォームと Mac UI](/ja/cell/platform) ─ プラットフォーム、Mac リボン、引数ヘルプ
 - [ホスト統合](/ja/cell/host-integration) ─ 保存、ステータス表示、印刷、ホストコールバック

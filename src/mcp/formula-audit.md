@@ -10,7 +10,7 @@ The audit is a review tool. It does not repair a cell, prove that a formula is c
 
 ## How the comparison works
 
-For each formula, the server creates a relative formula fingerprint. Copied references such as `=B2*C2` and `=B3*C3` therefore share a pattern. A candidate is reported only when neighboring formula peers support one expected pattern on both sides of the candidate. Completely blank rows or columns are hard boundaries: the audit does not use a formula across that boundary as a peer.
+For each formula, the server reads the engine's R1C1 representation relative to that cell and folds case outside double-quoted string literals. String contents remain case-sensitive. Copied references such as `=B2*C2` and `=B3*C3` therefore share a pattern. A candidate is reported only when neighboring formula peers support one expected pattern on both sides of the candidate. Completely blank rows or columns are hard boundaries: the audit does not use a formula across that boundary as a peer.
 
 Include populated input columns in the audited range. In a calculation table with inputs in `B:C` and formulas in `D`, audit `B2:D200`, not only `D2:D200`. The input cells keep each data row populated, so an empty output cell can be distinguished from a blank separator row. Header rows, totals, intentional overrides, and business rules still require human review.
 
@@ -41,7 +41,7 @@ The exact `formulon_audit_formulas` input is:
 | `maxFindings` | `100` by default; an integer from `1` through `500`. |
 | `recalc` | `false` by default. When true, recalculate before reading values and mark the session dirty. |
 
-The complete stored used rectangle is not silently truncated when `range` is omitted. An explicit range is checked by area before scanning. The server still enumerates the sheet's stored cells to discover formulas and rejects a sheet with more than 1,000,000 stored cells; an explicit small range does not bypass that inventory cap.
+The complete stored used rectangle is not silently truncated when `range` is omitted. An explicit range is checked by area before scanning. Without an explicit range, discovering used bounds requires enumerating stored cells and is limited to 1,000,000 cells. An explicit range uses sparse engine reads inside that rectangle and bypasses the sheet-wide inventory cap.
 
 Formula text in one finding is limited to 256 characters, and normalized patterns are limited to 1,024 characters. The corresponding `formulaTextTruncated`, `patternTextTruncated`, and `expectedPatternTextTruncated` fields identify truncation. Text cell values in findings are limited to 256 characters with `textTruncated` when needed.
 
@@ -71,7 +71,7 @@ The result has this shape:
 
 The example uses an abbreviated empty `findings` array only to show the envelope. Each finding includes `type`, `direction`, `directions`, `sheet`, `sheetName`, zero-based `row` and `col`, A1 `a1`, qualified `ref`, current `value`, `count`, `considered`, `nearestSamples`, `confidence`, an `issues` array, and the fixed `reviewNote`. Formula findings also include `formula`; pattern findings include `pattern` and, when a peer pattern exists, `expectedPattern`. `nearestSamples.before` and `.after` contain up to three nearby formula/constant/blank samples with A1 addresses, values, and available formula and pattern text.
 
-`confidence` is the supporting peer ratio rounded to two decimal places and capped at `0.99` for pattern findings. Formula errors use confidence `1`. `unsupportedFormulaCells` counts formulas whose syntax could not be normalized for pattern comparison. Those formulas are excluded from pattern comparisons and reported in `warnings`. `complete: true` means the selected range was scanned; it does not mean every formula was normalized or every finding was returned. Check both `unsupportedFormulaCells` and `findingsTruncated`. The result's `findingsTruncated` flag indicates that more finding groups existed than `maxFindings`; `findingCount` still reports the total groups found.
+`confidence` is the supporting peer ratio rounded to two decimal places and capped at `0.99` for pattern findings. Formula errors use confidence `1`. `unsupportedFormulaCells` counts formulas the engine could not express in R1C1 for pattern comparison. Those formulas are excluded from pattern comparisons and reported in `warnings`. `complete: true` means the selected range was scanned; it does not mean every formula was normalized or every finding was returned. Check both `unsupportedFormulaCells` and `findingsTruncated`. The result's `findingsTruncated` flag indicates that more finding groups existed than `maxFindings`; `findingCount` still reports the total groups found.
 
 ## Reproducible example: review a calculation column
 

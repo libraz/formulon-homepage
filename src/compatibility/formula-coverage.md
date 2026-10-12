@@ -3,29 +3,29 @@
 This page explains which Excel function names Formulon recognizes and which of them execute locally. Internally, it reflects the runtime registry report from `RegistryCatalog.CoverageReport` and the availability annotations in `tools/catalog/function_status.tsv`.
 
 ::: warning Recognized does not mean locally executable
-The 523-function number is the count of Excel function names Formulon recognizes. It includes names that Excel routes to external services or host-specific state, such as `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, translation functions, and CUBE connection functions. Those are recognized deliberately, but they are not local implementations.
+The 526-function number is the count of Excel function names Formulon recognizes. It includes names that Excel routes to external services or host-specific state, such as `COPILOT`, `PY`, `IMAGE`, `RTD`, `STOCKHISTORY`, `WEBSERVICE`, translation functions, and CUBE connection functions. Those are recognized deliberately, but they are not local implementations.
 :::
 
 ## Summary
 
-Formulon recognizes **523** Excel function names: **508 real implementations, including 2 environment-bound (`CELL`, `INFO`), plus 15 unavailable stubs**.
+Formulon recognizes **526** Excel function names: **511 real implementations, including 2 environment-bound (`CELL`, `INFO`), plus 15 unavailable stubs**.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| Real implementation | 508 | Evaluated locally; 2 (`CELL`, `INFO`) depend on workbook or host state |
+| Real implementation | 511 | Evaluated locally; 2 (`CELL`, `INFO`) depend on workbook or host state |
 | Unavailable service stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
-| **Total recognized** | **523** | |
+| **Total recognized** | **526** | |
 
 <DiagramLayers :layers="[
-  { title: '523 recognized function names', nodes: [
-    { label: '508 real implementations', note: 'includes CELL, INFO' },
+  { title: '526 recognized function names', nodes: [
+    { label: '511 real implementations', note: 'includes CELL, INFO' },
     { label: '15 unavailable service stubs', note: 'service/connection dependent' }
   ] }
 ]" />
 
 This is the honest compatibility claim: Formulon has broad local formula coverage, but it does not embed Microsoft 365 cloud services, a Python cloud runtime, an HTTP client, an OLAP cube connection, an RTD COM provider, or Copilot.
 
-The panel below reads that same registry at runtime — `functionNames()` for the index, `functionMetadata(name, locale)` for arity, availability class, and signature — and tallies the availability classes from the engine rather than from this page, so it answers per function what the tables here answer in aggregate. Its try-it field evaluates a call, which is the shortest way to see what a recognized-but-unavailable name actually returns instead of inferring it from the table below.
+The panel below reads that same registry at runtime — `functionNames()` for the index and `functionMetadata(name)` for canonical name, arity, and availability class — and tallies the availability classes from the engine rather than from this page, so it answers per function what the tables here answer in aggregate. Function metadata is locale-invariant: the engine does not ship human-readable signatures or descriptions. A host may merge its own localized help catalog after reading the structural metadata. Its try-it field evaluates a call, which is the shortest way to see what a recognized-but-unavailable name actually returns instead of inferring it from the table below.
 
 <FunctionLookupDemo />
 
@@ -36,7 +36,7 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 | Math & Trig | 81 | Local implementation |
 | Statistical | 149 | Local implementation |
 | Logical | 20 | Local implementation |
-| Text | 51 | Local implementation |
+| Text | 54 | Local implementation |
 | Date & Time | 25 | Local implementation |
 | Lookup & Reference | 39 | Local implementation, including dynamic-array lookup behavior; `IMAGE` and `RTD` are unavailable service stubs |
 | Financial | 56 | Includes `STOCKHISTORY` as an unavailable service stub |
@@ -52,6 +52,12 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 Formula oracle cases check cell values. Pivot tables and print layout need a workbook-level oracle because their behavior is stored in workbook structures, not just formula results.
 
 That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Its goldens carry a capture identifier that pins each capture to a verified Microsoft 365 session. Run the workbook oracle and closure checks against the current checkout before quoting pass or skip counts; those counts change when suites or captures change.
+
+## Function names and localized formula text
+
+The registry uses canonical English names. `functionMetadata(name)` remains the same under every profile, while `localizeFunctionName(name, profileId)` and `localizeFormula(formula, profileId)` produce the spelling a user sees in a selected Excel profile. The inverse methods return canonical names and invariant stored formula text. This separation lets an editor switch language without changing the workbook's stored formula representation. See [Workbook language](/workbook/language) for the conversion boundary and [Cell language switching](/cell/language-switching) for the interactive editor flow.
+
+Do not pass a locale argument to `functionMetadata`; localization is an explicit profile-aware operation. The current profile catalog is in [Locale profiles](/compatibility/locale-profiles).
 
 ## Unavailable service stubs
 
@@ -77,6 +83,8 @@ Use the CLI to inspect a workbook:
 ```sh
 formulon dump --formulas workbook.xlsx > formulas.txt
 ```
+
+For the current oracle checks and their report commands, see [Verification tracks](/compatibility/oracle-testing#verification-tracks).
 
 ## Source of truth
 

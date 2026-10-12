@@ -27,10 +27,12 @@ description: 画面の見本から編集可能なセル配置を作り、上限�
 | `column` | `first`、省略可能な `last`、0 以上の `size`、省略可能な `unit`（`chars`、`pt`、`px`、`mm`）です。`last` の既定値は `first` です。 |
 | `row` | `first`、省略可能な `last`、0 以上の `size`、省略可能な `unit`（`pt`、`px`、`mm`）です。`last` の既定値は `first` です。 |
 | `merge` | 選択したシートの A1 `range` と `operation`（`add` または `remove`）です。 |
-| `style` | A1 `range`、`style` オブジェクト、省略可能な `base`（`existing` または `default`）です。 |
+| `style` | A1 `range`（限定した範囲、`C:C` のような列全体、`1:1` のような行全体）、`style` オブジェクト、省略可能な `base`（`existing` または `default`）です。列全体・行全体はセルを作らず、列・行のスタイルとして適用します。 |
 | `print` | `formulon_print_settings` が受け付ける空でない `settings` オブジェクトです。 |
 
 列幅の既定単位は Excel の文字単位です。行高の既定単位はポイントです。`px` と `mm` は 96 DPI の表示基準で変換し、Excel の文字単位またはポイントで保存します。結果には保存値と、`points`、`pixels`、`mm` を持つ `displayGeometry` が含まれます。
+
+列幅の変換は、エンジンのシートごとの表示用列幅モデルと Normal フォントの校正を使います。ポイントで正の列幅を指定する場合は、モデルの表示用余白を超える必要があります。ゼロは指定できます。行・列の寸法もエンジンから取得し、シートの既定値と非表示状態を反映します。
 
 `style` オブジェクトには `font`（`name`、`size`、`bold`、`italic`、`strike`、`underline`、`vertAlign`、`color`）、`fill`（`color`、`bgColor`、`pattern`）、`border`（`all`、`outline`、`left`、`right`、`top`、`bottom`）、`numberFormat`、`align`（`horizontal`、`vertical`、`wrapText`、`indent`、`textRotation`、`shrinkToFit`）を指定できます。色は `#RRGGBB` または `#AARRGGBB` です。`border.all` は各セルを囲み、`border.outline` は外周だけを描きます。
 
@@ -82,7 +84,7 @@ description: 画面の見本から編集可能なセル配置を作り、上限�
 | 保存する列幅 | Excel の文字単位で 255 |
 | 保存する行高 | 409 ポイント |
 | 行操作で展開される行数 | 10,000 行 |
-| 1 バッチのスタイル対象セル数 | 100,000 セル |
+| 1 バッチのスタイル対象セル数 | 100,000 セル（列全体・行全体は数えません） |
 | 列番号 | 0 から 16,383（`XFD`） |
 | 行番号 | 0 から 1,048,575（Excel の行 1,048,576） |
 
@@ -111,6 +113,8 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 
 `cells` は空でないセルまたは数式セルを最大 500 件まで返します。セルごとのテキストと数式は 256 文字で切り詰め、フラグで切り詰めを示します。`logicalWidth` と `logicalHeight` はポイントです。セルの `x`、`y`、`width`、`height` もポイントです。
 
+`pages` はシート全体のページ情報で、`count`、印刷用 `scale`、`paperWidthPt`、`paperHeightPt`、`landscape`、最大 50 件の A1 `ranges`、`rangesTruncated` を返します。この印刷倍率は、最上位のプレビュー画像用 `scale` とは別です。`objects` には範囲と交差する描画の `objectId`、`kind`、`name`、`rendered` が入ります。印刷設定の取得にも `settings.layout` があり、用紙、ポイント単位の余白、印刷可能領域、倍率、ページ順、改ページ位置と手動フラグ、最大 50 件のページ範囲と `pagesTruncated` を返します。
+
 ### プレビューの上限
 
 プレビューは描画前に次の上限を検査します。
@@ -121,21 +125,87 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 | 拡大後の画像の幅または高さ | 4,096 ピクセル |
 | 拡大後の画像の面積 | 8,000,000 ピクセル |
 | 生成する SVG | 4 MiB |
-| 使用範囲と数式を調べる、保持されているセルの列挙 | 1,000,000 セル |
-| シートから読む結合範囲 | 10,000 |
+| 使用範囲を検出するためのセル列挙 | 1,000,000 セル |
+| 指定範囲と交差する結合範囲 | 10,000 |
+| プレビューと交差する描画オブジェクト | 100 |
+| 埋め込む画像の Base64 文字列の累計 | 2 MiB |
+| メタデータ内のページ範囲 | 50 |
 | メタデータのセル数 | 500 |
 | セルごとのメタデータ文字列 | 256 文字 |
 | 異なる警告メッセージ | 100 |
 
-明示的な範囲でも、数式と使用範囲を調べるため、シートに保持されているセルを列挙します。この列挙上限は範囲を狭くしても変わりません。大きく疎なワークブックでは、プレビュー前に対象を分けるか小さなワークブックを作ります。
+セル列挙の上限は、`range` を省略し、印刷範囲からも対象を決められない場合だけ適用します。範囲を明示すると数式と結合はその矩形内だけを取得するため、範囲外のセルはこの列挙上限に数えません。
 
 ## 描画の近似
 
-プレビューは印刷結果ではなく、ワークシート範囲の描画です。インストール済みのシステムフォントと調整済みの表示寸法を使います。未登録のフォント名やサイズは Calibri 11 の寸法へフォールバックし、近似の警告を追加します。別のマシンでは Excel が別のフォントへ置き換える場合があります。
+プレビューはワークシート範囲の描画です。印刷ページ全体の描画には対応しません。インストール済みのシステムフォントとエンジンの表示寸法を使い、有効なスタイル、テーマ色・インデックス色、表示形式に従うテキストもエンジンが解決します。テーマがない場合や読み取れない場合は、既定の Office テーマを使って警告します。別のマシンでは Excel が別のフォントへ置き換える場合があります。
 
-条件付き書式は適用しません。グラフ、画像、描画、ヘッダー、フッター、ページ余白も描画しません。セルの値、数式の現在値、結合、塗りつぶし、罫線、配置、ページャーが計算した改ページ線を描画します。表示形式、テーマ色やインデックス色、パターン塗り、回転文字、縮小表示、斜め罫線、指数形式の一部は近似され、`warnings` に出る場合があります。既存の描画パーツは読み書きで保持される場合がありますが、このツールで新しいロゴや画像を挿入する API はありません。
+条件付き書式は適用せず、ヘッダー、フッター、ページ余白も描画しません。セルの表示テキスト、結合、塗りつぶし、罫線、配置、ページ計算による改ページ線を描画します。PNG、JPEG、GIF は埋め込み上限内なら画像として描画します。グラフ、図形、BMP、非対応または大きすぎる画像は破線の代替表示になります。パターン塗り、回転文字、縮小表示、斜め罫線は近似です。結果を判断する際は、`warnings` と各オブジェクトの `rendered` を確認してください。
 
 `recalc: true` は描画前に現在の数式値を取得します。再計算でキャッシュ値が変わるため、プレビュー後の読み取りが読み取り専用でもセッションは変更あり（dirty）になります。キャッシュ値を比較対象にする場合は `recalc: false` を使います。
+
+## 画像を挿入・確認する {#images}
+
+先にセッションを開き、20 MiB 以下の既存の PNG、JPEG、GIF、BMP ファイルを用意します。`formulon_image_operation` は選択したシートの、シート名を付けないセル参照へ画像を挿入します。寸法とオフセット（`width`、`height`、`offsetX`、`offsetY`）は `{size,unit?}` で指定し、単位は既定 `pt`、または `px`、`mm` です。片方の寸法だけを指定すると縦横比を保ち、両方省略すると画像のピクセル寸法を 96 DPI で使います。`anchorKind` は `oneCell` または `twoCell` で、`twoCell` は行・列のサイズ変更に追従して伸縮します。挿入では省略すると `oneCell` になります。
+
+挿入結果には `objectId`、元画像の寸法、配置が入ります。一覧は画像、グラフ、図形などを含みますが、取得、移動、並べ替え、削除は画像が対象です。下の `2` は、応答で返された画像 ID に置き換えてください。取得は既知の形式なら画像コンテンツ、続いて JSON メタデータを返します。`outputPath` にはバイト列も書き出せます。
+
+#### `formulon_image_operation`: insert
+
+```json
+{
+  "sessionId": "form-layout",
+  "sheet": "Sheet1",
+  "operation": "insert",
+  "path": "/tmp/logo.png",
+  "anchor": "B2",
+  "width": { "size": 96, "unit": "px" },
+  "name": "Logo",
+  "description": "Company logo"
+}
+```
+
+#### `formulon_image_operation`: list
+
+```json
+{ "sessionId": "form-layout", "operation": "list" }
+```
+
+#### `formulon_image_operation`: get
+
+```json
+{ "sessionId": "form-layout", "operation": "get", "objectId": 2, "outputPath": "/tmp/extracted-logo.png" }
+```
+
+#### `formulon_image_operation`: remove
+
+```json
+{ "sessionId": "form-layout", "operation": "remove", "objectId": 2 }
+```
+
+`move` は、指定した `anchor`、`offsetX`、`offsetY`、`width`、`height`、`anchorKind` だけを変更します。省略した項目は現在の値を保ち、幅か高さの片方だけを指定したときは画像の縦横比を保ちます。画像の ID、名前、代替テキスト、トリミング、回転も変わりません。結果は `{session,sheet,objectId,placed}` です。
+
+#### `formulon_image_operation`: move
+
+```json
+{
+  "sessionId": "form-layout",
+  "operation": "move",
+  "objectId": 2,
+  "anchor": "D4",
+  "width": { "size": 120, "unit": "px" }
+}
+```
+
+`reorder` は `objectId` と、一覧順での移動先 `index` を取ります。一覧順は背面から前面の順なので、`0` が最背面です。結果は `{session,sheet,objectId,index,order}` で、`order` に新しい順序のオブジェクト ID が入ります。
+
+#### `formulon_image_operation`: reorder
+
+```json
+{ "sessionId": "form-layout", "operation": "reorder", "objectId": 2, "index": 0 }
+```
+
+挿入、移動、並べ替え、削除はセッションを変更ありにし、他の描画オブジェクトは保持します。対象範囲のプレビューで配置を確認し、XLSX を明示して保存してください。XLSB 保存では OOXML の描画を省略し、損失として報告します。詳しくは [ファイル形式](/ja/workbook/file-formats#xlsb) を参照してください。プレビュー自体は画像を挿入・削除しません。
 
 ## エンドツーエンド例: スクリーンショットからフォームを再現する
 
@@ -145,13 +215,14 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 提供された申請書のスクリーンショットを、編集可能な Sheet1 のグリッドとして再現してください。タイトルを A1:D1 に置き、列 A は 180 px、列 B:D は 96 px、行 1 は 36 px、行 2:5 は 24 px にします。ラベルと値はワークシートのセルとして保持してください。順序付きの 1 回のバッチでレイアウトを適用し、A1:D5 を /tmp/form-layout.png にプレビューし、セルとメタデータを読み取り、/tmp/form-layout.xlsx に保存してセッションを閉じてください。プレビューは近似であることを明記し、警告を報告してください。
 ```
 
-安定したセッション ID で空のワークブックを開きます。
+後続の `Sheet1` 範囲が意図した最初のシートを指すように、安定したセッション ID と Windows 英語の既定プロファイルを指定して空のワークブックを開きます。別のプロファイルを選ぶ場合は、返されたシート名を使います。
 
 #### `formulon_open_workbook`
 
 ```json
 {
-  "sessionId": "form-layout"
+  "sessionId": "form-layout",
+  "profile": "win-365-en_US"
 }
 ```
 

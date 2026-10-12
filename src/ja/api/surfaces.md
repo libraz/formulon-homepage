@@ -18,7 +18,7 @@
   { title: '実行入口', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: '配列 / CF 評価、コメント、ページ分割に対応' },
+      { label: 'Python (formulon)', note: 'ジオメトリ / テーマ、型付きフィルターと入力規則、コメント / 画像' },
       'CLI (formulon-cli-<os>-<arch>)'
     ]
   },
@@ -38,16 +38,16 @@
 | WASM | 最も広い JS API | `formulon.d.ts`、ブラウザ / Node 対応 |
 | Python | 広いワークブック API | wasmtime で動くラッパー、コンテキストマネージャーによるライフタイム管理 |
 | CLI | 用途を絞ったツール | `eval` / `recalc` / `dump` / `paginate` |
-| Native Node | 共有計算 API | 共有 Workbook メソッドを N-API アドオンで公開。ふりがな、反復設定の読み取り、3 状態の表示状態、印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応。JavaScript バインディングでは、テーブル作成、AutoFilter XML、セルスタイル作成は WASM にのみあります |
+| Native Node | 共有計算 API | 共有 Workbook メソッドを N-API アドオンで公開。ジオメトリとテーマ、型付き AutoFilter、入力規則の検査、コメントと画像、ふりがな、反復設定の読み取り、3 状態の表示状態、印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応。JavaScript バインディングでは、`createTable`、`updateTable`、`removeTable`、AutoFilter XML、`addCellStyleXf` は WASM にのみあります |
 | C ABI | 低レベル API 境界 | 各パッケージが呼び出す共通インターフェース |
 | MCP | エージェント向け API | WASM の上に構築し、許可リストに基づいて呼び出す |
 | `formulon-cell` | UI キット | TypeScript、React、Vue から埋め込める表計算 UI |
 
 ::: info Python のパリティ境界
-Python は配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、ふりがなテキストの取得・設定、コメント列挙（`comment_count()` / `get_comments()`）、`paginate()`、反復設定の読み取り、3 状態のシート表示、型付き印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応し、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()` と反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
+Python はジオメトリ、テーマと実効スタイル、シートとテーブルの型付き AutoFilter、入力規則の検査、配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、ふりがなテキストの取得・設定、コメント列挙（`comment_count()` / `get_comments()`）、画像と描画オブジェクト、`paginate()`、反復設定の読み取り、3 状態のシート表示、型付き印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応し、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()` と反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
 :::
 
-Python は条件付き書式の表示データ、DXF、ピボットのレポートレイアウト、ピボットキャッシュのワークシート参照も公開し、入力規則で `allow_blank` を省略した場合は `False` を使います。
+Python は条件付き書式の表示データ、DXF、ピボットのレポートレイアウト、ピボットキャッシュのワークシート参照も公開し、入力規則で `allow_blank` を省略した場合は `False` を使います。型付きワークブック API の詳細は [表示とレイアウト](/ja/workbook/presentation)、[フィルターと入力規則](/ja/workbook/filters-validation)、[コメントと画像](/ja/workbook/comments-images) を参照してください。
 
 ## 実行入口ごとの結果が食い違ったとき
 

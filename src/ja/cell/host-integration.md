@@ -28,6 +28,24 @@ function downloadWorkbook() {
 
 初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
 
+## Watch Window のワークブック名を更新する
+
+Watch Window にホスト側のファイル名を表示する場合は `getWorkbookName` を渡します。コールバックはパネルの描画時に読み取るため、スプレッドシートを再マウントせずに名前を変更できます。
+
+```ts
+let currentFilename: string | null = 'report.xlsx'
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  getWorkbookName: () => currentFilename,
+})
+
+function renameWorkbook(name: string | null) {
+  currentFilename = name
+  instance.closeWatchWindow()
+  instance.openWatchWindow()
+}
+```
+
 ## ステータスバー {#status-bar}
 
 1 セルの編集には `cellChange`、適用済みのセル更新には `changeBatch` を使います。拒否や変更なしの結果も受け取る場合は、下の例のように `instance.commands.subscribe()` を使います。数式の再計算後にホスト側の集計表示を更新する場合は `recalc` が使えます。

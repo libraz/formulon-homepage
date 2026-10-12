@@ -1,6 +1,6 @@
 # formulon-mcp
 
-`@libraz/formulon-mcp` is a stdio [MCP](https://modelcontextprotocol.io/) server for Formulon. It lets an AI agent inspect and edit `.xlsx` and `.xlsb` workbooks through typed tools. The server uses Formulon's WASM engine in a child process, keeps each open workbook in an isolated session, and writes workbook output when a save tool is called. Preview tools can also write PNG or SVG artifacts.
+`@libraz/formulon-mcp` is a stdio [MCP](https://modelcontextprotocol.io/) server for Formulon. It lets an AI agent inspect and edit `.xlsx` and `.xlsb` workbooks through typed tools. The server uses Formulon's WASM engine in a child process, keeps each open workbook in an isolated session, and writes workbook output when a save tool is called. Preview tools can also write PNG or SVG artifacts. `formulon_image_operation` lists drawing objects and retrieves, inserts, moves, reorders, or removes pictures.
 
 Use it when the workbook itself is the artifact to change: a template to fill, a report to format, a calculation sheet to review, or a table to summarize. A session can read values and formulas, mutate cells and structure, recalculate, render a bounded preview, and save the result without Excel.
 
@@ -14,7 +14,7 @@ MCP (Model Context Protocol) gives an AI client typed tools over a JSON-RPC tran
 | --- | --- |
 | [Workflow](/mcp/workflow) | The open, inspect, mutate, recalculate, preview, save, and close loop; session state; dirty flags; losses; and errors |
 | [Authoring](/mcp/authoring) | Creating an invoice, form, report, or other workbook from blocks and then refining named ranges |
-| [Layout and preview](/mcp/layout-preview) | Matching a reference layout, setting dimensions and print settings, and checking a PNG or SVG preview |
+| [Layout and preview](/mcp/layout-preview) | Matching a reference layout, inserting pictures, setting dimensions and print settings, and checking a PNG or SVG preview |
 | [Formula audit](/mcp/formula-audit) | Finding missing formulas, constants, outliers, and formula errors in a repeated calculation region |
 | [Tables and pivots](/mcp/tables-pivots) | Creating native worksheet Tables and PivotTables from a bounded source range |
 | [Advanced API](/mcp/advanced) | Discovering the installed `Workbook` API before making an allowlisted low-level call |
@@ -50,9 +50,9 @@ The same server also supports these concrete tasks:
 
 ## What the server operates on
 
-The server loads `.xlsx` and `.xlsb` paths, or creates a default workbook with `Sheet1` when no input path is supplied. It delegates workbook calculation and file parsing to `@libraz/formulon`, which is loaded as WASM by the MCP server. The engine version is available through `formulon_version`; documentation does not assume a particular release number.
+The server loads `.xlsx` and `.xlsb` paths, or creates a workbook when no input path is supplied. New workbook defaults, including the sheet name, follow the selected [Excel profile](/mcp/workflow#excel-profile); the default profile creates `Sheet1`. It delegates workbook calculation and file parsing to `@libraz/formulon`, which is loaded as WASM by the MCP server. These pages cover server `0.9.0`; check the installed server and engine versions through `formulon_version`.
 
-Sheet references accept a zero-based sheet index or an exact sheet name. Cell and range coordinates are zero-based when sent as numeric `row` and `col` values. A1 addresses such as `Summary!B2` are easier to read and are accepted by the high-level cell tools. Range readers and preview tools require a bounded rectangular range on one sheet; whole-column, whole-row, and 3-D references are rejected by the MCP A1 parser.
+Sheet references accept a zero-based sheet index or an exact sheet name. Cell and range coordinates are zero-based when sent as numeric `row` and `col` values. A1 addresses such as `Summary!B2` are easier to read and are accepted by the high-level cell tools. Range readers and preview tools require a bounded rectangular range on one sheet; whole-column, whole-row, and 3-D references are rejected by the MCP A1 parser, except that styling (`formulon_style_range` and the `style` operation of `formulon_apply_layout`) takes whole columns and rows.
 
 The tool surface has a high-level path for common work and an advanced path for the installed `Workbook` API. High-level calls validate their input, return domain-shaped JSON, and keep session bookkeeping. `formulon_workbook_call` is limited to an explicit allowlist and should be used after `formulon_workbook_api` has returned the installed signature and declarations.
 

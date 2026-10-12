@@ -2,7 +2,7 @@
 
 WASM パッケージは、同じ API を持つ 2 つのエントリーポイントを公開します。`@libraz/formulon` は単一スレッドの既定ビルドです。通常のメモリを使うため、ブラウザでオリジン間分離なしに読み込めます。`@libraz/formulon/threads` は並列再計算用の任意選択の pthread ビルドで、ブラウザ側では `SharedArrayBuffer` とオリジン間分離が必要です。`formulon-cell` の標準ローダーはシリアル入口を使います。ワーカーが必要な統合だけが threads 入口を明示的に読み込みます。
 
-npm の WASM ビルドはワークシート XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、解析時のピークメモリは最大のワークシート XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML でストリーミングに切り替えます。
+npm の WASM ビルドはワークシート XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、解析時のピークメモリは最大のワークシート XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML でストリーミングに切り替えます。どの実行環境でも、まずワークシートのパートを丸ごとメモリに展開します（zip の展開上限は 1 エントリ 100 MiB、1 回の読み込みで 256 MiB）。そのため CLI のストリーミング解析でも、省けるのは DOM ツリーだけで、展開済みのバッファは保持します。
 
 ::: warning ホスティングが重要
 ブラウザでの成功はサーバーのヘッダー、Worker 形式、バンドラ挙動に依存します。ローカル開発環境だけでなく、デプロイ先で必ず確認してください。
@@ -37,6 +37,10 @@ const result = Module.evalFormula('=SUM(1,2,3)')
 ```
 
 `createFormulon()` は非同期です。既定入口は `formulon.wasm` を取得し、threads 入口は `formulon_threads.wasm` を取得してワーカープールを起動します。`Module` 参照は長寿命にしてください。
+
+## プロファイルを選び、数式テキストをローカライズする
+
+`Workbook.setExcelProfileId()` はプロファイルに依存する評価と表示の挙動を制御します。保存する数式は英語の正規形で、完全な Excel プロファイル ID を指定した `localizeFormula()` / `canonicalizeFormula()` で数式バーのテキストを変換できます。UI に必要な区切り文字、名前、日付順、通貨、ローカライズ済みエラー名は `localeFacts()` から取得します。プロファイルは実行時のワークブック状態でファイルには保存されないため、読み込み後に再設定してください。プロファイルは 28 個あり、すべての Mac プロファイルと `win-365-ja_JP` は Excel との実測値、残り 13 個の Windows プロファイルは推定ロケールデータです。完全な例と戻り値の形は [WASM API](/ja/api/wasm) を参照してください。
 
 ```ts
 import createFormulon from '@libraz/formulon/threads'

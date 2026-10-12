@@ -28,6 +28,7 @@ Each demo runs the real engine in your browser; nothing is sent to a server. Thi
 
 ## formulon-cell UI
 
+- [Dynamic language switching](/cell/language-switching): try seven UI languages on the same workbook, comparing the calculation profile, localized formula, stored formula and results.
 - [Full spreadsheet demo](/cell/demo): edit a seeded workbook, open menus and dialogs, switch themes and platform UI, and change which controls are visible.
 - [Read-only report viewer](/cell/embedding): a fixed viewport that allows only selection and copy.
 - [Fixed-input form](/cell/embedding): a sheet where only designated cells accept input.

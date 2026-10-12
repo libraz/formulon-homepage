@@ -88,7 +88,7 @@ export function SheetWithInspector() {
             <strong>{readyLabel}</strong>
             <label>
               Language
-              <select value={locale} onChange={(event) => instance.i18n.setLocale(event.target.value)}>
+              <select value={locale} onChange={(event) => instance.setLocale(event.target.value)}>
                 <option value="en">English</option>
                 <option value="ja">日本語</option>
               </select>
@@ -195,7 +195,7 @@ const onError = (error: unknown) => {
   mountError.value = error instanceof Error ? error.message : String(error)
 }
 const changeLocale = (event: Event) => {
-  instance.value?.i18n.setLocale((event.target as HTMLSelectElement).value)
+  instance.value?.setLocale((event.target as HTMLSelectElement).value)
 }
 const readyLabel = computed(() => strings.value.statusBar?.ready ?? 'Loading spreadsheet…')
 
@@ -294,7 +294,7 @@ The Vue equivalent uses `watchEffect` and `onCleanup`, as shown in the complete 
 
 ## Use case: localized host controls
 
-Use `useI18n` when a host-owned panel should follow `instance.i18n.setLocale()` or label extensions. The returned dictionary is the same dictionary used by the spreadsheet UI, so a host control can share the active locale without maintaining a second locale subscription.
+Use `useI18n` when a host-owned panel should follow `instance.setLocale()` or label extensions. The returned dictionary is the same dictionary used by the spreadsheet UI, so a host control can share the active locale without maintaining a second locale subscription. Check the boolean returned by `setLocale()` and keep the old selection when a profile or active edit rejects the change; [Language switching](/cell/language-switching) shows the complete flow.
 
 ```tsx
 const { locale, strings } = useI18n(instance)
@@ -305,7 +305,7 @@ return (
     <select
       disabled={!instance}
       value={locale}
-      onChange={(event) => instance?.i18n.setLocale(event.target.value)}
+      onChange={(event) => instance?.setLocale(event.target.value)}
     >
       <option value="en">English</option>
       <option value="ja">日本語</option>

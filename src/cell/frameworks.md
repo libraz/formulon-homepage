@@ -61,6 +61,8 @@ export function OrderForm() {
 
 The adapter applies prop changes to the mounted instance. Changing `theme`, `locale`, `strings`, `ui`, `features`, `extensions`, `policy`, `viewport`, `contextMenu`, `overlays`, or host status props does not require a remount.
 
+For a host-owned language menu, keep the instance from `onReady` and call `instance.setLocale(next)`. It updates the UI and workbook profile together and returns `false` when an edit, visible modal, Find/Replace panel, comment editor, filter menu, profile write, or Mac Function Arguments palette prevents the change; the blocked surface stays open with its draft and the current locale stays active. `onLocaleChange` runs after an accepted change. The built-in selector is opt-in through `ui.features.localeSwitcher`. See [Language switching](/cell/language-switching) for the full formula, value, and failure flow.
+
 When `policy` is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu even when other feature flags are true. See [Options](/cell/options#interaction-policy) for the policy and UI relationship.
 
 ## A complete Vue mount
@@ -120,7 +122,8 @@ Both adapters forward these options to `Spreadsheet.mount()`:
 | `contextMenu` | Keep the built-in menu, transform its items, or hand it to the host. |
 | `overlays` | Keep menus and dialogs inside a modal or fullscreen root. |
 | `workbook` | Mount a workbook loaded or prepared by the host. |
-| `locale`, `strings` | Set the UI language and override labels. |
+| `getWorkbookName` | Return the current workbook name for the Watch Window; the callback is read live and may return `string`, `null`, or `undefined`. |
+| `locale`, `strings` | Set the UI language and override labels. Use `ui.features.localeSwitcher` for the optional built-in selector. |
 | `features`, `extensions` | Toggle built-in UI and add selected extensions. |
 | `getFunctionArgumentHelp` | Supply typed argument labels, descriptions, or reference URLs to the Mac palette. |
 | `functions` | Register host-side formula functions before mount. |
@@ -203,6 +206,7 @@ Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. 
 ## Read next
 
 - [Hooks and composables](/cell/hooks) — selection, edit notifications, and shared language controls.
+- [Language switching](/cell/language-switching) — the host API, optional selector, formula profile, and rollback behavior.
 - [Embedding](/cell/embedding) — vanilla mounting, options, and modal placement.
 - [Platform and Mac UI](/cell/platform) — platform selection, Mac ribbon, and argument help.
 - [Host integration](/cell/host-integration) — saving, status indicators, printing, and host callbacks.

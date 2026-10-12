@@ -12,7 +12,11 @@ Runtimes describe *how* you invoke Formulon; the workbook section describes *wha
 
 - [Lifecycle](/workbook/lifecycle) — how bytes become a workbook model and back.
 - [Formula engine](/workbook/formula-engine) — value kinds, coordinates, function behavior.
+- [Formula language](/workbook/language) — localized formula input, display, and calculation profiles.
 - [Workbook operations](/workbook/operations) — sheets, cells, styles, metadata, structures.
+- [Presentation and geometry](/workbook/presentation) — display text, themes, effective styles, dimensions, and pagination.
+- [Filters and validation](/workbook/filters-validation) — visible rows and proposed-value checks.
+- [Comments and images](/workbook/comments-images) — threaded discussions and anchored pictures.
 - [Recalculation](/workbook/recalculation) — dirty cells, dependencies, iterative settings, partial recalc.
 - [Dynamic arrays](/workbook/dynamic-arrays) — spill behavior and shape-sensitive recalculation.
 - [File formats](/workbook/file-formats) — OOXML, XLSB, and preservation boundaries.

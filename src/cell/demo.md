@@ -17,6 +17,10 @@ The full demo header has a UI platform selector with `Default`, `Mac`, and `Auto
 
 Choose `Mac` to try the Draw tab, the Function Arguments picker with live catalog, families, and Recent, and the Data and Review dialog routes. See [Platform and Mac UI](/cell/platform) for the available actions and limits. Draw ink is session-only and is not saved to `.xlsx`. Hold `Ctrl` or `Cmd` while dragging to add a second selection area, then use `Ctrl+Enter` or `Cmd+Enter` to fill every area. Ribbon formatting, Clear, named styles, and the Format Cells underline selector apply across the selected areas when each area is authorized.
 
+The language selector below the formula bar is the built-in control enabled with `ui.features.localeSwitcher: true`. It switches between English, 日本語, Deutsch, Français, 中文, 한국어, and ไทย, and each change moves the UI dictionary and the calculation profile together while the workbook stays mounted. Choose `Deutsch`, for example, and the ribbon turns German, `B10` displays `=SUMME(B2:B9)`, the `C11` average reads `4373,75`, and the `B12` margin reads `38,8%`. The stored formula is still `=SUM(B2:B9)`. Switching the header's UI platform to `Mac` keeps the chosen language and moves the profile to `mac-de_DE`. See [Language switching](/cell/language-switching) for the locale-to-profile mapping.
+
+Ribbon AutoFit keeps each selected area's cross-axis span. When ranges overlap on the same row or column, the largest fit wins, and one Undo restores the complete action.
+
 ## Try embedding options
 
 Switch UI profiles to change the surrounding controls while keeping the same workbook. The modal example opens formatting and search inside a host dialog.

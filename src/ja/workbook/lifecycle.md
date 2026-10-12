@@ -8,13 +8,52 @@
 パース後のワークブックを表すメモリ上の表現です。シート、セル、スタイル、定義名、テーブルと、再計算を駆動するエンジン状態をまとめます。ホスト API は生バイト列ではなくこのモデルに対して操作します。
 :::
 
+## プロファイルに合わせたワークブックを作成する
+
+`createDefault()` / `create_default()` は、既定の実行時プロファイル `win-365-en_US` と `Sheet1` という 1 枚のシートを持つワークブックを作成します。Excel が指定ロケールで新規作成するテンプレートから始める場合は、WASM または Native Node で `createForProfile(profileId)`、Python で `create_for_profile(profile_id)` を呼び出します。このファクトリはプロファイル、本文フォント、ローカライズされた標準スタイル名と最初のシート名、ページ余白、Mac の行高と基準列幅を設定します。CJK ロケールには、ふりがなフォントと垂直方向中央揃えの標準スタイルも設定します。Mac の既定値は実測値、Windows の既定値は推定値です。テーマパーツは作成せず、エンジンは Office の既定テーマを解決します。
+
+::: code-group
+
+```ts [WASM]
+// Module is initialized with await createFormulon().
+const wb = Module.Workbook.createForProfile('mac-365-ja_JP')
+try {
+  if (!wb.isValid()) throw new Error(Module.lastErrorMessage())
+  console.log(wb.excelProfileId().value, wb.getFont(0).name)
+} finally {
+  wb.delete()
+}
+```
+
+```ts [Native Node]
+import { Workbook } from '@libraz/formulon-native'
+
+const wb = Workbook.createForProfile('mac-365-ja_JP')
+try {
+  console.log(wb.excelProfileId().value, wb.getFont(0).name)
+} finally {
+  wb.dispose()
+}
+```
+
+```python [Python]
+from formulon import Workbook
+
+with Workbook.create_for_profile("mac-365-ja_JP") as wb:
+    print(wb.excel_profile_id(), wb.get_font(0).name)
+```
+
+:::
+
+ロード済みワークブックで `setExcelProfileId()` / `set_excel_profile_id()` を呼び出すと、実行時の計算プロファイルが変わり、依存する状態が再計算待ちになります。新規作成用のフォント、シート名、余白などのテンプレート既定値は適用されません。
+
 ## 開く
 
 ファイル形式層がワークブックのパーツ、リレーションシップ、共有文字列、スタイル、ワークシート、定義名、テーブル、コメント、ハイパーリンク、結合、入力規則、条件付き書式、ピボットキャッシュ、外部リンク表、その他の拡張パーツを読み込みます。意味を解釈しないパーツも保持対象として扱い、保存時に欠落しないようにします。
 
 入力規則はドロップダウン表示状態のフラグ（`show_dropdown`）を公開します。OOXML では `showDropDown` の意味が反転して保存されるため、Formulon はホスト API 向けに正規化し、保存時に正しいパッケージ表現へ戻します。
 
-対応済みの XLSB レコード形式では、ピボットキャッシュ定義、キャッシュレコード、ピボットテーブルの各パーツを OOXML リーダーと同じモデルへ読み込みます。`pivotLayout()` と `GETPIVOTDATA` は対応するキャッシュのレコードを必要に応じて集計・取得しますが、`recalc()` が元シートからピボットキャッシュを再構築することはありません。ふりがな注釈は各 `<rPh>` 要素の UTF-16 範囲を保持します。また外部リンク表の参照元ブックのインデックスも保持するため、`[1]Sheet1!A1` のような数式を対応するキャッシュ値へ解決できます。外部参照のデータ更新はこの流れでは行いません。
+対応済みの XLSB レコード形式では、ピボットキャッシュ定義、キャッシュレコード、ピボットテーブルの各パーツを OOXML リーダーと同じモデルへ読み込みます。`pivotLayout()` と `GETPIVOTDATA` は対応するキャッシュのレコードを必要に応じて集計・取得しますが、`recalc()` が元シートからピボットキャッシュを再構築することはありません。ふりがな注釈は各 `<rPh>` 要素の UTF-16 範囲を保持します。また外部リンク表の参照元ブックのインデックスも保持するため、`[1]Sheet1!A1` のような数式を対応するキャッシュ値へ解決できます。ブック名やパスで入力した参照は、このリンクレコードを作成または再利用します。外部参照はキャッシュ値から解決しますが、この流れで参照元ワークブックを開いたりネットワーク先から取得したり、キャッシュを更新したりはしません。
 
 ロード後は必ず妥当性を確認します。
 
@@ -46,13 +85,24 @@ WASM の `Workbook` インスタンスは通常の JS オブジェクトでは�
 
 再計算後は値を直接読み出すか、
 
-```ts
+::: code-group
+
+```ts [WASM / Native Node]
 const result = wb.getValue(0, 0, 0) // sheet 0, row 0, col 0
 if (!result.status.ok) throw new Error(result.status.message)
 const value = result.value
 ```
 
-ワークブック全体をバイト列として書き出せます。
+```python [Python]
+with Workbook.load(blob) as wb:
+    wb.recalc()
+    value = wb.get_value(0, 0, 0)
+    saved = wb.save()
+```
+
+:::
+
+または、ワークブック全体をバイト列として書き出せます。
 
 ```ts
 const saved = wb.save()

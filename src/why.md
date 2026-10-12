@@ -13,7 +13,7 @@ Formulon is for products that need spreadsheet calculation without embedding Exc
   ] }
 ]" label="One C++17 core packaged as WASM, Native Node, Python, CLI, and MCP" />
 
-The project optimizes for reproducible compatibility. The default behavior profile is `win-365-ja_JP`; goldens record observed Excel behavior, and accepted divergences are tracked explicitly instead of being hidden behind vague "Excel-like" claims.
+The project optimizes for reproducible compatibility. The default behavior profile is `win-365-en_US`; goldens record observed Excel behavior, and accepted divergences are tracked explicitly instead of being hidden behind vague "Excel-like" claims.
 
 ## What it solves
 

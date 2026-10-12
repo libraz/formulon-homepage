@@ -8,6 +8,8 @@ formulon --version
 formulon --help
 ```
 
+All four subcommands accept the shared `--profile <id>` and `--now <date[Thh:mm:ss]>` options. The default profile is `win-365-en_US`; `--profile` selects one of the 28 Excel behavior profiles. `--now` pins `NOW()`, `TODAY()`, and relative date filters to local civil time for this invocation. The pin is not written into a saved workbook. Put shared options before `--`, which ends option parsing.
+
 ::: info Glossary: exit codes
 The CLI follows a two-tier convention. Cell-level Excel errors (`#DIV/0!`, `#VALUE!`, …) print to stdout and the process returns 0 — the command succeeded, the formula simply produced an error value. Structural failures (missing file, bad bytes, internal engine failure) return non-zero so shell scripts can branch on `$?`.
 :::
@@ -25,7 +27,7 @@ The CLI follows a two-tier convention. Cell-level Excel errors (`#DIV/0!`, `#VAL
 ## `eval`
 
 ```sh
-formulon eval [--json] [--repeat N] <formula>
+formulon eval [--profile ID] [--now DATE] [--json] [--repeat N] <formula>
 ```
 
 Evaluates one formula on a new workbook whose evaluation anchor is `Sheet1!A1`. The formula may be passed with or without a leading `=`; `--repeat` takes a positive integer.
@@ -41,16 +43,19 @@ formulon eval --json '=1/0'         # → {"kind":"error","value":"#DIV/0!"}
 formulon eval '=SUM('               # → #NAME?; stdout, exit 0
 formulon eval '=SEQUENCE(2,2)'       # → two tab-separated rows: 1\t2 and 3\t4
 formulon eval --json '=SEQUENCE(2,2)' # → nested arrays of typed value objects
+formulon eval --profile mac-365-de_DE --now 2026-10-09T09:30:00 '=NOW()'
 ```
 
 Scalar results use the compact scalar form. A multi-cell result is printed as tab-separated rows on stdout; `--json` prints a nested array whose cells carry their value kind and payload. With `--repeat`, the timing line is written to stderr so stdout keeps the formula result.
 
 Cell-level Excel errors print to stdout and return exit code 0. Malformed eval syntax follows the same rule: it produces the Excel `#NAME?` error value on stdout and exits 0, so scripts must inspect the printed value rather than use the exit code to detect a formula typo. Usage errors return 64. Engine and I/O failures return 1.
 
+Formula input has one stricter boundary for workbook mutation. `setFormula()` in the host APIs rejects malformed text with the `kParserUnexpectedToken` status and leaves the existing cell unchanged. A malformed formula already stored in an XLSX or XLSB file remains loadable; `recalc` writes the resulting `#NAME?` cell error. Ad-hoc `eval` deliberately keeps the cell-error behavior above and exits 0.
+
 ## `recalc`
 
 ```sh
-formulon recalc [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
+formulon recalc [--profile ID] [--now DATE] [--iterative] [--threads N] [--quiet] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
 ```
 
 Loads a workbook, recalculates, and writes a new workbook.
@@ -77,7 +82,7 @@ The save warning is labelled by the container written (`XLSB write diagnostics` 
 ## `dump`
 
 ```sh
-formulon dump [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
+formulon dump [--profile ID] [--now DATE] [--formulas|--values|--sheets|--metadata] <in.xlsx-or-xlsb>
 ```
 
 | Mode | Output |
@@ -92,7 +97,7 @@ Like `recalc`, the input format is content-sniffed rather than restricted to `.x
 ## `paginate`
 
 ```sh
-formulon paginate [--sheet INDEX] <in.xlsx-or-xlsb>
+formulon paginate [--profile ID] [--now DATE] [--sheet INDEX] <in.xlsx-or-xlsb>
 ```
 
 Resolves the selected worksheet's print area, automatic page breaks, and physical page count. `INDEX` defaults to `0`; both sheet indexes and output coordinates are zero-based. Print-area coordinates are inclusive. The output is line-oriented:

@@ -28,6 +28,24 @@ For a new workbook, omit `workbook` and let `Spreadsheet.mount()` create one, or
 
 A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.
 
+## Live workbook name in Watch Window
+
+Pass `getWorkbookName` when the Watch Window should show a host-owned filename. The callback is read when the panel renders, so the host can change the name without remounting the spreadsheet:
+
+```ts
+let currentFilename: string | null = 'report.xlsx'
+const instance = await Spreadsheet.mount(host, {
+  workbook,
+  getWorkbookName: () => currentFilename,
+})
+
+function renameWorkbook(name: string | null) {
+  currentFilename = name
+  instance.closeWatchWindow()
+  instance.openWatchWindow()
+}
+```
+
 ## Status bar {#status-bar}
 
 Use `cellChange` for individual cell edits and `changeBatch` for applied cell batches. To receive rejected and unchanged results as well, use `instance.commands.subscribe()` as in this example. `recalc` is useful when the host displays a derived status after formulas are recalculated.

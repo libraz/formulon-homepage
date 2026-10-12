@@ -37,6 +37,8 @@ from formulon import Workbook
 
 def recalc_report(input_path: Path, output_path: Path, revenue: float) -> None:
     with Workbook.load(input_path.read_bytes()) as wb:
+        wb.set_excel_profile_id("win-365-en_US")
+        wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
         wb.set_number(0, 3, 1, revenue)  # Sheet1 の B4
         wb.recalc()
         output_path.write_bytes(wb.save())
@@ -56,6 +58,8 @@ INPUTS = [
 ]
 
 with Workbook.load(template_bytes) as wb:
+    wb.set_excel_profile_id("win-365-en_US")
+    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
     for sheet, row, col, value in INPUTS:
         wb.set_number(sheet, row, col, value)
     wb.recalc()
@@ -73,7 +77,8 @@ with Workbook.load(template_bytes) as wb:
 
 ```python
 with Workbook.load(template_bytes) as wb:
-    wb.set_excel_profile_id('win-365-ja_JP')
+    wb.set_excel_profile_id('win-365-en_US')
+    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
     wb.recalc()
     ...
 ```
@@ -86,7 +91,7 @@ CI の検証用ワークブックや本番ジョブではプロファイルを�
 
 ```sh
 python jobs/recalc_reports.py
-formulon dump --values report.xlsx > report.values.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values report.xlsx > report.values.txt
 git diff --exit-code report.values.txt
 ```
 

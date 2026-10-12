@@ -30,7 +30,7 @@ The PyPI package does not ship a platform-native `libformulon`. It ships one `py
 
 ## API scope
 
-`Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, merges, comments, hyperlinks, validations, styles, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, PivotTables with report layout and pivot-cache worksheet-source access, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
+`Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, geometry, workbook theme and effective styles, typed sheet/table AutoFilters, validation checks, merges, comments and threaded-comment people, hyperlinks, validations, styles, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, images and drawing objects, PivotTables with report layout and pivot-cache worksheet-source access, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
 
 Tables can be authored with `table_create()`, `table_update()`, and `table_remove()`. `column_names` must match the width of `ref`, and the caller still writes the header cells. `table_update()` preserves fields passed as `None`; an existing table AutoFilter keeps its criteria and extensions when its range is retargeted. Worksheet-level AutoFilter XML is available through `get_auto_filter_xml()` / `set_auto_filter_xml()` as a complete opaque `<autoFilter>` fragment; an empty string clears it. `add_hyperlink_range()` adds a hyperlink over an inclusive rectangle, and read-back `Hyperlink` values include `last_row` and `last_col`.
 
@@ -38,14 +38,31 @@ Python's `DataBar` exposes the full `x14` controls: `gradient`, `axis_position` 
 
 Python can author worksheet presentation metadata as well as read it back. Use `set_sheet_visibility()` with `SheetVisibility.VISIBLE`, `HIDDEN`, or `VERY_HIDDEN`; `get_sheet_view()` returns the resolved three-state `visibility`. Use `set_page_setup()`, `set_page_margins()`, `set_print_options()`, `set_header_footer()`, `set_print_area()`, `set_print_titles()`, `add_row_break()`, and `add_col_break()` for typed print settings. `set_range_xf_index()` applies one cell-style XF index across an inclusive rectangle and materializes missing cells as styled blanks. `pivot_field_add_item_at()` addresses a cache shared-item index, including the blank pivot member; a label-based empty string cannot identify it.
 
-When a data-validation input omits `allow_blank`, Python uses `False`. Pass `allow_blank=True` to allow empty cells. Row/column structural edits move an AutoFilter's `ref` range with its cells, but criteria offsets inside the range are not remapped.
+When a data-validation input omits `allow_blank`, Python uses `False`. Pass `allow_blank=True` to allow empty cells. Row/column structural edits remap an AutoFilter's `ref` range and modeled criteria/sort offsets with the moved cells; worksheet XML that remains opaque is preserved byte-for-byte.
+
+The wrapper also exposes sheet geometry (`get_cell_rect_pt`, width and height helpers), theme colors/fonts and effective styles, typed AutoFilter evaluation, `validate_value()` / `list_invalid_cells()`, threaded comments, and image/drawing-object access. See [presentation](/workbook/presentation), [filters and validation](/workbook/filters-validation), and [comments and images](/workbook/comments-images).
+
+Workbook-independent locale helpers use the same full Excel profile ids as `set_excel_profile_id()`:
+
+```python
+from formulon import Workbook
+
+profile = "mac-365-de_DE"
+display_text = Workbook.localize_formula("=SUM(1.5,TRUE)", profile)
+stored_text = Workbook.canonicalize_formula(display_text, profile)
+facts = Workbook.locale_facts(profile)
+```
+
+The helpers rewrite or inspect formula text for a display locale. They do not change workbook state, and `set_excel_profile_id()` remains the setting that controls evaluation. `Workbook.function_metadata()` returns locale-invariant structural metadata; merge translated descriptions and signatures with `formulon.merge_function_metadata(..., locale)` using a BCP-47 UI locale. The engine's 28 profiles include 14 Mac profiles and 14 Windows profiles; all Mac profiles and `win-365-ja_JP` have Excel measurements, while the other 13 Windows profiles use estimated locale data.
 
 The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Python exposes no `recalc_parallel()` or `recalcParallel()` API; use `@libraz/formulon/threads`, the native Node binding, or the CLI's `--threads` when the parallel scheduler is required. The default npm WASM entry is also serial. With the same calculation core, engine/profile, and workbook inputs, results should match the other surfaces; documented surface differences still apply.
 
-The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB.
+`set_formula()` rejects malformed text with the `kParserUnexpectedToken` host status and leaves an existing cell unchanged. A malformed formula already stored in an XLSX or XLSB file can be loaded and produces `#NAME?` when recalculated; the one-shot `eval_formula()` helper returns that error as a value for malformed input.
+
+The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB. Every surface first inflates the worksheet part into memory whole (the zip reader caps this at 100 MiB per entry and 256 MiB per load), so the CLI's streaming parser skips the DOM tree but not that buffer.
 
 ::: info Evaluator and workbook parity
-Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
+Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, images and drawing objects have typed accessors, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
 Python has broad workbook parity, but does not mirror every C ABI entry point: the iterative-progress callback is not exposed. It exposes phonetic text through `set_phonetic()` and `get_phonetic()`, plus span-preserving `set_phonetic_runs()` / `get_phonetic_runs()` and `set_phonetic_properties()` / `get_phonetic_properties()` for the guide's rendering settings. Use mutation plus recalc for a general scalar evaluated in workbook context.
 :::
 

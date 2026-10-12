@@ -27,10 +27,12 @@ The five operation shapes are:
 | `column` | `first`, optional `last`, non-negative `size`, optional `unit` (`chars`, `pt`, `px`, `mm`). `last` defaults to `first`. |
 | `row` | `first`, optional `last`, non-negative `size`, optional `unit` (`pt`, `px`, `mm`). `last` defaults to `first`. |
 | `merge` | `operation` (`add` or `remove`) and an A1 `range` on the selected sheet. |
-| `style` | A1 `range`, a `style` object, and optional `base` (`existing` or `default`). |
+| `style` | A1 `range` (a bounded range, whole columns such as `C:C`, or whole rows such as `1:1`), a `style` object, and optional `base` (`existing` or `default`). Whole columns and rows are styled as columns and rows without creating cells. |
 | `print` | A non-empty `settings` object accepted by `formulon_print_settings`. |
 
 Column sizes default to Excel character units. Row sizes default to points. `px` and `mm` convert through the 96-DPI display calibration and are stored in Excel's native character or point units. The result reports both stored values and `displayGeometry` with `points`, `pixels`, and `mm`.
+
+Column conversions use the engine's per-sheet display width model and Normal-font calibration. A positive width in points must exceed that model's visible-column padding; zero is allowed. Row and column geometry comes from the engine, including sheet defaults and hidden dimensions.
 
 The `style` object has `font` (`name`, `size`, `bold`, `italic`, `strike`, `underline`, `vertAlign`, `color`), `fill` (`color`, `bgColor`, `pattern`), `border` (`all`, `outline`, `left`, `right`, `top`, `bottom`), `numberFormat`, and `align` (`horizontal`, `vertical`, `wrapText`, `indent`, `textRotation`, `shrinkToFit`). Colors use `#RRGGBB` or `#AARRGGBB`. `border.all` rules every cell; `border.outline` draws only the outer edge.
 
@@ -82,7 +84,7 @@ The layout limits are part of the input contract:
 | Stored column width | 255 Excel character units |
 | Stored row height | 409 points |
 | Expanded row writes across row operations | 10,000 rows |
-| Cells covered by style operations in one batch | 100,000 cells |
+| Cells covered by style operations in one batch | 100,000 cells (whole columns or rows count as none) |
 | Column index | 0 through 16,383 (`XFD`) |
 | Row index | 0 through 1,048,575 (Excel row 1,048,576) |
 
@@ -113,6 +115,8 @@ For the form payload in the example below, the 180 px first column and three 96 
 
 The actual dimensions and cells depend on the workbook. `cells` contains at most 500 non-empty or formula cells; text and formula strings are truncated at 256 characters, and the flags report truncation. `logicalWidth` and `logicalHeight` are points. Cell `x`, `y`, `width`, and `height` also use points.
 
+`pages` reports the whole sheet's pagination: `count`, print `scale`, `paperWidthPt`, `paperHeightPt`, `landscape`, up to 50 A1 `ranges`, and `rangesTruncated`. This print scale is separate from the top-level preview raster `scale`. `objects` lists intersecting drawings with `objectId`, `kind`, `name`, and `rendered`. Print-settings reads also include `settings.layout` with resolved paper, point margins, printable area, scale, page order, break indices and manual flags, and up to 50 page ranges with `pagesTruncated`.
+
 ### Preview limits
 
 Preview requests are bounded before rendering:
@@ -123,21 +127,87 @@ Preview requests are bounded before rendering:
 | Raster width or height after scale | 4,096 pixels |
 | Raster area after scale | 8,000,000 pixels |
 | Generated SVG | 4 MiB |
-| Stored-cell inventory for used bounds and formula scan | 1,000,000 cells |
-| Merged ranges read from a sheet | 10,000 |
+| Stored-cell inventory when discovering used bounds | 1,000,000 cells |
+| Merged ranges intersecting the requested range | 10,000 |
+| Drawing objects intersecting the preview | 100 |
+| Embedded picture payload (cumulative Base64 length) | 2 MiB |
+| Page ranges in metadata | 50 |
 | Metadata cells | 500 |
 | Metadata text per cell field | 256 characters |
 | Distinct warning messages | 100 |
 
-The inventory limit applies even when an explicit range is small, because the server enumerates stored cells to find formulas or used bounds. For a large sparse workbook, inspect or extract a smaller workbook before previewing.
+The inventory limit applies only when `range` is omitted and no print area supplies the bounds. With an explicit range, formulas and merges are read inside that rectangle, so unrelated cells do not consume this inventory limit.
 
 ## Rendering approximation
 
-The preview is a worksheet-range render, not a print renderer. It uses installed system fonts and a calibrated display geometry. Unknown font families or sizes fall back to Calibri 11 metrics and add an approximation warning. Excel can substitute a different font on another machine.
+The preview is a worksheet-range render, not a print renderer. It uses installed system fonts and engine display geometry. The engine resolves effective styles, theme/indexed colors, and number-format display text. Missing or unreadable themes use the default Office theme with a warning; Excel can substitute a different font on another machine.
 
-The renderer does not apply conditional formatting. It does not render charts, images, drawings, headers, footers, or page margins. It renders cell values, formulas' current values, merges, fills, borders, text alignment, and page-break lines from the paginator. Some number formats, theme or indexed colors, pattern fills, rotated text, shrink-to-fit, diagonal borders, and scientific formats can be approximated and appear in `warnings`. Existing drawing parts may survive a load/save round trip, but this preview tool cannot insert a new logo or other image.
+The renderer does not apply conditional formatting or render headers, footers, or page margins. It renders cell display text, merges, fills, borders, alignment, and paginator page-break lines. PNG, JPEG, and GIF pictures are embedded within the payload budget; charts, shapes, BMP pictures, and unsupported or oversized pictures appear as dashed placeholders. Pattern fills, rotated text, shrink-to-fit, and diagonal borders remain approximations. Read `warnings` and each object's `rendered` flag before judging the result.
 
 `recalc: true` obtains current formula values before rendering. Recalculation changes cached values and marks the session dirty, even though the preview itself is read-only afterward. Use `recalc: false` when the cached values are the intended comparison target.
+
+## Insert and inspect pictures {#images}
+
+Open a session first and provide an existing PNG, JPEG, GIF, or BMP file, at most 20 MiB. `formulon_image_operation` inserts it at an unqualified cell anchor on the selected sheet. Sizes and offsets (`width`, `height`, `offsetX`, `offsetY`) use `{size,unit?}`, where `unit` is `pt` by default or `px` / `mm`. Specifying one dimension preserves aspect ratio; omitting both uses the image's pixel size at 96 DPI. `anchorKind` is `oneCell` or `twoCell`, which stretches with row/column sizing; insert uses `oneCell` when it is omitted.
+
+The insert result reports `objectId`, source dimensions, and placement. List includes pictures, charts, shapes, and other drawing kinds; get, move, reorder, and remove operate on pictures. Replace `2` below with the returned picture id. Get returns image content when the format is known, followed by JSON metadata; it can also write the bytes to `outputPath`.
+
+#### `formulon_image_operation`: insert
+
+```json
+{
+  "sessionId": "form-layout",
+  "sheet": "Sheet1",
+  "operation": "insert",
+  "path": "/tmp/logo.png",
+  "anchor": "B2",
+  "width": { "size": 96, "unit": "px" },
+  "name": "Logo",
+  "description": "Company logo"
+}
+```
+
+#### `formulon_image_operation`: list
+
+```json
+{ "sessionId": "form-layout", "operation": "list" }
+```
+
+#### `formulon_image_operation`: get
+
+```json
+{ "sessionId": "form-layout", "operation": "get", "objectId": 2, "outputPath": "/tmp/extracted-logo.png" }
+```
+
+#### `formulon_image_operation`: remove
+
+```json
+{ "sessionId": "form-layout", "operation": "remove", "objectId": 2 }
+```
+
+`move` changes only what it states among `anchor`, `offsetX`, `offsetY`, `width`, `height`, and `anchorKind`. Omitted fields keep their current values, a lone width or height keeps the picture's aspect ratio, and the picture keeps its id, name, alt text, crop, and rotation. The result is `{session,sheet,objectId,placed}`.
+
+#### `formulon_image_operation`: move
+
+```json
+{
+  "sessionId": "form-layout",
+  "operation": "move",
+  "objectId": 2,
+  "anchor": "D4",
+  "width": { "size": 120, "unit": "px" }
+}
+```
+
+`reorder` takes `objectId` and `index`, the target position in list order. List order runs back to front, so `0` is the back. The result is `{session,sheet,objectId,index,order}`, where `order` holds the object ids in the new order.
+
+#### `formulon_image_operation`: reorder
+
+```json
+{ "sessionId": "form-layout", "operation": "reorder", "objectId": 2, "index": 0 }
+```
+
+Insertion, movement, reordering, and removal mark the session dirty and preserve other drawing objects. Preview the affected range to check placement, then save explicitly as XLSX. OOXML drawings are omitted on XLSB save and reported in losses; see [File formats](/workbook/file-formats#xlsb). Preview itself does not insert or remove pictures.
 
 ## End-to-end example: reproduce a form from a screenshot
 
@@ -147,13 +217,14 @@ This prompt tells an agent how to make the visual result editable and reviewable
 Recreate the supplied application-form screenshot as an editable Sheet1 grid. Put the title in A1:D1, use 180 px for column A and 96 px for columns B:D, use 36 px for row 1 and 24 px for rows 2:5, and keep the labels and values as worksheet cells. Apply the layout in one ordered batch, preview A1:D5 to /tmp/form-layout.png, read the cells and metadata, save as /tmp/form-layout.xlsx, and close the session. Treat the preview as an approximation and report its warnings.
 ```
 
-Open a blank workbook with a stable session ID:
+Open a blank workbook with a stable session ID and the default Windows English profile so the later `Sheet1` ranges resolve to the intended first sheet. Use the returned sheet name when choosing another profile:
 
 #### `formulon_open_workbook`
 
 ```json
 {
-  "sessionId": "form-layout"
+  "sessionId": "form-layout",
+  "profile": "win-365-en_US"
 }
 ```
 

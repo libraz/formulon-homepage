@@ -5,17 +5,19 @@ description: Install and mount the formulon-cell spreadsheet UI kit.
 
 # Install
 
+The current cell packages use `@libraz/formulon@0.15.1` and require Node.js 22 or later.
+
 Install the core package and its `zustand` peer dependency:
 
 ```sh
-npm install @libraz/formulon-cell zustand
+npm install @libraz/formulon-cell@0.9.0 zustand
 ```
 
 For framework applications, install one adapter as well:
 
 ```sh
-npm install @libraz/formulon-cell-react react react-dom
-npm install @libraz/formulon-cell-vue vue
+npm install @libraz/formulon-cell-react@0.9.0 react react-dom
+npm install @libraz/formulon-cell-vue@0.9.0 vue
 ```
 
 Import the core stylesheet once in the browser entry point. The package export is `@libraz/formulon-cell/styles.css`.

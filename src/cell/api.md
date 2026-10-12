@@ -78,7 +78,8 @@ The returned `SpreadsheetInstance` is the main host API:
 | `setContextMenu()`, `setOverlayOptions()` | Coordinate menus and dialogs with the host layout. |
 | `setUi()`, `setFeatures()`, `setExtensions()` | Adjust the UI surface while it is mounted. |
 | `openFunctionArguments()` | Open the function picker or Mac Function Arguments palette. |
-| `i18n`, `setTheme()` | Change labels and visual theme. |
+| `locale`, `setLocale()` | Read or change the mounted UI locale, workbook profile, and formula editing profile. `setLocale()` returns `false` when the change is rolled back. |
+| `i18n`, `setTheme()` | Work with dictionaries and change the visual theme. |
 | `on()` | Subscribe to stable named events. |
 | `print()`, `captureScreenClip()` | Invoke host-facing print and capture actions. |
 | `dispose()` | Release the mounted UI and event subscriptions. |
@@ -172,6 +173,8 @@ const tabs = buildRibbonModel('en', { profile })
 
 Formatting commands include the selected range and every `selection.extraRanges`. Named styles apply their `includedGroups` across all selected areas. The Format Cells dialog exposes the underline style selector. Policy authorization checks every area before applying the formatting action; a denial aborts the whole action. Cell protection can separately limit which cells receive formatting.
 
+Ribbon AutoFit commands use every selected area, including disjoint `selection.extraRanges`. Each area keeps its own cross-axis span. When a row or column appears in more than one area, the largest measured size wins, and the complete command is one undo step.
+
 `formatA1Cell()` formats a zero-based row and column for host labels:
 
 ```ts
@@ -201,6 +204,30 @@ const options: AutofitOptions = {
 autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, options)
 ```
 
+## Units for cell and sheet layout
+
+`CellFormat.fontSize`, `WorkbookHandle.setRowHeight()`, `WorkbookHandle.setColumnWidth()`, and AutoFit results use CSS pixels. Native `FontRecord.size` values and ribbon font-size controls use typographic points. The conversion is `px = pt * 96 / 72`. Formulon stores row heights in points and column widths in characters; the cell layer converts those values at the engine boundary.
+
+## CSV import and export
+
+The package root exports `exportCSV()` and `importCSV()` with the `ExportOptions` and `ImportCSVOptions` types:
+
+```ts
+import {
+  exportCSV,
+  importCSV,
+  type ExportOptions,
+  type ImportCSVOptions,
+} from '@libraz/formulon-cell'
+
+const exportOptions: ExportOptions = { locale: 'de-DE', delimiter: ';' }
+const csv = exportCSV(instance.store.getState(), exportOptions)
+const importOptions: ImportCSVOptions = { locale: 'de-DE', delimiter: ';' }
+importCSV(instance.store.getState(), instance.workbook, csv, undefined, instance.history, importOptions)
+```
+
+`delimiter` accepts `,` or `;` and defaults to `,`. When `locale` is omitted, import uses the workbook's active profile. Export keeps canonical text when `locale` is omitted; pass a locale to format editable numbers and booleans for a regional CSV file.
+
 ## Store access
 
 `instance.store` is available for integrations that need a reactive view of selection, layout, or cell state. It is a per-instance store; there is no global spreadsheet store. Framework users normally prefer `useSelection()` or `useSpreadsheet()` from the adapter package so subscription cleanup follows component lifetime.
@@ -208,13 +235,15 @@ autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, opti
 ## i18n controller
 
 ```ts
-instance.i18n.setLocale('ja')
+if (!instance.setLocale('ja')) {
+  showLanguageError()
+}
 instance.i18n.extend('ja', {
   contextMenu: { copy: 'コピー' },
 })
 ```
 
-`i18n` exposes `setLocale()`, `extend()`, `register()`, `subscribe()`, and the resolved `strings`. See [Internationalization](/cell/i18n) for runtime switching and custom labels.
+`instance.locale` is the committed locale. `instance.setLocale()` is the host-facing runtime path: it synchronizes the workbook profile and returns whether the change was accepted. `i18n` exposes the lower-level dictionary operations `setLocale()`, `extend()`, `register()`, `subscribe()`, and the resolved `strings`; use it from dictionary or extension code when you do not need the profile result. See [Language switching](/cell/language-switching) for the selector, formula text, edit commit, and rollback behavior, and [Internationalization](/cell/i18n) for dictionary registration and subscriptions.
 
 ## Theme controller
 
@@ -230,6 +259,7 @@ Built-in themes are `paper`, `ink`, and `contrast`. A custom name selects host C
 ## Read next
 
 - [Hooks and composables](/cell/hooks) — selection, edit notifications, and shared language controls.
+- [Language switching](/cell/language-switching) — the selector, runtime host API, workbook profiles, formulas, and rejection cases.
 - [Embedding](/cell/embedding) — choose options for a full, minimal, or embedded surface.
 - [Platform and Mac UI](/cell/platform) — platform resolution, Mac dialogs, and argument help.
 - [React and Vue adapters](/cell/frameworks) — component props, events, hooks, and composables.

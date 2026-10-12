@@ -17,19 +17,21 @@ Use the CLI in CI to catch accidental workbook changes and to reproduce issues w
 
 `eval` treats malformed formula syntax as a cell-level result: it prints `#NAME?` to stdout and exits `0`. Check the output when a shell script must reject a typo; the exit code distinguishes host/usage failures, not this Excel error value.
 
+Every subcommand also accepts `--profile ID` and `--now DATE`. `--profile` selects the Excel behavior profile (the default is `win-365-en_US`), and `--now` pins `NOW()`, `TODAY()`, and relative date filters to a local civil-time value for the invocation. The profile and clock pin are workbook state for the command and are not saved into the file. Use both flags in reproducible CI commands.
+
 ## Examples
 
 ```sh
 formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
-formulon recalc input.xlsx -o output.xlsx
-formulon recalc --threads 4 input.xlsx -o output.xlsx
-formulon dump --formulas input.xlsx
-formulon dump --values output.xlsx
-formulon dump --sheets input.xlsx
-formulon dump --metadata input.xlsx
-formulon paginate --sheet 0 input.xlsx
+formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 input.xlsx -o output.xlsx
+formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 --threads 4 input.xlsx -o output.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas input.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --sheets input.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --metadata input.xlsx
+formulon paginate --profile win-365-en_US --now 2026-10-09T09:30:00 --sheet 0 input.xlsx
 ```
 
 ::: tip --values recalculates; --formulas does not
@@ -53,9 +55,11 @@ formulon recalc --quiet -o output.xlsx -- -input.xlsx
 formulon recalc model.xlsx -o model.xlsb
 ```
 
-XLSB models styles, row/column layout, merges, date1904, sheet view/zoom/frozen panes, dynamic-array metadata, and supported tokenized formulas. Worksheet tails for conditional formatting, data validation, hyperlinks, auto-filter, print setup/breaks, and drawing/table references and relationships are preserved verbatim; preservation does not make them editable or evaluated. See [XLSB coverage](/compatibility/file-format-support).
+XLSB models and emits styles, row/column layout, merges, `date1904`, sheet view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. AutoFilters loaded from XLSB remain opaque; typed AutoFilter edits, modeled print settings, tables, comments, and OOXML drawings are deferred or omitted and reported on save. Compatible retained XLSB tails and drawing parts may pass through. See [XLSB coverage](/compatibility/file-format-support) for the detailed preservation and loss boundaries.
 
 `recalc` writes atomically: a failed load, recalc, or save leaves the existing target unchanged.
+
+The load path keeps malformed stored formula text in the workbook. Recalculation exposes such a cell as the `#NAME?` Excel error value. This differs from host-side `setFormula()` calls, which reject malformed text with `kParserUnexpectedToken` and leave the cell unchanged.
 
 `recalc` is serial unless `--threads N` is supplied. The parallel SCC scheduler accepts `0` for automatic detection capped at 8, `1` for caller-thread-only execution with no workers, and `2..8` for a worker cap. Values outside `0..8` are rejected. A parallel call may use fewer workers than requested.
 
@@ -74,7 +78,7 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 ## Pagination
 
 ```sh
-formulon paginate [--sheet INDEX] <in.xlsx>
+formulon paginate [--profile ID] [--now DATE] [--sheet INDEX] <in.xlsx>
 ```
 
 `INDEX` defaults to `0` and is zero-based. The output reports `sheet`, `pages`, inclusive zero-based `print_area`, `horizontal_breaks`, and `vertical_breaks`. Exit `0` means success, `64` means usage error, and `1` means an engine or I/O failure.
@@ -84,14 +88,14 @@ formulon paginate [--sheet INDEX] <in.xlsx>
 Run `dump --values` to snapshot calculated outputs against a checked-in golden file. With volatile inputs controlled and the engine version and profile fixed, a `git diff` over the dump file exposes workbook or engine changes.
 
 ```sh
-formulon dump --values model.xlsx > model.values.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values model.xlsx > model.values.txt
 git diff --exit-code model.values.txt
 ```
 
 For formulas only:
 
 ```sh
-formulon dump --formulas model.xlsx > model.formulas.txt
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > model.formulas.txt
 git diff --exit-code model.formulas.txt
 ```
 

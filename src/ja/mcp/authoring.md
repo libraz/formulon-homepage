@@ -165,7 +165,9 @@ description: 名前付きブロックから印刷用のワークブック文書�
 }
 ```
 
-`style` には `font`（`name`、`size`、`bold`、`italic`、`strike`、`underline`、`vertAlign`、`color`）、`fill`（`color`、`bgColor`、`pattern`）、`border`（`all`、`outline`、`left`、`right`、`top`、`bottom`）、`numberFormat`、`align`（`horizontal`、`vertical`、`wrapText`、`indent`、`textRotation`、`shrinkToFit`）を指定できます。色は `#RRGGBB` または `#AARRGGBB` です。`border.all` は範囲内の各セルを罫線で囲み、`border.outline` は外周だけに枠を付けます。スタイルを付けた範囲の空セルも実体化するため、空の入力フォームにも罫線が表示されます。
+`style` には `font`（`name`、`size`、`bold`、`italic`、`strike`、`underline`、`vertAlign`、`color`）、`fill`（`color`、`bgColor`、`pattern`）、`border`（`all`、`outline`、`left`、`right`、`top`、`bottom`）、`numberFormat`、`align`（`horizontal`、`vertical`、`wrapText`、`indent`、`textRotation`、`shrinkToFit`）を指定できます。色は `#RRGGBB` または `#AARRGGBB` です。`border.all` は範囲内の各セルを罫線で囲み、`border.outline` は外周だけに枠を付けます。`range` には列全体（`C:C`、`B:D`）と行全体（`1:1`、`3:5`）も指定でき、シート名も付けられます。これらは列・行のスタイルとして適用されるため、空白セルは作られず、後からそこへ書き込んだ値にスタイルが付きます。範囲を限定した場合は、空の罫線付きボックスが表示されるよう空白セルも実体化し、上限は 100,000 セルです。行全体・列全体に上限はありません。行全体・列全体への `outline` 罫線は拒否されるため、範囲を限定して指定してください。
+
+応答の `regions` は `{range, baseXfIndex, xfIndex}` の配列です。`range` は適用した帯（範囲全体、または外周の帯）で、その帯の中の基底スタイルごとに 1 件入ります。
 
 ## エンドツーエンド例: 印刷用請求書
 
@@ -175,13 +177,14 @@ description: 名前付きブロックから印刷用のワークブック文書�
 `invoice-demo` というセッションで新しいワークブックを開き、B2 から印刷用の請求書を作成してください。明細表の列は Item、Qty、Unit、Amount とし、各行の Amount、小計 Subtotal、10% の税額 Tax、合計 Total を数式で計算してください。税の扱いはここで指定した数式に従い、地域の税制は推測しないでください。日本語を表示できる既定フォントを設定し、値と数式を読み取り、B2:E13 を PNG でプレビューしてください。最終結果を /tmp/invoice-demo.xlsx に保存して保存結果を確認し、セッションを閉じてください。
 ```
 
-空のセッションを開きます。
+後続の `Sheet1` 範囲が既知の最初のシートを指すように、Windows 英語の既定プロファイルで空のセッションを開きます。別のプロファイルを選ぶ場合は、調査結果からシート名を取得してください。
 
 #### `formulon_open_workbook`
 
 ```json
 {
-  "sessionId": "invoice-demo"
+  "sessionId": "invoice-demo",
+  "profile": "win-365-en_US"
 }
 ```
 

@@ -24,6 +24,8 @@ try {
     throw new Error(Module.lastErrorMessage())
   }
 
+  check(workbook.setExcelProfileId('win-365-en_US'))
+  check(workbook.setPinnedNow(2026, 10, 9, 9, 30, 0))
   check(workbook.setNumber(0, 3, 1, 125000)) // sheet 0, B4
   check(workbook.recalc())
 
@@ -34,6 +36,7 @@ try {
 
   await upload(saved.bytes)
 } finally {
+  workbook.clearPinnedNow()
   workbook.delete()
 }
 ```
@@ -47,6 +50,8 @@ with open("input.xlsx", "rb") as f:
     blob = f.read()
 
 with Workbook.load(blob) as wb:
+    wb.set_excel_profile_id("win-365-en_US")
+    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
     wb.set_number(0, 3, 1, 125000.0)
     wb.recalc()
     output = wb.save()
@@ -58,11 +63,11 @@ with open("output.xlsx", "wb") as f:
 ## CLI
 
 ```sh
-formulon recalc input.xlsx -o output.xlsx
-formulon dump --values output.xlsx
+formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 input.xlsx -o output.xlsx
+formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.xlsx
 ```
 
-エンジンは対応するワークブック構造を保持しながら計算値を更新し、モデル化していないパートはそのまま保持します。保持・変換できる機能はコンテナと機能によって異なるため、[ファイル形式サポート](/ja/compatibility/file-format-support) と保存時の診断を確認してください。このパスは、サーバー側の検証、ブラウザからのアップロード処理、バッチ変換、既知のワークブックに対する回帰テストに使えます。
+エンジンは対応するワークブック構造を保持しながら計算値を更新し、モデル化していないパートはそのまま保持します。保持・変換できる機能はコンテナと機能によって異なるため、[ファイル形式サポート](/ja/compatibility/file-format-support) と保存時の診断を確認してください。このパスは、サーバー側の検証、ブラウザからのアップロード処理、バッチ変換、既知のワークブックに対する回帰テストに使えます。プロファイルと時計の固定は実行時状態で、出力ファイルには保存されないため、読み込み後に再設定してください。
 
 ## 読み込みから保存までを試す
 

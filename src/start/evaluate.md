@@ -46,6 +46,28 @@ value = formulon.eval_formula("=SUM(1,2,3)")
 print(value.to_python())
 ```
 
+## Show a formula in a user's Excel locale
+
+Stored formulas use the invariant English function names and separators. A UI can switch the displayed locale without rewriting the workbook by passing a full Excel profile id to `localizeFormula()`. Convert edited text back with `canonicalizeFormula()` before storing it, and select the same profile on the workbook when the formula is evaluated.
+
+```ts
+import createFormulon from '@libraz/formulon'
+
+const LocaleModule = await createFormulon()
+const profile = 'mac-365-de_DE'
+const localeWorkbook = LocaleModule.Workbook.createDefault()
+try {
+  const displayed = localeWorkbook.localizeFormula('=SUM(1.5,TRUE)', profile)
+  if (!displayed.status.ok) throw new Error(displayed.status.message)
+  const canonical = localeWorkbook.canonicalizeFormula(displayed.value, profile)
+  if (!canonical.status.ok) throw new Error(canonical.status.message)
+} finally {
+  localeWorkbook.delete()
+}
+```
+
+`localizeFormula()` is a text transform. It changes function names, separators, decimal points, Boolean names, and error names while leaving strings, quoted sheet names, external qualifiers, and structured-reference brackets alone. `localeFacts(profile)` supplies the separators, names, date order, currency, and localized error names needed by a custom editor. The engine profile catalog has 28 ids; `mac-*` profiles and `win-365-ja_JP` are measured against Excel, and the other Windows profiles use estimated locale data.
+
 ## CLI
 
 ```sh

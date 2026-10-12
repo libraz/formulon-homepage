@@ -42,6 +42,8 @@ ctest --test-dir build-variants -L VARIANT --output-on-failure
 
 Only provenance-approved variant directories are included. Enabling the option does not activate every captured target. Use this check when investigating profile-specific differences or before adding a supported profile.
 
+The current profile catalog contains 28 ids across 14 locales. The formula Oracle gates cover 14 Mac profiles; `win-365-ja_JP` is the measured Windows workbook target, and the other 13 Windows profiles use estimated donor-locale data. Locale switching, formula translation, and locale-fact access are covered by the core and binding tests even when a Windows Excel capture is not available.
+
 ## Packaging smoke tests
 
 | Surface | Commands |
@@ -83,6 +85,8 @@ Parity checks whether the available runtime channels agree with each other. Orac
 | `make ironcalc-verify` | Verify the secondary IronCalc oracle fixtures |
 | `make fuzz` / `make fuzz-long` | Run the parser, evaluator, file-format, and print-settings fuzz harnesses |
 | `bash tools/ci/run_tsan.sh` | Run the thread-sanitizer suite used by CI |
+
+The fuzz harnesses exist only in a build configured with `-DFM_BUILD_FUZZ=ON` and carry the `SLOW` label there; neither the default build nor CI includes them. They need a Clang that ships the libFuzzer runtime, which the Apple toolchain does not, so macOS needs a separate LLVM. AddressSanitizer is off by default on macOS because it deadlocks in its own shadow-memory setup against recent dynamic linkers, so a macOS fuzz run catches crashes, timeouts and undefined behavior but not heap corruption.
 
 ## Read next
 
