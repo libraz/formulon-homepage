@@ -1,6 +1,7 @@
 import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { defineAsyncComponent } from 'vue'
+import ApiReferenceTable from './components/ApiReferenceTable.vue'
 import CellFullDemo from './components/CellFullDemo.vue'
 import DiagramFlow from './components/DiagramFlow.vue'
 import DiagramLayers from './components/DiagramLayers.vue'
@@ -8,7 +9,6 @@ import SizeBudgetTable from './components/SizeBudgetTable.vue'
 import SvgEmail from './components/SvgEmail.vue'
 import Layout from './Layout.vue'
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell/styles/toolbar.css'
 import './custom.css'
 
 // The live-engine demos are code-split: a page that embeds none of them must
@@ -30,6 +30,7 @@ const CellEmbedDemo = defineAsyncComponent(() => import('@/components/demos/Cell
 const LocaleSwitchDemo = defineAsyncComponent(
   () => import('@/components/demos/LocaleSwitchDemo.vue')
 )
+const CompatCasesDemo = defineAsyncComponent(() => import('@/components/demos/CompatCasesDemo.vue'))
 const DemoFrame = defineAsyncComponent(() => import('@/components/demos/DemoFrame.vue'))
 
 // Bespoke figures: one page each, so they are code-split like the demos.
@@ -45,6 +46,7 @@ export default {
     app.component('SvgEmail', SvgEmail)
     app.component('DiagramFlow', DiagramFlow)
     app.component('DiagramLayers', DiagramLayers)
+    app.component('ApiReferenceTable', ApiReferenceTable)
     app.component('SizeBudgetTable', SizeBudgetTable)
     app.component('DemoFrame', DemoFrame)
     app.component('FormulaEvalDemo', FormulaEvalDemo)
@@ -59,6 +61,7 @@ export default {
     app.component('ErrorsDemo', ErrorsDemo)
     app.component('CellEmbedDemo', CellEmbedDemo)
     app.component('LocaleSwitchDemo', LocaleSwitchDemo)
+    app.component('CompatCasesDemo', CompatCasesDemo)
     app.component('CellTokenCascade', CellTokenCascade)
   }
 } satisfies Theme
