@@ -173,21 +173,36 @@ describe('CellEmbedDemo', () => {
     const { captured, wrapper } = await mountScenario('theme-locale')
     await ready(wrapper)
     const instance = firstInstance(captured)
-    const labels = wrapper.findAll('.demo-result dd').at(-1)
-    const english = labels?.text() ?? ''
+    const english = wrapper.find('[data-ui-labels]').text()
 
     expect(instance.i18n.locale).toBe('en')
     expect(english).toContain('Copy')
 
     await page.getByRole('tab', { name: 'ja', exact: true }).click()
     await expect.poll(() => instance.i18n.locale).toBe('ja')
-    await expect
-      .poll(() => wrapper.findAll('.demo-result dd').at(-1)?.text() ?? '')
-      .toContain('コピー')
+    await expect.poll(() => wrapper.find('[data-ui-labels]').text()).toContain('コピー')
     expect(wrapper.find('.fc-host__ribbon').exists()).toBe(false)
     expect(wrapper.find('.fc-host__statusbar').exists()).toBe(false)
     await page.getByRole('tab', { name: 'ink', exact: true }).click()
     expect(wrapper.find('.cell-embed-demo__host').attributes('data-fc-theme')).toBe('ink')
+  })
+
+  it('switches the calculation profile with the language and keeps the stored formula', async () => {
+    const { captured, wrapper } = await mountScenario('theme-locale')
+    await ready(wrapper)
+    const instance = firstInstance(captured)
+    const readout = () => wrapper.find('.demo-result').text()
+
+    expect(readout()).toContain('windows-en_US')
+    expect(readout()).toContain('=ROUND(C2/B2,2)')
+
+    await page.getByRole('tab', { name: 'de', exact: true }).click()
+    await expect.poll(() => instance.locale).toBe('de')
+    await expect.poll(readout).toContain('windows-de_DE')
+    expect(readout()).toContain('=RUNDEN(C2/B2;2)')
+    expect(instance.workbook.cellFormula(addr(1, 3))).toBe('=ROUND(C2/B2,2)')
+    expect(numberValue(instance, 1, 3)).toBe(30.48)
+    expect(captured.instances).toEqual([instance])
   })
 
   it('keeps the native overlay closed until requested and bounds its opened layout', async () => {

@@ -8,6 +8,8 @@ type Cell = {
   meta: string
   children?: string[]
   link?: string
+  /** Set on packages that exist only in the source tree, not on a public registry. */
+  unpublished?: boolean
 }
 
 type Layer = {
@@ -28,6 +30,9 @@ const copy = computed(() =>
         section: 'Ecosystem',
         heading: 'パッケージの構成',
         body: 'L1 が C++17 計算エンジン、L2 が言語ごとのインターフェイスパッケージ、L3 が用途別アプリパッケージ、L4 が利用側のアプリやエージェントです。',
+        unpublishedBadge: 'npm 未公開',
+        unpublishedNote:
+          '破線のパッケージは npm に公開していません。Formulon のソースからビルドして使います。',
         layers: <Layer[]>[
           {
             kind: 'pair',
@@ -77,9 +82,10 @@ const copy = computed(() =>
                 link: '/ja/runtimes/cli'
               },
               {
-                name: 'Native Node',
-                meta: 'ソースからビルドする Node.js ネイティブアドオン',
-                link: '/ja/runtimes/node-native'
+                name: '@libraz/formulon-native',
+                meta: 'ソースからビルド · Node.js N-API アドオン',
+                link: '/ja/runtimes/node-native',
+                unpublished: true
               }
             ]
           },
@@ -99,6 +105,9 @@ const copy = computed(() =>
         section: 'Ecosystem',
         heading: 'How the packages relate',
         body: 'L1 is the C++17 calculation core (formulon). L2 provides the WASM, Python, Native Node, and CLI interfaces. L3 contains packages for applications and agents. L4 is the consumer.',
+        unpublishedBadge: 'Not on npm',
+        unpublishedNote:
+          'Dashed packages are not published to npm; build them from a Formulon source checkout.',
         layers: <Layer[]>[
           {
             kind: 'pair',
@@ -148,9 +157,10 @@ const copy = computed(() =>
                 link: '/runtimes/cli'
               },
               {
-                name: 'Native Node',
-                meta: 'Source-built Node.js native addon',
-                link: '/runtimes/node-native'
+                name: '@libraz/formulon-native',
+                meta: 'Source build · Node.js N-API addon',
+                link: '/runtimes/node-native',
+                unpublished: true
               }
             ]
           },
@@ -215,8 +225,14 @@ const copy = computed(() =>
                 :key="i"
                 :href="cell.link"
                 class="fln-stack-chip"
+                :data-status="cell.unpublished ? 'unpublished' : undefined"
               >
-                <strong>{{ cell.name }}</strong>
+                <div class="fln-stack-chip-head">
+                  <strong>{{ cell.name }}</strong>
+                  <small v-if="cell.unpublished" class="fln-stack-badge">{{
+                    copy.unpublishedBadge
+                  }}</small>
+                </div>
                 <span>{{ cell.meta }}</span>
               </component>
             </template>
@@ -237,6 +253,9 @@ const copy = computed(() =>
           </div>
         </div>
       </div>
+      <p class="fln-stack-note">
+        <span class="fln-stack-note-swatch" aria-hidden="true"></span>{{ copy.unpublishedNote }}
+      </p>
     </div>
   </section>
 </template>

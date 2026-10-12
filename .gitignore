@@ -8,6 +8,10 @@
 !.yarn/cache
 #.pnp.*
 node_modules
+/vendor/
+.DS_Store
+/coverage/
+*.tsbuildinfo
 .vitepress/cache
 .vitepress/dist
 .vitepress/build

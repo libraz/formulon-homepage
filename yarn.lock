@@ -767,32 +767,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell-vue@npm:0.8.0":
-  version: 0.8.0
-  resolution: "@libraz/formulon-cell-vue@npm:0.8.0"
+"@libraz/formulon-cell-vue@npm:0.9.0":
+  version: 0.9.0
+  resolution: "@libraz/formulon-cell-vue@npm:0.9.0"
   dependencies:
-    "@libraz/formulon-cell": "npm:^0.8.0"
+    "@libraz/formulon-cell": "npm:^0.9.0"
   peerDependencies:
     vue: ^3.3
-  checksum: 10c0/5f20b3b1b8afd55148df8c1f5bd0845aa15703ec2350eb535a85437f8653c44389acde5eedbb9b916959e8198a685eec71e00a9bc217fe70cbf2b6fd91d77e25
+  checksum: 10c0/8b3645f7f4d3598ba4fda45a57e29277b64bed6abb35d088d46be26488b7ab2aa2e197de0f2226199efbd5449044d97a6a060e32dc113be7170a03f2834f1df5
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell@npm:0.8.0, @libraz/formulon-cell@npm:^0.8.0":
-  version: 0.8.0
-  resolution: "@libraz/formulon-cell@npm:0.8.0"
+"@libraz/formulon-cell@npm:0.9.0":
+  version: 0.9.0
+  resolution: "@libraz/formulon-cell@npm:0.9.0"
   dependencies:
-    "@libraz/formulon": "npm:0.12.0"
+    "@libraz/formulon": "npm:0.15.1"
   peerDependencies:
     zustand: ^5
-  checksum: 10c0/9d869dc97932ea440630f1b5aec0df55b51371cc1dfaf381b146ff816615ce11d706144cd10e36f2d3b30979b5c2ac1c98d64a68910681df6583f534cec86c21
+  checksum: 10c0/8b9f2797f8b3bce3070b44a8f81d396c1f727ba6106a0c7add565cf5f2a38c95095c6409d23baf5db584da1914b220d71ded73bb5b763df2e490a4b6970125a4
   languageName: node
   linkType: hard
 
-"@libraz/formulon@npm:0.12.0":
-  version: 0.12.0
-  resolution: "@libraz/formulon@npm:0.12.0"
-  checksum: 10c0/ec7d9d0283b4ce35ddd4751f427b83b4ef568bd31452cd24653c591fae89b599f9b830b451802929954d873b8697b4da099699e4414b970619ab7d55082bd780
+"@libraz/formulon@npm:0.15.1":
+  version: 0.15.1
+  resolution: "@libraz/formulon@npm:0.15.1"
+  checksum: 10c0/a64cff4043fb02324aaa6b02df5096774164e97ddeec6e354dedd8e311ad861216553d3502888db62685956ec5cee9a8827d94c87376df9551bb0c8facc4e65e
   languageName: node
   linkType: hard
 
@@ -2498,9 +2498,9 @@ __metadata:
   resolution: "formulon-homepage@workspace:."
   dependencies:
     "@biomejs/biome": "npm:^2.5.14"
-    "@libraz/formulon": "npm:0.12.0"
-    "@libraz/formulon-cell": "npm:0.8.0"
-    "@libraz/formulon-cell-vue": "npm:0.8.0"
+    "@libraz/formulon": "npm:0.15.1"
+    "@libraz/formulon-cell": "npm:0.9.0"
+    "@libraz/formulon-cell-vue": "npm:0.9.0"
     "@vitejs/plugin-vue": "npm:6.0.8"
     "@vitest/browser-playwright": "npm:4.1.10"
     "@vue/test-utils": "npm:2.4.6"

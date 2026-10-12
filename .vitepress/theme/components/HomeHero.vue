@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useData } from 'vitepress'
 import { computed } from 'vue'
-import { MCP_TOOL_COUNT } from '@/data/facts'
+import { DOCS_VERSION, MCP_TOOL_COUNT } from '@/data/facts'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -12,18 +12,16 @@ const copy = computed(() =>
   isJa.value
     ? {
         masthead: 'Formulon',
-        volume: '0.12.0',
-        issue: 'v0.12.0 · 2026 / 09',
-        eyebrow: 'Workbook calculation platform',
-        claim: 'アプリや自動化、AI エージェントから Excel ワークブックを計算するエンジン',
-        sub: 'Formulon は同じ C++17 計算エンジンを WebAssembly、Python、Native Node、CLI、MCP から使えます。Excel をインストールせずに .xlsx / .xlsb を読み込み、数式を評価・再計算して保存できます。',
+        eyebrow: 'Headless Spreadsheet Engine',
+        claim: 'アプリや自動化、AI\u00a0エージェントから Excel ワークブックを計算するエンジン',
+        sub: 'Formulon は同じ C++17 計算エンジンを WebAssembly、Python、Native Node、CLI、MCP から使えます。Excel や Microsoft のランタイム、COM 自動化なしで .xlsx / .xlsb を読み込み、数式を評価・再計算して保存できます。',
         primary: { text: 'クイックスタート', link: '/ja/start/install' },
         secondary: { text: 'MCP で使う', link: '/ja/mcp/' },
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモを試す', link: '/ja/demos' },
         stats: [
-          { value: 'v0.12.0', label: 'ドキュメント対象' },
-          { value: '508 / 523', label: 'ローカル実装 / 認識対象' },
+          { value: `v${DOCS_VERSION}`, label: 'ドキュメント対象' },
+          { value: '511 / 526', label: 'ローカル実装 / 認識対象' },
           { value: String(MCP_TOOL_COUNT), label: 'MCP ツール' }
         ] as Stat[],
         coverageNote:
@@ -43,8 +41,6 @@ const copy = computed(() =>
       }
     : {
         masthead: 'Formulon',
-        volume: '0.12.0',
-        issue: 'v0.12.0 · 2026 / 09',
         eyebrow: 'Headless Spreadsheet Engine',
         claim: 'A workbook calculation platform for apps, automation, and AI agents.',
         sub: 'Formulon ships one C++17 calculation core across WASM, Python, Native Node, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
@@ -53,8 +49,8 @@ const copy = computed(() =>
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the live demos', link: '/demos' },
         stats: [
-          { value: 'v0.12.0', label: 'Documentation target' },
-          { value: '508 / 523', label: 'Local / recognized functions' },
+          { value: `v${DOCS_VERSION}`, label: 'Documentation target' },
+          { value: '511 / 526', label: 'Local / recognized functions' },
           { value: String(MCP_TOOL_COUNT), label: 'MCP tools' }
         ] as Stat[],
         coverageNote:
@@ -92,8 +88,10 @@ const flowLabel = (i: number) => String(i + 1).padStart(2, '0')
           <a :href="copy.secondary.link" class="fln-cta fln-cta-secondary">{{
             copy.secondary.text
           }}</a>
-          <a :href="copy.tertiary.link" class="fln-cta-link">{{ copy.tertiary.text }}</a>
+        </div>
+        <div class="fln-actions-links">
           <a :href="copy.demo.link" class="fln-cta-link">{{ copy.demo.text }}</a>
+          <a :href="copy.tertiary.link" class="fln-cta-link">{{ copy.tertiary.text }}</a>
         </div>
       </div>
 

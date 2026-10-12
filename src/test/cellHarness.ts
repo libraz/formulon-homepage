@@ -5,16 +5,24 @@ import type { Component } from 'vue'
 import { getCellApi } from '../components/demos/engine'
 
 /** Observe real mounts without replacing the engine or spreadsheet implementation. */
-export async function captureMounts() {
+export async function captureMounts(options: { trackDisposals?: boolean } = {}) {
   const api = await getCellApi()
   const original = api.Spreadsheet.mount
   const instances: SpreadsheetInstance[] = []
+  const disposed: SpreadsheetInstance[] = []
   const spy = vi.spyOn(api.Spreadsheet, 'mount').mockImplementation(async (...args) => {
     const instance = await original(...args)
+    if (options.trackDisposals) {
+      const originalDispose = instance.dispose.bind(instance)
+      vi.spyOn(instance, 'dispose').mockImplementation(() => {
+        disposed.push(instance)
+        originalDispose()
+      })
+    }
     instances.push(instance)
     return instance
   })
-  return { api, instances, spy, original }
+  return { api, instances, disposed, spy, original }
 }
 
 export function mountDemo(component: Component, props = {}): VueWrapper {

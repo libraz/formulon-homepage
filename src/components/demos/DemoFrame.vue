@@ -17,6 +17,7 @@
  */
 import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { DOCS_VERSION } from '@/data/facts'
 import { type EngineBlocker, engineBlocker } from './engine'
 
 const props = withDefaults(
@@ -112,8 +113,7 @@ const copy = computed(() =>
         retry: 'もう一度試す',
         failed: 'エンジンの実行に失敗しました。',
         note: '本物の Formulon エンジン (WASM) がこのページ内で動作します。データは送信されません。',
-        releaseNote:
-          'ドキュメントは 0.12.0 を対象としています。デモの実行バージョンは上に表示します。',
+        releaseNote: `ドキュメントは ${DOCS_VERSION} を対象としています。デモの実行バージョンは上に表示します。`,
         badge: 'live engine',
         blocked: {
           wasm: 'このブラウザは WebAssembly に対応していないため、デモを実行できません。',
@@ -129,7 +129,7 @@ const copy = computed(() =>
         retry: 'Try again',
         failed: 'The engine failed to run.',
         note: 'Powered by the real Formulon engine (WASM) — it runs entirely in your browser, nothing is uploaded.',
-        releaseNote: 'The documentation targets 0.12.0. The demo’s runtime version is shown above.',
+        releaseNote: `The documentation targets ${DOCS_VERSION}. The demo’s runtime version is shown above.`,
         badge: 'live engine',
         blocked: {
           wasm: 'This browser has no WebAssembly support, so the demo cannot run.',
@@ -188,6 +188,6 @@ const blockedText = computed(() => (blocker.value ? copy.value.blocked[blocker.v
     </ClientOnly>
 
     <p class="demo-frame__note">{{ copy.note }}</p>
-    <p v-if="version && version !== '0.12.0'" class="demo-frame__note">{{ copy.releaseNote }}</p>
+    <p v-if="version && version !== DOCS_VERSION" class="demo-frame__note">{{ copy.releaseNote }}</p>
   </section>
 </template>

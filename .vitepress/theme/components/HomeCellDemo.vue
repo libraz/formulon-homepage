@@ -5,6 +5,7 @@ import type {
 } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { setDemoLocale } from '@/components/demos/engine'
 
 const { lang, isDark } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -26,7 +27,7 @@ const functions: DemoFunction[] = [
   {
     name: 'IF',
     category: 'Logic',
-    formula: '=IF(SUM(D2:D7)>8000,"above plan","below plan")',
+    formula: '=IF(SUM(D2:D7)>4000,"above plan","below plan")',
     target: 'F2'
   },
   { name: 'SORT', category: 'Array', formula: '=SORT(B2:B7,,-1)', target: 'F2' },
@@ -211,7 +212,7 @@ watch(isDark, (dark) => {
 })
 
 watch(isJa, async (ja) => {
-  spreadsheet?.i18n.setLocale(ja ? 'ja' : 'en')
+  if (spreadsheet) setDemoLocale(spreadsheet, ja ? 'ja' : 'en')
   await nextTick()
   readResult()
 })

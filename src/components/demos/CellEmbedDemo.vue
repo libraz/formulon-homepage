@@ -10,13 +10,14 @@ import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import {
   CELL_EMBED_FORM_RANGE,
+  CELL_EMBED_LOCALES,
   CELL_EMBED_VIEWPORT,
   type CellEmbedLocale,
   type CellEmbedScenario,
   seedCellEmbedWorkbook
 } from './cellEmbedScenarios'
 import DemoFrame from './DemoFrame.vue'
-import { cellAddress, getCellApi } from './engine'
+import { cellAddress, getCellApi, setDemoLocale } from './engine'
 
 const props = defineProps<{ scenario: CellEmbedScenario }>()
 
@@ -29,10 +30,11 @@ type ChromeToggle = 'formulaBar' | 'sheetTabs' | 'statusBar'
 
 const FORM_INPUT_ADDR = { sheet: 0, row: 1, col: 1 } as const
 const FORM_TOTAL_ADDR = { sheet: 0, row: 1, col: 3 } as const
+const LOCALE_FORMULA_ADDR = { sheet: 0, row: 1, col: 3 } as const
 
 const PROFILE_NAMES: SpreadsheetUiProfile[] = ['embedded', 'minimal', 'standard', 'excel365']
 const THEMES: DemoTheme[] = ['paper', 'ink', 'contrast']
-const LOCALES: CellEmbedLocale[] = ['en', 'ja']
+const LOCALES: readonly CellEmbedLocale[] = CELL_EMBED_LOCALES
 
 const state = ref<DemoState>('idle')
 const failure = ref('')
@@ -60,6 +62,7 @@ const syncResult = ref<SyncResult | null>(null)
 const eventLog = ref<string[]>([])
 const overlayFeedback = ref('')
 const uiLabels = ref({ copy: '', paste: '', find: '' })
+const localeReadout = ref({ locale: '', profile: '', display: '', stored: '' })
 
 interface SyncResult {
   status: string
@@ -107,8 +110,13 @@ const copy = computed(() => {
         viewport: 'viewport',
         theme: 'テーマ',
         locale: 'ロケール',
-        themeHint: 'setTheme() と i18n.setLocale() がマウント済みの UI に反映されます。',
+        themeHint:
+          'setTheme() と setLocale() はマウント済みのシートに反映されます。D2 を選択した状態なので、数式バーでも関数名と区切り文字の変化を確認できます。',
         labels: '現在の UI 辞書',
+        activeLocale: 'instance.locale',
+        profileId: '計算プロファイル',
+        displayFormula: 'D2 の表示式',
+        storedFormula: 'D2 の保存式',
         openSheet: 'シートを開く',
         closeSheet: '閉じる',
         format: '書式設定を開く',
@@ -150,8 +158,13 @@ const copy = computed(() => {
         viewport: 'Viewport',
         theme: 'Theme',
         locale: 'Locale',
-        themeHint: 'setTheme() and i18n.setLocale() update the mounted UI.',
+        themeHint:
+          'setTheme() and setLocale() update the mounted sheet. D2 stays selected, so the formula bar shows the localized function name and separators too.',
         labels: 'Resolved UI labels',
+        activeLocale: 'instance.locale',
+        profileId: 'Calculation profile',
+        displayFormula: 'D2 as displayed',
+        storedFormula: 'D2 as stored',
         openSheet: 'Open sheet',
         closeSheet: 'Close',
         format: 'Open format dialog',
@@ -183,7 +196,8 @@ const copy = computed(() => {
         },
         'theme-locale': {
           title: 'テーマとロケールの実行時切り替え',
-          description: 'マウント済みのシートへテーマと UI 辞書を切り替えます。'
+          description:
+            'マウント済みのシートのテーマと言語を切り替えます。言語を変えると UI 辞書と計算プロファイルが一緒に切り替わり、関数名、引数区切り、小数点の表記が変わります。保存される数式は変わりません。'
         },
         overlay: {
           title: 'native dialog 内のオーバーレイ',
@@ -213,7 +227,8 @@ const copy = computed(() => {
         },
         'theme-locale': {
           title: 'Switch theme and locale at runtime',
-          description: 'Change the mounted sheet’s theme and UI dictionary while it stays in place.'
+          description:
+            'Change the mounted sheet’s theme and language in place. A language switch moves the UI dictionary and the calculation profile together, so function names, argument separators, and decimal marks change while the stored formula stays the same.'
         },
         overlay: {
           title: 'Overlays inside a native dialog',
@@ -263,13 +278,21 @@ const pushEvent = (message: string): void => {
   eventLog.value = [message, ...eventLog.value].slice(0, 6)
 }
 
-const readUiLabels = (): void => {
+const readLocaleState = (): void => {
   if (!instance) return
   const strings = instance.i18n.strings
   uiLabels.value = {
     copy: strings.contextMenu.copy,
     paste: strings.contextMenu.paste,
     find: strings.findReplace.findLabel
+  }
+  const wb = instance.workbook
+  const stored = wb.cellFormula(LOCALE_FORMULA_ADDR) ?? ''
+  localeReadout.value = {
+    locale: instance.locale,
+    profile: wb.spreadsheetProfileId() ?? '—',
+    display: stored ? wb.getFormulaForDisplay(stored) : '—',
+    stored: stored || '—'
   }
 }
 
@@ -293,6 +316,7 @@ const resetReadouts = (): void => {
   eventLog.value = []
   overlayFeedback.value = ''
   uiLabels.value = { copy: '', paste: '', find: '' }
+  localeReadout.value = { locale: '', profile: '', display: '', stored: '' }
   activeProfile.value = 'embedded'
   selectedTheme.value = isDark.value ? 'ink' : 'paper'
   selectedLocale.value = isJa.value ? 'ja' : 'en'
@@ -396,10 +420,10 @@ const attachEvents = (mounted: SpreadsheetInstance): void => {
   )
   stops.push(
     mounted.on('localeChange', () => {
-      readUiLabels()
+      readLocaleState()
     })
   )
-  readUiLabels()
+  readLocaleState()
 }
 
 const verifyFormPolicy = (): void => {
@@ -472,6 +496,10 @@ const mountInstance = async (mine: number, target: HTMLDivElement): Promise<void
       cellApi.mutators.setActive(mounted.store, FORM_INPUT_ADDR)
       selection.value = 'B2'
       readFormValues()
+    }
+    if (activeScenario.value === 'theme-locale') {
+      cellApi.mutators.setActive(mounted.store, LOCALE_FORMULA_ADDR)
+      selection.value = 'D2'
     }
     if (activeScenario.value === 'host-sync') pushEvent('mount ready')
   } finally {
@@ -584,8 +612,9 @@ const changeTheme = (theme: DemoTheme): void => {
 }
 
 const changeLocale = (locale: CellEmbedLocale): void => {
+  // A rejected switch keeps the previous locale, so the segment stays on it too.
+  if (instance && !setDemoLocale(instance, locale)) return
   selectedLocale.value = locale
-  instance?.i18n.setLocale(locale)
 }
 
 const openOverlayAction = (kind: 'format' | 'find'): void => {
@@ -614,7 +643,7 @@ watch(isJa, (ja) => {
   if (activeScenario.value === 'theme-locale') return
   const locale: CellEmbedLocale = ja ? 'ja' : 'en'
   selectedLocale.value = locale
-  instance?.i18n.setLocale(locale)
+  if (instance) setDemoLocale(instance, locale)
 })
 
 onBeforeUnmount(() => {
@@ -841,7 +870,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="cell-embed-demo__control-block">
         <span class="demo-label">{{ copy.locale }}</span>
-        <div class="demo-segment demo-segment--inline" role="tablist">
+        <div class="demo-segment" role="tablist">
           <button
             v-for="locale in LOCALES"
             :key="locale"
@@ -878,7 +907,23 @@ onBeforeUnmount(() => {
       <dl class="demo-result">
         <div>
           <dt>{{ copy.labels }}</dt>
-          <dd class="is-formula">{{ uiLabels.copy }} · {{ uiLabels.paste }} · {{ uiLabels.find }}</dd>
+          <dd class="is-formula" data-ui-labels>{{ uiLabels.copy }} · {{ uiLabels.paste }} · {{ uiLabels.find }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy.activeLocale }}</dt>
+          <dd class="is-formula">{{ localeReadout.locale }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy.profileId }}</dt>
+          <dd class="is-formula">{{ localeReadout.profile }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy.displayFormula }}</dt>
+          <dd class="is-formula">{{ localeReadout.display }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy.storedFormula }}</dt>
+          <dd class="is-formula">{{ localeReadout.stored }}</dd>
         </div>
       </dl>
       <p class="demo-hint">{{ copy.themeHint }}</p>

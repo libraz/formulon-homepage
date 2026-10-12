@@ -1,3 +1,4 @@
+import enginePackage from '@libraz/formulon/package.json'
 import { describe, expect, it } from 'vitest'
 import { engineBlocker, getEngine, numberResult } from './engine'
 
@@ -9,7 +10,7 @@ describe('serial WASM demos', () => {
     const engine = await getEngine()
     const workbook = engine.module.Workbook.createDefault()
     try {
-      expect(engine.module.version()).toBe('0.12.0')
+      expect(engine.module.version()).toBe(enginePackage.version)
     } finally {
       workbook.delete()
     }

@@ -16,7 +16,7 @@
 import type { SpreadsheetInstance, WorkbookHandle } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { getCellApi } from './engine'
+import { getCellApi, setDemoLocale } from './engine'
 
 const props = withDefaults(
   defineProps<{
@@ -147,7 +147,7 @@ watch(isDark, (dark) => {
 })
 
 watch(isJa, (ja) => {
-  instance?.i18n.setLocale(ja ? 'ja' : 'en')
+  if (instance) setDemoLocale(instance, ja ? 'ja' : 'en')
 })
 
 onBeforeUnmount(() => {

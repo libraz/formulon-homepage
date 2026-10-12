@@ -1,8 +1,9 @@
 /**
  * Shared access to the real Formulon WASM engine for the embedded doc demos.
  *
- * Raw-engine demos share `getEngine()`. The grid package manages its own
- * engine, which may be older than the documentation's release target.
+ * Raw-engine demos share `getEngine()`. Registry builds use the pinned
+ * published packages; explicit local builds alias both surfaces to the
+ * prepared source snapshots.
  * The import is dynamic on purpose: `@libraz/formulon` pulls in the Emscripten
  * glue, and `@libraz/formulon-cell` touches `document` at module scope, so
  * neither may be evaluated during the SSR pass or on initial page load.
@@ -12,6 +13,7 @@
  */
 import type { FormulonModule, Status, Value, Workbook } from '@libraz/formulon'
 import enginePackage from '@libraz/formulon/package.json'
+import type { SpreadsheetInstance } from '@libraz/formulon-cell'
 
 type FormulonNamespace = typeof import('@libraz/formulon')
 type CellNamespace = typeof import('@libraz/formulon-cell')
@@ -28,8 +30,24 @@ export interface Engine {
   ErrorCode: FormulonNamespace['ErrorCode']
 }
 
-/** Catalog-locale ordinals accepted by `Workbook.functionMetadata(name, locale)`. */
-export const METADATA_LOCALE = { enUS: 0, jaJP: 1 } as const
+export type DemoLocale = 'en' | 'ja'
+
+interface LocaleRuntimeSurface {
+  setLocale?: (locale: DemoLocale) => unknown
+  i18n?: {
+    setLocale?: (locale: DemoLocale) => unknown
+  }
+}
+
+/** Set the locale on a mounted demo instance. */
+export function setDemoLocale(instance: SpreadsheetInstance, locale: DemoLocale): boolean {
+  const surface = instance as unknown as LocaleRuntimeSurface
+  if (typeof surface.setLocale === 'function') return surface.setLocale(locale) !== false
+
+  const legacySetLocale = surface.i18n?.setLocale
+  if (typeof legacySetLocale !== 'function' || !surface.i18n) return false
+  return legacySetLocale.call(surface.i18n, locale) !== false
+}
 
 /** `precedents()` / `dependents()` cap the BFS at this depth. */
 export const MAX_TRACE_DEPTH = 32

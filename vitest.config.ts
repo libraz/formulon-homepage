@@ -2,16 +2,26 @@ import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { playwright } from '@vitest/browser-playwright'
 import { defineConfig } from 'vitest/config'
+import { loadDemoPackageAliases } from './scripts/demo-package-aliases.mjs'
+
+const demoPackageConfig = loadDemoPackageAliases()
 
 export default defineConfig({
   plugins: [vue()],
   publicDir: 'src/public',
-  optimizeDeps: { exclude: ['@libraz/formulon', '@libraz/formulon-cell'] },
+  optimizeDeps: {
+    include: ['zustand/vanilla'],
+    exclude: ['@libraz/formulon', '@libraz/formulon-cell']
+  },
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      vitepress: fileURLToPath(new URL('./src/test/siteData.ts', import.meta.url))
-    }
+    alias: [
+      ...demoPackageConfig.aliases,
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+      {
+        find: 'vitepress',
+        replacement: fileURLToPath(new URL('./src/test/siteData.ts', import.meta.url))
+      }
+    ]
   },
   test: {
     include: ['src/**/*.test.ts', '.vitepress/theme/**/*.test.ts'],

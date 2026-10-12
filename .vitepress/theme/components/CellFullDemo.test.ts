@@ -87,6 +87,31 @@ describe('full spreadsheet demo', () => {
     expect(instance.host.dataset.fcTheme).toBe('ink')
   })
 
+  it('switches language from the built-in selector and survives a platform change', async () => {
+    const { instances } = await openDemo()
+    const instance = instances[0]
+    const select = requiredElement<HTMLSelectElement>(
+      '.cell-full-demo__sheet .fc-host__locale-switcher-select'
+    )
+    await userEvent.selectOptions(select, 'de')
+    await expect.poll(() => instance.locale).toBe('de')
+    expect(instance.workbook.spreadsheetProfileId()).toBe('windows-de_DE')
+    const formula = instance.workbook.cellFormula({ sheet: 0, row: 9, col: 1 })
+    expect(formula).toBe('=SUM(B2:B9)')
+    expect(instance.workbook.getFormulaForDisplay(formula ?? '')).toBe('=SUMME(B2:B9)')
+
+    await userEvent.selectOptions(
+      requiredElement<HTMLSelectElement>('.cell-full-demo__platform select'),
+      'mac'
+    )
+    await expect.poll(() => instance.host.dataset.fcPlatform).toBe('mac')
+    expect(instance.workbook.spreadsheetProfileId()).toBe('mac-de_DE')
+    expect(
+      document.querySelector('.cell-full-demo__sheet .fc-host__locale-switcher-select')
+    ).not.toBeNull()
+    expect(instances).toEqual([instance])
+  })
+
   it('switches to Mac chrome and its palette without remounting the edited workbook', async () => {
     const { instances } = await openDemo()
     const instance = instances[0]

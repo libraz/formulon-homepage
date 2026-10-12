@@ -48,7 +48,7 @@ const paths = computed<Path[]>(() =>
         },
         {
           key: 'Agent',
-          title: 'AI エージェントからワークブックを編集する',
+          title: 'AI\u00a0エージェントからワークブックを編集する',
           description:
             'MCP ツールで .xlsx / .xlsb を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
           link: '/ja/mcp/'

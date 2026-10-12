@@ -12,7 +12,7 @@ const copy = computed(() =>
     ? {
         section: 'Agent interface',
         heading: 'AI エージェントからワークブックを扱う。',
-        body: 'formulon-mcp は Formulon の計算エンジンを MCP ツールとして公開します。エージェントは .xlsx / .xlsb を開き、セルやシートを編集し、再計算して保存できます。',
+        body: 'formulon-mcp は Formulon の計算エンジンを MCP ツールとして公開します。エージェントは .xlsx / .xlsb を開いて構造を調べ、セルやシートを編集し、再計算して保存できます。',
         primary: { text: 'MCP セットアップ', link: '/ja/mcp/' },
         secondary: { text: 'GitHub', link: 'https://github.com/libraz/formulon-mcp' },
         installLabel: 'Codex の設定',

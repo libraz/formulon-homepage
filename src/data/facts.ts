@@ -22,6 +22,12 @@ export interface Budget {
   hardBytes: number
 }
 
+/**
+ * Formulon release the documentation describes. May lead the published npm
+ * version while the core repo is mid-release; dependencies stay on what is published.
+ */
+export const DOCS_VERSION: string = facts.docsVersion
+
 /** Tools exposed by `@libraz/formulon-mcp`, counted from `src/mcp/tools.md`. */
 export const MCP_TOOL_COUNT: number = facts.mcpToolCount
 

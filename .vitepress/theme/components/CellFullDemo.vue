@@ -7,6 +7,7 @@ import type {
 } from '@libraz/formulon-cell'
 import { useData } from 'vitepress'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { setDemoLocale } from '@/components/demos/engine'
 
 const { lang, isDark } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -69,7 +70,15 @@ const seedSheet = (wb: WorkbookHandle) => {
   wb.setFormula({ sheet: 0, row: avgRow, col: 3 }, `=AVERAGE(D2:D${lastDataRow})`)
 
   wb.setText({ sheet: 0, row: marginRow, col: 0 }, 'Margin %')
-  wb.setFormula({ sheet: 0, row: marginRow, col: 1 }, `=TEXT(D${totalA1}/B${totalA1},"0.0%")`)
+  // A cell number format follows the language switch; a TEXT() format string would not.
+  wb.setFormula({ sheet: 0, row: marginRow, col: 1 }, `=D${totalA1}/B${totalA1}`)
+  const baseXf = wb.getCellXfIndex(0, marginRow, 1)
+  const baseRecord = baseXf === null ? null : wb.getCellXf(baseXf)
+  const percent = wb.addNumFmtCode('0.0%')
+  if (baseRecord && percent >= 0) {
+    const percentXf = wb.addXfRecord({ ...baseRecord, numFmtId: percent, applyNumberFormat: true })
+    if (percentXf >= 0) wb.setCellXfIndex(0, marginRow, 1, percentXf)
+  }
 
   wb.setText({ sheet: 0, row: statusRow, col: 0 }, 'Status')
   wb.setFormula({ sheet: 0, row: statusRow, col: 1 }, `=IF(D${totalA1}>30000,"On plan","Off plan")`)
@@ -77,11 +86,19 @@ const seedSheet = (wb: WorkbookHandle) => {
   wb.recalc()
 }
 
+// setUi() resolves from the profile again, so the opt-in selector is restated on every call.
+const demoUi = (nextPlatform: SpreadsheetPlatform, theme: 'paper' | 'ink') => ({
+  profile: 'excel365' as const,
+  platform: nextPlatform,
+  theme,
+  features: { localeSwitcher: true }
+})
+
 const copy = computed(() =>
   isJa.value
     ? {
         title: 'formulon-cell フルデモ',
-        body: 'formulon-cell を埋め込んだ表計算デモです。リボン、セル編集、数式入力、UI プラットフォームの切り替えを試せます。',
+        body: 'formulon-cell を埋め込んだ表計算デモです。リボン、セル編集、数式入力、UI プラットフォームと表示言語の切り替えを試せます。',
         open: 'フルデモを開く',
         close: 'フルデモを閉じる',
         label: 'formulon-cell',
@@ -94,7 +111,7 @@ const copy = computed(() =>
       }
     : {
         title: 'formulon-cell full demo',
-        body: 'A spreadsheet demo embedded with formulon-cell. Try the ribbon, cell editing, formula entry, and the UI platform switch.',
+        body: 'A spreadsheet demo embedded with formulon-cell. Try the ribbon, cell editing, formula entry, and the UI platform and language switches.',
         open: 'Open full demo',
         close: 'Close full demo',
         label: 'formulon-cell',
@@ -114,7 +131,9 @@ const getFunctionArgumentHelp: FunctionArgumentHelpProvider = (
 ) => {
   if (argumentIndex !== 0) return null
   const isJapanese = locale.toLowerCase().startsWith('ja')
-  const helpUrl = isJapanese ? '/ja/workbook/formula-engine' : '/workbook/formula-engine'
+  const helpUrl = isJapanese
+    ? 'https://formulon.libraz.net/ja/workbook/formula-engine'
+    : 'https://formulon.libraz.net/workbook/formula-engine'
   switch (functionName.toUpperCase()) {
     case 'SUM':
       return isJapanese
@@ -210,7 +229,7 @@ const mountDemo = async () => {
     const requestedTheme = isDark.value ? 'ink' : 'paper'
     const requestedLocale = isJa.value ? 'ja' : 'en'
     const mounted = await cellApi.Spreadsheet.mount(sheetEl, {
-      ui: { profile: 'excel365', platform: requestedPlatform, theme: requestedTheme },
+      ui: demoUi(requestedPlatform, requestedTheme),
       locale: requestedLocale,
       getFunctionArgumentHelp,
       overlays: {
@@ -230,10 +249,10 @@ const mountDemo = async () => {
     instance.value = mounted
     const currentTheme = isDark.value ? 'ink' : 'paper'
     if (platform.value !== requestedPlatform || currentTheme !== requestedTheme) {
-      mounted.setUi({ profile: 'excel365', platform: platform.value, theme: currentTheme })
+      mounted.setUi(demoUi(platform.value, currentTheme))
     }
     const currentLocale = isJa.value ? 'ja' : 'en'
-    if (currentLocale !== requestedLocale) mounted.i18n.setLocale(currentLocale)
+    if (currentLocale !== requestedLocale) setDemoLocale(mounted, currentLocale)
   } catch (error) {
     if (mine === token) failure.value = String(error)
   } finally {
@@ -246,15 +265,11 @@ watch(isDark, (dark) => {
 })
 
 watch(platform, (nextPlatform) => {
-  spreadsheet?.setUi({
-    profile: 'excel365',
-    platform: nextPlatform,
-    theme: isDark.value ? 'ink' : 'paper'
-  })
+  spreadsheet?.setUi(demoUi(nextPlatform, isDark.value ? 'ink' : 'paper'))
 })
 
 watch(isJa, (ja) => {
-  spreadsheet?.i18n.setLocale(ja ? 'ja' : 'en')
+  if (spreadsheet) setDemoLocale(spreadsheet, ja ? 'ja' : 'en')
 })
 
 onBeforeUnmount(() => {

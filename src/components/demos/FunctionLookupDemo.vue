@@ -4,9 +4,9 @@
  *
  * Nothing here is a copy of the catalog: the index comes from
  * `functionNames()` and every badge, arity and count comes from
- * `functionMetadata(name, locale)` at runtime, so the page cannot drift from
+ * `functionMetadata(name)` at runtime, so the page cannot drift from
  * the engine it ships with. Signature and description fall back to the
- * display tables in formulon-cell when the engine's locale table has no entry.
+ * display tables in formulon-cell because the engine metadata is structural.
  */
 import type { FunctionMetadataResult, Workbook } from '@libraz/formulon'
 import { useData } from 'vitepress'
@@ -20,7 +20,6 @@ import {
   getEngine,
   getFunctionCatalog,
   isErrorValue,
-  METADATA_LOCALE,
   statusText
 } from './engine'
 
@@ -122,8 +121,6 @@ const copy = computed(() =>
       }
 )
 
-const localeOrdinal = computed(() => (isJa.value ? METADATA_LOCALE.jaJP : METADATA_LOCALE.enUS))
-
 const matches = computed(() => {
   const needle = query.value.trim().toUpperCase()
   return needle ? names.value.filter((name) => name.includes(needle)) : names.value
@@ -156,7 +153,7 @@ const describe = (name: string) => {
 const select = (name: string) => {
   if (!engine || !catalog) return
   selected.value = name
-  meta.value = catalog.functionMetadata(name, localeOrdinal.value)
+  meta.value = catalog.functionMetadata(name)
   describe(name)
   tryFormula.value = EXAMPLES[name] ?? `=${name}(`
   tryResult.value = null
@@ -188,9 +185,7 @@ const start = async () => {
     const list = Array.from(checkedList(catalog.functionNames()))
     names.value = list
     availability.value = list.map(
-      (name) =>
-        catalog?.functionMetadata(name, METADATA_LOCALE.enUS).availability ??
-        AVAILABILITY.unavailableStub
+      (name) => catalog?.functionMetadata(name).availability ?? AVAILABILITY.unavailableStub
     )
     state.value = 'ready'
     // ROUND opens on a fixed two-argument signature, which reads better as a

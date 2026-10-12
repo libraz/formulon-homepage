@@ -11,7 +11,9 @@
   },
   "scripts": {
     "dev": "vitepress dev",
-    "build": "node scripts/check-facts.mjs && vitepress build",
+    "dev:local": "node scripts/check-demo-packages.mjs && FORMULON_DEMO_SOURCE=local yarn dev",
+    "build": "node scripts/check-facts.mjs && vitepress build && node scripts/check-docs.mjs",
+    "build:local": "node scripts/check-demo-packages.mjs && FORMULON_DEMO_SOURCE=local yarn build",
     "preview": "node scripts/preview.mjs",
     "check:facts": "node scripts/check-facts.mjs",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
@@ -19,8 +21,12 @@
     "lint:fix": "biome check --write src .vitepress vitest.config.ts",
     "format": "biome format --write src .vitepress vitest.config.ts",
     "test": "vitest run",
+    "test:local": "node scripts/check-demo-packages.mjs && FORMULON_DEMO_SOURCE=local yarn test",
     "test:watch": "vitest",
-    "test:install": "playwright install chromium"
+    "test:install": "playwright install chromium",
+    "demos:prepare": "node scripts/prepare-demo-packages.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "check:demos": "node scripts/check-demo-packages.mjs"
   },
   "keywords": [
     "excel",
@@ -44,13 +50,15 @@
     "vitest": "4.1.10"
   },
   "dependencies": {
-    "@libraz/formulon": "0.12.0",
-    "@libraz/formulon-cell": "0.8.0",
-    "@libraz/formulon-cell-vue": "0.8.0",
+    "@libraz/formulon": "0.15.1",
+    "@libraz/formulon-cell": "0.9.0",
+    "@libraz/formulon-cell-vue": "0.9.0",
     "vue": "^3.5.43",
     "zustand": "^5.0.15"
   },
   "resolutions": {
-    "@libraz/formulon": "0.12.0"
+    "@libraz/formulon": "0.15.1",
+    "@libraz/formulon-cell": "0.9.0",
+    "@libraz/formulon-cell-vue": "0.9.0"
   }
 }

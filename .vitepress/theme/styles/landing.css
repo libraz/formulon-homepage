@@ -1953,6 +1953,143 @@ a.fln-stack-chip:hover {
   }
 }
 
+/* The last section carries its own bottom padding and rule. */
+.VPHome {
+  margin-bottom: 0 !important;
+}
+
+/* Break Japanese headings at phrase boundaries instead of mid-word. */
+.fln-claim,
+.fln-mcp-copy h2,
+.fln-stack-header h2,
+.fln-start-header h2,
+.fln-demo-copy h2,
+.fln-path strong,
+.fln-capabilities strong {
+  word-break: auto-phrase;
+  text-wrap: balance;
+}
+
+/* Kana and kanji read larger than Latin at the same size. */
+:lang(ja) .fln-mcp-copy h2,
+:lang(ja) .fln-stack-header h2,
+:lang(ja) .fln-start-header h2 {
+  max-width: none;
+  font-size: clamp(1.9rem, 3.2vw, 2.9rem);
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+}
+
+:lang(ja) .fln-path strong {
+  max-width: none;
+  font-size: clamp(1.15rem, 1.4vw, 1.32rem);
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+:lang(ja) .fln-demo-copy h2 {
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+:lang(ja) .fln-claim {
+  max-width: none;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+/* Sit the sample sheet at its natural height beside the copy. */
+.fln-workbench {
+  align-self: center;
+}
+
+.fln-actions-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  margin-top: 14px;
+}
+
+/* L4 consumers are not packages, so they drop the monospace package face. */
+div.fln-stack-cell strong {
+  font-family: var(--biz-display);
+}
+
+.fln-stack-body[data-kind="triple"] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.fln-stack-chip-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+/* Source-only packages: dashed outline and muted ink, so they read as
+   available-by-build rather than installable. */
+.fln-stack-chip[data-status="unpublished"] {
+  border-style: dashed;
+  background: transparent;
+}
+
+.fln-stack-chip[data-status="unpublished"] strong {
+  color: var(--biz-muted);
+  font-weight: 500;
+}
+
+a.fln-stack-chip[data-status="unpublished"]:hover {
+  background: var(--biz-bg-soft);
+}
+
+.fln-stack-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid var(--biz-line-strong);
+  border-radius: 4px;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--biz-muted);
+  background: var(--biz-bg-soft);
+}
+
+.fln-stack-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.fln-stack-note-swatch {
+  flex: none;
+  width: 22px;
+  height: 14px;
+  border: 1px dashed var(--biz-line-strong);
+  border-radius: 3px;
+}
+
+@media (max-width: 1024px) {
+  .fln-stack-body[data-kind="triple"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .fln-stack-body[data-kind="triple"] {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- Keyboard focus ----------
  * A single pass covering every interactive element the homepage
  * components introduce. Several of these sit inside `overflow: hidden`

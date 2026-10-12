@@ -9,7 +9,9 @@ export type CellEmbedScenario =
   | 'theme-locale'
   | 'overlay'
 
-export type CellEmbedLocale = 'en' | 'ja'
+export const CELL_EMBED_LOCALES = ['en', 'ja', 'de', 'fr', 'zh', 'ko', 'th'] as const
+
+export type CellEmbedLocale = (typeof CELL_EMBED_LOCALES)[number]
 
 export interface CellEmbedViewport {
   sheet: number
@@ -37,7 +39,7 @@ export const CELL_EMBED_FORM_RANGE: CellEmbedViewport = {
   c1: 2
 }
 
-const reportRows = {
+const reportRows: Record<'en' | 'ja', readonly (readonly [string, number, number])[]> = {
   en: [
     ['North', 42, 1280],
     ['Central', 31, 945],
@@ -50,7 +52,7 @@ const reportRows = {
   ]
 } as const
 
-const formRows = {
+const formRows: Record<'en' | 'ja', readonly (readonly [string, number, number])[]> = {
   en: [
     ['Seats', 2, 120],
     ['Support', 1, 300],
@@ -81,14 +83,17 @@ export function seedCellEmbedWorkbook(
   scenario: CellEmbedScenario,
   locale: CellEmbedLocale
 ): void {
+  // The workbook content is intentionally bilingual; other locales are used
+  // to exercise the live UI/profile switch and keep the same seed content.
+  const seedLocale: 'en' | 'ja' = locale === 'ja' ? 'ja' : 'en'
   if (scenario === 'form') {
-    seedForm(wb, locale)
+    seedForm(wb, seedLocale)
     return
   }
-  seedReport(wb, locale)
+  seedReport(wb, seedLocale)
 }
 
-function seedReport(wb: WorkbookHandle, locale: CellEmbedLocale): void {
+function seedReport(wb: WorkbookHandle, locale: 'en' | 'ja'): void {
   const labels =
     locale === 'ja' ? ['区分', '件数', '売上', '平均'] : ['Region', 'Orders', 'Revenue', 'Average']
   labels.forEach((label, col) => {
@@ -113,7 +118,7 @@ function seedReport(wb: WorkbookHandle, locale: CellEmbedLocale): void {
   wb.recalc()
 }
 
-function seedForm(wb: WorkbookHandle, locale: CellEmbedLocale): void {
+function seedForm(wb: WorkbookHandle, locale: 'en' | 'ja'): void {
   const labels =
     locale === 'ja' ? ['項目', '数量', '単価', '小計'] : ['Item', 'Qty', 'Price', 'Total']
   labels.forEach((label, col) => {
