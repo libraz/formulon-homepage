@@ -18,7 +18,7 @@ CLI を使い、ワークブックの変更をコードレビューで確認す�
     { nodes: ['CI ジョブ'] },
     { nodes: [
       { label: 'formulon dump --formulas', note: '数式スナップショット' },
-      { label: 'formulon recalc → formulon dump --values', note: '値スナップショット' }
+      { label: 'formulon dump --values', note: '再計算してから値スナップショット' }
     ] },
     { nodes: ['testdata/*.txt'] },
     { nodes: ['git diff --exit-code'] },
@@ -48,17 +48,16 @@ jobs:
       - uses: actions/checkout@v7
       - name: コミット済み期待値を確認
         run: git ls-files --error-unmatch testdata/model.formulas.txt testdata/model.values.txt
-      - name: 現在の Formulon CLI をソースからビルド
+      - name: 固定したバージョンの Formulon CLI を入れる
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git clone https://github.com/libraz/formulon.git formulon-src
-          git -C formulon-src checkout v0.15.1
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build
-          cmake -S formulon-src -B formulon-src/build-ci -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release -DFM_BUILD_TESTING=OFF
-          cmake --build formulon-src/build-ci --parallel --target formulon_cli
-          install -Dm755 formulon-src/build-ci/bin/formulon_cli "$RUNNER_TEMP/formulon-bin/formulon"
-          echo "$RUNNER_TEMP/formulon-bin" >> "$GITHUB_PATH"
+          gh release download v0.15.1 --repo libraz/formulon \
+            --pattern 'formulon-0.15.1-linux-x64.tar.gz*' --dir "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          sha256sum -c formulon-0.15.1-linux-x64.tar.gz.sha256
+          tar -xzf formulon-0.15.1-linux-x64.tar.gz
+          echo "$RUNNER_TEMP/formulon-0.15.1-linux-x64" >> "$GITHUB_PATH"
       - name: Snapshot formulas
         run: |
           formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > testdata/model.formulas.txt
@@ -70,7 +69,7 @@ jobs:
           git diff --exit-code testdata/
 ```
 
-揮発性の入力を固定し、プロファイル、時計、Formulon のソースリビジョンをそろえると、スナップショットの差分をワークブックやエンジンの変更として確認できます。CLI のフラグを明示するのは、プロファイルと時計がワークブックに保存されないためです。この例は固定したソースタグからビルドします。同じ版の GitHub Releases の CLI アーカイブでも `--profile` と `--now` を使えます。アップグレードで出力が意図的に変わる場合もあるため、固定したリビジョン自体もレビューしてください。
+`dump --values` は出力の前に再計算するため、別途 `recalc` を実行する必要はありません。`--profile` と `--now` を明示するのは、どちらもワークブックに保存されないためです。揮発性の入力を固定し、プロファイル、時刻、CLI のバージョンをそろえると、スナップショットの差分はワークブックかエンジンの変更を示します。
 
 ## レビュー方針
 
@@ -84,8 +83,8 @@ jobs:
 
 この分類を PR 本文（またはコミット末尾の注記）に書き残すと、将来同じ差分を見た人が「なぜ受け入れたのか」を追跡できます。期待値ファイルが意味の分からないバイナリ差分になるのを防ぎます。
 
-::: tip CI では Formulon のソースリビジョンを固定する
-Formulon のソースリビジョン（または公開後に対応するリリースの CLI バイナリ URL）を明示的に固定してください。エンジンを更新すると数式やファイル形式の挙動が意図的に変わる場合があるため、パッチリリースでも出力互換を前提にしません。
+::: tip CI では Formulon のバージョンを固定する
+例のように、リリースタグを明示的に固定してください。エンジンを更新すると数式やファイル形式の挙動が意図的に変わる場合があるため、パッチリリースでも出力互換を前提にしません。タグの更新は単独のプルリクエストにすると、それによるスナップショットの差分だけをレビューできます。
 :::
 
 ## 次に読むもの

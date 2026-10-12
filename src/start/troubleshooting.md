@@ -50,7 +50,7 @@ export default defineConfig({
 
 ## Workbook load returns an invalid handle
 
-In WASM, check `wb.isValid()` immediately after `loadBytes(bytes)` and read `Module.lastErrorMessage()`.
+In WASM, `loadBytes(bytes)` does not throw on bad input. Check `wb.isValid()` immediately and read `Module.lastErrorMessage()`; for a file that is not a ZIP archive, the message comes from the ZIP reader.
 
 ```ts
 const wb = Module.Workbook.loadBytes(bytes)
@@ -63,9 +63,11 @@ try {
 }
 ```
 
+Python's `Workbook.load(data)` raises `FormulonError` instead of returning an invalid handle.
+
 ## Formula returns an Excel error
 
-Excel errors are values. `#DIV/0!`, `#VALUE!`, and `#NAME?` do not mean the host API failed. Inspect the value kind and error payload.
+Excel errors are values. `#DIV/0!`, `#VALUE!`, and `#NAME?` do not mean the host API failed. Check `value.kind` for `ValueKind.Error` and read `value.errorCode` (`error_code` in Python); `Module.errorDisplayName(code)` turns the code into text such as `#DIV/0!`.
 
 The CLI follows the same rule for malformed `eval` syntax: `formulon eval '=SUM('` prints `#NAME?` to stdout and exits `0`. Check stdout when a script must reject malformed formula text; a non-zero exit is reserved for usage, IO, or engine failures.
 
@@ -83,7 +85,7 @@ Install the published wheel so pip can resolve a compatible `wasmtime` wheel, or
 make python-package
 ```
 
-The source-tree import expects the staged C-ABI WASM module under `packages/python/formulon/_wasm/`.
+The source-tree import expects the staged C-ABI WASM module at `packages/python/formulon/_wasm/formulon_capi.wasm`. To use a module built elsewhere, set `FORMULON_WASM_PATH` to its path; the bundled location is checked first.
 
 ## CLI result differs from Excel
 

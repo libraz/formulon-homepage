@@ -3,7 +3,7 @@
 Use this pattern when a server-side Node service accepts an uploaded or internally generated workbook, recalculates it, and returns either values, diagnostics, or a saved workbook. Choose Native Node when deployment can build or stage a platform binary from the source tree; choose WASM when portability matters more than native throughput.
 
 ::: tip Pick the runtime by deployment
-Native Node avoids WASM heap-copy costs and browser isolation concerns, but it needs a matching `.node` binary from `packages/npm-native`. WASM is easier to deploy uniformly across Node environments. Formula semantics should be the same; if they differ, treat it as a bug or documented compatibility gap.
+Native Node avoids copying workbook bytes into the WASM heap, but it needs a `.node` binary built from `packages/npm-native` for each target platform. WASM deploys the same way on every Node environment. Formula results should match; a difference is a bug or a documented compatibility gap.
 :::
 
 ## Flow
@@ -23,14 +23,14 @@ Native Node avoids WASM heap-copy costs and browser isolation concerns, but it n
   :layers="[
     { nodes: ['Can you build or stage a platform-specific .node binary in this deployment today?'] },
     { nodes: [
-      { label: 'Yes → Native Node', note: 'operational throughput, no browser isolation constraints' },
+      { label: 'Yes → Native Node', note: 'native threads, no WASM heap copies' },
       { label: 'No → WASM', note: 'portable across Node environments, no native build step' }
     ] }
   ]"
   label="Decision: if the deployment can build or stage a platform-specific native binary today, choose Native Node for operational throughput; otherwise choose WASM for portability"
 />
 
-Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table authoring, AutoFilter XML, or `addCellStyleXf`; typed AutoFilters and `setCellStyle` are available on both. The [Native Node integration](/runtimes/node-native) page shows status checks and explicit disposal for the service path. The choice above is otherwise operational: binary staging and deployment portability, not a difference in formula evaluation.
+Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table authoring, AutoFilter XML, or `addCellStyleXf`; typed AutoFilters and `setCellStyle` are available on both. The [Native Node integration](/runtimes/node-native) page shows status checks and explicit disposal for the service path.
 
 ## Service boundary
 

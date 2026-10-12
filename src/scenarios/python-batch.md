@@ -3,11 +3,7 @@
 Use Python when spreadsheet recalculation is part of a scheduled job, notebook, or data pipeline. The same engine that runs in the browser runs here — only the host language changes.
 
 ::: tip Keep workbook IO at the edges
-Load bytes at the start, perform explicit mutations and recalc, write bytes at the end. Avoid mixing calculation logic with unrelated data-loading code; that makes failures easier to attribute and tests easier to write.
-:::
-
-::: info Glossary: scheduled job
-A recurring batch process — typically run by cron, Airflow, GitHub Actions, or a cloud scheduler — that consumes one or more input artifacts and produces output artifacts. Stateless, idempotent jobs are the easiest to operate; Formulon's `load → mutate → recalc → save` shape fits cleanly.
+Load bytes at the start, mutate and recalculate explicitly, and write bytes at the end. Keeping unrelated data-loading code out of that block makes failures easier to attribute and the job easier to test.
 :::
 
 ## Flow
@@ -27,7 +23,7 @@ A recurring batch process — typically run by cron, Airflow, GitHub Actions, or
   label="Batch job flow: read template bytes, Workbook.load, set_number/set_formula for inputs, recalc, get_value to validate, then either save and write output on success or log and raise on failure"
 />
 
-The `with` block around the `Workbook` releases the native handle on exit either way, including when the failure branch raises.
+The `with` block around the `Workbook` releases the engine handle on exit, including when the failure branch raises.
 
 ## Example job
 
@@ -45,6 +41,8 @@ def recalc_report(input_path: Path, output_path: Path, revenue: float) -> None:
 
 recalc_report(Path("template.xlsx"), Path("report.xlsx"), 125_000.0)
 ```
+
+The job sets the profile and the clock on every run because neither is saved in the file. Without them, locale-sensitive and date-dependent results can differ between runs. See [Locale profiles](/compatibility/locale-profiles).
 
 ## Mutating many cells
 
@@ -73,18 +71,6 @@ with Workbook.load(template_bytes) as wb:
 
 `set_number` / `set_text` / `set_formula` are the canonical mutators; coordinates are zero-based `(sheet, row, col)`. See [Workbook operations](/workbook/operations).
 
-## Pinning the compatibility profile
-
-```python
-with Workbook.load(template_bytes) as wb:
-    wb.set_excel_profile_id('win-365-en_US')
-    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
-    wb.recalc()
-    ...
-```
-
-CI fixtures and production jobs should pin a profile explicitly so locale-sensitive results are reproducible. See [Locale profiles](/compatibility/locale-profiles).
-
 ## Validation pattern
 
 Keep a small set of fixture workbooks in your repository:
@@ -95,7 +81,7 @@ formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values report.
 git diff --exit-code report.values.txt
 ```
 
-Pair the Python entrypoint with the CLI `dump --values` snapshot, and you have an end-to-end regression check that catches both code drift and workbook drift.
+Running the job and then snapshotting its output with `dump --values` catches changes in both the job code and the workbook.
 
 ::: warning Volatile inputs need handling
 `NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` are volatile. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O; they return a fixed unavailable Excel error. For golden snapshots, replace volatile inputs with fixed values or move them out of the snapshotted range, and record or exclude unavailable-service cells according to [formula coverage](/compatibility/formula-coverage).
@@ -114,7 +100,7 @@ try:
             # Cell-level Excel error — surface as data, not as exception
             log.warning("cell error: %s", value.error_code)
 except FormulonError as e:
-    # Host failure — bad bytes, missing handle, IO error
+    # Host failure — unreadable workbook bytes or another engine status error
     log.error("formulon host failure: %s", e)
     raise
 ```

@@ -1,6 +1,6 @@
 # 数式を評価する
 
-数式だけを計算したい場合は、ワークブック用の画面を組み込まずに数式評価 API を使えます。
+ワークブックファイルを読み込まずにスプレッドシートの結果だけが欲しい場合は、数式を単独で評価します。読み込み済みのワークブックのセルを使って評価する方法は [読み込み済みワークブックに対する評価](#evaluating-against-a-loaded-workbook) を参照してください。
 
 ::: info Excel エラーは値
 `#DIV/0!`、`#VALUE!`、`#NAME?` はスプレッドシートの値として返ります。ホスト API の失敗は実行入口ごとのステータス付きの戻り値、例外、非ゼロ終了で扱います。
@@ -75,22 +75,22 @@ formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
 ```
 
-Excel のセルエラーは値です。`=1/0` は `#DIV/0!` のようなエラー値として返り、プロセス / Python / JS の例外とは別に扱います。ホスト側の失敗（不正なワークブックのバイト列、ファイルが見つからないなど）は、実行入口ごとのエラー経路で報告されます。
+`formulon eval --json '=1/0'` は `{"kind":"error","value":"#DIV/0!"}` を出力し、終了コード `0` で終わります。非 0 の終了コードは、使い方の誤りやファイルを読めないといったホスト側の失敗に使われます。
 
 下のパネルで実際に確かめられます。`=1/0` のプリセットを選ぶと、値の種類が `Error`、テキストが `#DIV/0!` の結果が返ります。捕捉すべき例外ではなく、そのまま検査できる値です。2 つ目のタブは、次の節で説明する `evaluateFormulaText` を使い、初期データを入れたワークブックで評価します。
 
 <FormulaEvalDemo />
 
-## 読み込み済みワークブックに対する評価
+## 読み込み済みワークブックに対する評価 {#evaluating-against-a-loaded-workbook}
 
-単発評価は、新規ワークブックの `Sheet1!A1` を基準に実行します。空のセルを参照でき、`ROW()` と `COLUMN()` は `1` を返します。既存ワークブックのセルや定義名は参照できません。既存の内容を使う場合は、ワークブックを読み込んで `evaluateFormulaText`（条件付き書式版は `evaluateConditionalFormula`）を呼び出してください。指定したセルに入力したかのように数式を評価しますが、ワークブックの内容は変更しません。
+単発評価は、空の新規ワークブックの `Sheet1!A1` を基準に実行します。そのため、どのセル参照も空白を読み、`ROW()` と `COLUMN()` は `1` を返します。既存ワークブックのセルや定義名を使う場合は、ワークブックを読み込んで `evaluateFormulaText`（条件付き書式版は `evaluateConditionalFormula`）を呼び出してください。どちらも指定したセルに入力したかのように数式を評価し、ワークブックの内容は変更しません。
 
 ::: warning 読み取り専用、かつスカラーのみ
 `evaluateFormulaText` / `evaluateConditionalFormula` はワークブックを変更せず、依存グラフにも参加しません。自己参照は `#REF!` を出さず、対象セルのキャッシュ済みの値をそのまま読みます。配列やスピルの結果からは、左上の要素だけを返します。これはスカラー評価 API の動作であり、Excel の暗黙的交差やスピルの挙動ではありません。スピルの実際の挙動は [動的配列](/ja/workbook/dynamic-arrays) を参照してください。
 :::
 
 ::: tip 配列全体を返す `evaluateFormulaArray`
-配列全体が必要な場合は `evaluateFormulaArray`（Python は `evaluate_formula_array`）を使います。ワークブックを変更せず、自己参照ではキャッシュ値を読むという動作は同じですが、動的配列 / スピル数式の結果を配列全体（`EvalArrayResult`）として返します。
+スピルした結果全体が必要な場合は `evaluateFormulaArray(sheet, row, col, formula)` を使います。戻り値は `{ status, rows, cols, cells }` の形の `EvalArrayResult` で、各値は `cells[r][c]` に入ります。スカラーの結果は 1×1 の配列として返ります。Python の `evaluate_formula_array(...)` は同じ内容を、`Value` の行のリストとして返します。
 :::
 
 ### JavaScript / WASM と Native Node

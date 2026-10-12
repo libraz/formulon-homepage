@@ -3,11 +3,7 @@
 スケジュールジョブ、ノートブック、データパイプラインの一部としてスプレッドシート再計算を組み込むパターンです。ブラウザで動くエンジンと同じものを、ホスト言語だけ Python に置き換えて動かします。
 
 ::: tip ワークブックの入出力は端にまとめる
-最初にバイト列をロードし、明示的に変更 / 再計算し、最後にバイト列を書き出します。計算ロジックと無関係なデータロードを混ぜないこと。原因の切り分けとテストが楽になります。
-:::
-
-::: info 用語: scheduled job（スケジュールジョブ）
-cron / Airflow / GitHub Actions / クラウドスケジューラなどから定期実行されるバッチ処理。1 つ以上の入力ファイルを読み込み、出力ファイルを生成する。状態を持たず冪等な設計が運用しやすく、Formulon の `load → mutate → recalc → save` の形と相性が良い。
+最初にバイト列を読み込み、明示的に変更して再計算し、最後にバイト列を書き出します。無関係なデータ読み込みの処理をこの範囲に混ぜなければ、失敗の原因を切り分けやすく、ジョブのテストも書きやすくなります。
 :::
 
 ## 流れ
@@ -27,7 +23,7 @@ cron / Airflow / GitHub Actions / クラウドスケジューラなどから定�
   label="バッチジョブの流れ。テンプレートのバイト列を読み込み、Workbook.load、set_number / set_formula で入力を設定し、recalc、get_value で検証する。検証に成功したら save して書き込み、失敗したらログを記録して例外を送出する"
 />
 
-`Workbook` を包む `with` ブロックは、どちらの分岐でもブロック終了時にネイティブハンドルを解放します。失敗分岐で例外が送出される場合も同様です。
+`Workbook` を包む `with` ブロックは、失敗分岐で例外が送出された場合も含め、ブロックを抜けるときにエンジンのハンドルを解放します。
 
 ## ジョブの例
 
@@ -45,6 +41,8 @@ def recalc_report(input_path: Path, output_path: Path, revenue: float) -> None:
 
 recalc_report(Path("template.xlsx"), Path("report.xlsx"), 125_000.0)
 ```
+
+プロファイルと時刻はファイルに保存されないため、このジョブは実行のたびに両方を設定します。設定しないと、ロケールや日付に依存する結果が実行ごとに変わる可能性があります。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles) を参照してください。
 
 ## 複数セルを変更する
 
@@ -71,19 +69,7 @@ with Workbook.load(template_bytes) as wb:
     output_path.write_bytes(wb.save())
 ```
 
-`set_number` / `set_text` / `set_formula` が定番です。座標は 0 始まりの `(sheet, row, col)` です。詳しくは [ワークブック操作](/ja/workbook/operations)。
-
-## 互換性プロファイルを固定する
-
-```python
-with Workbook.load(template_bytes) as wb:
-    wb.set_excel_profile_id('win-365-en_US')
-    wb.set_pinned_now(2026, 10, 9, 9, 30, 0)
-    wb.recalc()
-    ...
-```
-
-CI の検証用ワークブックや本番ジョブではプロファイルを明示し、ロケール依存結果を再現可能にしてください。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles)。
+セルの変更には主に `set_number` / `set_text` / `set_formula` を使います。座標は 0 始まりの `(sheet, row, col)` です。詳しくは [ワークブック操作](/ja/workbook/operations) を参照してください。
 
 ## 検証パターン
 
@@ -95,7 +81,7 @@ formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values report.
 git diff --exit-code report.values.txt
 ```
 
-Python の実行入口と CLI の `dump --values` スナップショットを組にすると、コード変更とワークブック変更の両方を一連の流れとして検知できます。
+ジョブを実行し、その出力を `dump --values` でスナップショットすると、ジョブのコードとワークブックのどちらの変更も検知できます。
 
 ::: warning 揮発性の入力は要対処
 `NOW` / `TODAY` / `RAND` / `RANDBETWEEN` は揮発性関数です。`WEBSERVICE`、CUBE 関数、`STOCKHISTORY` など外部サービス依存の関数はネットワークへアクセスせず、利用不可を表す固定の Excel エラーを返します。期待値スナップショットでは、揮発性の入力をテンプレート側で固定値に置き換えるか対象範囲から外し、外部サービス依存のセルは [数式カバレッジ](/ja/compatibility/formula-coverage) に従って記録するか除外してください。
@@ -114,7 +100,7 @@ try:
             # セルの Excel エラー ─ 例外にせずデータとして処理
             log.warning("cell error: %s", value.error_code)
 except FormulonError as e:
-    # ホスト失敗（バイト列不正・ハンドル失効・入出力）
+    # ホスト失敗（読み込めないバイト列、その他エンジンのステータスエラー）
     log.error("formulon host failure: %s", e)
     raise
 ```

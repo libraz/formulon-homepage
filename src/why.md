@@ -13,12 +13,13 @@ Formulon is for products that need spreadsheet calculation without embedding Exc
   ] }
 ]" label="One C++17 core packaged as WASM, Native Node, Python, CLI, and MCP" />
 
-The project optimizes for reproducible compatibility. The default behavior profile is `win-365-en_US`; goldens record observed Excel behavior, and accepted divergences are tracked explicitly instead of being hidden behind vague "Excel-like" claims.
+Compatibility is measured, not claimed. Results are checked against values captured from real Excel 365 (oracle data), and each known difference is listed in `tests/divergence.yaml` with its reason and the Excel build it was last verified on. New workbooks use the `win-365-en_US` behavior profile unless you select another. [How far compatibility goes](/compatibility/edge-cases) shows concrete cases, from floating-point residue to Japanese era dates, run live against the captured Excel values.
 
 ## What it solves
 
 - Run `.xlsx` and `.xlsb` workbooks in services, jobs, and notebooks.
 - Evaluate Excel formulas inside a browser or worker.
+- Get the result Excel gives in a specific locale: 28 profiles cover fourteen locales on Mac and Windows hosts.
 - Keep browser, Python, CLI, Native Node, and MCP results aligned because they share one core.
 - Preserve supported workbook structures while recalculating values.
 - Audit formula behavior against versioned oracle data.
@@ -30,4 +31,4 @@ Formulon is not a spreadsheet UI, chart renderer, VBA runtime, Power Query/DAX e
 
 ## Current status
 
-Formulon is under active development and has not reached its first stable release. The formula engine has broad local coverage and explicitly marks service-backed functions such as `COPILOT`, `PY`, and `WEBSERVICE` as unavailable service stubs rather than pretending to implement the corresponding Microsoft 365 services. APIs and package layout may still change before the first stable release. Validate business-critical workbooks with fixtures against the Excel profile you target.
+Formulon is pre-1.0, and APIs and package layout may still change before the first stable release. Of 526 recognized function names, 511 run locally; service-backed functions such as `COPILOT`, `PY`, and `WEBSERVICE` are recognized but return a fixed error instead of calling Microsoft 365 services. Validate business-critical workbooks with fixtures against the Excel profile you target.

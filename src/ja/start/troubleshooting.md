@@ -50,7 +50,7 @@ export default defineConfig({
 
 ## ワークブックの読み込みが無効なハンドルを返す
 
-WASM では `loadBytes(bytes)` の直後に `wb.isValid()` を確認し、`Module.lastErrorMessage()` を読みます。
+WASM の `loadBytes(bytes)` は、不正な入力でも例外を送出しません。直後に `wb.isValid()` を確認し、`Module.lastErrorMessage()` を読んでください。ZIP アーカイブではないファイルの場合、メッセージは ZIP の読み込み処理から返ります。
 
 ```ts
 const wb = Module.Workbook.loadBytes(bytes)
@@ -63,9 +63,11 @@ try {
 }
 ```
 
+Python の `Workbook.load(data)` は、無効なハンドルを返す代わりに `FormulonError` を送出します。
+
 ## 数式が Excel エラーを返す
 
-Excel エラーは値です。`#DIV/0!`、`#VALUE!`、`#NAME?` はホスト API の失敗ではありません。
+Excel エラーは値です。`#DIV/0!`、`#VALUE!`、`#NAME?` はホスト API の失敗ではありません。`value.kind` が `ValueKind.Error` かを確認し、`value.errorCode`（Python は `error_code`）を読んでください。`Module.errorDisplayName(code)` を使うと、コードを `#DIV/0!` などの文字列に変換できます。
 
 CLI も同じ規則です。不正な `eval` 構文（`formulon eval '=SUM('`）は `#NAME?` を stdout に出力して終了コード `0` を返します。数式テキストの不正を検出する場合は stdout を確認してください。非 0 終了は使い方、I/O、エンジンの失敗に使われます。
 
@@ -83,7 +85,7 @@ WASM と Native Node で `allowBlank` を省略した場合の既定値は、Pyt
 make python-package
 ```
 
-ソースツリーから読み込む場合は、C ABI の WASM モジュールが `packages/python/formulon/_wasm/` に配置されている必要があります。
+ソースツリーから読み込む場合は、C ABI の WASM モジュールが `packages/python/formulon/_wasm/formulon_capi.wasm` に配置されている必要があります。別の場所でビルドしたモジュールを使うには、`FORMULON_WASM_PATH` にそのパスを設定します。同梱の配置場所が優先されます。
 
 ## CLI の結果が Excel と違う
 

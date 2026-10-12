@@ -18,7 +18,7 @@ A checked-in expected-output file that a test compares against the current outpu
     { nodes: ['CI job'] },
     { nodes: [
       { label: 'formulon dump --formulas', note: 'formula snapshot' },
-      { label: 'formulon recalc → formulon dump --values', note: 'value snapshot' }
+      { label: 'formulon dump --values', note: 'recalculates, then value snapshot' }
     ] },
     { nodes: ['testdata/*.txt'] },
     { nodes: ['git diff --exit-code'] },
@@ -48,17 +48,16 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check committed snapshots
         run: git ls-files --error-unmatch testdata/model.formulas.txt testdata/model.values.txt
-      - name: Build the current Formulon CLI from source
+      - name: Install the pinned Formulon CLI
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git clone https://github.com/libraz/formulon.git formulon-src
-          git -C formulon-src checkout v0.15.1
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build
-          cmake -S formulon-src -B formulon-src/build-ci -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release -DFM_BUILD_TESTING=OFF
-          cmake --build formulon-src/build-ci --parallel --target formulon_cli
-          install -Dm755 formulon-src/build-ci/bin/formulon_cli "$RUNNER_TEMP/formulon-bin/formulon"
-          echo "$RUNNER_TEMP/formulon-bin" >> "$GITHUB_PATH"
+          gh release download v0.15.1 --repo libraz/formulon \
+            --pattern 'formulon-0.15.1-linux-x64.tar.gz*' --dir "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          sha256sum -c formulon-0.15.1-linux-x64.tar.gz.sha256
+          tar -xzf formulon-0.15.1-linux-x64.tar.gz
+          echo "$RUNNER_TEMP/formulon-0.15.1-linux-x64" >> "$GITHUB_PATH"
       - name: Snapshot formulas
         run: |
           formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > testdata/model.formulas.txt
@@ -70,7 +69,7 @@ jobs:
           git diff --exit-code testdata/
 ```
 
-With volatile inputs controlled and the profile, clock, and Formulon source revision fixed, a changed snapshot points to a workbook or engine change. An upgrade can intentionally change output, so review the pinned revision as part of the diff. The CLI flags are explicit because the profile and clock are not stored in the workbook. This example builds the pinned source tag; the matching GitHub Releases CLI archive also supports `--profile` and `--now`.
+`dump --values` recalculates before printing, so no separate `recalc` step is needed. The `--profile` and `--now` flags are explicit because neither is stored in the workbook. With volatile inputs controlled and the profile, clock and CLI version fixed, a changed snapshot points to a workbook or engine change.
 
 ## Review policy
 
@@ -84,8 +83,8 @@ Require reviewers to classify diffs as:
 
 This keeps workbook regression tests from becoming opaque golden files. The reviewer's classification is captured in the PR body (or a commit trailer); future contributors looking at the same diff can see why it was accepted.
 
-::: tip Pin the Formulon source revision in CI
-Pin the Formulon source revision (or, after publication, a CLI binary URL for the matching release) explicitly. An engine upgrade can change formula or file-format behavior intentionally, so do not treat patch releases as output-compatible by default.
+::: tip Pin the Formulon version in CI
+Pin the release tag explicitly, as the example does. An engine upgrade can change formula or file-format behavior intentionally, so do not treat patch releases as output-compatible by default. Bump the tag in a separate pull request, so the snapshot diff it causes gets its own review.
 :::
 
 ## Read next

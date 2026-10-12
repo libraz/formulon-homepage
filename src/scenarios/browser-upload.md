@@ -3,7 +3,7 @@
 Use this pattern when a user uploads an `.xlsx`, your app recalculates it locally, and the browser returns values or a modified workbook — without ever sending the file to a server.
 
 ::: warning Browser hosting requirement
-The default `@libraz/formulon` WASM entry is serial and does not require cross-origin isolation. The optional `@libraz/formulon/threads` entry needs the COOP / COEP headers — see [Bundler setup](/cell/bundler) and [Troubleshooting](/start/troubleshooting).
+The default `@libraz/formulon` WASM entry is single-threaded and does not require cross-origin isolation. The optional `@libraz/formulon/threads` entry needs the COOP / COEP headers — see [Bundler setup](/cell/bundler) and [Troubleshooting](/start/troubleshooting).
 :::
 
 ::: info Glossary: ArrayBuffer / Uint8Array
@@ -53,7 +53,7 @@ export async function recalcUpload(file: File) {
 
 The `try / finally` is the important shape — `wb.delete()` releases WASM heap memory even when the helper or application throws during recalculation.
 
-The panel below is that function with a file picker and a live sheet attached. Choosing a workbook reads it with `File.arrayBuffer()`, hands the bytes to `loadBytes()`, renders the recalculated result in an embedded `formulon-cell` grid, and offers the serialized bytes back as a download. A file that is not a workbook stops at `isValid()` and shows `lastErrorMessage()` — the first row of the error table further down, reached without a server round trip to produce it.
+The panel below is that function with a file picker and a live sheet attached. Choosing a workbook reads it with `File.arrayBuffer()`, hands the bytes to `loadBytes()`, renders the recalculated result in an embedded `formulon-cell` grid, and offers the saved bytes as a download. A file that is not a workbook stops at `isValid()` and shows `lastErrorMessage()`, the first row of the [error table](#error-surfaces) below.
 
 <RecalcDemo />
 
@@ -99,11 +99,9 @@ const buffer = await file.arrayBuffer()
 worker.postMessage(buffer, [buffer])
 ```
 
-Read the buffer once and pass that same reference as both the message payload and the transfer list. Calling `file.arrayBuffer()` twice would produce two distinct buffers — the payload copy would still be deep-cloned because it isn't the one being transferred, silently defeating the point of using a transferable at all.
+Listing a buffer in the transfer list moves it to the receiver instead of copying it; the sender's buffer is detached and cannot be used afterward. Read the buffer once and pass the same reference as both the payload and the transfer list. A second `file.arrayBuffer()` call creates a different buffer, and whichever one is not in the transfer list is copied.
 
 <DiagramFlow steps="Main thread: read ArrayBuffer → postMessage(buffer, [buffer]) transfers ownership → Worker owns buffer, recalculates → postMessage(bytes, [bytes.buffer]) transfers back → Main thread owns result" label="Main thread reads the ArrayBuffer, transfers ownership to the worker via postMessage with a transfer list, the worker recalculates and transfers the result buffer back, and the main thread regains ownership of the output bytes" />
-
-The transfer list avoids copying the buffer during `postMessage`; the sender's buffer becomes detached and cannot be used afterward. The receiver owns the bytes.
 
 ## Error surfaces
 
@@ -114,17 +112,13 @@ The transfer list avoids copying the buffer during `postMessage`; the sender's b
 | Save failed | `saved.status.ok === false` | Surface the message; keep the original bytes available |
 | Stub engine active (only when using `formulon-cell`'s `WorkbookHandle` with `preferStub: true`) | `isUsingStub()` returns true | Warn the user that calculations are disabled |
 
-::: tip Keep original bytes until save succeeds
-Treat the input `File` / `ArrayBuffer` as the source of truth until your app has successfully written the recalculated output somewhere durable. That way a failed save does not lose the user's upload.
-:::
-
 ## UX checklist
 
 - Validate file type and size client-side before loading.
 - Show unsupported-function failures as workbook compatibility issues, not as upload failures.
-- Keep original bytes until save succeeds.
+- Keep the original `File` / `ArrayBuffer` until the recalculated output is stored somewhere durable, so a failed save does not lose the upload.
 - Run the calculation in a worker if the UI must stay responsive.
-- If importing `@libraz/formulon/threads`, serve COOP / COEP headers and surface missing `SharedArrayBuffer` support. The raw `@libraz/formulon` path used above is serial and does not need those headers. The standard `formulon-cell` loader is also serial; `preferStub: true` remains an explicit test/demo choice.
+- If you import `@libraz/formulon/threads`, serve COOP / COEP headers and handle a browser without `SharedArrayBuffer`.
 
 ## Fit check
 

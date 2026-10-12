@@ -3,7 +3,7 @@
 ユーザーが `.xlsx` をアップロードし、アプリがブラウザ内で再計算し、値または変更済みワークブックを返すパターンです。ファイルをサーバーに送らずに完結します。
 
 ::: warning ブラウザホスティングの要件
-既定の `@libraz/formulon` WASM 入口はシリアルで、オリジン間分離を必要としません。`@libraz/formulon/threads` 入口を使う場合は COOP / COEP ヘッダーが必要です。[バンドラ設定](/ja/cell/bundler) と [トラブルシュート](/ja/start/troubleshooting) を参照してください。
+既定の `@libraz/formulon` WASM 入口は単一スレッドで動作し、オリジン間分離を必要としません。`@libraz/formulon/threads` 入口を使う場合は COOP / COEP ヘッダーが必要です。[バンドラ設定](/ja/cell/bundler) と [トラブルシュート](/ja/start/troubleshooting) を参照してください。
 :::
 
 ::: info 用語: ArrayBuffer / Uint8Array
@@ -53,7 +53,7 @@ export async function recalcUpload(file: File) {
 
 `try / finally` の形が重要です。ヘルパーやアプリケーションが再計算中に例外を送出しても、`wb.delete()` が WASM ヒープを解放します。
 
-下のパネルでは、この関数にファイル選択と編集用のグリッドを組み合わせています。ワークブックを選ぶと `File.arrayBuffer()` で読み取ったバイト列を `loadBytes()` に渡し、再計算後の結果を埋め込みの `formulon-cell` グリッドに表示して、書き出したバイト列をダウンロードできます。ワークブックとして読めないファイルは `isValid()` で止まり、`lastErrorMessage()` の内容が表示されます。後述のエラー表の 1 行目にあたる挙動を、サーバーへの往復なしにその場で確認できます。
+下のパネルでは、この関数にファイル選択と編集用のグリッドを組み合わせています。ワークブックを選ぶと `File.arrayBuffer()` で読み取ったバイト列を `loadBytes()` に渡し、再計算後の結果を埋め込みの `formulon-cell` グリッドに表示して、保存したバイト列をダウンロードできます。ワークブックとして読めないファイルは `isValid()` で止まり、`lastErrorMessage()` の内容が表示されます。後述の[エラー表](#error-surfaces)の 1 行目にあたる挙動です。
 
 <RecalcDemo />
 
@@ -99,13 +99,11 @@ const buffer = await file.arrayBuffer()
 worker.postMessage(buffer, [buffer])
 ```
 
-バッファは 1 回だけ読み込み、そのまま送信データと転送リストの両方に渡します。`file.arrayBuffer()` を 2 回呼ぶと別々のバッファが 2 つできてしまい、転送リストに載らない方（実際の送信データ）はディープコピーされてしまいます。これでは転送可能オブジェクトを使う意味がなくなります。
+転送リストに載せたバッファは、コピーされずに受信側へ移ります。送信側のバッファは切り離され、以後は使えません。バッファは 1 回だけ読み込み、同じ参照を送信データと転送リストの両方に渡してください。`file.arrayBuffer()` をもう一度呼ぶと別のバッファができ、転送リストに載っていない方はコピーされます。
 
 <DiagramFlow steps="メインスレッド: ArrayBuffer を読み込む → postMessage(buffer, [buffer]) で所有権をワーカーへ転送 → ワーカーがバッファを所有し再計算 → postMessage(bytes, [bytes.buffer]) で結果を転送し返す → メインスレッドが結果を所有" label="メインスレッドが ArrayBuffer を読み込み、転送リスト付きの postMessage でワーカーに所有権を渡す。ワーカーが再計算してから結果のバッファをメインスレッドへ転送し返し、メインスレッドが出力バイト列の所有権を取り戻す図" />
 
-転送リストを指定すると、`postMessage` によるバッファのコピーを避けられます。送信側のバッファは切り離され、以後は使えません。受信側がバイト列の所有権を持ちます。
-
-## エラーの分岐
+## エラーの分岐 {#error-surfaces}
 
 | 失敗 | 検出箇所 | 対応 |
 | --- | --- | --- |
@@ -114,17 +112,13 @@ worker.postMessage(buffer, [buffer])
 | 保存失敗 | `saved.status.ok === false` | メッセージを出し、元のバイト列を保持 |
 | 簡易エンジンが有効（`formulon-cell` の `WorkbookHandle` を `preferStub: true` で使った場合） | `isUsingStub()` が true | 計算機能が無効である旨をユーザーに通知 |
 
-::: tip 保存に成功するまで元のバイト列を捨てない
-アプリが再計算後の出力を永続化できるまでは、入力の `File` / `ArrayBuffer` を信頼すべき情報源として保持します。保存失敗時にユーザーのアップロードを失わずに済みます。
-:::
-
 ## UX チェックリスト
 
-- 読み込み前にファイルタイプ / サイズをクライアント側で検証
+- 読み込み前にファイルタイプ / サイズをクライアント側で検証する
 - 未対応関数の失敗はアップロード失敗ではなく互換性問題として見せる
-- 保存成功までは元のバイト列を保持
-- UI 応答性が必要ならワーカーで計算
-- `@libraz/formulon/threads` を読み込む場合は COOP / COEP ヘッダーを配信し、`SharedArrayBuffer` が使えない状態を明示的に扱います。上のコードが使う生の `@libraz/formulon` 入口はシリアルで、これらのヘッダーを必要としません。`formulon-cell` の標準ローダーもシリアルです。`preferStub: true` はテストやデモで明示的に選ぶ場合だけ使います。
+- 再計算後の出力を永続化できるまで、元の `File` / `ArrayBuffer` を保持する（保存に失敗してもアップロードを失わないため）
+- UI の応答性が必要ならワーカーで計算する
+- `@libraz/formulon/threads` を読み込む場合は COOP / COEP ヘッダーを配信し、`SharedArrayBuffer` が使えないブラウザへの対応を用意する
 
 ## 適合性の確認
 

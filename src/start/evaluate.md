@@ -1,6 +1,6 @@
 # Evaluate a Formula
 
-Formula evaluation is useful when your application needs spreadsheet semantics without loading a whole workbook UI.
+Evaluate a formula on its own when you need a spreadsheet result without loading a workbook file. To evaluate against cells in a workbook you already loaded, see [Evaluating against a loaded workbook](#evaluating-against-a-loaded-workbook).
 
 ::: info Excel errors are values
 `#DIV/0!`, `#VALUE!`, and `#NAME?` travel as spreadsheet values. Host API failures use status envelopes, exceptions, or non-zero CLI exits depending on surface.
@@ -75,22 +75,22 @@ formulon eval '=SUM(1,2,3)'
 formulon eval --json '=1/0'
 ```
 
-Cell-level Excel errors are values. `=1/0` should return an error value such as `#DIV/0!`; it should not be treated as a process, Python, or JS exception. Host-side failures, such as invalid workbook bytes or a missing file, are reported through the surface-specific error path.
+`formulon eval --json '=1/0'` prints `{"kind":"error","value":"#DIV/0!"}` and exits `0`. A non-zero exit is reserved for host-side failures such as a usage error or an unreadable file.
 
-The panel below is where to check that claim. Its `=1/0` preset comes back with value kind `Error` and the text `#DIV/0!` — a value you can inspect, not an exception you have to catch. Its second tab evaluates against a small seeded workbook, the `evaluateFormulaText` path described in the next section.
+Try it in the panel below: the `=1/0` preset comes back with value kind `Error` and the text `#DIV/0!`, a value you inspect rather than an exception you catch. The second tab evaluates against a small seeded workbook through `evaluateFormulaText`, described in the next section.
 
 <FormulaEvalDemo />
 
 ## Evaluating against a loaded workbook
 
-The one-shot helpers evaluate at `Sheet1!A1` in a new workbook. Blank cell references resolve against that workbook, and `ROW()` / `COLUMN()` return `1`. They cannot access cells or defined names from an existing workbook. To use those, load the workbook and call `evaluateFormulaText` (or its conditional-formatting counterpart, `evaluateConditionalFormula`), which evaluates formula text as if it were entered at a specific cell without changing the workbook.
+The one-shot helpers evaluate at `Sheet1!A1` in a new, empty workbook, so every cell reference reads a blank and `ROW()` / `COLUMN()` return `1`. To use the cells and defined names of an existing workbook, load it and call `evaluateFormulaText` (or its conditional-formatting counterpart, `evaluateConditionalFormula`). Both evaluate formula text as if it were entered at a given cell, without changing the workbook.
 
 ::: warning Read-only, and scalar-only
 `evaluateFormulaText` / `evaluateConditionalFormula` never mutate the workbook and never join the dependency graph — a self-reference reads the target cell's cached value instead of raising `#REF!`. Array and spill results are reduced to their top-left element; this is the direct scalar-result behavior, not Excel's implicit-intersection or spill behavior. See [Dynamic arrays](/workbook/dynamic-arrays) for how spilling actually works.
 :::
 
 ::: tip Whole-array variant
-When you want the entire spilled result rather than just the top-left element, use `evaluateFormulaArray(sheet, row, col, formula)` — it returns the whole Array (`EvalArrayResult`) of a dynamic-array formula. Python exposes the same operation as `evaluate_formula_array(...)`.
+For the entire spilled result, use `evaluateFormulaArray(sheet, row, col, formula)`. It returns an `EvalArrayResult` of `{ status, rows, cols, cells }`, where `cells[r][c]` holds each value; a scalar result comes back as a 1×1 array. Python's `evaluate_formula_array(...)` returns the same grid as a list of rows of `Value`.
 :::
 
 ### JavaScript / WASM and Native Node

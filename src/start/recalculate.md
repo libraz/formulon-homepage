@@ -1,6 +1,6 @@
 # Recalculate a Workbook
 
-Recalculation starts with bytes, not with a desktop application.
+Load workbook bytes, change inputs, recalculate, and save new bytes. No desktop application is involved.
 
 ::: tip Test with a real workbook early
 Single-formula tests prove the package loads. A representative workbook proves whether file structures, formulas, and locale assumptions fit your use case.
@@ -36,7 +36,6 @@ try {
 
   await upload(saved.bytes)
 } finally {
-  workbook.clearPinnedNow()
   workbook.delete()
 }
 ```
@@ -67,10 +66,12 @@ formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 input.xlsx -o 
 formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.xlsx
 ```
 
-The engine updates calculated values while preserving supported workbook structures and passing through parts it does not model. The preservation and conversion boundary depends on the container and feature; check [file format support](/compatibility/file-format-support) and save diagnostics. Use this path for server-side checks, browser uploads, batch conversions, and regression tests against known workbooks. Profiles and pinned clocks are runtime state, so reapply them after loading; neither is saved in the output file.
+The profile and the pinned clock are runtime state: neither is saved in the output file, so set both again after every load. `setPinnedNow` fixes what `NOW()`, `TODAY()` and relative date filters read, which keeps date-dependent results reproducible.
+
+Saving updates calculated values, keeps the workbook structures Formulon models, and passes through parts it does not model. What survives depends on the container and the feature; check [File format support](/compatibility/file-format-support) and the save diagnostics. An unchanged workbook saves to identical bytes, because every entry in the saved archive carries a fixed timestamp.
 
 ## Run the round trip here
 
-The panel below performs that same sequence in the browser: pick a workbook — or let it generate the sample — and the bytes are parsed with `loadBytes()`, recalculated, and serialized back to `.xlsx` bytes you can download. The sheet under the panel is those serialized bytes reopened in an embedded `formulon-cell` grid, so the values on screen are what the engine computed rather than what the file happened to carry.
+The panel below runs the same sequence in the browser. Pick a workbook, or let it generate a sample; the bytes are parsed with `loadBytes()`, recalculated, and saved back to `.xlsx` bytes you can download. The sheet under the panel reopens those saved bytes in an embedded `formulon-cell` grid, so the values on screen are what the engine computed, not the values cached in the original file.
 
 <RecalcDemo />

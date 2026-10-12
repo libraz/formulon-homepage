@@ -1,9 +1,9 @@
 # Install
 
-Use the surface that matches where the workbook will run. Formulon packages are pre-1.0: pin exact versions in applications and expect API growth before the first stable release.
+Use the surface that matches where the workbook will run.
 
 ::: warning Pin versions
-Use exact package versions for experiments and internal tooling. Do not float on `latest` while APIs and packaging are still pre-stable.
+Formulon is pre-1.0, and APIs and packaging can still change between releases. Install exact versions, including for experiments and internal tooling, rather than floating on `latest`.
 :::
 
 The package commands below pin Formulon 0.15.1 and formulon-cell 0.9.0, which include the APIs described here. To build the same releases yourself, follow [Build from source](/development/build-from-source). The cell packages have their own release cycle; [Language switching](/cell/language-switching) covers their runtime locale and calculation-profile controls.
@@ -33,15 +33,19 @@ Use this for scripts, notebooks, and batch jobs. The wheel targets Python 3.9 an
 
 ## CLI
 
-Download the platform binary from GitHub Releases when you need a standalone tool for `eval`, `recalc`, or workbook inspection workflows.
+Use the standalone binary for `eval`, `recalc`, and workbook inspection from a shell or CI. [GitHub Releases](https://github.com/libraz/formulon/releases) carries one archive per platform (`darwin-arm64`, `linux-x64`, `linux-arm64`), each with a `.sha256` checksum file:
 
 ```sh
+curl -LO https://github.com/libraz/formulon/releases/download/v0.15.1/formulon-0.15.1-linux-x64.tar.gz
+tar -xzf formulon-0.15.1-linux-x64.tar.gz
+export PATH="$PWD/formulon-0.15.1-linux-x64:$PATH"
+
 formulon --version
 formulon eval '=SUM(1,2,3)'
 formulon recalc input.xlsx -o output.xlsx
 ```
 
-The CLI accepts `--profile` to select calculation behavior and `--now` to fix the evaluation clock. To build it from the same source as these docs, follow the steps below.
+Every subcommand accepts `--profile` to select calculation behavior and `--now` to fix the evaluation clock.
 
 ## formulon-cell
 
@@ -49,11 +53,11 @@ The CLI accepts `--profile` to select calculation behavior and `--now` to fix th
 yarn add @libraz/formulon-cell@0.9.0 @libraz/formulon-cell-vue@0.9.0
 ```
 
-Install `@libraz/formulon-cell-vue` when using the Vue adapter. The core package is shared by the framework adapters.
+`@libraz/formulon-cell` is the framework-independent core. Add `@libraz/formulon-cell-vue` or `@libraz/formulon-cell-react` for the matching adapter; see [formulon-cell install](/cell/install).
 
 ## From source
 
-Clone the repository at the revision used by the current docs and build the surface you need:
+Check out the tag these docs describe and build:
 
 ```sh
 git clone https://github.com/libraz/formulon.git
@@ -63,6 +67,4 @@ make build
 make test
 ```
 
-`make build` produces `build/bin/formulon_cli`. This revision also includes the current workbook APIs described here; build and stage the matching binding when using them from JavaScript or Python.
-
-Packaging commands live in [Build from source](/development/build-from-source).
+`make build` produces a debug CLI at `build/bin/formulon_cli`. The WASM, Python and Native Node bindings have their own build targets; see [Build from source](/development/build-from-source), and [Native Node integration](/runtimes/node-native) for staging the `.node` addon.

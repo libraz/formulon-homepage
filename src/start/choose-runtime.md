@@ -1,17 +1,18 @@
 # Choose a Surface
 
-Formulon exposes the same core through several packaging surfaces.
+Formulon packages the same C++ core for several hosts. Each package is a *surface*: the API and distribution format one host sees.
 
 ::: info Same engine, different host contracts
-Surface choice affects packaging, memory lifetime, deployment, and error reporting. The shared core is intended to keep formula behavior common; verify exact agreement with the same engine/profile and workbook inputs because documented compatibility boundaries still apply.
+The surface decides packaging, memory lifetime, deployment, and how host errors are reported. Formula results come from the shared core; where exact agreement matters, check it with the same engine version, profile and workbook on each surface you ship.
 :::
 
 | Surface | Best for | Package |
 | --- | --- | --- |
 | WebAssembly | Browser apps, workers, Node services | `@libraz/formulon` |
-| Native Node | Node services that can build or stage a `.node` addon | `packages/npm-native` |
+| Native Node | Node services that can build or stage a `.node` addon | `packages/npm-native` (source checkout) |
 | Python | Notebooks, batch jobs, data pipelines | `formulon` |
 | CLI | Shell scripts, CI checks, workbook inspection | GitHub Releases |
+| MCP | AI agents that open, edit and save workbooks | `@libraz/formulon-mcp` |
 | C ABI | Host applications and custom bindings | repository build |
 
 Pick the highest-level surface that fits your deployment. Drop to the C ABI only when you need a binding that is not already packaged.
@@ -55,6 +56,5 @@ Pick the highest-level surface that fits your deployment. Drop to the C ABI only
 | Node service with large workbooks and native deployment | Native Node |
 | Batch job or notebook | Python |
 | CI workbook snapshots | CLI |
+| AI agent editing workbooks | MCP |
 | New language binding | C ABI |
-
-All surfaces share the same engine. Differences include packaging, lifetime management, and host error reporting; verify exact result agreement under the same engine/profile and workbook inputs when it matters.

@@ -5,7 +5,7 @@ description: Every interactive demo on the Formulon docs site, grouped by what y
 
 # Demos
 
-Each demo runs the real engine in your browser; nothing is sent to a server. This page only links to them, so it stays light. Open the page that hosts a demo to read the surrounding explanation.
+Each demo runs the real engine in your browser; nothing is sent to a server. Each link opens the page that hosts the demo, next to the explanation it illustrates.
 
 ## Formulas and recalculation
 
@@ -23,6 +23,7 @@ Each demo runs the real engine in your browser; nothing is sent to a server. Thi
 
 ## Compatibility
 
+- [How far compatibility goes](/compatibility/edge-cases): run floating-point, date, coercion, locale and spill edge cases and compare each result with the value captured from Excel.
 - [Function lookup](/compatibility/formula-coverage): search the function catalog read from the running engine, with arity and implementation status.
 - [Error model](/compatibility/errors): compare a formula error value with a host failure from loading invalid bytes.
 

@@ -8,7 +8,7 @@ import { MCP_TOOL_COUNT } from '@/data/facts'
 
 ### Does Formulon require Excel?
 
-No at runtime. Formulon does not automate Excel, COM, or a Microsoft runtime when it loads workbooks, evaluates formulas, recalculates, or saves files.
+Not at runtime. Formulon does not automate Excel, COM, or a Microsoft runtime when it loads workbooks, evaluates formulas, recalculates, or saves files.
 
 Excel is used during development and verification to capture *oracle data*: reference values returned by the real product. Windows Excel bridge coverage for pivot tables and print pagination is a test track, not a production dependency.
 
@@ -44,9 +44,9 @@ No. Formulon is a headless calculation and workbook-processing engine. It intent
 
 The goal is narrower: load modern workbook files, evaluate local spreadsheet formulas, preserve workbook structures where practical, and expose the same core through WASM, Python, CLI, Native Node, and MCP.
 
-### Why not just use Excel, LibreOffice, HyperFormula, or a cloud spreadsheet API?
+### Why not just use Excel, an office suite, a formula library, or a cloud spreadsheet API?
 
-Use those when they fit. Excel is the right answer when you need the real application, VBA, Power Query, live connections, or final visual review. LibreOffice is a broad office suite and can be a good batch conversion tool. HyperFormula is useful when you want an embeddable formula engine without full `.xlsx` workbook round-trip semantics. Cloud spreadsheet APIs are useful when the workbook already lives in that product.
+Use those when they fit. Excel is the right answer when you need the real application, VBA, Power Query, live connections, or final visual review. A desktop office suite can be a good batch conversion tool. A formula-only library is enough when you need formulas but not `.xlsx` round trips. Cloud spreadsheet APIs are useful when the workbook already lives in that product.
 
 Formulon exists for a different slot: applications that need local, embeddable `.xlsx` calculation and workbook mutation without automating a desktop app or sending workbook data to a hosted spreadsheet service.
 
@@ -66,7 +66,7 @@ The formula oracle is captured on Mac Excel 365 in all 14 supported locales, eac
 
 WASM, Python, Native Node, CLI, and MCP can load `.xlsx` and `.xlsb`. Loaders detect the format from the file contents. Use `saveAs` / `save_as` to select the output format explicitly. CLI selects XLSB for a `.xlsb` output extension and XLSX otherwise. MCP accepts only `.xlsx` or `.xlsb` output paths and selects the corresponding format.
 
-`.xlsb` (MS-XLSB) is also read and written. The modeled/emitted core includes styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. Conditional-format rules use the shared model and supported rules can be evaluated; `validateValue` / `validate_value` and `listInvalidCells` / `list_invalid_cells` perform explicit checks against modeled validation rules. Other worksheet tails such as print setup/breaks, drawing/table references, and relationships use their documented passthrough behavior. Typed AutoFilter edits, classic notes, threaded comments, OOXML drawings (loaded or inserted), page setup, margins, print options, header/footer, manual breaks, tables, and nondefault calculation settings remain deferred for XLSB writes; `saveWithDiagnostics` / `save_with_diagnostics` report deferred or dropped losses through `deferredFeatureCount` and related counters. Unsupported formulas may downgrade to cached literals. The CLI selects the format from the output extension; `saveAs` / `save_as` select it explicitly. Loaders sniff input by content.
+For `.xlsb` (MS-XLSB), the parts Formulon models and writes include styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. Conditional-format rules use the shared model and supported rules can be evaluated; `validateValue` / `validate_value` and `listInvalidCells` / `list_invalid_cells` perform explicit checks against modeled validation rules. Other worksheet tails such as print setup/breaks, drawing/table references, and relationships use their documented passthrough behavior. Typed AutoFilter edits, classic notes, threaded comments, OOXML drawings (loaded or inserted), page setup, margins, print options, header/footer, manual breaks, tables, and nondefault calculation settings remain deferred for XLSB writes; `saveWithDiagnostics` / `save_with_diagnostics` report deferred or dropped losses through `deferredFeatureCount` and related counters. Unsupported formulas may downgrade to cached literals. See [File format support](/compatibility/file-format-support).
 
 XLSB pivot cache definitions, cache records, and PivotTable parts are evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. External references accept book names and paths, such as `[Book1.xlsx]Sheet1!A1`, and survive XLSX and XLSB saves with their link parts. Evaluation uses available cached external values; it does not fetch the linked file. Phonetic annotations preserve the span of each run.
 
@@ -82,13 +82,13 @@ No. Power Query, DAX, live external connections, Web / OData / OLAP refresh, and
 
 ### What about pivot tables?
 
-Pivot cache and PivotTable structure preservation, pivot operations, layout inspection, worksheet-source access, and cache-index item filtering are available across the C API, Node addon, WASM, and Python bindings. XLSB pivots are evaluated when the record encoding is supported. Formulon does not rebuild external data connections.
+Pivot cache and PivotTable structure preservation, pivot operations, layout inspection, worksheet-source access, and cache-index item filtering are available across the C API, Node addon, WASM, and Python bindings. XLSB pivots are evaluated when the record encoding is supported. See [PivotTables](/workbook/pivots).
 
-Formulon is not a replacement for Excel's external-data refresh and pivot-cache rebuild pipeline.
+Formulon does not refresh a pivot cache from its source data or rerun external data connections; that remains Excel's job.
 
 ### Are print settings and page breaks preserved?
 
-`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. WASM, Native Node, Python, and the C ABI can author the modeled print settings through typed setters as well as read them back. The `paginate` APIs resolve inclusive print areas and page breaks; rendering still belongs to Excel or another print engine.
+`.xlsx` page setup, margins, header/footer, print options, printer settings, and page-break metadata are part of the round-trip surface. WASM, Native Node, Python, and the C ABI can author the modeled print settings through typed setters as well as read them back. The `paginate` APIs resolve inclusive print areas and page breaks.
 
 Formulon is not a print-preview UI or PDF renderer. Final page rendering belongs to Excel or another rendering layer.
 
@@ -124,9 +124,9 @@ The implementation uses a C ABI, explicit error values, controlled inlining, and
 
 ### Why not Rust?
 
-Aware of the trade-off. Rust would be a reasonable language for parts of this problem, and the memory-safety argument is real. Formulon is built around existing C / C++ infrastructure: OOXML parsing, ZIP handling, regular expressions, numeric conversion, C ABI packaging, Emscripten, and native embedding. Using C++ keeps that stack direct instead of adding FFI layers around libraries such as miniz, pugixml, PCRE2, and double-conversion.
+Rust would be a reasonable language for parts of this problem, and the memory-safety argument is real. Formulon is built around existing C / C++ infrastructure: OOXML parsing, ZIP handling, regular expressions, numeric conversion, C ABI packaging, Emscripten, and native embedding. Using C++ keeps that stack direct instead of adding FFI layers around libraries such as miniz, pugixml, PCRE2, and double-conversion.
 
-The main compatibility risk is also not only memory safety. The hard part is Excel behavior: coercion rules, error propagation, locale handling, dates, dynamic arrays, OOXML round-trips, and oracle drift. Rust can help with many implementation risks, but it does not remove the spreadsheet-specification work. Formulon's current C++17 conventions, C ABI boundary, formatter, and oracle / CTest gates are the path the project is built around. Not a recommendation for everyone else to start new spreadsheet engines in C++.
+The main compatibility risk is also not only memory safety. The hard part is Excel behavior: coercion rules, error propagation, locale handling, dates, dynamic arrays, OOXML round-trips, and oracle drift. Rust can help with many implementation risks, but it does not remove the spreadsheet-specification work. Formulon's C++17 conventions, C ABI boundary, formatter, and oracle / CTest gates are what the project is built around. This is not a recommendation that new spreadsheet engines be written in C++.
 
 ### Which runtime should I pick?
 
