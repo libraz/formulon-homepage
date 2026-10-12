@@ -14,6 +14,7 @@ Read means Formulon can parse the structure. Write means it can emit it. Preserv
 | `.xlsb` read/write | Models/emits styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional formatting, data validation, and sheet/workbook protection metadata. AutoFilters loaded from XLSB remain opaque worksheet tails; typed edits are deferred and reported. Classic notes, threaded comments, and OOXML drawings are omitted on XLSB save and reported; see the [XLSB boundaries](/workbook/file-formats#xlsb). |
 | `.xlsm` macro bytes | Preserve, never execute |
 | Legacy `.xls` | Out of scope |
+| Password-protected packages | Not decrypted. An encrypted workbook and a legacy `.xls` are both OLE compound files, and loading either fails with `kIoZipEncrypted`; decrypt or convert to `.xlsx` first |
 | Charts/drawings rendering | Out of scope. XLSX picture bytes and anchors can be probed, read, inserted, and removed; drawing objects can be listed, but charts, shapes, and groups are not rendered. |
 | Pivot cache refresh from worksheet or external source data | Out of scope; supported cached structures can be preserved and projected |
 
@@ -27,6 +28,16 @@ Read means Formulon can parse the structure. Write means it can emit it. Preserv
 ]" />
 
 The CLI picks the output container from the `-o` file extension. Bindings pick it from the explicit `WorkbookFormat` passed to `saveAs(format)` / `save_as(fmt)`. Readers inspect package contents, so a file name does not select the input format.
+
+## Load limits
+
+Loading caps how much a package may expand, so a crafted file fails with a host status instead of exhausting memory:
+
+| Limit | Value | Status when exceeded |
+| --- | --- | --- |
+| One package part, uncompressed | 100 MiB, plus a compression-ratio check | `kIoZipBomb` |
+| All parts read during one load, uncompressed | 256 MiB | `kIoFileTooLarge` |
+| Stored cells in one `.xlsx` worksheet | About 2.98 million (each distinct written coordinate counts; `.xlsb` is not charged) | `kIoFileTooLarge` |
 
 ## Preservation rule
 

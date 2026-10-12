@@ -14,6 +14,10 @@
 | テストを実行する | [テストマトリクス](/ja/development/test-matrix) |
 | Excel の Oracle データを追加する | [Oracle データの提供](/ja/development/oracle-contribution) |
 
+::: info 用語: Oracle データ
+実際の Excel で取得し、*ゴールデン*（期待値ファイル）としてコミットした値です。Oracle テストは同じワークブックを Formulon で再計算して比較します。詳しくは [Oracle テスト](/ja/compatibility/oracle-testing) を参照してください。
+:::
+
 ## コードマップ
 
 | 領域 | 参照先 |
@@ -24,4 +28,4 @@
 | ブラウザ向けパッケージのサイズ | [サイズ上限](/ja/development/size-budgets) |
 | リリース作業 | [リリースチェックリスト](/ja/development/release-checklist) |
 
-Formulon の開発では再現性を重視します。同じコアのリビジョンから各実行環境をパッケージし、Oracle データを更新し、許容する差分を記録し、実行環境間の結果一致を確認します。
+Formulon の開発では再現性を重視します。同じコアのリビジョンから各実行環境をパッケージし、Oracle データを更新し、受け入れ済み差分を記録し、実行環境間の結果一致を確認します。

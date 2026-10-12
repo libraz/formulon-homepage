@@ -27,13 +27,19 @@ Oracle data must come from **Excel 365** (a Microsoft 365 subscription). Office 
 3. Review the generated goldens and metadata.
 4. Open a pull request with the captured data.
 
+`make oracle-contribute` needs Python 3.10 or newer. On first run it creates a virtual environment with `xlwings`. It then reads the installed Excel version and locale, maps them to a target in `tools/oracle/targets.yaml`, and generates the goldens; a full run takes 15 to 25 minutes. When the committed `ENVIRONMENT.md` for that target already records an Excel build at or above yours, it exits without generating anything.
+
+- On macOS, grant the terminal Automation access to Microsoft Excel when prompted.
+- From WSL2, export `FORMULON_WIN_PYTHON` as the path of the Windows-side `python.exe`, which needs `xlwings`, `pywin32`, and `pyyaml`.
+- The first goldens for a new target are accepted once a second contributor regenerates them independently and gets the same output.
+
 Each contribution should include the OS, Excel build, locale, and profile identity. When a golden later disagrees with Formulon, this metadata identifies the Excel build to capture again.
 
 ## Targets
 
 Target names have the shape `<host>-<excel-major>-<locale>`, for example `mac-365-ja_JP` or `win-365-ja_JP`. The manifest lives at `tools/oracle/targets.yaml`.
 
-The formula track has 14 Mac Excel gates: the primary `mac-365-ja_JP` plus 13 locale gates (`mac-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`). The workbook track also has the measured `win-365-ja_JP` target. The remaining 13 Windows profiles (`win-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`) use estimated donor-locale data until real Windows captures replace those estimates. Together these are 28 profile ids across 14 locales.
+The formula track has 14 Mac Excel gates: the primary `mac-365-ja_JP` plus 13 locale gates (`mac-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`). The workbook track also has the measured `win-365-ja_JP` target. The remaining 13 Windows profiles (`win-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`) are estimated from the Mac measurements plus the Windows host rules until real Windows captures replace them. Together these are 28 profile ids across 14 locales.
 
 To capture a Mac locale, set `defaults write com.microsoft.Excel AppleLanguages -array <lang>` and `defaults write com.microsoft.Excel AppleLocale <locale>`, relaunch Excel, and run `make oracle-gen TARGET=<target>` (or `tools/oracle/oracle_gen.py --target <target> --incremental`). Afterwards run `defaults delete` on both keys to return to the system locale. Localized error names are resolved through `ERROR.TYPE`.
 

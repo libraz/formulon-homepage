@@ -18,7 +18,7 @@ A *cell error* is a value with `kind = Error`. It travels through the binding as
   ] }
 ]" />
 
-A host failure (bad bytes, missing handle, or IO error) must be handled and reported through its host-failure channel; retry or fix the integration when appropriate. A cell error is data: show it inline and keep going.
+Handle a host failure through its channel, then retry or fix the integration. A cell error is data: show it inline and keep going.
 
 | Error | Meaning |
 | --- | --- |

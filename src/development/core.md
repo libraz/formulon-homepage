@@ -18,6 +18,10 @@ A return type that carries either a success value or an error code, instead of u
 - **In-tree implementations** for spreadsheet-specific logic (formula parser, date math, OOXML quirks) where generic libraries would add size or semantic risk.
 - **`miniz`** for ZIP container reading / writing.
 - **`pugixml`** for XML / XPath 1.0.
+- **`pcre2`** for the `REGEX*` functions.
+- **`double-conversion`** for shortest round-trip number text when writing OOXML cells.
+
+These four are fetched at configure time by default; `-DFM_USE_SYSTEM_DEPS=ON` uses installed packages instead.
 
 ## What the core must not depend on
 

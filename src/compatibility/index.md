@@ -6,6 +6,8 @@ Formulon treats compatibility as something you can inspect and reproduce. Use th
 “Excel-compatible” does not mean every workbook behaves exactly like every Excel build. It means the documented profile, implemented function families, file-format support, and oracle tests match the workbook you plan to process.
 :::
 
+To see how closely Formulon follows Excel in practice, start with [How far compatibility goes](/compatibility/edge-cases): floating-point, date, coercion, locale and spill cases, each checked live against a value captured from Excel.
+
 ## What to check
 
 1. Compare formulas against [Formula coverage](/compatibility/formula-coverage).
@@ -26,4 +28,4 @@ Formulon remains pre-1.0. Of the **526** recognized names, **511** are real impl
 | Locale and language | The 28 profile IDs, locale facts, formula localization, and runtime editor links in [Locale profiles](/compatibility/locale-profiles) and [Workbook language](/workbook/language) |
 | Text behavior | Mac measured collation, Windows byte order, and per-function strength in [Text collation](/compatibility/text-collation) |
 | Errors | `#VALUE!`, `#REF!`, parser failures, and host exceptions in [Error model](/compatibility/errors) |
-| Status | Pre-1.0 APIs, 511 / 526 real function implementations, locale-specific formula oracles, and workbook oracle verification |
+| Verification | Captured Excel values per profile, accepted divergences, and the closure checks in [Oracle testing](/compatibility/oracle-testing) |

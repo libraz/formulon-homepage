@@ -3,7 +3,7 @@
 Browser transfer size and load time increase with each byte, so the WASM package has explicit size limits. Native Node, Python, and CLI builds are not subject to these WASM size gates. The WASM build still dictates the dependency policy for the whole core.
 
 ::: info Glossary: size budget
-A per-target byte ceiling for the built artifact. Builds that exceed the ceiling fail; builds that exceed the target are warnings to investigate. Budgets are checked in CI through `make size-check`.
+A per-target byte ceiling for the built artifact. Builds that exceed the hard ceiling fail; builds that exceed the soft target print a warning to investigate. CI and the release workflow run the same check script as `make size-check` (`tools/bench/wasm_size_report.sh`).
 :::
 
 ::: info Glossary: Brotli vs uncompressed

@@ -14,6 +14,10 @@ Most contributors should start with [Build from source](/development/build-from-
 | Run tests | [Test matrix](/development/test-matrix) |
 | Add Excel oracle data | [Oracle contribution](/development/oracle-contribution) |
 
+::: info Glossary: oracle data
+Values captured from a real Excel build and committed as *golden* files. Oracle tests recalculate the same workbooks with Formulon and compare. See [Oracle testing](/compatibility/oracle-testing).
+:::
+
 ## Code map
 
 | Area | Where to look |

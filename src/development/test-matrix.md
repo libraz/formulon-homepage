@@ -3,7 +3,7 @@
 The test surface is broader than a single `make test` because Formulon ships multiple packages from one source tree. The core, Oracle, packaging, and cross-surface agreement checks catch different categories of regression.
 
 ::: info Glossary: CTest labels
-CTest groups tests with text labels such as `SLOW`, `BENCH`, `TSAN`, and `VARIANT`. Targets can include or exclude labels, so a fast pre-commit run can skip slow or diagnostic tests while CI still runs them.
+CTest groups tests with text labels: `SLOW`, `BENCH`, `TSAN`, `PARITY`, and `VARIANT`. Unlabeled tests form the fast tier. Targets include or exclude labels, so a fast pre-commit run can skip slow or diagnostic tests while CI still runs them.
 :::
 
 <DiagramLayers :layers="[
@@ -42,7 +42,7 @@ ctest --test-dir build-variants -L VARIANT --output-on-failure
 
 Only provenance-approved variant directories are included. Enabling the option does not activate every captured target. Use this check when investigating profile-specific differences or before adding a supported profile.
 
-The current profile catalog contains 28 ids across 14 locales. The formula Oracle gates cover 14 Mac profiles; `win-365-ja_JP` is the measured Windows workbook target, and the other 13 Windows profiles use estimated donor-locale data. Locale switching, formula translation, and locale-fact access are covered by the core and binding tests even when a Windows Excel capture is not available.
+The current profile catalog contains 28 ids across 14 locales. The formula Oracle gates cover 14 Mac profiles; `win-365-ja_JP` is the measured Windows workbook target, and the other 13 Windows profiles are estimated from the Mac measurements plus the Windows host rules. Locale switching, formula translation, and locale-fact access are covered by the core and binding tests even when a Windows Excel capture is not available.
 
 ## Packaging smoke tests
 
@@ -72,6 +72,7 @@ Parity checks whether the available runtime channels agree with each other. Orac
 | Command | Purpose |
 | --- | --- |
 | `ctest -R RegistryCatalog.CoverageReport -V --output-on-failure` (run from the build directory, after `make build`) | Runtime function-registration status against the canonical catalog |
+| `make function-status` | Recognized, implemented, stub, and environment-bound counts per category, read from the catalog files without a build |
 | `make behavior-status` | Status of the fine-grained behavior catalog |
 | `make coverage` | Local coverage diagnostic |
 | `make mutation` | Local mutation-testing diagnostic |
@@ -82,7 +83,7 @@ Parity checks whether the available runtime channels agree with each other. Orac
 
 | Target | Purpose |
 | --- | --- |
-| `make ironcalc-verify` | Verify the secondary IronCalc oracle fixtures |
+| `make bench` | Run the `BENCH`-labelled benchmark checks. It reconfigures `build/` as Release |
 | `make fuzz` / `make fuzz-long` | Run the parser, evaluator, file-format, and print-settings fuzz harnesses |
 | `bash tools/ci/run_tsan.sh` | Run the thread-sanitizer suite used by CI |
 

@@ -1,9 +1,9 @@
-# 実行環境間の比較と Excel との比較
+# テストマトリクス
 
 テストの対象範囲は `make test` 1 つに収まりません。Formulon は 1 つのソースツリーから複数パッケージを出荷するため、コア、Oracle、パッケージング、実行環境間の一致を別々に検証します。
 
 ::: info 用語: CTest のラベル
-CTest はテストにテキストラベル（`SLOW` / `BENCH` / `TSAN` / `VARIANT` など）を付け、ラベルで対象に含める・除外する操作ができます。コミット前は遅いテストや診断用テストを除外し、CI ではそれらも実行できます。
+CTest はテストにテキストのラベル（`SLOW` / `BENCH` / `TSAN` / `PARITY` / `VARIANT`）を付けます。ラベルのないテストが高速な層です。ターゲットはラベルで対象を含めたり除外したりできるので、コミット前は遅いテストや診断用テストを省き、CI ではそれらも実行できます。
 :::
 
 <DiagramLayers :layers="[
@@ -42,7 +42,7 @@ ctest --test-dir build-variants -L VARIANT --output-on-failure
 
 検証済みの取得元情報があるバリアントだけが対象です。オプションを有効にしても、取得済みデータがすべて自動的にテスト対象になるわけではありません。プロファイル固有差分の調査や、対応するプロファイルを追加する前に使います。
 
-現在のプロファイルカタログは 14 ロケール、28 個の ID です。数式 Oracle のゲートは Mac 14 プロファイルを対象とし、Windows のワークブックターゲットは実測済みの `win-365-ja_JP` です。残り 13 個の Windows プロファイルは寄贈ロケールからの推定値を使います。Windows の Excel 取得がなくても、ロケール切り替え、数式変換、ロケール情報の取得はコアとバインディングのテストで検証します。
+現在のプロファイルカタログは 14 ロケール、28 個の ID です。数式 Oracle のゲートは Mac 14 プロファイルを対象とし、Windows のワークブックターゲットは実測済みの `win-365-ja_JP` です。残り 13 個の Windows プロファイルは、Mac での実測値と Windows ホストの規則から推定しています。Windows の Excel 取得がなくても、ロケール切り替え、数式変換、ロケール情報の取得はコアとバインディングのテストで検証します。
 
 ## パッケージングのスモークテスト
 
@@ -72,17 +72,18 @@ make parity-test
 | コマンド | 目的 |
 | --- | --- |
 | `ctest -R RegistryCatalog.CoverageReport -V --output-on-failure`（`make build` の後、build ディレクトリで実行） | 正規カタログに対する実行時の関数登録状態 |
+| `make function-status` | カテゴリごとの認識数、実装数、スタブ数、環境依存の数。ビルドせずにカタログファイルから読む |
 | `make behavior-status` | 細かな挙動のカタログの状態 |
 | `make coverage` | ローカルカバレッジ診断 |
 | `make mutation` | ローカルミューテーションテスト診断 |
 
-`RegistryCatalog.CoverageReport` は診断専用の gtest ケースです ─ 常に成功し、カバレッジ比率を標準出力に出すだけで、それは `ctest -V` を付けたときだけ表示されます。合否ゲートではなく、現在の数値を読むための手段として扱ってください。
+`RegistryCatalog.CoverageReport` は診断専用の gtest ケースです。常に成功し、カバレッジ比率を標準出力に出すだけなので、`ctest -V` を付けたときにしか表示されません。合否の判定ではなく、現在の数値を読むために使ってください。
 
 ## 追加の診断
 
 | ターゲット | 目的 |
 | --- | --- |
-| `make ironcalc-verify` | IronCalc 由来の二次 Oracle 検証データを検証します |
+| `make bench` | `BENCH` ラベルのベンチマーク検査を実行します。`build/` をリリース構成に変更します |
 | `make fuzz` / `make fuzz-long` | パーサ、評価器、ファイル形式、印刷設定のファジングハーネスを実行します |
 | `bash tools/ci/run_tsan.sh` | CI で使う ThreadSanitizer テストを実行します |
 

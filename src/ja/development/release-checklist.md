@@ -10,12 +10,13 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 
 - [ ] コアテスト（`make test-all`）
 - [ ] 基準となる Oracle 検証（`make oracle-verify`）。対応するバリアントを変更した場合は `FORMULON_ORACLE_VARIANTS=ON` を有効にし、`formulon_oracle_variant_tests` と `formulon_workbook_oracle_variant_tests` をビルドして `ctest -L VARIANT` を実行します
+- [ ] 差分レジストリを確認（`tools/oracle/.venv/bin/python tools/oracle/divergence_check.py --strict` が 0 で終了すること）。リリースの基準は Oracle の失敗ゼロです。合格率を示す前に、このツールが出力する原因別のスキップ集計を確認します
 - [ ] WASM のサイズ上限を検証（`make size-check`）
 - [ ] JavaScript / Python / CLI / ネイティブ成果物を同一リビジョンからビルド
 - [ ] 各パッケージ API のスモークテスト
 - [ ] 利用可能な実行環境をステージ後に `make parity-test` で比較
 - [ ] 兄弟チェックアウトからコア WASM と cell パッケージをステージングした後、`yarn demos:prepare` でホームページのデモ用スナップショットを更新し、`vendor/manifest.json` のソースコミット、ソース差分 SHA-256、アーカイブ SHA-256 を確認する。その後 `yarn check:demos` と、兄弟チェックアウトなしの通常のホームページビルドを実行する
-- [ ] `RegistryCatalog.CoverageReport` を実行し（`ctest -R RegistryCatalog.CoverageReport -V` を build ディレクトリで ─ 診断専用で常に成功し、カバレッジ比率は標準出力に出ます）、変化があれば [数式カバレッジ](/ja/compatibility/formula-coverage) を更新
+- [ ] ビルドディレクトリで `ctest -R RegistryCatalog.CoverageReport -V` を実行し、変化があれば [数式カバレッジ](/ja/compatibility/formula-coverage) を更新（診断専用で常に成功し、カバレッジ比率は標準出力に出ます）
 - [ ] [互換性](/ja/compatibility/) のステータス表現を確認
 - [ ] 変更履歴とドキュメントバージョンの更新
 
@@ -25,12 +26,13 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 | --- | --- |
 | `make test-all` | エンジン内部の回帰 |
 | `make oracle-verify` | Formulon と取得済み Excel 値のずれ |
+| `divergence_check.py --strict` | 未検証または古い Excel の観測に頼ったままの受け入れ済み差分 |
 | `make size-check` | ページ読み込みを遅くする WASM サイズの増加 |
 | 同一リビジョンのビルド | 部分ビルドによる実行環境間のずれ |
 | 各 API のスモークテスト | パッケージング / バインディング限定の回帰 |
 | `make parity-test` | 同じ入力に対し実行環境間で異なる値を返す状況 |
 | `RegistryCatalog.CoverageReport` | ドキュメントの関数数が古いまま |
-| 互換性監査 | 成立しなくなった「Excel-compatible」表現 |
+| 互換性監査 | 成り立たなくなった「Excel 互換」という表現 |
 | 変更履歴 / ドキュメント | アップグレード後にユーザーが驚く差分 |
 
 ::: warning パッケージビルドだけでは実行環境間の一致を確認できません
@@ -40,8 +42,9 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 ## 公開と確認
 
 - [ ] タグを付けて push します（`git tag vX.Y.Z && git push origin vX.Y.Z`）。タグで `release.yml` が起動し、Trusted Publishing で npm と PyPI を公開し、GitHub Actions のワークフロー認証情報で GitHub Release と CLI アセットを作成します。
-- [ ] 同じタグで別に起動する `prebuild.yml` の Native Node マトリクスと `release-bundle` を確認します。ネイティブ成果物は個別に検証します。
-- [ ] ホームページの `docsVersion` をドキュメントが対象とするソースのバージョンに合わせます。未公開の機能は Git 管理外のローカルスナップショットで確認します（`yarn test:local` と `yarn build:local`）。コア、`formulon-cell`、`formulon-cell-vue` の公開後にレジストリ依存を更新し、lockfile を再生成して、ローカルの別名参照を使わずにテストとビルドを実行します。デプロイ前に、画面に表示される実行バージョンと言語切り替えデモを公開パッケージで確認してください。
+- [ ] 同じタグで別に起動する `prebuild.yml` を確認します。`release-bundle` ジョブがビルド済みアドオンを `formulon-native-bundle` アーティファクトにまとめます。`@libraz/formulon-native` の npm 公開は手動で行います。
+- [ ] タグを作成したら、公開済み C ABI のベースラインをそのタグに合わせて更新します（`python3 tools/dev/gen_c_abi_baseline.py vX.Y.Z`）。以降の ABI 変更はこのリリースを基準に検査されます。
+- [ ] ホームページの `docsVersion` をドキュメントが対象とするソースのバージョンに合わせます。未公開の機能は Git 管理外のローカルスナップショットで確認します（`yarn test:local` と `yarn build:local`）。コア、`formulon-cell`、`formulon-cell-vue` の公開後にレジストリ依存を更新し、ロックファイルを再生成して、ローカルのエイリアスを使わずにテストとビルドを実行します。デプロイ前に、画面に表示される実行バージョンと言語切り替えデモを公開パッケージで確認してください。
 - [ ] 互換性報告を監視し、適切な Oracle データ / プロファイルに振り分けます
 
 <DiagramFlow steps="develop で作業 → main への PR → CI 成功 → merge → vX.Y.Z タグを push → release.yml + prebuild.yml → 成果物を確認" />

@@ -3,7 +3,7 @@
 Oracle tests compare Formulon against values captured from real Excel builds. They are the empirical layer of the compatibility story — what *Excel actually does* on a given workbook and locale, not what the documentation says it should.
 
 ::: info Glossary: oracle data
-A captured set of Excel-produced values for a known workbook, profile, and build. Tests load the workbook, recalculate with Formulon, and compare against the captured values. When they disagree, *Excel* is treated as the source of truth.
+A captured set of Excel-produced values for a known workbook, profile, and build, committed as *golden* files. Tests load the workbook, recalculate with Formulon, and compare against the goldens. When they disagree, *Excel* is treated as the source of truth.
 :::
 
 ::: info Glossary: accepted divergence
@@ -22,13 +22,14 @@ The oracle suite has separate tracks for formulas, conditional formatting, impor
 | Imported third-party engine corpus | Cross-check against a non-Excel engine | Third-party engine, not Excel |
 | Workbook oracle | PivotTable structures and print layout | Windows Microsoft 365 ja-JP (`win-365-ja_JP`) |
 
-The formula track regenerates from Mac Excel 365 in all 14 locales: `mac-365-ja_JP` is the primary, and the other 13 each run as their own CI-gating oracle against the profile of the same name. Each target keeps its goldens, `divergence.yaml` and `ENVIRONMENT.md` under `tests/oracle/targets/<target>/`; `applies_to` in a divergence file accepts a `mac` host token. The conditional-formatting track regenerates from Mac Excel 365 ja-JP; the workbook track regenerates from Windows Excel 365 ja-JP. Workbook goldens carry a capture identifier that pins every suite to a single verified Microsoft 365 session. The workbook capture uses a WSL2-to-Windows COM bridge for PivotTable and print behavior. Pass and skip counts belong to a particular capture and are intentionally omitted here. From a [Formulon source checkout](https://github.com/libraz/formulon), build the test binaries and run the suites:
+The formula track regenerates from Mac Excel 365 in all 14 locales: `mac-365-ja_JP` is the primary, and the other 13 each run as their own CI-gating oracle against the profile of the same name. Each target keeps its goldens and `ENVIRONMENT.md` under `tests/oracle/targets/<target>/`. The 13 locale gates also keep a per-target `divergence.yaml`, whose `applies_to` accepts a `mac` host token; the primary target uses the shared `tests/divergence.yaml`. The conditional-formatting track regenerates from Mac Excel 365 ja-JP; the workbook track regenerates from Windows Excel 365 ja-JP. Workbook goldens carry a capture identifier that pins every suite to a single verified Microsoft 365 session. The workbook capture uses a WSL2-to-Windows COM bridge for PivotTable and print behavior. Pass and skip counts belong to a particular capture and are intentionally omitted here. From a [Formulon source checkout](https://github.com/libraz/formulon), build the test binaries and run the suites:
 
 ```sh
 make build
 make oracle-verify
-make ironcalc-verify
 ```
+
+The imported third-party corpus has its own verify target in the `Makefile`.
 
 The catalogue closure checks are separate metadata checks; they do not recalculate the engine or report suite pass counts:
 
@@ -45,7 +46,7 @@ Most workbook-track skips share one Excel quirk: at a print scale or zoom of 50%
 
 ## Why oracle data matters
 
-Spreadsheet behavior includes many undocumented details: rounding edges, how `TEXT()` formats locale-specific digits, how `DATEVALUE()` handles two-digit years, how blank values coerce, how spill collisions interact with merged cells. Committed goldens (`tests/oracle/*/golden`) turn those details into reviewable data and make compatibility regressions visible at PR time rather than after deployment.
+Spreadsheet behavior includes many undocumented details: rounding edges, how `TEXT()` formats locale-specific digits, how `DATEVALUE()` handles two-digit years, how blank values coerce, how spill collisions interact with merged cells. Committed goldens (`tests/oracle/targets/<target>/golden*`) turn those details into reviewable data and make compatibility regressions visible at PR time rather than after deployment.
 
 ## How a failure is interpreted
 
@@ -69,8 +70,6 @@ A failure usually falls into one of four buckets:
 ## Contributing data
 
 Locale coverage grows when contributors run the oracle capture flow on their own Excel installations and donate the resulting goldens. The Windows profiles other than `win-365-ja_JP` are estimated from the Mac capture, so goldens from a real Windows install in any of the other 13 locales are the most useful donation. See [Oracle contribution](/development/oracle-contribution) for the capture flow.
-
-The formula and conditional-formatting tracks use `mac-365-ja_JP` as their primary profile; the other 13 Mac locales are checked against their own goldens. The workbook track uses the product-verified Windows Microsoft 365 `win-365-ja_JP` profile.
 
 ## Read next
 

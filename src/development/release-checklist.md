@@ -10,6 +10,7 @@ A core release whose WASM, Native Node, Python wheel, and CLI binaries are built
 
 - [ ] Run core tests (`make test-all`).
 - [ ] Run primary Oracle verification (`make oracle-verify`). If a supported variant changed, also configure `FORMULON_ORACLE_VARIANTS=ON`, build `formulon_oracle_variant_tests` and `formulon_workbook_oracle_variant_tests`, and run `ctest -L VARIANT`.
+- [ ] Check the divergence registry (`tools/oracle/.venv/bin/python tools/oracle/divergence_check.py --strict` must exit 0). The release bar is zero oracle failures; read the per-cause skip tally it prints before quoting a pass rate.
 - [ ] Verify WASM size budgets (`make size-check`).
 - [ ] Build JavaScript, Python, CLI, and native artifacts from the same revision.
 - [ ] Smoke-test each package surface.
@@ -25,6 +26,7 @@ A core release whose WASM, Native Node, Python wheel, and CLI binaries are built
 | --- | --- |
 | `make test-all` | Engine-internal regressions |
 | `make oracle-verify` | Drift between Formulon and captured Excel values |
+| `divergence_check.py --strict` | Accepted divergences resting on an unverified or stale Excel observation |
 | `make size-check` | WASM bloat that would slow page loads |
 | Same-revision build | Cross-surface drift caused by partial rebuilds |
 | Smoke-test each surface | Packaging or binding-only regressions |
@@ -40,7 +42,8 @@ Run the parity check and binding smoke tests before release. They cover agreemen
 ## Publish and verify
 
 - [ ] Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`). The tag triggers `release.yml`, which publishes npm and PyPI through trusted publishing and creates the GitHub Release and CLI assets with GitHub workflow credentials.
-- [ ] Check the separate `prebuild.yml` workflow for the Native Node matrix and its `release-bundle` job on the same tag. Verify the uploaded native artifacts separately.
+- [ ] Check the separate `prebuild.yml` workflow on the same tag. Its `release-bundle` job collects the prebuilt addons into a `formulon-native-bundle` artifact; publishing `@libraz/formulon-native` to npm is a manual step.
+- [ ] Once the tag exists, rebase the released C ABI baseline onto it (`python3 tools/dev/gen_c_abi_baseline.py vX.Y.Z`). Later ABI changes are then checked against this release.
 - [ ] Update the homepage's `docsVersion` to the documented source version. Verify unreleased features with the ignored local snapshots (`yarn test:local` and `yarn build:local`). After the core, `formulon-cell`, and `formulon-cell-vue` packages are published, update the registry dependency pins, regenerate the lockfile, and rerun tests and the build without local aliases. Confirm the displayed runtime versions and the language-switching demo against the published packages before deploying.
 - [ ] Watch for incoming compatibility issues and route them to the right oracle / profile.
 

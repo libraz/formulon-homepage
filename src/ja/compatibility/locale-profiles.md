@@ -2,22 +2,22 @@
 
 Excel の挙動は完全にはロケール非依存ではありません。関数名、区切り文字、日付解析、文字幅、通貨、テキスト処理は、プラットフォームとロケールによって変わることがあります。そのため Formulon は、単一のグローバル互換モードではなく、名前付きプロファイルを公開します。
 
-::: info 用語: compatibility profile（互換性プロファイル）
+::: info 用語: 互換性プロファイル
 Excel 365 のホストとロケールの組に名前を付け、互換性の根拠となる Oracle データを紐付けたものです。ロケール依存の評価はプロファイルに従います。アプリとテストはホスト OS の既定値ではなく、プロファイルを明示的に固定してください。
 :::
 
 ## 現在のプロファイル
 
-Formulon は 28 個のプロファイル ID を提供します。形式は `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}` です。新しいワークブックは、別のプロファイルを選択しない限り `win-365-en_US` を使います。
+Formulon は 28 個のプロファイル ID を提供します。形式は `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}` です。新しいワークブックは、別のプロファイルを選択しない限り `win-365-en_US` を使います。`createForProfile(profileId)` を使うと、そのロケールの Excel と同じフォント、スタイル名、シート名を持つワークブックを作れます。詳しくは [ワークブックの流れ](/ja/workbook/lifecycle) を参照してください。
 
 | ホスト | プロファイル | 測定状況 |
 | --- | --- | --- |
 | Mac Excel 365 | 14 ロケールすべてに対する `mac-365-` | 14 個すべて実測済みです。`mac-365-ja_JP` が数式と条件付き書式の主 Oracle で、ほかの 13 ロケールにも専用の数式ゴールデンがあります。 |
 | Windows Microsoft 365 | 14 ロケールすべてに対する `win-365-` | `win-365-ja_JP` は実測済みで、ワークブック（ピボットテーブルと印刷）の Oracle です。ほかの 13 個は、Windows での取得に置き換わるまで推定値です。 |
 
-`localeFacts(profileId)` は測定状況を 2 つのフラグで返します。`measured` は数値的なロケール情報、`collationMeasured` は文字列の照合順序の測定状況です。後者はすべての Mac プロファイルで true、`win-365-ja_JP` を含むすべての Windows プロファイルで false です。どちらも個々の関数が実装済みかどうかは示しません。Python と C のフィールド名は `collation_measured` です。
+`localeFacts(profileId)` は測定状況を 2 つのフラグで返します。`measured` は区切り文字や通貨などのロケール情報、`collationMeasured` は文字列の照合順序についての測定状況です。後者はすべての Mac プロファイルで true、`win-365-ja_JP` を含むすべての Windows プロファイルで false です。どちらも個々の関数が実装済みかどうかは示しません。Python と C のフィールド名は `collation_measured` です。
 
-## ロケールの事実
+## ロケール情報
 
 次の値は現在の `localeFacts()` の内容です。`配列` 列は（列区切り、行区切り）です。通貨の `prefix` / `suffix` は記号の位置を示し、`space` は記号と数値の間に 1 個の空白を出力することを示します。これらのスカラー値は同じロケールの Mac と Windows で共通で、`measured` の値だけが上記の測定状況に従って変わります。
 
@@ -52,7 +52,7 @@ Formulon は 28 個のプロファイル ID を提供します。形式は `{mac
 | `zh_TW` | Big5 | DBCS の高位バイトは空白 | なし |
 | その他 | なし | `mac-*` は MacRoman、`win-*` は Windows-1252。ただし `th_TH` と `ru_RU` は除く | `mac-*` は Mac 規則、`win-*` は Windows 規則 |
 
-`th_TH` のバイトページは MacThai、`ru_RU` は MacCyrillic です。対応する `win-*` ID でもこのプロファイル事実を使います。中国語プロファイルでは、ソースの照合器が区別する経路で幅とかなを区別します。関数ごとの正確な強度は [テキスト照合](./text-collation) を参照してください。
+`th_TH` のバイトページは MacThai、`ru_RU` は MacCyrillic です。対応する `win-*` ID でも同じページを使います。中国語プロファイルでは、ソースの照合器が区別する経路で幅とかなを区別します。関数ごとの正確な強度は [テキスト照合](./text-collation) を参照してください。
 
 ## ピボットのラベル
 
@@ -68,7 +68,7 @@ Formulon は 28 個のプロファイル ID を提供します。形式は `{mac
 | `ko_KR` | `합계` | `총합계` | `행 필드␠` | `열 필드␠` | `값␠` |
 | `th_TH` | `ผลรวม` | `ผลรวมทั้งหมด` | `เขตข้อมูลแถว␠` | `เขตข้อมูลคอลัมน์␠` | `ค่า␠` |
 | `es_ES`, `es_MX` | `Total` | `Total general` | `Campo de fila␠` | `Campo de columna␠` | `Valor␠` |
-| `pt_BR` | `Total` | `Total Geral` | `Campo de linha␠` | `Campo de columna␠` | `Valor␠` |
+| `pt_BR` | `Total` | `Total Geral` | `Campo de linha␠` | `Campo de coluna␠` | `Valor␠` |
 | `ru_RU` | `Итого` | `Общий итог` | `Поле строки␠` | `Поле столбца␠` | `Значение␠` |
 | `zh_TW` | `總計` | `總計` | `列欄位␠` | `欄欄位␠` | `值␠` |
 | `it_IT` | `Totale` | `Totale complessivo` | `Campo riga␠` | `Campo colonna␠` | `Valore␠` |
@@ -119,7 +119,7 @@ wb.recalc()
 
 :::
 
-プロファイルはランタイム全体のフラグではなく、ワークブックのインスタンスに属します。そのため同じプロセスで異なるプロファイルのワークブックを共存させられます。プロファイルは XLSX / XLSB ファイルへシリアライズされません。アプリケーションの状態として ID を保存し、読み込み後に再適用してください。プロファイルを変更すると数式は dirty になります。値を読む前に `recalc()` を呼び出してください。
+プロファイルはランタイム全体のフラグではなく、ワークブックのインスタンスに属します。そのため同じプロセスで異なるプロファイルのワークブックを共存させられます。プロファイルは XLSX / XLSB ファイルへシリアライズされません。アプリケーションの状態として ID を保存し、読み込み後に再適用してください。プロファイルを変更すると数式は再計算待ちになります。値を読む前に `recalc()` を呼び出してください。
 
 ## 次に読むもの
 
@@ -129,4 +129,4 @@ wb.recalc()
 - [セルの言語切り替え](/ja/cell/language-switching) ─ エディター言語の実行時切り替え
 - [Oracle テスト](/ja/compatibility/oracle-testing) ─ プロファイルを裏付けるデータ
 
-事実の根拠は Formulon の `src/excel_profile.h`、`src/excel_locale.h`、`src/excel_locale.cpp` と、ロケールおよび照合の Oracle fixture です。
+事実の根拠は Formulon の `src/excel_profile.h`、`src/excel_locale.h`、`src/excel_locale.cpp` と、ロケールおよび照合の Oracle 検証データです。

@@ -8,7 +8,7 @@ A named binding between an Excel 365 host and a locale, plus the oracle data tha
 
 ## Profiles today
 
-Formulon ships 28 profile IDs: `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`. A new workbook uses `win-365-en_US` unless the application selects another profile.
+Formulon ships 28 profile IDs: `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`. A new workbook uses `win-365-en_US` unless the application selects another profile. `createForProfile(profileId)` also gives the new workbook the fonts, style names, and sheet names Excel uses in that locale; see [Workbook lifecycle](/workbook/lifecycle).
 
 | Host | Profiles | Measurement status |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ Pivot captions are also profile data. `␠` below marks the trailing space prese
 | `ko_KR` | `합계` | `총합계` | `행 필드␠` | `열 필드␠` | `값␠` |
 | `th_TH` | `ผลรวม` | `ผลรวมทั้งหมด` | `เขตข้อมูลแถว␠` | `เขตข้อมูลคอลัมน์␠` | `ค่า␠` |
 | `es_ES`, `es_MX` | `Total` | `Total general` | `Campo de fila␠` | `Campo de columna␠` | `Valor␠` |
-| `pt_BR` | `Total` | `Total Geral` | `Campo de linha␠` | `Campo de columna␠` | `Valor␠` |
+| `pt_BR` | `Total` | `Total Geral` | `Campo de linha␠` | `Campo de coluna␠` | `Valor␠` |
 | `ru_RU` | `Итого` | `Общий итог` | `Поле строки␠` | `Поле столбца␠` | `Значение␠` |
 | `zh_TW` | `總計` | `總計` | `列欄位␠` | `欄欄位␠` | `值␠` |
 | `it_IT` | `Totale` | `Totale complessivo` | `Campo riga␠` | `Campo colonna␠` | `Valore␠` |

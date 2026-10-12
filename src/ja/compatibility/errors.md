@@ -3,13 +3,13 @@
 スプレッドシートのエラーは **値** です。`#DIV/0!` を返した数式はクラッシュしておらず、エラー値を生成しただけです。それを取得したホスト API 呼び出しは成功しています。この区別はすべてのバインディングで保たれます。
 
 ::: info 用語: セルエラーとホスト失敗
-*セルエラー* は `kind = Error` の値であり、バインディングを通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（バイト列の不正・ハンドル失効・入出力エラー・エンジン内部失敗）であり、別チャネル（`Status` envelope / 例外 / 非ゼロ終了 / `fm_status_t`）で報告されます。
+*セルエラー* は `kind = Error` の値であり、バインディングを通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（バイト列の不正・ハンドル失効・入出力エラー・エンジン内部失敗）であり、別の経路（`Status` エンベロープ、例外、非ゼロの終了コード、`fm_status_t`）で報告されます。
 :::
 
 <DiagramLayers :layers="[
   { title: 'ホスト呼び出し', nodes: ['getValue / recalc / save'] },
   { title: '呼び出し自体は成功したか', nodes: [
-    { label: 'いいえ → ホスト失敗経路', note: 'status envelope · 例外 · 非ゼロ終了 · fm_status_t' },
+    { label: 'いいえ → ホスト失敗経路', note: 'Status エンベロープ · 例外 · 非ゼロ終了 · fm_status_t' },
     { label: 'はい → value.kind を確認' }
   ] },
   { title: 'value.kind', nodes: [
@@ -18,7 +18,7 @@
   ] }
 ]" />
 
-ホスト側のエラー（不正なバイト列・ハンドル失効・入出力エラー）は、ホスト側のエラー経路で処理・報告します。必要に応じて再試行や統合コードの修正を行います。セルエラーはデータなので、インラインに表示して処理を続けます。
+ホスト失敗はその経路で受け取り、再試行するか統合コードを直します。セルエラーはデータなので、インラインに表示して処理を続けます。
 
 | Error | 意味 |
 | --- | --- |
@@ -40,7 +40,7 @@
 | `#PYTHON!` | `PY` セルの評価中に発生したエラー |
 | `#UNKNOWN!` | 認識できない、または対応付けのないエラーコード |
 
-これが `ErrorCode` の全 17 種です（`src/value.h` の `kErrorTable`）。各バインディングの表示ヘルパーが全種類を扱います。入力ワークブックから保持された名前も含まれるため、`#PYTHON!` は Formulon が Python を実行することを意味せず、`#GETTING_DATA` もネットワークへ接続することを意味しません。
+これが `ErrorCode` の全 17 種です（`src/value.h` の `kErrorTable`）。各バインディングの表示ヘルパーは、入力ワークブックから引き継いだだけのものも含めて 17 種すべてを扱います。`#PYTHON!` が出ても Formulon が Python を実行するわけではなく、`#GETTING_DATA` が出てもネットワークに接続するわけではありません。
 
 バインディングはこれらをホスト言語の例外に変換せず、値として保持してください（API 誤用・入出力失敗を報告する場合を除く）。
 
@@ -52,12 +52,12 @@
 
 | 実行入口 | ホスト側の失敗経路 |
 | --- | --- |
-| WASM | `status.ok === false` または invalid workbook handle + `lastErrorMessage()` |
+| WASM | `status.ok === false`、または無効なワークブックハンドルと `lastErrorMessage()` |
 | Python | `FormulonError` |
 | CLI | 非ゼロ終了コード + stderr 診断 |
 | C ABI | 非ゼロ `fm_status_t` + `fm_last_error_message()` / `fm_last_error_context()` |
 | MCP | 構造化データを含む MCP エラー応答 |
-| Native Node | 返却 envelope の `status.ok === false` |
+| Native Node | 戻り値エンベロープの `status.ok === false` |
 
 ## バインディング引数の検証
 
@@ -73,7 +73,7 @@ WASM と Native Node の JavaScript バインディングは、C ABI を呼ぶ�
 | --- | --- | --- |
 | `setFormula()` / `set_formula()` | ホストステータス `kParserUnexpectedToken` | 既存セルの数式とキャッシュ値は変わりません。 |
 | 不正な保存済み数式を含むインポート済みワークブック | 保存テキストは保持され、`recalc()` 後にセルは `#NAME?` になります | ワークブック記録を保持するため、内容を確認して書き換えられます。 |
-| `evaluateFormulaText()` / `evalFormula()` / `eval_formula()` | 評価自体は成功する envelope で、値として `#NAME?` が返ります | 読み取り専用で、セルや依存グラフは変わりません。 |
+| `evaluateFormulaText()` / `evalFormula()` / `eval_formula()` | 評価は成功し、エンベロープの値として `#NAME?` が返ります | 読み取り専用で、セルや依存グラフは変わりません。 |
 
 たとえば `=SUM(` は、厳密な数式 setter では `kParserUnexpectedToken` で拒否されます。同じ不正テキストがインポートファイルから入ると保持され、アドホック評価ではセルエラー `#NAME?` が返ります。どちらも一般的なホスト例外へまとめないでください。setter のステータスは要求した変更が起きなかったためホスト側の失敗であり、`#NAME?` はインポートまたはアドホック評価経路が返すセル値です。
 

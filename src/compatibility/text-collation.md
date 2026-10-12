@@ -15,7 +15,7 @@ Collation is the rule for which strings are equal and how they are ordered. Stre
 
 | If the workbook is doing this | Collation strength | Functions and surfaces |
 | --- | --- | --- |
-| Compare values or apply a text criterion | `compare` | `=`, `<>`, `<`, `>`, `<=`, `>=`, criteria functions, `SWITCH`, and approximate `MATCH` / `VLOOKUP` |
+| Compare values or apply a text criterion | `compare` | `=`, `<>`, `<`, `>`, `<=`, `>=`, criteria functions, `SWITCH`, approximate `MATCH` / `VLOOKUP`, `SEARCH` / `SEARCHB`, conditional-format text rules, and AutoFilter and PivotTable label filters |
 | Sort, group, deduplicate, or use a modern lookup | `dynamic` | `SORT`, `UNIQUE`, `GROUPBY`, `XLOOKUP`, `XMATCH`, and PivotTable grouping |
 | Reproduce a classic exact lookup | `classic exact` | Exact `MATCH`, `VLOOKUP`, and `HLOOKUP` |
 

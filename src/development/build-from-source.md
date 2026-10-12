@@ -6,22 +6,6 @@ Most contributors only need `make build` and `make test`. The other targets exis
 Staging places built artifacts in the package layout each surface expects — `packages/npm/dist/`, `packages/python/formulon/_wasm/`, and the Native Node addon directory. It is what makes `npm test`, `unittest`, and `node --test` reach the freshly built core.
 :::
 
-## Homepage demo snapshots
-
-Normal homepage installs use the registry versions pinned in `package.json` and `yarn.lock`; they do not need sibling checkouts or generated archives. Unreleased features can be previewed with local snapshots of the core WASM package, `formulon-cell`, and the Vue adapter. `vendor/` holds these generated files and is ignored by Git. Stage both core WASM variants first with `make npm-package` in `../formulon`, install the cell workspace dependencies in `../formulon-cell`, then run from the homepage checkout:
-
-```sh
-yarn demos:prepare
-yarn check:demos
-yarn test:local
-yarn build:local
-yarn dev:local
-```
-
-`yarn demos:prepare` builds the cell packages from the sibling `../formulon-cell` checkout, copies the staged core from `../formulon`, and writes `vendor/manifest.json`. The manifest records each package version, source commit, source input and diff SHA-256, and archive SHA-256. Local commands set `FORMULON_DEMO_SOURCE=local`, verify and unpack the archives, and resolve package imports through Vite aliases. They leave registry pins and the lockfile unchanged and fail if a snapshot is missing or corrupt. Preparation also rejects stale WASM or a runtime version that differs from its package manifest.
-
-The registry and local test suites both exercise the seven-language switching demo, including live profile changes, preserved edits, theme updates, and disposal. Registry tests use the pinned published packages; local tests use the prepared snapshots. Verify the registry artifacts before deploying.
-
 Clone the repository:
 
 ```sh
@@ -32,7 +16,7 @@ git checkout v0.15.1
 
 The `v0.15.1` release tag matches the published npm and Python packages and the workbook APIs described here. It includes profile-shaped new workbooks, text comparison helpers, and the row, column, and range-style APIs.
 
-Native builds require CMake and a C++17 toolchain. WASM builds require the Emscripten SDK pinned in `tools/wasm/emsdk-version.txt`. The npm package requires Node 22 or newer. Install `brotli` to run the complete size check.
+Native builds require CMake 3.20 or newer and a C++17 toolchain. WASM builds require the Emscripten SDK pinned in `tools/wasm/emsdk-version.txt`. The npm package requires Node 22 or newer. Install `brotli` to run the complete size check.
 
 ## Native debug build
 
@@ -50,6 +34,25 @@ make release
 ```
 
 Use the release build before measuring performance or shipping artifacts. Debug builds carry extra assertions that distort timings.
+
+## CMake presets
+
+`CMakePresets.json` also defines configure presets. Apart from `debug`, each writes to its own directory, so it does not reconfigure `build/`:
+
+| Preset | Directory | Use |
+| --- | --- | --- |
+| `debug` | `build/` | Debug build in the directory `make build` uses |
+| `release` | `build-release/` | Release build in the directory `make release` uses |
+| `relwithdebinfo` | `build-relwithdebinfo/` | Optimized build with debug symbols, for profiling |
+| `asan` / `ubsan` / `tsan` | `build-asan/` / `build-ubsan/` / `build-tsan/` | Address, undefined-behavior, or thread sanitizer |
+| `coverage` | `build-coverage/` | gcov instrumentation |
+| `mutation` | `build-mutation/` | Clang build for mutation testing |
+
+```sh
+cmake --preset asan
+cmake --build build-asan --parallel
+ctest --test-dir build-asan -LE "SLOW|BENCH|TSAN" --output-on-failure
+```
 
 ## WASM package
 
@@ -87,7 +90,7 @@ The wheel stages `formulon_capi.wasm` into `packages/python/formulon/_wasm/` and
 make NODE_NATIVE_BUILD_DIR=build-node-native node-test
 ```
 
-This builds the addon, stages it into the package layout, and runs its N-API test suite via `node --test`. Use a separate directory so the native addon build does not change the Debug core configuration in `build/`. Prebuilt binaries are published per `(os, arch)` from CI; the local target is mostly for development.
+This builds the addon in Release mode, stages it into the package layout, and runs its N-API test suite via `node --test`. Pass a separate directory: the default `NODE_NATIVE_BUILD_DIR` is `build/`, and the addon build would reconfigure it from Debug to Release. CI builds the prebuilt addons for `darwin-arm64`, `linux-x64`, and `linux-arm64`; the local target is mostly for development.
 
 ## Oracle tooling
 
@@ -104,6 +107,22 @@ CI verification reads committed goldens and does not start Excel. See [Oracle co
 ::: tip Pick a minimal working set
 A contributor who only changes the formula evaluator usually needs `make build && make test`. A contributor who changes the WASM packaging usually needs `make wasm && make npm-test && make size-check`. Choose the builds and tests required by the change; few changes need every target.
 :::
+
+## Homepage demo snapshots
+
+This section applies to the documentation site, not to the engine. Normal homepage installs use the registry versions pinned in `package.json` and `yarn.lock`; they do not need sibling checkouts or generated archives. Unreleased features can be previewed with local snapshots of the core WASM package, `formulon-cell`, and the Vue adapter. `vendor/` holds these generated files and is ignored by Git. Stage both core WASM variants first with `make npm-package` in `../formulon`, install the cell workspace dependencies in `../formulon-cell`, then run from the homepage checkout:
+
+```sh
+yarn demos:prepare
+yarn check:demos
+yarn test:local
+yarn build:local
+yarn dev:local
+```
+
+`yarn demos:prepare` builds the cell packages from the sibling `../formulon-cell` checkout, copies the staged core from `../formulon`, and writes `vendor/manifest.json`. The manifest records each package version, source commit, source input and diff SHA-256, and archive SHA-256. Local commands set `FORMULON_DEMO_SOURCE=local`, verify and unpack the archives, and resolve package imports through Vite aliases. They leave registry pins and the lockfile unchanged and fail if a snapshot is missing or corrupt. Preparation also rejects stale WASM or a runtime version that differs from its package manifest.
+
+The registry and local test suites both exercise the seven-language switching demo, including live profile changes, preserved edits, theme updates, and disposal. Registry tests use the pinned published packages; local tests use the prepared snapshots. Verify the registry artifacts before deploying.
 
 ## Read next
 

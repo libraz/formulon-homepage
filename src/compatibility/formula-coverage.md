@@ -23,16 +23,16 @@ Formulon recognizes **526** Excel function names: **511 real implementations, in
   ] }
 ]" />
 
-This is the honest compatibility claim: Formulon has broad local formula coverage, but it does not embed Microsoft 365 cloud services, a Python cloud runtime, an HTTP client, an OLAP cube connection, an RTD COM provider, or Copilot.
+Formulon evaluates almost every recognized function locally, but it does not embed Microsoft 365 cloud services, a Python cloud runtime, an HTTP client, an OLAP cube connection, an RTD COM provider, or Copilot.
 
-The panel below reads that same registry at runtime — `functionNames()` for the index and `functionMetadata(name)` for canonical name, arity, and availability class — and tallies the availability classes from the engine rather than from this page, so it answers per function what the tables here answer in aggregate. Function metadata is locale-invariant: the engine does not ship human-readable signatures or descriptions. A host may merge its own localized help catalog after reading the structural metadata. Its try-it field evaluates a call, which is the shortest way to see what a recognized-but-unavailable name actually returns instead of inferring it from the table below.
+The panel below reads the same registry at runtime: `functionNames()` for the index and `functionMetadata(name)` for canonical name, arity, and availability class. Its counts come from the engine, not from this page. Its try-it field evaluates a call, so you can see what a recognized-but-unavailable name returns. Function metadata is locale-invariant and carries no human-readable signatures or descriptions; a host can merge its own localized help catalog on top.
 
 <FunctionLookupDemo />
 
 ## Recognized Functions By Category
 
 | Category | Recognized | Notes |
-| --- | ---: | ---: |
+| --- | ---: | --- |
 | Math & Trig | 81 | Local implementation |
 | Statistical | 149 | Local implementation |
 | Logical | 20 | Local implementation |
@@ -46,12 +46,6 @@ The panel below reads that same registry at runtime — `functionNames()` for th
 | Web | 4 | `ENCODEURL` and `FILTERXML` are implemented; `WEBSERVICE` and `PY` are unavailable service stubs |
 | Cube | 7 | Recognized as unavailable service stubs; live OLAP connections are outside Formulon |
 | 2024 / 2025 additions | 6 | Includes unavailable service stubs such as `COPILOT`, `TRANSLATE`, and `DETECTLANGUAGE` |
-
-## Workbook oracle track
-
-Formula oracle cases check cell values. Pivot tables and print layout need a workbook-level oracle because their behavior is stored in workbook structures, not just formula results.
-
-That track uses `win-365-ja_JP` as its primary profile because reliable PivotTable automation depends on Windows Excel COM. Its goldens carry a capture identifier that pins each capture to a verified Microsoft 365 session. Run the workbook oracle and closure checks against the current checkout before quoting pass or skip counts; those counts change when suites or captures change.
 
 ## Function names and localized formula text
 
