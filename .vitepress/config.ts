@@ -156,8 +156,6 @@ const startSidebar = [
       { text: 'Why Formulon', link: '/why' },
       { text: 'Demos', link: '/demos' },
       { text: 'Choose a surface', link: '/start/choose-runtime' },
-      { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
-      { text: 'File format support', link: '/compatibility/file-format-support' },
       { text: 'FAQ', link: '/faq' }
     ]
   }
@@ -206,6 +204,7 @@ const compatibilitySidebar = [
     text: 'Compatibility',
     items: [
       { text: 'Overview', link: '/compatibility/' },
+      { text: 'How far compatibility goes', link: '/compatibility/edge-cases' },
       { text: 'Compatibility model', link: '/compatibility/model' },
       { text: 'Locale profiles', link: '/compatibility/locale-profiles' },
       { text: 'Text comparison and sorting', link: '/compatibility/text-collation' },
@@ -229,6 +228,7 @@ const workbookSidebar = [
       { text: 'Operations', link: '/workbook/operations' },
       { text: 'Presentation and geometry', link: '/workbook/presentation' },
       { text: 'Filters and validation', link: '/workbook/filters-validation' },
+      { text: 'Conditional formats', link: '/workbook/conditional-formats' },
       { text: 'Comments and images', link: '/workbook/comments-images' },
       { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' },
       { text: 'File formats', link: '/workbook/file-formats' },
@@ -251,6 +251,8 @@ const cellSidebar = [
       { text: 'Language switching', link: '/cell/language-switching' },
       { text: 'Embedding guide', link: '/cell/embedding' },
       { text: 'Modals and fullscreen', link: '/cell/modals' },
+      { text: 'Ribbon toolbar', link: '/cell/toolbar' },
+      { text: 'Custom cells and host functions', link: '/cell/custom-cells' },
       { text: 'Extensions', link: '/cell/extensions' },
       { text: 'Theming', link: '/cell/theming' },
       { text: 'Framework adapters', link: '/cell/frameworks' },
@@ -273,6 +275,7 @@ const mcpSidebar = [
       { text: 'Layout and previews', link: '/mcp/layout-preview' },
       { text: 'Formula audit', link: '/mcp/formula-audit' },
       { text: 'Tables and pivots', link: '/mcp/tables-pivots' },
+      { text: 'Conditional formats and validation', link: '/mcp/conditional-formats-validation' },
       { text: 'Tools', link: '/mcp/tools' },
       { text: 'Advanced API', link: '/mcp/advanced' },
       { text: 'Security model', link: '/mcp/security' }
@@ -314,8 +317,6 @@ const jaStartSidebar = [
       { text: 'Formulon が必要な理由', link: '/ja/why' },
       { text: 'デモ', link: '/ja/demos' },
       { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
-      { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
-      { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
       { text: 'FAQ', link: '/ja/faq' }
     ]
   }
@@ -364,6 +365,7 @@ const jaCompatibilitySidebar = [
     text: '互換性',
     items: [
       { text: '概要', link: '/ja/compatibility/' },
+      { text: '互換性をどこまで詰めているか', link: '/ja/compatibility/edge-cases' },
       { text: '互換性モデル', link: '/ja/compatibility/model' },
       { text: 'ロケールプロファイル', link: '/ja/compatibility/locale-profiles' },
       { text: '文字列の比較と並べ替え', link: '/ja/compatibility/text-collation' },
@@ -387,6 +389,7 @@ const jaWorkbookSidebar = [
       { text: '操作', link: '/ja/workbook/operations' },
       { text: '表示とレイアウト', link: '/ja/workbook/presentation' },
       { text: 'フィルターと入力規則', link: '/ja/workbook/filters-validation' },
+      { text: '条件付き書式', link: '/ja/workbook/conditional-formats' },
       { text: 'コメントと画像', link: '/ja/workbook/comments-images' },
       { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
       { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
@@ -409,6 +412,8 @@ const jaCellSidebar = [
       { text: '言語切り替え', link: '/ja/cell/language-switching' },
       { text: '埋め込みガイド', link: '/ja/cell/embedding' },
       { text: 'モーダルと全画面表示', link: '/ja/cell/modals' },
+      { text: 'リボンツールバー', link: '/ja/cell/toolbar' },
+      { text: 'セルの独自表示とホスト関数', link: '/ja/cell/custom-cells' },
       { text: '拡張機能', link: '/ja/cell/extensions' },
       { text: 'テーマ設定', link: '/ja/cell/theming' },
       { text: 'フレームワーク連携', link: '/ja/cell/frameworks' },
@@ -431,6 +436,7 @@ const jaMcpSidebar = [
       { text: 'レイアウトとプレビュー', link: '/ja/mcp/layout-preview' },
       { text: '数式の監査', link: '/ja/mcp/formula-audit' },
       { text: 'テーブルとピボット', link: '/ja/mcp/tables-pivots' },
+      { text: '条件付き書式と入力規則', link: '/ja/mcp/conditional-formats-validation' },
       { text: 'ツール一覧', link: '/ja/mcp/tools' },
       { text: '高度な API 操作', link: '/ja/mcp/advanced' },
       { text: 'セキュリティモデル', link: '/ja/mcp/security' }
@@ -707,7 +713,6 @@ export default defineConfig({
           '/mcp/': mcpSidebar,
           '/cell/': cellSidebar,
           '/compatibility/': compatibilitySidebar,
-          '/compatibility/formula-coverage': startSidebar,
           '/development/': developmentSidebar,
           '/why': startSidebar,
           '/faq': startSidebar
@@ -779,7 +784,6 @@ export default defineConfig({
           '/ja/mcp/': jaMcpSidebar,
           '/ja/cell/': jaCellSidebar,
           '/ja/compatibility/': jaCompatibilitySidebar,
-          '/ja/compatibility/formula-coverage': jaStartSidebar,
           '/ja/development/': jaDevelopmentSidebar,
           '/ja/why': jaStartSidebar,
           '/ja/faq': jaStartSidebar
