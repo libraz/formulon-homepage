@@ -1,8 +1,32 @@
 # WASM Integration
 
-The npm package ships two WASM entry points with the same API. `@libraz/formulon` is the default single-threaded build. It uses ordinary memory and loads in a browser without cross-origin isolation. `@libraz/formulon/threads` is the optional pthread build for parallel recalculation; its browser host needs `SharedArrayBuffer` and cross-origin isolation. The default `formulon-cell` loader uses the serial entry; use the threads entry explicitly when an integration needs workers.
+`@libraz/formulon` runs the engine as WebAssembly in browsers, workers, and Node.
 
-The npm WASM build parses worksheet XML with a DOM parser. It parses one worksheet at a time, so peak parse memory follows the largest worksheet XML part rather than the whole package. The working set must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB. Every surface first inflates the worksheet part into memory whole (the zip reader caps this at 100 MiB per entry and 256 MiB per load), so the CLI's streaming parser skips the DOM tree but not that buffer.
+## Install and first call
+
+```sh
+yarn add @libraz/formulon@0.15.1
+```
+
+```ts
+import createFormulon from '@libraz/formulon'
+
+const Module = await createFormulon()
+const result = Module.evalFormula('=SUM(1,2,3)')
+if (result.status.ok) console.log(result.value.number) // 6
+```
+
+The package is ESM-only and needs Node 22 or newer outside the browser. `createFormulon()` is async and loads `formulon.wasm`; call it once per worker or process and keep the `Module` reference.
+
+## Choose an entry point
+
+The package ships two entry points with the same API. `@libraz/formulon` is the default single-threaded build. It uses ordinary memory and loads in a browser without cross-origin isolation. `@libraz/formulon/threads` is the optional pthread build for parallel recalculation; it loads `formulon_threads.wasm`, starts a worker pool, and in a browser needs `SharedArrayBuffer` and cross-origin isolation. The default `formulon-cell` loader uses the serial entry.
+
+```ts
+import createFormulon from '@libraz/formulon/threads'
+
+const ThreadedModule = await createFormulon()
+```
 
 ::: warning Hosting matters
 Browser success depends on server headers, worker format, and bundler behavior. Verify the deployed environment, not only local development.
@@ -25,39 +49,16 @@ Without them, the `@libraz/formulon/threads` factory fails to instantiate becaus
 
 <DiagramFlow steps="Page load → choose @libraz/formulon or /threads → default memory, or COOP/COEP + worker pool → Workbook.loadBytes()" />
 
-## Load once
-
-Initialize the module once per worker or process, then reuse workbook instances for related work.
-
-```ts
-import createFormulon from '@libraz/formulon'
-
-const Module = await createFormulon()
-const result = Module.evalFormula('=SUM(1,2,3)')
-```
-
-`createFormulon()` is async. The default entry loads `formulon.wasm`; the threads entry loads `formulon_threads.wasm` and starts its worker pool. Keep the `Module` reference long-lived.
-
-## Select a profile and localize formula text
-
-`Workbook.setExcelProfileId()` controls profile-sensitive evaluation and display behavior. Stored formulas use the English canonical spelling; `localizeFormula()` and `canonicalizeFormula()` convert formula-bar text for a full Excel profile id, and `localeFacts()` exposes the separators, names, date order, currency, and localized error names a UI needs. The profile is runtime workbook state and is not saved into the file, so reapply it after loading. The catalog has 28 ids; all Mac profiles and `win-365-ja_JP` are measured against Excel, while the other 13 Windows profiles use estimated locale data. See the [WASM API](/api/wasm) page for the complete example and result shapes.
-
-```ts
-import createFormulon from '@libraz/formulon/threads'
-
-const ThreadedModule = await createFormulon()
-```
-
 ## Parallel recalculation
 
-`Workbook.recalc()` remains the serial, caller-thread API. `Workbook.recalcParallel(threadCount)` is synchronous and returns `{ status, stats }`. The default `@libraz/formulon` entry accepts the call but evaluates serially with `stats.workerThreadsStarted === 0`. The `@libraz/formulon/threads` entry starts workers and returns after they have joined: a `threadCount` of `0` selects automatic detection capped at 8, `1` keeps evaluation on the caller thread and starts no workers, and `2..8` sets the maximum worker count. Missing, fractional, non-finite, negative, or above-8 values fail with `kInvalidArgument`.
+`Workbook.recalc()` is the serial, caller-thread API. `Workbook.recalcParallel(threadCount)` is synchronous and returns `{ status, stats }`. On the default entry it evaluates serially and reports `stats.workerThreadsStarted === 0`; on `@libraz/formulon/threads` it starts up to `threadCount` workers (`0` for automatic detection, at most 8) and returns after they have joined. [WASM API](/api/wasm#method-notes) lists the accepted values.
 
 ```ts
 const result = workbook.recalcParallel(0)
 if (!result.status.ok) throw new Error(Module.lastErrorMessage())
 ```
 
-The browser needs ES module workers and the COOP / COEP headers described above when the threads entry is used. `stats` reports the work completed and the workers actually started; the scheduler may use fewer workers than requested.
+In a browser the threads entry needs ES module workers and the COOP / COEP headers described above. The scheduler may use fewer workers than requested; `stats` reports how many it started.
 
 ## Keep bytes explicit
 
@@ -79,6 +80,10 @@ try {
 ::: tip Lifetime patterns
 Wrap the try / finally in a helper (`withWorkbook(bytes, fn)`) so every call site is consistent. The cost of forgetting `delete()` is a memory leak inside the WASM heap that survives until the page reloads.
 :::
+
+## Memory limits
+
+The WASM build parses worksheet XML with a DOM parser, one worksheet at a time, so peak parse memory follows the largest worksheet XML part rather than the whole package, and the working set must fit in the 32-bit WASM address space. The Python wheel also runs the engine as WebAssembly and has the same limit. The native CLI switches to a streaming parser above 256 KiB of worksheet XML. Every surface first inflates each worksheet part into memory whole (the zip reader caps this at 100 MiB per entry and 256 MiB per load), so streaming saves the DOM tree but not that buffer.
 
 ## Watch the size budget
 

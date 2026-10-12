@@ -1,18 +1,37 @@
 # CLI リファレンス
 
+`formulon` バイナリは GitHub Releases の `formulon-<version>-<os>-<arch>.tar.gz` として、darwin-arm64、linux-x64、linux-arm64 向けに配布しています。ダウンロードと最初の実行は [CLI ワークフロー](/ja/runtimes/cli) を参照してください。
+
 ## トップレベル
 
 ```sh
-formulon <command> [options]
+formulon <command> [options] [--] <argument>
+formulon <command> --help
 formulon --version
 formulon --help
 ```
 
-`eval`、`recalc`、`dump`、`paginate` は共通して `--profile <id>` と `--now <date[Thh:mm:ss]>` を受け付けます。既定のプロファイルは `win-365-en_US` です。`--now` はホストのローカルな年月日・時分秒を固定し、時刻を省略すると 00:00:00 になります。プロファイルは 28 個の ID から選び、どちらの値も保存ファイルには記録されません。CI では両方を明示して結果を固定してください。`--` でオプション解析を終える前なら、共有オプションは位置引数の前後に置けます。
+`<command>` は `eval`、`recalc`、`dump`、`paginate` のいずれかです。どのコマンドも位置引数を 1 つだけ取り（`eval` は数式、それ以外は入力パス）、次の共通オプションを受け付けます。
 
-::: info 用語: 終了コード
-CLI は 2 層の規約に従います。セル単位の Excel エラー（`#DIV/0!`、`#VALUE!` など）は stdout に出力し、プロセスは 0 を返します。コマンド自体は成功しており、数式がエラー値を返しただけです。構造的失敗（ファイルが見つからない・バイト列不正・エンジン内部失敗）は非ゼロを返し、シェルスクリプトから `$?` で分岐できます。
-:::
+| オプション | 効果 |
+| --- | --- |
+| `--profile <id>` | Excel の挙動プロファイル。既定値は `win-365-en_US` で、28 個の ID から選ぶ。不明な ID は使い方エラーになり、対応する ID の一覧を表示する |
+| `--now <date[Thh:mm:ss]>` | `NOW()`、`TODAY()`、相対日付フィルターをローカル時刻に固定する。形式は `YYYY-MM-DD`（0 時）または `YYYY-MM-DDThh:mm:ss` で、範囲は 1900-01-01 から 9999-12-31。保存するワークブックには記録しない |
+| `-h`、`--help` | そのコマンドの使い方を stdout に出して `0` で終了 |
+| `--version` | エンジンのバージョンを出して `0` で終了 |
+| `--` | オプション解析を終える。次のトークンは `-` で始まっていても位置引数として扱う |
+
+オプションは位置引数の前後どちらにも置けますが、`--` の後には置けません。値を取るオプションを繰り返すと、後の値で置き換わります。診断メッセージは `formulon: <command>:` を先頭に付けて stderr に出力します。
+
+## 終了コード
+
+セル単位の Excel エラーは失敗ではなく、正常な結果です。コマンドはその値を stdout に出力して `0` で終了します。
+
+| コード | 意味 |
+| --- | --- |
+| `0` | 成功。`#DIV/0!` や `#NAME?` などの Excel エラーになった数式も含む |
+| `64` | 使い方エラー。不明なフラグ、位置引数の不足や過剰、不正なオプション値、`-o` の指定漏れ |
+| `1` | エンジン、ファイル入出力、stdout への書き込みの失敗 |
 
 <DiagramLayers label="2 層の終了コード規約" :layers="[
   { nodes: ['コマンドを実行 (eval / recalc / dump / paginate)'] },
@@ -27,15 +46,15 @@ CLI は 2 層の規約に従います。セル単位の Excel エラー（`#DIV/
 ## `eval`
 
 ```sh
-formulon eval [--json] [--repeat N] [--profile ID] [--now DATE] <formula>
+formulon eval [--json] [--repeat N] [共通オプション] [--] <formula>
 ```
 
-`Sheet1!A1` を評価の基準とする新規ワークブックで、1 つの数式を評価します。先頭の `=` の有無は問いません。`--repeat` には正の整数を指定してください。
+`Sheet1!A1` を評価の基準とする新規ワークブックで、1 つの数式を評価します。先頭の `=` の有無は問いません。
 
 | フラグ | 効果 |
 | --- | --- |
-| `--json` | 文字列ではなく構造化 JSON で出力 |
-| `--repeat N` | 同じ式を `N` 回評価。マイクロベンチ用途。`N` は正の整数 |
+| `--json` | プレーンテキストではなく JSON で出力 |
+| `--repeat N` | 同じ式を `N` 回（正の整数）評価し、`formulon: eval: N iterations in <t>us` を stderr に出力 |
 
 ```sh
 formulon eval '=SUM(1,2,3)'        # → 6
@@ -46,61 +65,56 @@ formulon eval '=SEQUENCE(2,2)'       # → タブ区切りの 2 行: 1\t2 と 3\
 formulon eval --json '=SEQUENCE(2,2)' # → 型付き値オブジェクトの入れ子配列
 ```
 
-スカラー結果は単一値形式で出力します。複数セルの結果は stdout にタブ区切りの行として出力し、`--json` ではセルの値の種類とデータを持つ入れ子配列にします。`--repeat` を指定した場合、計測時間は stderr に出力するため、stdout の数式結果をそのまま読み取れます。
+プレーンテキストでは結果の 1 行を 1 行に出力し、セルをタブで区切ります。値の中の制御文字は `dump` と同じく JSON 形式のバックスラッシュエスケープ（`\t`、`\n`）になります。`--json` では、1×1 の結果は `{"kind": ..., "value": ...}` のオブジェクト 1 つ、それより大きい結果はそのオブジェクトを行優先で並べた配列の配列です。`kind` は `blank`、`number`、`bool`、`text`、`error`、`array`、`ref`、`lambda` のいずれかで、blank・array・ref・lambda の `value` は `null` です。
 
-セル単位エラーは stdout、exit 0 です。`eval` の構文が不正な場合も同じで、Excel の `#NAME?` エラー値を stdout に出力して 0 で終了します。数式の typo を終了コードで検出せず、出力値を確認してください。使い方エラーは 64、エンジン / I/O 失敗は 1 です。
-
-この境界は入力方法で異なります。WASM / Python の `setFormula()` / `set_formula()` は不正な数式を `kParserUnexpectedToken` として拒否し、既存セルを変更しません。保存済みファイルに不正な数式文字列が含まれる場合は読み込み自体は成功しますが、再計算後のセル値は文字どおりの `#NAME?` になります。CLI の `eval` はアドホック評価のため、同じ入力を `#NAME?` として出力し、終了コードは 0 のままです。
+構文が不正でもコマンドの失敗にはなりません。`eval` は `#NAME?` を出力して `0` で終了するため、数式の打ち間違いを拒否したいスクリプトは出力を確認してください。ホスト API は扱いが異なり、`setFormula()` は不正なテキストを `kParserUnexpectedToken` として拒否します。
 
 ## `recalc`
 
 ```sh
-formulon recalc [--iterative] [--threads N] [--quiet] [--profile ID] [--now DATE] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
+formulon recalc [--iterative] [--threads N] [--quiet] [共通オプション] <in.xlsx-or-xlsb> -o <out.xlsx-or-xlsb>
+formulon recalc [--iterative] [--threads N] [--quiet] [共通オプション] -o <out.xlsx-or-xlsb> -- <in.xlsx-or-xlsb>
 ```
 
-ワークブックをロードして再計算し、新しいワークブックを書き出します。
+ワークブックを読み込んで再計算し、新しいワークブックを書き出します。
 
 | フラグ | 効果 |
 | --- | --- |
-| `--iterative` | 意図的な循環参照のために反復計算を有効化し、ワークブックの最大反復回数と収束しきい値を保持 |
-| `--threads N` | 並列スケジューラを使う。`0` は最大 8 ワーカーを自動検出し、`1` は呼び出しスレッドで実行し、`2..8` はワーカー数の上限を指定 |
-| `--quiet` | 成功時のステータス出力を抑制。診断 warning は表示 |
+| `-o`、`--output PATH` | 必須。空でない出力パスを指定し、`--` より前に置く |
+| `--iterative` | 意図的な循環参照のために反復計算を有効にする。ワークブックの最大反復回数と収束しきい値はそのまま使う |
+| `--threads N` | 並列スケジューラを使う。`0` は最大 8 ワーカーの自動検出、`1` は呼び出し元スレッドだけで実行、`2..8` はワーカー数の上限。それ以外の値は使い方エラー。指定しなければ直列に再計算する |
+| `--quiet` | 成功時のステータス行を出さない。損失の警告は表示する |
 
-出力コンテナ形式は `-o` の拡張子で決まります。`.xlsb` なら MS-XLSB を、それ以外（拡張子なしを含む）は OOXML `.xlsx` を書き出します。入力ファイルの形式はファイル名ではなくバイト列から自動判別されます。再計算は既定では直列で実行し、`--threads N` を指定すると並列スケジューラを使います。
+出力コンテナは `-o` の拡張子で決まります。`.xlsb` なら MS-XLSB、それ以外（拡張子なしを含む）は OOXML の `.xlsx` を書き出します。入力形式は拡張子ではなくバイト列から判別します。
 
-`recalc` は一時ファイルへ書き込み、成功時だけ対象を置き換えます。再計算や保存に失敗しても既存の対象ファイルは壊れません。
+書き込みはアトミックです。一時ファイルに書き、再計算と保存が成功してから対象を置き換えるため、失敗しても既存の対象ファイルは壊れません。
 
-`recalc` は読み込み時と保存時に検出した損失カウンターのうち、0 ではないものを stderr の warning として出力します。読み込んだコンテナに応じて、次の見出しを使います。
-
-| 警告行 | カウンター |
-| --- | --- |
-| `warning: XLSB read diagnostics` | `undecoded_formula_count`、`undecoded_defined_name_count`、`undecoded_part_count` |
-| `warning: OOXML read diagnostics` | `skipped_feature_count`、`unknown_content_type_count` |
-
-保存時の警告は、書き出したコンテナに応じて `XLSB write diagnostics` または `OOXML write diagnostics` と表示され、`downgraded_formula_count`、`deferred_feature_count`、`dropped_part_count`、`dropped_relationship_count`、`renumbered_part_count` を含みます。0 のカウンターは出力されません。`dropped_part_count` と `dropped_relationship_count` は同じ損失を表す場合があるため、合計しないでください。これらはパッケージ損失の一部だけを対象とする警告で、コマンドが成功した場合の終了コードは変わりません。`--quiet` で抑制されるのは成功時のステータス行だけで、診断 warning は表示されます。
+成功すると、`recalc` は `formulon: recalc: ok, wrote <n> bytes to '<out>'` を stderr に出力します。`--threads` を指定した場合は、この行にスケジューラの統計（`threads`、`cells_evaluated`、`sccs_processed`、`parallel_steps`、`serial_fallback_steps`、`cycle_recoveries`、`worker_threads_started`、`worker_threads_used`）も入ります。stdout には何も出力しません。
 
 ## `dump`
 
 ```sh
-formulon dump [--formulas|--values|--sheets|--metadata] [--profile ID] [--now DATE] <in.xlsx-or-xlsb>
+formulon dump [--formulas|--values|--sheets|--metadata] [共通オプション] [--] <in.xlsx-or-xlsb>
 ```
+
+4 つのモードは同時に指定できません。各行の制御文字は `eval` と同じ方法でエスケープします。
 
 | モード | 出力 |
 | --- | --- |
-| `--formulas` | 安定順序の数式セル。デフォルト |
-| `--values` | 再計算後の非空セル |
-| `--sheets` | ドキュメント順のシート名 |
-| `--metadata` | 定義名、テーブル、保持対象パート |
+| `--formulas`（既定） | すべての数式セルを `Sheet!A1 =formula` の形で、シートごとに `(row, col)` 順に出力。再計算しない |
+| `--values` | 再計算したうえで、空でないすべてのセルを `Sheet!A1 <表示値>` の形で出力 |
+| `--sheets` | シート名を文書順に 1 行ずつ出力 |
+| `--metadata` | `[defined_names]`、`[tables]`、`[passthrough_parts]` の 3 セクション。空のセクションも見出しは出力する。再計算しない |
 
-`recalc` と同様、入力形式は `.xlsx` に限定されず内容から自動判別されます。すべての dump モードで `.xlsb` 入力を扱えます。
+`--metadata` では、シートに属する名前を `Sheet!Name formula`、テーブルを `name display_name sheet_index ref` の形で出力します。
 
 ## `paginate`
 
 ```sh
-formulon paginate [--sheet INDEX] [--profile ID] [--now DATE] <in.xlsx-or-xlsb>
+formulon paginate [--sheet INDEX] [共通オプション] [--] <in.xlsx-or-xlsb>
 ```
 
-指定したシートの印刷範囲、自動改ページ、物理ページ数を解決します。`INDEX` の既定値は `0` で、シート番号と出力座標はすべて 0 始まりです。印刷範囲は両端を含みます。成功は終了コード `0`、使い方エラーは `64`、エンジン / I/O 失敗は `1` です。
+指定したシートの印刷範囲、自動改ページ、物理ページ数を解決します。`INDEX` の既定値は `0` で、シート番号と出力座標はすべて 0 始まりです。印刷範囲は両端を含みます。
 
 出力は行単位です。
 
@@ -112,11 +126,19 @@ horizontal_breaks=25
 vertical_breaks=4
 ```
 
-改ページがない場合、`horizontal_breaks` または `vertical_breaks` の値は空になります。
+印刷範囲や改ページ位置が複数ある場合はカンマで区切ります。改ページがないシートでは値が空になります（`horizontal_breaks=`）。
 
-::: tip CI での使い方
-`dump --formulas` / `--metadata` は再計算しないので、PR ごとに走らせても安価です。`dump --values` は事前に再計算するため、期待値ファイルとの計算値比較に向きます。
-:::
+## 損失の警告 {#loss-warnings}
+
+`recalc`、`dump`、`paginate` は、読み込んだワークブックの読み込み時の損失カウンターが 0 でない場合に stderr へ警告を出します。`recalc` は保存したファイルの書き出し時の損失カウンターも報告します。出力するのは 0 でないカウンターだけで、警告によって終了コードは変わりません。
+
+| 警告行 | カウンター |
+| --- | --- |
+| `formulon: <command>: warning: XLSB read diagnostics` | `undecoded_formula_count`、`undecoded_defined_name_count`、`undecoded_part_count` |
+| `formulon: <command>: warning: OOXML read diagnostics` | `skipped_feature_count`、`unknown_content_type_count` |
+| `formulon: recalc: warning: XLSB write diagnostics` または `OOXML write diagnostics` | `downgraded_formula_count`、`deferred_feature_count`、`dropped_part_count`、`dropped_relationship_count`、`renumbered_part_count` |
+
+パートを破棄すると、そのパートを指す関連付けも破棄されます。そのため `dropped_part_count` と `dropped_relationship_count` は同じ損失を表す場合があり、合計してはいけません。カウンターが対象とする損失は [コンテナ形式](/ja/api/wasm#container-format) に挙げたものだけです。
 
 ## 次に読むもの
 

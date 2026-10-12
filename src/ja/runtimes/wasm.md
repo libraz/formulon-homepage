@@ -1,8 +1,32 @@
 # WASM 連携
 
-WASM パッケージは、同じ API を持つ 2 つのエントリーポイントを公開します。`@libraz/formulon` は単一スレッドの既定ビルドです。通常のメモリを使うため、ブラウザでオリジン間分離なしに読み込めます。`@libraz/formulon/threads` は並列再計算用の任意選択の pthread ビルドで、ブラウザ側では `SharedArrayBuffer` とオリジン間分離が必要です。`formulon-cell` の標準ローダーはシリアル入口を使います。ワーカーが必要な統合だけが threads 入口を明示的に読み込みます。
+`@libraz/formulon` は、ブラウザ、ワーカー、Node でエンジンを WebAssembly として動かします。
 
-npm の WASM ビルドはワークシート XML を DOM として読み込みます。シートを 1 枚ずつ処理するため、解析時のピークメモリは最大のワークシート XML に比例し、32-bit WASM アドレス空間内に収める必要があります。Native CLI は 256 KiB を超える XML でストリーミングに切り替えます。どの実行環境でも、まずワークシートのパートを丸ごとメモリに展開します（zip の展開上限は 1 エントリ 100 MiB、1 回の読み込みで 256 MiB）。そのため CLI のストリーミング解析でも、省けるのは DOM ツリーだけで、展開済みのバッファは保持します。
+## インストールと最初の呼び出し
+
+```sh
+yarn add @libraz/formulon@0.15.1
+```
+
+```ts
+import createFormulon from '@libraz/formulon'
+
+const Module = await createFormulon()
+const result = Module.evalFormula('=SUM(1,2,3)')
+if (result.status.ok) console.log(result.value.number) // 6
+```
+
+パッケージは ESM 専用で、ブラウザ以外では Node 22 以降が必要です。`createFormulon()` は非同期で `formulon.wasm` を読み込みます。ワーカーまたはプロセスごとに 1 回だけ呼び、`Module` の参照を保持してください。
+
+## 入口を選ぶ
+
+パッケージは同じ API を持つ 2 つの入口を公開します。`@libraz/formulon` は単一スレッドの既定ビルドです。通常のメモリを使うため、ブラウザでオリジン間分離なしに読み込めます。`@libraz/formulon/threads` は並列再計算用の pthread ビルドで、必要な場合だけ使います。`formulon_threads.wasm` を読み込んでワーカープールを起動し、ブラウザでは `SharedArrayBuffer` とオリジン間分離が必要です。`formulon-cell` の標準ローダーは単一スレッドの入口を使います。
+
+```ts
+import createFormulon from '@libraz/formulon/threads'
+
+const ThreadedModule = await createFormulon()
+```
 
 ::: warning ホスティングが重要
 ブラウザでの成功はサーバーのヘッダー、Worker 形式、バンドラ挙動に依存します。ローカル開発環境だけでなく、デプロイ先で必ず確認してください。
@@ -25,39 +49,16 @@ Cross-Origin-Embedder-Policy: require-corp
 
 <DiagramFlow steps="ページ読み込み → @libraz/formulon または /threads を選択 → 通常メモリ、または COOP/COEP + ワーカープール → Workbook.loadBytes()" />
 
-## Module は 1 度だけ初期化する
-
-ワーカー / プロセスごとに 1 度 `createFormulon()` を呼び、関連処理でワークブックのインスタンスを再利用します。
-
-```ts
-import createFormulon from '@libraz/formulon'
-
-const Module = await createFormulon()
-const result = Module.evalFormula('=SUM(1,2,3)')
-```
-
-`createFormulon()` は非同期です。既定入口は `formulon.wasm` を取得し、threads 入口は `formulon_threads.wasm` を取得してワーカープールを起動します。`Module` 参照は長寿命にしてください。
-
-## プロファイルを選び、数式テキストをローカライズする
-
-`Workbook.setExcelProfileId()` はプロファイルに依存する評価と表示の挙動を制御します。保存する数式は英語の正規形で、完全な Excel プロファイル ID を指定した `localizeFormula()` / `canonicalizeFormula()` で数式バーのテキストを変換できます。UI に必要な区切り文字、名前、日付順、通貨、ローカライズ済みエラー名は `localeFacts()` から取得します。プロファイルは実行時のワークブック状態でファイルには保存されないため、読み込み後に再設定してください。プロファイルは 28 個あり、すべての Mac プロファイルと `win-365-ja_JP` は Excel との実測値、残り 13 個の Windows プロファイルは推定ロケールデータです。完全な例と戻り値の形は [WASM API](/ja/api/wasm) を参照してください。
-
-```ts
-import createFormulon from '@libraz/formulon/threads'
-
-const ThreadedModule = await createFormulon()
-```
-
 ## 並列再計算
 
-`Workbook.recalc()` はシリアルに呼び出し側スレッドで実行する API のままです。`Workbook.recalcParallel(threadCount)` は同期 API で `{ status, stats }` を返します。既定の `@libraz/formulon` 入口はこの呼び出しを受け付けますが、シリアルに評価し、`stats.workerThreadsStarted === 0` を報告します。`@libraz/formulon/threads` 入口はワーカーを起動し、全ワーカーの終了後に返ります。`threadCount` が `0` の場合は最大 8 の自動検出、`1` の場合はワーカーを起動せず呼び出し側スレッドだけで実行し、`2..8` の場合はワーカー数の上限を指定します。未指定、小数、有限でない値、負数、8 超の値は `kInvalidArgument` で失敗します。
+`Workbook.recalc()` は呼び出し元スレッドで直列に実行する API です。`Workbook.recalcParallel(threadCount)` は同期 API で `{ status, stats }` を返します。既定の入口では直列に評価して `stats.workerThreadsStarted === 0` を返し、`@libraz/formulon/threads` では最大 `threadCount` 個のワーカー（`0` は自動検出で最大 8）を起動して、すべて終了してから返ります。指定できる値は [WASM API](/ja/api/wasm#method-notes) を参照してください。
 
 ```ts
 const result = workbook.recalcParallel(0)
 if (!result.status.ok) throw new Error(Module.lastErrorMessage())
 ```
 
-threads 入口をブラウザで使う場合は、前述の ES module ワーカーと COOP / COEP ヘッダーが必要です。`stats` には実行した処理と実際に起動したワーカー数が入り、要求値より少ないワーカー数で完了する場合があります。
+ブラウザで threads 入口を使う場合は、ES module ワーカーと前述の COOP / COEP ヘッダーが必要です。スケジューラは要求より少ないワーカーで済ませることがあり、実際に起動した数は `stats` で確認できます。
 
 ## バイト列を明示的に渡す
 
@@ -76,9 +77,13 @@ try {
 }
 ```
 
-::: tip ライフタイムをヘルパで包む
+::: tip ライフタイムをヘルパーで包む
 try / finally を `withWorkbook(bytes, fn)` のようなヘルパーに閉じ込めると、毎回の呼び出しが揃います。`delete()` を忘れるとリロードまで WASM ヒープ内に残るリークになります。
 :::
+
+## メモリの上限 {#memory-limits}
+
+WASM ビルドはワークシート XML を DOM として、1 枚ずつ解析します。そのため解析時のピークメモリはパッケージ全体ではなく最大のワークシート XML で決まり、作業領域は 32-bit の WASM アドレス空間に収める必要があります。Python の wheel もエンジンを WebAssembly で動かすため、同じ上限があります。ネイティブの CLI は、ワークシート XML が 256 KiB を超えるとストリーミング解析に切り替えます。どの実行環境でも、まず各ワークシートのパートを丸ごとメモリに展開します（zip の展開上限は 1 エントリ 100 MiB、1 回の読み込みで 256 MiB）。ストリーミング解析で省けるのは DOM ツリーだけで、展開したバッファは残ります。
 
 ## サイズ上限
 

@@ -30,21 +30,10 @@ WASM, Python, Native Node, and CLI should share calculation behavior. What chang
 
 - Use WASM when workbook data starts in the browser, when upload privacy matters, or when a server should not receive the raw file.
 - Use Python when the workbook is part of report generation, scheduled jobs, data validation, or notebook workflows.
-- Use Native Node only when a service can ship native artifacts and wants lower startup overhead than WASM.
+- Use Native Node only when a service can ship native artifacts and large workbooks make WASM heap copies or the 32-bit memory ceiling a problem.
 - Use CLI for reproducible issue reports, CI snapshots, and one-off recalculation checks.
 
-## API entry points
-
-The detailed API pages are grouped under this runtime section instead of being a top-level navigation category:
-
-| API page | Purpose |
-| --- | --- |
-| [Surface matrix](/api/surfaces) | Compare package surfaces and host responsibilities |
-| [C API](/api/c) | C11 ABI, ownership, and custom bindings |
-| [WASM API](/api/wasm) | Browser / worker usage and lifetime management |
-| [Native Node](/runtimes/node-native) | N-API addon integration and workbook lifetime management |
-| [Python API](/api/python) | Batch recalculation and workbook inspection |
-| [CLI reference](/api/cli) | Shell automation and CI usage |
+Exact signatures and per-binding differences are in the [API reference](/api/), starting with the [surface matrix](/api/surfaces).
 
 ## What is not decided here
 

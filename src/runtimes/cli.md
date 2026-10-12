@@ -1,37 +1,44 @@
 # CLI Workflows
 
-The CLI is the lowest-friction Formulon surface. It is useful when you need spreadsheet calculation in shell scripts, CI, or one-off reproductions — without writing a host-language integration.
+The `formulon` command runs the engine from shell scripts, CI jobs, and issue reproductions, with no host-language integration to write.
+
+## Install and first run
+
+```sh
+curl -LO https://github.com/libraz/formulon/releases/download/v0.15.1/formulon-0.15.1-linux-x64.tar.gz
+tar -xzf formulon-0.15.1-linux-x64.tar.gz
+./formulon-0.15.1-linux-x64/formulon eval '=SUM(1,2,3)'   # 6
+```
+
+Archives exist for `linux-x64`, `linux-arm64`, and `darwin-arm64`, each with a `.sha256` file beside it. Move the `formulon` binary onto your `PATH` to use the commands below as written.
 
 ::: info Glossary: standalone binary
-A single executable file that links Formulon and a minimal command runner. No Node, Python, or shared libraries required at runtime. Download per `(os, arch)` from GitHub Releases.
+One executable with the engine and its libraries linked in. It needs no Node, Python, or Formulon shared library; only the operating system's C and C++ runtime libraries.
 :::
 
-Common workflows:
+The four commands:
 
-- `eval`: evaluate a formula or expression on a fresh, empty workbook (supports `--json` and `--repeat N`).
-- `recalc`: recalculate a workbook and write updated bytes.
-- `dump`: inspect workbook structure and calculated values.
+- `eval`: evaluate one formula on a fresh, empty workbook.
+- `recalc`: recalculate a workbook and write the result to a new file.
+- `dump`: print formulas, values, sheet names, or metadata in a diff-friendly form.
 - `paginate`: resolve one worksheet's print area and page breaks.
 
-Use the CLI in CI to catch accidental workbook changes and to reproduce issues without writing a host-language integration first.
+Every command accepts `--profile ID` (default `win-365-en_US`) and `--now DATE`, which pins `NOW()`, `TODAY()`, and relative date filters for the invocation. Neither is saved into the file. Pass both in CI so results do not depend on the runner's locale or clock.
 
-`eval` treats malformed formula syntax as a cell-level result: it prints `#NAME?` to stdout and exits `0`. Check the output when a shell script must reject a typo; the exit code distinguishes host/usage failures, not this Excel error value.
-
-Every subcommand also accepts `--profile ID` and `--now DATE`. `--profile` selects the Excel behavior profile (the default is `win-365-en_US`), and `--now` pins `NOW()`, `TODAY()`, and relative date filters to a local civil-time value for the invocation. The profile and clock pin are workbook state for the command and are not saved into the file. Use both flags in reproducible CI commands.
+`eval` treats a formula typo as a cell-level result: it prints `#NAME?` and exits `0`. A script that must reject typos has to check the output, because the exit code only reports usage and host failures. [CLI reference](/api/cli) lists every flag, output format, and exit code.
 
 ## Examples
 
 ```sh
 formulon --version
-formulon eval '=SUM(1,2,3)'
-formulon eval --json '=1/0'
+formulon eval --json '=1/0'                 # {"kind":"error","value":"#DIV/0!"}
 formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 input.xlsx -o output.xlsx
-formulon recalc --profile win-365-en_US --now 2026-10-09T09:30:00 --threads 4 input.xlsx -o output.xlsx
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas input.xlsx
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.xlsx
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --sheets input.xlsx
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --metadata input.xlsx
-formulon paginate --profile win-365-en_US --now 2026-10-09T09:30:00 --sheet 0 input.xlsx
+formulon recalc --threads 4 input.xlsx -o output.xlsx
+formulon dump --formulas input.xlsx
+formulon dump --values output.xlsx
+formulon dump --sheets input.xlsx
+formulon dump --metadata input.xlsx
+formulon paginate --sheet 0 input.xlsx
 ```
 
 ::: tip --values recalculates; --formulas does not
@@ -55,19 +62,15 @@ formulon recalc --quiet -o output.xlsx -- -input.xlsx
 formulon recalc model.xlsx -o model.xlsb
 ```
 
-XLSB models and emits styles, row/column layout, merges, `date1904`, sheet view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. AutoFilters loaded from XLSB remain opaque; typed AutoFilter edits, modeled print settings, tables, comments, and OOXML drawings are deferred or omitted and reported on save. Compatible retained XLSB tails and drawing parts may pass through. See [XLSB coverage](/compatibility/file-format-support) for the detailed preservation and loss boundaries.
+Writing XLSB can drop or defer features that XLSX keeps; `recalc` reports each loss on stderr (see [Loss warnings](/api/cli#loss-warnings)), and [File format support](/compatibility/file-format-support) lists the boundaries. The write is atomic, so a failed load, recalc, or save leaves an existing target unchanged.
 
-`recalc` writes atomically: a failed load, recalc, or save leaves the existing target unchanged.
+A malformed formula stored in the input file stays loadable and becomes a `#NAME?` cell after recalculation; it does not fail the command.
 
-The load path keeps malformed stored formula text in the workbook. Recalculation exposes such a cell as the `#NAME?` Excel error value. This differs from host-side `setFormula()` calls, which reject malformed text with `kParserUnexpectedToken` and leave the cell unchanged.
-
-`recalc` is serial unless `--threads N` is supplied. The parallel SCC scheduler accepts `0` for automatic detection capped at 8, `1` for caller-thread-only execution with no workers, and `2..8` for a worker cap. Values outside `0..8` are rejected. A parallel call may use fewer workers than requested.
-
-The command reports loss diagnostics on stderr for undecoded formulas or defined names, dropped package parts, downgraded formula cells, and omitted modelled features. `--quiet` suppresses only the successful-write status line; it leaves these warnings visible.
+`recalc` is serial unless `--threads N` is given (`0` for automatic detection, `1` for the caller thread only, `2..8` for a worker cap).
 
 ## Iterative calculation
 
-Workbooks with intentional circular references need iterative calculation enabled, or `recalc` converges to whatever the engine's non-iterative circular-reference handling produces:
+Workbooks with intentional circular references need iterative calculation. Without it, `recalc` settles cycles by the non-iterative rules in [Recalculation](/workbook/recalculation):
 
 ```sh
 formulon recalc circular.xlsx -o circular.xlsx --iterative
@@ -75,35 +78,9 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 
 `--iterative` enables iterative calculation and preserves the workbook's maximum-iteration and convergence-threshold settings. The CLI has no flags to override those two workbook settings; configure them in the workbook before invoking `recalc`.
 
-## Pagination
-
-```sh
-formulon paginate [--profile ID] [--now DATE] [--sheet INDEX] <in.xlsx>
-```
-
-`INDEX` defaults to `0` and is zero-based. The output reports `sheet`, `pages`, inclusive zero-based `print_area`, `horizontal_breaks`, and `vertical_breaks`. Exit `0` means success, `64` means usage error, and `1` means an engine or I/O failure.
-
 ## CI usage
 
-Run `dump --values` to snapshot calculated outputs against a checked-in golden file. With volatile inputs controlled and the engine version and profile fixed, a `git diff` over the dump file exposes workbook or engine changes.
-
-```sh
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values model.xlsx > model.values.txt
-git diff --exit-code model.values.txt
-```
-
-For formulas only:
-
-```sh
-formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > model.formulas.txt
-git diff --exit-code model.formulas.txt
-```
-
-This catches formula edits without depending on cached calculated values.
-
-::: warning Volatiles are not deterministic
-`NOW`, `TODAY`, `RAND`, and `RANDBETWEEN` are volatile. External-service functions such as `WEBSERVICE`, CUBE functions, and `STOCKHISTORY` do not perform network I/O; they return a fixed unavailable Excel error. Control or replace the volatile inputs, and record or exclude the unavailable-service cells according to [formula coverage](/compatibility/formula-coverage).
-:::
+`dump --values` and `dump --formulas` write stable text that a checked-in golden file can be diffed against. [CI regression workflows](/runtimes/ci-regression) covers the snapshot setup and how to handle volatile and external-service functions.
 
 ## Read next
 

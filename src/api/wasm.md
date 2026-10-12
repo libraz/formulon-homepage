@@ -20,20 +20,11 @@ const Module = await createFormulon()
 
 `@libraz/formulon` is the single-threaded entry point. It uses ordinary memory and loads in a browser without cross-origin isolation. Import `@libraz/formulon/threads` when `recalcParallel` must use workers; that entry uses the companion `@libraz/formulon/formulon_threads.wasm` binary and requires cross-origin isolation in browsers. Both entries expose this API and the same declaration file.
 
-Important module methods:
+`createFormulon(opts?)` accepts the Emscripten overrides `locateFile(path, prefix)`, `print(msg)`, `printErr(msg)`, `noInitialRun`, and `noExitRuntime`. Use `locateFile` when a bundler serves the `.wasm` file from a different URL.
 
-| API | Purpose |
-| --- | --- |
-| `Module.evalFormula(formula)` | One-shot formula evaluation in a fresh workbook |
-| `Module.Workbook.createDefault()` | Workbook with `Sheet1` |
-| `Module.Workbook.createForProfile(profileId)` | One-sheet workbook seeded with the selected Excel profile's locale defaults |
-| `Module.Workbook.createEmpty()` | Workbook with no sheets |
-| `Module.Workbook.loadBytes(bytes)` | Load in-memory workbook bytes (auto-detects `.xlsx` / `.xlsb` container) |
-| `Module.versionString()` | Engine version string |
-| `Module.errorDisplayName(errorCode)` | Excel display literal for an error ordinal |
-| `Module.statusString(status)` | Symbolic status description |
-| `Module.lastErrorMessage()` | Last thread-local diagnostic |
-| `Module.lastErrorContext()` | Last thread-local diagnostic context |
+The resolved `Module` carries the library functions and the static `Workbook` factories; every one of them is listed under [Functions and methods](#main-workbook-methods). `Module.evalFormula(formula)` evaluates read-only at `Sheet1!A1` of a fresh workbook and reduces an array result to its top-left element. `Workbook.createForProfile(profileId)` with an unknown id returns a workbook whose `isValid()` is `false`, and `Workbook.loadBytes(bytes)` detects the `.xlsx` or `.xlsb` container from the bytes. `setLogMinLevel(level)` and `setLogSink(sink)` change process-wide state: the default `LogLevel.Off` writes nothing, `sink(record: Uint8Array)` receives one JSON record that is valid only during the call, and `null` restores the stderr fallback.
+
+The package also exports `mergeFunctionMetadata(base, entry, locale)` as a named export. It is a pure JavaScript helper that touches no WASM state; see [Profiles and formula text](#profiles-and-formula-text).
 
 ## Result envelopes
 
@@ -56,8 +47,6 @@ List getters return `ListResult<T>`, which is the result array itself with a `.s
 
 The JavaScript binding validates argument types and integer narrowing before calling the C ABI. Wrong primitive types, symbols, `BigInt` values, non-finite or fractional integers, unsafe cursors, and malformed nested records can raise `TypeError` or `RangeError` before a result is returned. Validly shaped calls that the engine rejects return `Status.ok === false`; argument checks leave the workbook unchanged.
 
-Conditional-format data exposes the rule direction and icon-set floor directly. `dataBar.direction` uses `0` for context, `1` for left-to-right, and `2` for right-to-left; `iconSet.floor` is the lower-bound `CfValueObjectInput` (optional when adding a rule and returned for every icon-set rule read back). Resolved data-bar matches report the same direction in `CfMatch.barDirection`.
-
 ## Value kinds
 
 ```ts
@@ -73,19 +62,23 @@ enum ValueKind {
 }
 ```
 
-`getValue()` returns a `CellResult` (`{ status, value }`), while `evalFormula()`, `evaluateFormulaText()`, and `evaluateConditionalFormula()` return `EvalResult` envelopes with the same `status` / `value` shape. In each case, the `value` field is a `Value` whose `kind` discriminates the payload. Number values use `value.number`, Booleans use `value.boolean` (`0` or `1`), text uses `value.text`, and errors use `value.errorCode` — a `formulon::ErrorCode` ordinal; there is no `errorText` field (see [Error model](/compatibility/errors) for what each code means). `Array`, `Ref`, and `Lambda` currently carry no extra payload on `Value` — those fields are reserved in the C ABI for a later bundle. To read a lambda's formula text, call `getLambdaText(sheet, row, col)` on the workbook instead.
+`getValue()` returns a `CellResult` (`{ status, value }`), while `evalFormula()`, `evaluateFormulaText()`, and `evaluateConditionalFormula()` return `EvalResult` envelopes with the same `status` / `value` shape. In each case, the `value` field is a `Value` whose `kind` discriminates the payload. Number values use `value.number`, Booleans use `value.boolean` (`0` or `1`), text uses `value.text`, and errors use `value.errorCode` — a `formulon::ErrorCode` ordinal; there is no `errorText` field (see [Error model](/compatibility/errors) for what each code means). `Array`, `Ref`, and `Lambda` values carry no payload on `Value`. To read a lambda's formula text, call `getLambdaText(sheet, row, col)` on the workbook; use `evaluateFormulaArray()` for array contents.
 
 The declarations also export these enum groups:
 
 | Area | Enums |
 | --- | --- |
+| Values | `ValueKind`, `ErrorCode` (`Null = 0`, `Div0 = 1`, … `Python = 15`, `Unknown = 16`; the ordinal in `Value.errorCode` and the argument of `setError`) |
 | Geometry and display | `GeometryMode` (`Display = 0`, `Print = 1`), `DisplayStatus` (`Ok = 0`, `Overflow = 1`, `InvalidFormat = 2`) |
 | AutoFilter | `FilterKind`, `FilterOperator`, `DynamicFilterType`, `SortBy`, `SortMethod`, `DateTimeGrouping` |
 | Validation | `ValidationErrorStyle` (`Stop = 0`, `Warning = 1`, `Information = 2`) |
+| Conditional formats | `CfMatchKind` (`DifferentialFormat = 0`, `ColorScale = 1`, `DataBar = 2`, `IconSet = 3`) |
 | Themes and styles | `ColorContext`, `ColorResolution`, `ThemeSource`, `EffectiveStyleSource` |
 | Images and drawings | `ImageFormat`, `DrawingObjectKind`, `AnchorKind`, `AnchorEditAs` |
+| PivotTables | `PivotAxis`, `PivotAggregation`, `PivotShowValuesAs`, `PivotFilterType`, `PivotFilterValueKind`, `PivotDateGrouping`, `PivotCalendar`, `PivotReportLayout`, `PivotCellKind`, plus the constants `PIVOT_SHOW_AS_BASE_PREVIOUS` / `PIVOT_SHOW_AS_BASE_NEXT` |
 | Text collation | `CollationStrength` (`Compare = 0`, `Dynamic = 1`, `ClassicExact = 2`) |
-| Workbook state | `CalcMode`, `SheetVisibility`, `WorkbookFormat` |
+| Workbook state | `CalcMode` (round-trip metadata only; the engine recalculates dirty cells in every mode), `SheetVisibility`, `WorkbookFormat`, `ExternalLinkKind` |
+| Logging | `LogLevel` (`Debug = 0`, `Info = 1`, `Warn = 2`, `Error = 3`, `Off = 4`) |
 
 The filter enums follow the corresponding OOXML ordinals, and `ImageFormat` identifies `Png`, `Jpeg`, `Gif`, and `Bmp` in addition to `Unknown`. See the declaration file for the complete enum members.
 
@@ -158,7 +151,7 @@ check(wb.clearPinnedNow())
 
 ## Profiles and formula text
 
-New workbooks use the `win-365-en_US` profile. A profile is workbook state: it controls locale-sensitive evaluation, number and date rendering, text comparison, and localized Excel names. Formula input remains the English canonical spelling; use the text helpers to convert a displayed formula before storing it. The profile id is not written into the file, so apply it again after loading. The catalog contains 28 ids, `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`. Locale facts for every `mac-*` profile and `win-365-ja_JP` are measured against Excel; the other 13 Windows profiles use estimated locale data. Text collation measurement is separate and is available only for `mac-*` profiles.
+New workbooks use the `win-365-en_US` profile. A profile is workbook state: it controls locale-sensitive evaluation, number and date rendering, text comparison, and localized Excel names. Formula input remains the English canonical spelling; use the text helpers to convert a displayed formula before storing it. The profile id is not written into the file, so apply it again after loading. The catalog contains 28 ids, `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`. Locale facts for every `mac-*` profile and `win-365-ja_JP` are measured against Excel; the other 13 Windows profiles use estimated locale data.
 
 `createDefault()` keeps the ordinary one-sheet defaults, including Calibri 11. `createForProfile(profileId)` also records the selected profile and applies its new-workbook defaults: body and optional phonetic fonts, the `Normal` style and first-sheet names, cell-xf alignment, phonetic settings, page margins, and the Mac row-height and base-column-width values. It writes no theme part, so a fresh workbook reads as using the default Office theme. The `win-*` row and column metrics use the engine defaults.
 
@@ -183,33 +176,119 @@ try {
 
 `localizeFormula()` rewrites function names, list and array separators, decimal points, Boolean names, and error names. It preserves strings, quoted sheet names, external qualifiers, and structured-reference brackets. `canonicalizeFormula()` performs the inverse rewrite. Both are pure text transforms and do not validate or install the formula. Use `setExcelProfileId()` for evaluation behavior and pass stored, en-invariant text to `setFormula()`.
 
-`compareText(a, b, strength, profileId)` returns the sign of the text order in `order` (`-1`, `0`, or `1`). `CollationStrength` selects the text fold used by comparison, dynamic-array lookups, or classic exact lookups; it does not merge different value kinds. `collationClasses(values, strength, profileId)` returns one dense `classIds` entry per `Value` and a `classCount`. Within that call, equal values share an id only when their kinds also match, and ids ascend in SORT order: numbers, text, booleans, errors, then blanks. Text uses the selected strength, `-0` equals `0`, and all blanks share one class. The ids are meaningful only for that call, so classify saved values together with the current values when matching a selection. `localeFacts(profileId).facts.collationMeasured` reports whether text collation was measured; it is true for `mac-*` and false for Windows profiles, including `win-365-ja_JP`.
+`localeFacts()` returns separators, Boolean names, date order, currency, and localized error names for the selected profile. Its `facts.collationMeasured` is true for `mac-*` profiles and false for every Windows profile, including `win-365-ja_JP`.
 
-`functionMetadata()` returns only locale-invariant structure: the canonical name, arity, availability, and currently empty human-readable signature and description fields. A host can merge its own display catalog with `mergeFunctionMetadata()`; that helper's BCP-47 UI locale is independent of the engine profile id. `localeFacts()` returns separators, Boolean names, date order, currency, and localized error names for the selected profile.
+`compareText(a, b, strength, profileId)` returns `{ status, order }` with `order` equal to `-1`, `0`, or `1`. `collationClasses(values, strength, profileId)` returns `{ status, classIds, classCount }`: one dense id per input `Value`, ascending in SORT order and meaningful only within that call. [Text collation](/compatibility/text-collation) defines each `CollationStrength` fold and the class rules.
 
-## Main workbook methods
+`functionMetadata(name)` returns only locale-invariant structure: the canonical name, arity, and availability; the human-readable signature and description fields are empty. `functionNames()` lists the catalog. A host merges its own display catalog with `mergeFunctionMetadata(base, entry, locale)`, whose BCP-47 UI locale is independent of the engine profile id.
+
+## Functions and methods {#main-workbook-methods}
+
+Generated from `dist/formulon.d.ts` in the installed `@libraz/formulon` package. Names starting with `Module.` are on the object `createFormulon()` resolves to, names starting with `Workbook.` are static factories, `createFormulon` and `mergeFunctionMetadata` are package exports, and every other name is a `Workbook` instance method. A summary is the first sentence of the declaration's doc comment and is blank where the declaration has none.
+
+### Library, diagnostics and logging {#library}
+
+<ApiReferenceTable surface="wasm" family="library" />
+
+### Workbook lifecycle and I/O {#lifecycle}
+
+<ApiReferenceTable surface="wasm" family="lifecycle" />
+
+### Sheets and structure {#sheets}
+
+<ApiReferenceTable surface="wasm" family="sheets" />
+
+### Cells {#cells}
+
+<ApiReferenceTable surface="wasm" family="cells" />
+
+### Recalculation {#calculation}
+
+<ApiReferenceTable surface="wasm" family="calculation" />
+
+### Read-only evaluation {#evaluation}
+
+<ApiReferenceTable surface="wasm" family="evaluation" />
+
+### Profiles, locale and text {#profiles}
+
+<ApiReferenceTable surface="wasm" family="profiles" />
+
+### Defined names {#names}
+
+<ApiReferenceTable surface="wasm" family="names" />
+
+### Tables {#tables}
+
+<ApiReferenceTable surface="wasm" family="tables" />
+
+### Dependencies, spills and external links {#dependencies}
+
+<ApiReferenceTable surface="wasm" family="dependencies" />
+
+### Sheet view and protection {#view}
+
+<ApiReferenceTable surface="wasm" family="view" />
+
+### Rows, columns and geometry {#rows-columns}
+
+<ApiReferenceTable surface="wasm" family="rows-columns" />
+
+### Display text {#display}
+
+<ApiReferenceTable surface="wasm" family="display" />
+
+### Styles {#styles}
+
+<ApiReferenceTable surface="wasm" family="styles" />
+
+### Themes and colors {#themes}
+
+<ApiReferenceTable surface="wasm" family="themes" />
+
+### Merges {#merges}
+
+<ApiReferenceTable surface="wasm" family="merges" />
+
+### Comments and hyperlinks {#comments-links}
+
+<ApiReferenceTable surface="wasm" family="comments-links" />
+
+### Threaded comments and persons {#threaded-comments}
+
+<ApiReferenceTable surface="wasm" family="threaded-comments" />
+
+### AutoFilter {#filters}
+
+<ApiReferenceTable surface="wasm" family="filters" />
+
+### Data validation {#validation}
+
+<ApiReferenceTable surface="wasm" family="validation" />
+
+### Conditional formats {#conditional-formats}
+
+<ApiReferenceTable surface="wasm" family="conditional-formats" />
+
+### Images and drawings {#images}
+
+<ApiReferenceTable surface="wasm" family="images" />
+
+### Print settings and pagination {#print}
+
+<ApiReferenceTable surface="wasm" family="print" />
+
+### PivotTables {#pivots}
+
+<ApiReferenceTable surface="wasm" family="pivots" />
+
+### Pivot caches {#pivot-caches}
+
+<ApiReferenceTable surface="wasm" family="pivot-caches" />
+
+## Method notes
 
 `cellCount()` / `cellAt()` enumerate written coordinates, including styled blanks, `setBlank` writes, and spill phantoms. Unwritten gaps are omitted; indices are dense and ordered by `(row, col)`. Do not mutate the sheet during enumeration. This differs from populated-range enumeration; see [Inspect a range](/workbook/operations#inspect-a-range).
-
-| Group | Methods |
-| --- | --- |
-| Sheets | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
-| Cells | `setNumber`, `setBool`, `setError`, `setText`, `setBlank`, `setFormula`, `getValue`, `getFormula`, `getFormulaR1C1`, `cellCount`, `cellAt`, `getLambdaText`, phonetic getters/setters |
-| Ranges | `getCellsInRange`, `getMergesInRange`, `setRangeXfIndex`, `listInvalidCells` |
-| Calculation | `recalc`, `recalcParallel`, `partialRecalc`, `evaluateFormulaText`, `evaluateFormulaArray`, `evaluateConditionalFormula`, `setIterative`, `getIterative`, `setIterativeProgress`, `calcMode`, `setCalcMode`, `pinnedNow`, `setPinnedNow`, `clearPinnedNow`, `paginate` |
-| Serialization | `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics` |
-| Profiles and formula text | `excelProfileId`, `setExcelProfileId`, `localizeFunctionName`, `canonicalizeFunctionName`, `localizeFormula`, `canonicalizeFormula`, `localeFacts`, `compareText`, `collationClasses` |
-| Names/tables | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
-| Structure | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
-| Geometry and layout | `getCellRectPt`, `getColumnWidthPt`, `getRowHeightPt`, `getWidthModel`, `columnCharsToPt`, `columnPtToChars`, sheet view, protection, row/column layout, typed print settings |
-| Display | `getDisplayText`, `formatValue` |
-| Themes and styles | `getTheme`, `setThemeColors`, `setThemeFonts`, `setThemeScriptFont`, `resolveColor`, `getEffectiveStyle`, row/column style setters and clearers, `getCellXfIndex`, `setCellXfIndex`, `clearCellXfIndex`, `setRangeXfIndex`, `rangeStyleBases`, `remapRangeStyle`, `snapshotRangeStyle`, `restoreRangeStyle`, `getFont` / `addFont`, `setFont`, `setDefaultFont`, `setCellStyle`, `removeCellStyle` |
-| Filters | `getAutoFilter` / `setAutoFilter` / `removeAutoFilter`, `applyAutoFilter`, `clearAutoFilter`, `evaluateAutoFilter`, plus table AutoFilter counterparts |
-| Validation | `getValidations`, `addValidation`, `removeValidationAt`, `clearValidations`, `validateValue`, `listInvalidCells` |
-| Threaded comments | `getThreadedComments`, `addThreadedComment`, `editThreadedComment`, `setThreadResolved`, `removeThreadedComment`, `getPersons`, `addPerson`, `removePerson` |
-| Images and drawings | `probeImage`, `listDrawingObjects`, `getImage`, `insertImage`, `removeImage` |
-| Rich workbook data | comments (`getCommentResult`), hyperlinks, conditional formats, pivot layout and cache-item filters, external links |
-| Introspection | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 `setCellPhoneticRuns()` accepts an ordered, non-overlapping UTF-16 partition of the annotated cell text. `setCellPhoneticProperties()` changes its font, kana form, and alignment independently of those readings; writing a cell value clears both the runs and their properties.
 
@@ -223,9 +302,7 @@ Worksheet print settings are authored with `setSheetPageSetup()`, `setSheetPageM
 
 `setRangeXfIndex(sheet, firstRow, firstCol, lastRow, lastCol, xfIndex)` applies one cell-style XF index across an inclusive rectangle and materializes missing cells as styled blanks.
 
-`setColumnStyle()` and `setRowStyle()` assign a cell-style XF to an inclusive axis span while retaining the other row or column attributes; `clearColumnStyle()` and `clearRowStyle()` remove only that assignment. Index `0` is the default XF. `clearCellXfIndex()` removes a cell's explicit assignment so a blank cell can inherit its row, column, or workbook default. Calling `setCellXfIndex(..., 0)` keeps an explicit Normal XF and therefore remains distinct from clearing it; inspect `getEffectiveStyle().source` to tell `Cell` from `Row`, `Column`, or `Default`.
-
-`rangeStyleBases()` lists the ascending cell-XF indices that some cell of a selection resolves to. Build a patched XF for each base and pass the pairs to `remapRangeStyle()` for an attribute-only change; values and formulas stay untouched. `snapshotRangeStyle()` captures the covered row/column styles and stored cell assignments, and `restoreRangeStyle()` restores them without changing values, formulas, phonetic runs, or comments. The selection rules and canonical workbook operation flow are documented in [Workbook operations](/workbook/operations).
+Row and column styles, `clearCellXfIndex()` versus `setCellXfIndex(..., 0)`, and the `rangeStyleBases()` → `remapRangeStyle()` attribute-only edit with its `snapshotRangeStyle()` / `restoreRangeStyle()` undo capture are described in [Workbook operations](/workbook/operations). `getEffectiveStyle().source` reports whether a style came from the `Cell`, `Row`, `Column`, or `Default`.
 
 `setFormula()` validates the complete formula before changing a cell. A malformed formula returns a failed status corresponding to `kParserUnexpectedToken` and leaves an existing formula, cached value, and dependency edges unchanged. A malformed formula already stored in an XLSX or XLSB file is kept as file text; after recalculation the cell yields the `#NAME?` error value. The ad-hoc `evalFormula()` path has different input semantics: malformed text still returns `#NAME?` as a cell value with a successful status.
 
@@ -233,9 +310,11 @@ Worksheet print settings are authored with `setSheetPageSetup()`, `setSheetPageM
 
 Geometry methods use `GeometryMode.Display` for the 96-DPI screen model and `GeometryMode.Print` for the DPI-stable pagination model. Display methods return `DisplayStatus.Overflow` with `########` when the value is outside the format's representable range, such as an invalid date serial, and `DisplayStatus.InvalidFormat` when the format code is malformed; the latter falls back to General rendering.
 
-`setCellStyle(record)` adds or replaces a named cell style. The JavaScript record is `{ name, xfId?, builtinId?, iLevel?, hidden?, customBuiltin? }`; omitted fields default to `xfId: 0`, a custom `builtinId`, level `0`, and both flags `false`. The `xfId` points into the named-style `cellStyleXfs` table, not the per-cell `cellXfs` table. `getEffectiveStyle()` reports whether the resolved style came from the cell, row, column, or workbook default and includes resolved theme colours.
+`setCellStyle(record)` adds or replaces a named cell style. The JavaScript record is `{ name, xfId?, builtinId?, iLevel?, hidden?, customBuiltin? }`; omitted fields default to `xfId: 0`, a custom `builtinId`, level `0`, and both flags `false`. The `xfId` points into the named-style `cellStyleXfs` table, not the per-cell `cellXfs` table.
 
-`getTheme()` returns `majorScripts` and `minorScripts` alongside the four theme typefaces. Each list preserves theme-part order and has the 47 default Office script entries when the theme part is absent. `setThemeScriptFont(major, script, typeface)` changes one script or appends it. On readback, a `Jpan` entry supplies the corresponding East Asian face only when that font set's `<a:ea typeface>` is empty; an explicit `<a:ea typeface>` takes precedence. A workbook without a theme part receives the full default set before the change, and `script` must be four ASCII letters with a non-empty `typeface`.
+`getTheme()` returns the four theme typefaces plus `majorScripts` and `minorScripts`; `setThemeScriptFont(major, script, typeface)` changes or appends one script entry. The defaults and the `Jpan` fallback rule are in [Presentation and geometry](/workbook/presentation).
+
+`dataBar.direction` in conditional-format records uses `0` for context, `1` for left-to-right, and `2` for right-to-left, and resolved matches report it as `CfMatch.barDirection`. `iconSet.floor` is the lower-bound `CfValueObjectInput`: optional when adding a rule and present on every icon-set rule read back.
 
 `pivotFieldAddItemAt(sheet, pivotIdx, fieldIdx, cacheIndex, visible)` addresses a manual-filter item by its bound cache field's shared-item index. It is the only form that can identify a blank pivot member; an empty name passed to `pivotFieldAddItem()` is text matching and cannot do so. An unresolved index is accepted but filters nothing.
 
@@ -250,8 +329,6 @@ AutoFilter criteria are stored separately from row visibility. Use `evaluateAuto
 `evaluateFormulaText` and `evaluateConditionalFormula` evaluate formula text against an existing workbook **without mutating it or joining the dependency graph**. They resolve local and cross-sheet references, defined names, and `ROW()` / `COLUMN()` anchoring; conditional-format evaluation also shifts relative references from the rule anchor and applies Excel-style predicate coercion. An array/spill result from the scalar call is reduced to its top-left element (not Excel implicit intersection). A formula that references its own anchor cell reads that cell's cached value rather than raising `#REF!`.
 
 `evaluateFormulaArray` is the whole-array companion to `evaluateFormulaText`. It shares the same read-only resolution and never joins the dependency graph, but returns the entire result as an `EvalArrayResult` (`status`, `rows`, `cols`, and row-major `cells: Value[][]`; a scalar is a 1×1 array). Range-shaped defined names evaluate as `Array` values and spill-phantom cells are enumerated by `cellCount` / `cellAt`.
-
-`INDIRECT(ref_text, FALSE)` selects the R1C1 grammar. Absolute references use forms such as `R5C2`; relative axes use forms such as `R[-1]C`, resolved from the cell containing the formula. A bare `R` or `C` means the current row or column, and an endpoint naming only one axis is unbounded along the other (`R5` is the whole of row 5, just as `5:5` is). The `a1` argument selects a grammar rather than adding a fallback: A1 text with `FALSE`, and R1C1 text with `TRUE`, return `#REF!`. A relative R1C1 reference also returns `#REF!` when evaluated through an ad-hoc entry point that has no formula cell to anchor it.
 
 The diagram below contrasts three paths through the same workbook:
 

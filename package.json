@@ -12,10 +12,12 @@
   "scripts": {
     "dev": "vitepress dev",
     "dev:local": "node scripts/check-demo-packages.mjs && FORMULON_DEMO_SOURCE=local yarn dev",
-    "build": "node scripts/check-facts.mjs && vitepress build && node scripts/check-docs.mjs",
+    "build": "node scripts/check-facts.mjs && node scripts/gen-api-reference.mjs --check && vitepress build && node scripts/check-docs.mjs",
     "build:local": "node scripts/check-demo-packages.mjs && FORMULON_DEMO_SOURCE=local yarn build",
     "preview": "node scripts/preview.mjs",
     "check:facts": "node scripts/check-facts.mjs",
+    "gen:api": "node scripts/gen-api-reference.mjs",
+    "check:api": "node scripts/gen-api-reference.mjs --check",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "lint": "biome check src .vitepress vitest.config.ts",
     "lint:fix": "biome check --write src .vitepress vitest.config.ts",

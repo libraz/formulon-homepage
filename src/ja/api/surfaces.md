@@ -3,23 +3,23 @@
 | 実行入口 | パッケージ | 実行環境 |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | ブラウザ、ワーカー、Node |
-| Native Node | `@libraz/formulon-native` | Node.js N-API アドオン。npm には未公開で、ソースを取得して配置先の OS / CPU アーキテクチャ用バイナリを配置します。リリース CI は darwin-arm64、linux-x64、linux-arm64 を対象にします。[Native Node](/ja/runtimes/node-native) を参照 |
-| Python | `formulon` | wasmtime を使う py3 wheel |
-| CLI | `formulon-cli-<os>-<arch>` | 単体バイナリ |
-| C ABI | ヘッダとネイティブライブラリ | 独自ホスト向け |
+| Native Node | `@libraz/formulon-native` | Node.js N-API アドオン。npm には公開していないため、ソースからビルドします（[Native Node](/ja/runtimes/node-native)）。リリース CI は darwin-arm64、linux-x64、linux-arm64 向けにビルドします |
+| Python | `formulon` | `wasmtime` で動く `py3-none-any` wheel |
+| CLI | GitHub Releases の `formulon-<version>-<os>-<arch>.tar.gz` | 単体の `formulon` バイナリ。darwin-arm64、linux-x64、linux-arm64 向け |
+| C ABI | `src/c_api/formulon_c.h` と `formulon_static`（または共有ライブラリの `formulon`） | 独自ホスト向け。ソースからビルドします |
 | MCP | `@libraz/formulon-mcp` | エージェント向け stdio MCP サーバー |
 | 表計算 UI | `@libraz/formulon-cell` | ブラウザ向け表計算 UI キット |
 
-すべての API・パッケージは同じ計算コアを呼び出します。パッケージやホスト言語、メモリ所有権、入出力の扱いに加えて、文書化された互換性の境界も実行入口ごとに異なる場合があります。
+すべての実行入口は同じ計算コアを呼び出します。違いはパッケージ構成、ホスト言語、メモリ所有権と、[後述のメソッド差分](#method-differences)です。
 
 <DiagramLayers label="C++17 計算コア -> C ABI -> WASM / Native Node / Python / CLI、WASM -> formulon-cell と formulon-mcp" :layers="[
   { title: 'コア', nodes: ['C++17 計算コア'] },
-  { title: 'C ABI', nodes: ['ヘッダ + ネイティブライブラリ'] },
+  { title: 'C ABI', nodes: ['formulon_c.h + コアライブラリ'] },
   { title: '実行入口', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'ジオメトリ / テーマ、型付きフィルターと入力規則、コメント / 画像' },
-      'CLI (formulon-cli-<os>-<arch>)'
+      'Python (formulon)',
+      'CLI (formulon)'
     ]
   },
   { title: 'WASM の上に構築', nodes: ['formulon-cell (UI キット)', 'formulon-mcp (stdio エージェントサーバー)'] }
@@ -35,23 +35,36 @@
 
 | 実行入口 | 成熟度 | 補足 |
 | --- | --- | --- |
-| WASM | 最も広い JS API | `formulon.d.ts`、ブラウザ / Node 対応 |
-| Python | 広いワークブック API | wasmtime で動くラッパー、コンテキストマネージャーによるライフタイム管理 |
+| WASM | 最も広い JS API | 生成された `formulon.d.ts`。ブラウザ、ワーカー、Node 対応 |
+| Python | 広いワークブック API | `wasmtime` で動くラッパー。`with` ブロックを抜けるとワークブックを解放 |
 | CLI | 用途を絞ったツール | `eval` / `recalc` / `dump` / `paginate` |
-| Native Node | 共有計算 API | 共有 Workbook メソッドを N-API アドオンで公開。ジオメトリとテーマ、型付き AutoFilter、入力規則の検査、コメントと画像、ふりがな、反復設定の読み取り、3 状態の表示状態、印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応。JavaScript バインディングでは、`createTable`、`updateTable`、`removeTable`、AutoFilter XML、`addCellStyleXf` は WASM にのみあります |
-| C ABI | 低レベル API 境界 | 各パッケージが呼び出す共通インターフェース |
+| Native Node | WASM と同じメソッド構成のネイティブバイナリ | 戻り値の形と値の意味は WASM と同じ。違いは下表のとおり |
+| C ABI | 低レベル API 境界 | 他の実行入口が包んでいるすべての関数 |
 | MCP | エージェント向け API | WASM の上に構築し、許可リストに基づいて呼び出す |
 | `formulon-cell` | UI キット | TypeScript、React、Vue から埋め込める表計算 UI |
 
-::: info Python のパリティ境界
-Python はジオメトリ、テーマと実効スタイル、シートとテーブルの型付き AutoFilter、入力規則の検査、配列全体の `evaluate_formula_array()`、条件付き書式の `evaluate_cf_formula()`、ふりがなテキストの取得・設定、コメント列挙（`comment_count()` / `get_comments()`）、画像と描画オブジェクト、`paginate()`、反復設定の読み取り、3 状態のシート表示、型付き印刷設定、範囲 XF、キャッシュの共有項目インデックスによるピボット項目に対応し、ワークブックの広い範囲を同等に扱います。明示的な非公開項目は、一般的なスカラーの `evaluate_formula_text()` と反復進捗コールバックです。Python が C ABI のすべてのエントリーポイントをそのまま公開するわけではありません。
-:::
+## メソッド差分 {#method-differences}
 
-Python は条件付き書式の表示データ、DXF、ピボットのレポートレイアウト、ピボットキャッシュのワークシート参照も公開し、入力規則で `allow_blank` を省略した場合は `False` を使います。型付きワークブック API の詳細は [表示とレイアウト](/ja/workbook/presentation)、[フィルターと入力規則](/ja/workbook/filters-validation)、[コメントと画像](/ja/workbook/comments-images) を参照してください。
+3 つのライブラリ用バインディングは、ワークブックモデル、ジオメトリ、テーマとスタイル、型付き AutoFilter、入力規則、コメント、画像、ピボットテーブル、印刷設定、プロファイル関連のヘルパーを共通で持ちます。違いがあるのは次の項目です。
+
+| 機能 | WASM | Native Node | Python |
+| --- | --- | --- | --- |
+| ワークブックの解放 | `delete()` | `dispose()`（GC による最終化は予備） | `close()` または `with` ブロック |
+| メモリ使用量の推定 | — | `memoryUsage()` | `memory_usage()` |
+| 並列再計算 | `recalcParallel()`。ワーカーを使うのは `@libraz/formulon/threads` だけ | `recalcParallel()` | — |
+| スカラーの読み取り専用評価 | `evaluateFormulaText()` | `evaluateFormulaText()` | —（`evaluate_formula_array()` を使う） |
+| 反復計算の進捗コールバック | `setIterativeProgress()` | `setIterativeProgress()` | — |
+| ログの受け取り先 | `setLogSink()` | `setLogSink()` | —（`set_log_min_level()` のみ） |
+| テーブルの作成 | `createTable()` / `updateTable()` / `removeTable()` | — | `table_create()` / `table_update()` / `table_remove()` |
+| シートの AutoFilter XML | `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` | — | `get_auto_filter_xml()` / `set_auto_filter_xml()` |
+| 名前付きスタイルの XF レコード | `addCellStyleXf()` | — | `add_cell_style_xf()` |
+| スタイルの一括登録、有効化だけの反復切り替え | — | — | `add_batch()`、`set_iterative_enabled()` |
+
+CLI が公開するのは一部だけです。並列再計算の `--threads`、`--iterative`、4 つのサブコマンドがあります。
 
 ## 実行入口ごとの結果が食い違ったとき
 
-同じワークブック・同じプロファイルで 2 つの API・パッケージが異なる値を返したら、不具合か、文書化された互換性差分として扱います。`make parity-test` の整合性テストは、共有の検証用ワークブックを利用可能な全チャネルで評価し、*未ビルド* と *不一致* を分けて報告します。Native Node と WASM の共有計算メソッドは同じステータス付きの戻り値と値の形式を持ち、残るメソッド差分は上記の WASM 専用の作成機能だけです。その他の違いはネイティブスレッド、コピーコスト、WASM のメモリ上限などの運用面です。
+同じワークブック・同じプロファイルで 2 つの実行入口が異なる値を返したら、不具合か、文書化された互換性差分として扱います。リポジトリの `make parity-test` は、CLI、npm の WASM パッケージ、Python wheel で共有の検証用ワークブックを評価し、ビルドされていないチャネルと値の不一致を分けて報告します。その他の違いはネイティブスレッド、コピーコスト、WASM のメモリ上限などの運用面です。
 
 ## 次に読むもの
 

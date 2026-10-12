@@ -8,28 +8,22 @@ Python ABI タグ・プラットフォームタグ・ネイティブコードの
 
 ## トップレベル API
 
-| API | 用途 |
-| --- | --- |
-| `formulon.eval_formula(formula)` | 単発の数式評価 |
-| `formulon.error_display_name(error_code)` | エラーコードを Excel の表示文字列へ変換 |
-| `formulon.library_version()` | ロード済み Formulon モジュールのバージョン |
-| `formulon.version_string()` | `library_version()` の別名 |
-| `formulon.set_log_min_level(level)` | エンジンのログを出す閾値をプロセス全体で設定します。既定の `LogLevel.OFF` では何も出力せず、`WARN` 以下にすると 1 行 1 件の JSON を stderr に書きます。独自のログ出力先コールバックはバインドしていません |
-| `formulon.merge_function_metadata(base, entry, locale)` | ロケールに依存しないエンジンの構造カタログへ、ホスト提供のローカライズ済みメタデータを重ねる純関数。`locale` は BCP-47 の表示ロケール |
-| `ValueKind` | C ABI と一致する enum |
-| `FormulonError` | ホスト側の失敗を表す例外 |
+モジュール関数（`formulon.eval_formula`、`formulon.error_display_name`、`formulon.merge_function_metadata`、`formulon.library_version`、その別名の `formulon.version_string`、`formulon.set_log_min_level`）は、ワークブックのメソッドと一緒に [関数とメソッド](#functions-and-methods) に載せています。`formulon.__version__` はインストール済みパッケージのバージョンです。`set_log_min_level()` はプロセス全体に効きます。既定の `LogLevel.OFF` では何も出力せず、`WARN` 以下にすると 1 行 1 件の JSON を stderr に書きます。Python にはログの受け取り先を渡すコールバックはありません。主な型は、ワークブックのハンドル `Workbook`、セル値のレコード `Value` とその種類を表す enum `ValueKind`、ホスト側の失敗を表す例外 `FormulonError` です。
 
-パッケージは、ワークブックのレコードで使う enum も公開します。
+パッケージは、ワークブックのメソッドが使う enum とデータクラスのレコード（`Cell`、`Comment`、`ConditionalFormat`、`DataValidation`、`PaginationResult`、`PivotLayout`、`Theme` など。一覧は `formulon.__all__`）も公開します。
 
 | 分野 | enum |
 | --- | --- |
+| 値 | `ErrorCode`（`NULL = 0`、`DIV0 = 1`、… `UNKNOWN = 16`） |
 | 寸法と表示 | `GeometryMode`（`DISPLAY = 0`、`PRINT = 1`）、`DisplayStatus`（`OK = 0`、`OVERFLOW = 1`、`INVALID_FORMAT = 2`） |
 | AutoFilter | `FilterKind`、`FilterOperator`、`DynamicFilterType`、`SortBy`、`SortMethod`、`DateTimeGrouping` |
 | 入力規則 | `ValidationErrorStyle`（`STOP = 0`、`WARNING = 1`、`INFORMATION = 2`） |
 | テーマとスタイル | `ColorContext`、`ColorResolution`、`ThemeSource`、`EffectiveStyleSource` |
 | 画像と描画 | `ImageFormat`、`DrawingObjectKind`、`AnchorKind`、`AnchorEditAs` |
+| ピボットテーブル | `PivotAxis`、`PivotAggregation`、`PivotShowValuesAs`、`PivotFilterType`、`PivotFilterValueKind`、`PivotDateGrouping`、`PivotCalendar`、`PivotReportLayout`、`PivotCellKind` |
 | テキスト照合 | `CollationStrength`（`COMPARE = 0`、`DYNAMIC = 1`、`CLASSIC_EXACT = 2`） |
-| ワークブック状態 | `CalcMode`、`SheetVisibility`、`WorkbookFormat` |
+| ワークブック状態 | `CalcMode`、`SheetVisibility`、`WorkbookFormat`、`ExternalLinkKind` |
+| ログ | `LogLevel`（`DEBUG = 0`、`INFO = 1`、`WARN = 2`、`ERROR = 3`、`OFF = 4`） |
 
 関数カタログは役割ごとに分かれています。`Workbook.function_metadata(name)` は正規名、引数数、利用可能性などの構造フィールドだけを返し、人間向けのシグネチャと説明は `None` です。Excel の表示名と数式テキストはプロファイル単位のヘルパーで変換し、説明文の翻訳はホスト側の BCP-47 UI ロケールを指定して `merge_function_metadata()` に渡してください。
 
@@ -44,33 +38,9 @@ with Workbook.create_default() as wb:
     print(wb.get_value(0, 0, 0).to_python())
 ```
 
-ファクトリ:
-
-- `Workbook.create_default()`
-- `Workbook.create_for_profile(profile_id)`
-- `Workbook.create_empty()`
-- `Workbook.load(data)`
-
 `create_default()` は Calibri 11 を含む通常の 1 シートワークブックを作成します。`create_for_profile(profile_id)` は選択したプロファイルを記録し、本文用フォントと必要なロケールのふりがな用フォント、ローカライズされた `Normal` スタイルと最初のシート名、セル XF の配置、ふりがな設定、ページ余白、Mac の行の高さと基本列幅を設定します。テーマパートは書き出さないため、新しいワークブックは既定の Office テーマとして読み取られます。Windows の行と列の寸法はエンジンの既定値を使います。
 
-主なメソッド:
-
-- `sheet_count()`, `sheet_name(index)`, `add_sheet(name)`
-- `set_number`, `set_bool`, `set_text`, `set_blank`, `set_formula`
-- `get_value`, `lambda_text_at`, `evaluate_formula_array`
-- `recalc`, `partial_recalc`, `set_iterative`, `get_iterative`
-- `pinned_now`, `set_pinned_now`, `clear_pinned_now`
-- `save`, `save_as(fmt)`（XLSX / XLSB のコンテナ形式を選択）
-- `save_with_diagnostics(fmt)`, `read_diagnostics()`
-- `iter_cells`, `iter_defined_names`, `iter_tables`, `iter_passthrough`
-- シート構造編集、行 / 列編集、定義名
-- セル結合、`get_comment` / `set_comment`、`comment_count` / `get_comments`、ハイパーリンク、入力規則
-- `evaluate_cf_formula`、条件付き書式の表示データ（`ColorScale`、`DataBar`、`IconSet`）、DXF、`paginate`
-- スタイル、行 / 列スタイルの上書き、範囲スタイルの置換とスナップショット、`set_range_xf_index`、条件付き書式、シート表示 / 保護、3 状態の表示状態
-- 型付き印刷設定（`set_page_setup`、`set_page_margins`、`set_print_options`、`set_header_footer`、印刷範囲 / タイトル、行 / 列改ページ）
-- ピボットキャッシュ / テーブル API（ワークシート参照、キャッシュの共有項目インデックスによるフィルター、ピボットレポートのレイアウトを含む）、依存関係の追跡、スピル情報、関数メタデータ、DXF
-
-プロファイルと数式テキストのヘルパーは、ワークブックに依存しない静的メソッドとしても利用できます。
+プロファイルと数式テキストのヘルパーは、ワークブックに依存しない静的メソッドです。
 
 ```python
 from formulon import Workbook
@@ -82,9 +52,9 @@ facts = Workbook.locale_facts(profile)
 print(shown, stored, facts.decimal_separator, facts.true_name)
 ```
 
-`localize_function_name()` / `canonicalize_function_name()` は 1 つの関数名を変換します。`localize_formula()` は関数名、リスト / 配列区切り、少数点、真偽値名、エラー名を変換し、文字列、引用符付きシート名、外部修飾子、構造化参照の角括弧を保持します。`canonicalize_formula()` はこの変換を戻します。これらは数値ロケールコードではなく完全なプロファイル ID を受け取り、数式の検証や登録は行いません。プロファイルは 28 個あり、ロケール情報はすべての `mac-*` と `win-365-ja_JP` で Excel の実測値、残り 13 個の Windows プロファイルは推定値です。`LocaleFacts.collation_measured` は別の項目で、テキスト照合の実測値を持つのは `mac-*` だけです。
+`localize_function_name()` / `canonicalize_function_name()` は 1 つの関数名を変換します。`localize_formula()` は関数名、リスト / 配列区切り、小数点、真偽値名、エラー名を変換し、文字列、引用符付きシート名、外部修飾子、構造化参照の角括弧を保持します。`canonicalize_formula()` はこの変換を戻します。これらは数値ロケールコードではなく完全なプロファイル ID を受け取り、数式の検証や登録は行いません。プロファイルは 28 個あり、ロケール情報はすべての `mac-*` と `win-365-ja_JP` で Excel の実測値、残り 13 個の Windows プロファイルは推定値です。`LocaleFacts.collation_measured` は別の項目で、テキスト照合の実測値を持つのは `mac-*` だけです。
 
-`Workbook.compare_text(a, b, strength, profile_id)` は選択したテキストの折りたたみ方で `-1`、`0`、`1` を返します。`CollationStrength` は通常の比較、動的配列の検索、従来の完全一致検索で使う折りたたみ方を選びます。`Workbook.collation_classes(values, strength, profile_id)` は `CollationClasses` として、SORT の順序（数値、テキスト、真偽値、エラー、空白）で密なクラス ID を返します。同じ ID になるのは `ValueKind` も一致する値だけです。テキストは選択した強度で比較し、`-0` と `0` は同じ数値、空白は 1 クラスです。ID は 1 回の呼び出しの中だけで意味を持つため、保存済みの値と現在の値を同じ呼び出しで分類して選択を照合してください。
+`Workbook.compare_text(a, b, strength, profile_id)` は `-1`、`0`、`1` のいずれかを返します。`Workbook.collation_classes(values, strength, profile_id)` は `CollationClasses(class_ids, class_count)` を返します。ID は `Value` ごとに 1 つ、SORT の順序で昇順に振られ、その呼び出しの中だけで意味を持ちます。`CollationStrength` ごとの比較規則とクラスの規則は [テキスト照合](/ja/compatibility/text-collation) を参照してください。
 
 ```python
 from formulon import CollationStrength, Value, ValueKind, Workbook
@@ -96,37 +66,129 @@ classes = Workbook.collation_classes(values, CollationStrength.DYNAMIC, profile)
 print(order, classes.class_ids, classes.class_count)
 ```
 
-新しいワークブックメソッドを対象ごとにまとめます。
+## 関数とメソッド {#functions-and-methods}
 
-| 分類 | メソッド |
-| --- | --- |
-| 範囲 | `get_formula`、`get_formula_r1c1`、`get_cells_in_range`、`get_merges_in_range`、`set_range_xf_index`、`list_invalid_cells` |
-| テキスト照合 | `compare_text`、`collation_classes` |
-| 寸法とレイアウト | `get_cell_rect_pt`、`get_column_width_pt`、`get_row_height_pt`、`get_width_model`、`column_chars_to_pt`、`column_pt_to_chars`、シート表示、保護、行 / 列レイアウト、型付き印刷設定 |
-| 表示 | `get_display_text`、`format_value` |
-| テーマとスタイル | `get_theme`、`set_theme_colors`、`set_theme_fonts`、`set_theme_script_font`、`resolve_color`、`get_effective_style`、行 / 列スタイルの設定と解除、`get_cell_xf_index`、`set_cell_xf_index`、`clear_cell_xf_index`、`set_range_xf_index`、`range_style_bases`、`remap_range_style`、`snapshot_range_style`、`restore_range_style`、`set_cell_style`、`remove_cell_style` |
-| フィルター | `get_auto_filter` / `set_auto_filter` / `remove_auto_filter`、`apply_auto_filter`、`clear_auto_filter`、`evaluate_auto_filter`、テーブル向けの対応 API |
-| 入力規則 | `get_validations`、`add_validation`、`remove_validation_at`、`clear_validations`、`validate_value`、`list_invalid_cells` |
-| スレッドコメント | `get_threaded_comments`、`add_threaded_comment`、`edit_threaded_comment`、`set_thread_resolved`、`remove_threaded_comment`、`get_persons`、`add_person`、`remove_person` |
-| 画像と描画 | `probe_image`、`list_drawing_objects`、`get_image`、`insert_image`、`remove_image` |
+パッケージの type stub（`formulon/__init__.pyi`）と formulon ソースの docstring から生成した一覧です。`formulon.` で始まる名前はモジュール関数、`Workbook.` で始まる名前はクラスメソッドまたは静的メソッドで、それ以外はすべて `Workbook` インスタンスのメソッドです。`is_valid` はプロパティです。`= ...` は stub と同じく既定値のある引数を表します。説明列は docstring の最初の 1 文で、API 自身の英語のテキストをそのまま載せています。`Workbook` はコンテキストマネージャーでもあり、`with` ブロックを抜けると `close()` が呼ばれます。
+
+### ライブラリ、診断、ログ {#library}
+
+<ApiReferenceTable surface="python" family="library" />
+
+### ワークブックのライフサイクルと入出力 {#lifecycle}
+
+<ApiReferenceTable surface="python" family="lifecycle" />
+
+### シートと構造 {#sheets}
+
+<ApiReferenceTable surface="python" family="sheets" />
+
+### セル {#cells}
+
+<ApiReferenceTable surface="python" family="cells" />
+
+### 再計算 {#calculation}
+
+<ApiReferenceTable surface="python" family="calculation" />
+
+### 読み取り専用の評価 {#evaluation}
+
+<ApiReferenceTable surface="python" family="evaluation" />
+
+### プロファイル、ロケール、テキスト {#profiles}
+
+<ApiReferenceTable surface="python" family="profiles" />
+
+### 定義名 {#names}
+
+<ApiReferenceTable surface="python" family="names" />
+
+### テーブル {#tables}
+
+<ApiReferenceTable surface="python" family="tables" />
+
+### 依存関係、スピル、外部リンク {#dependencies}
+
+<ApiReferenceTable surface="python" family="dependencies" />
+
+### シートの表示と保護 {#view}
+
+<ApiReferenceTable surface="python" family="view" />
+
+### 行、列、ジオメトリ {#rows-columns}
+
+<ApiReferenceTable surface="python" family="rows-columns" />
+
+### 表示テキスト {#display}
+
+<ApiReferenceTable surface="python" family="display" />
+
+### スタイル {#styles}
+
+<ApiReferenceTable surface="python" family="styles" />
+
+### テーマと色 {#themes}
+
+<ApiReferenceTable surface="python" family="themes" />
+
+### セルの結合 {#merges}
+
+<ApiReferenceTable surface="python" family="merges" />
+
+### コメントとハイパーリンク {#comments-links}
+
+<ApiReferenceTable surface="python" family="comments-links" />
+
+### スレッド形式のコメントと人物 {#threaded-comments}
+
+<ApiReferenceTable surface="python" family="threaded-comments" />
+
+### オートフィルター {#filters}
+
+<ApiReferenceTable surface="python" family="filters" />
+
+### データの入力規則 {#validation}
+
+<ApiReferenceTable surface="python" family="validation" />
+
+### 条件付き書式 {#conditional-formats}
+
+<ApiReferenceTable surface="python" family="conditional-formats" />
+
+### 画像と描画オブジェクト {#images}
+
+<ApiReferenceTable surface="python" family="images" />
+
+### 印刷設定とページ分割 {#print}
+
+<ApiReferenceTable surface="python" family="print" />
+
+### ピボットテーブル {#pivots}
+
+<ApiReferenceTable surface="python" family="pivots" />
+
+### ピボットキャッシュ {#pivot-caches}
+
+<ApiReferenceTable surface="python" family="pivot-caches" />
+
+## メソッドの補足
 
 `CellStyle` は `set_cell_style()` と `get_cell_style()` が使う名前付きスタイルのレコードです。フィールドは `name`、`xf_id`、`builtin_id`、`i_level`、`hidden`、`custom_builtin` で、`name` と `xf_id` は必須です。それ以外はデータクラスの既定値を使います。カスタムスタイルでは `builtin_id` を既定値のままにしてください。`xf_id` は名前付きスタイルの XF テーブルを指し、セル単位の XF テーブルは指しません。
 
-`set_column_style()` / `clear_column_style()` と `set_row_style()` / `clear_row_style()` は、行または列のほかの属性を残してセル書式 XF だけを設定または解除します。インデックス `0` は既定 XF です。`clear_cell_xf_index()` はセルの明示的な割り当てを解除し、空白セルが行、列、ワークブックの既定値を継承できるようにします。`set_cell_xf_index(..., 0)` は明示的な Normal XF を残すため、解除とは異なります。`get_effective_style().source` でその違いを確認できます。`range_style_bases()` は選択範囲のセルが実際に解決する XF を返し、各基底を変更した XF に対応付けて `remap_range_style()` に渡します。`snapshot_range_style()` / `restore_range_style()` は値と数式を変えずにスタイルを元へ戻すために使います。選択範囲の規則は [ワークブック操作](/ja/workbook/operations) を参照してください。
+行と列のスタイル、`clear_cell_xf_index()` と `set_cell_xf_index(..., 0)` の違い、`range_style_bases()` → `remap_range_style()` による変更と、その取り消しに使う `snapshot_range_style()` / `restore_range_style()` は [ワークブック操作](/ja/workbook/operations) の規則に従います。`get_theme()` は `major_scripts` と `minor_scripts` を返します。スクリプト別フォントの規則は [表示とレイアウト](/ja/workbook/presentation) を参照してください。
 
-`get_theme()` はテーマ内の順序で `major_scripts` と `minor_scripts` を返し、テーマパートがない場合も既定の Office テーマにある 47 個のスクリプト項目を返します。`set_theme_script_font(major, script, typeface)` は 1 つのスクリプトを変更または追加します。読み取り時は、`Jpan` の項目が対応する東アジア書体として使われるのは、そのフォントセットの `<a:ea typeface>` が空の場合だけです。`<a:ea typeface>` に明示値があれば、そちらが優先されます。`script` は 4 個の ASCII 英字、`typeface` は空でない文字列にしてください。
+Python にはスカラーの `evaluate_formula_text()` がありません。`evaluate_formula_array(sheet, row, col, formula)` は結果全体を読み取り専用で返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` は条件付き書式の条件式を評価します。
 
-::: tip ライフタイムはコンテキストマネージャーで管理する
-`with` ブロックを抜けるとネイティブハンドルが解放されます。例外が出ても解放されるため、`Workbook` の参照を `with` の外で使わないでください。
-:::
+`get_iterative()` は `IterativeSettings(enabled, max_iterations, max_change)` を返します。エンジンは `max_iterations` を `32767` までに制限し、制限後の値を返します。`set_iterative_enabled(enabled)` は保存済みの上限と閾値を保ったまま反復計算を切り替え、`add_batch()` はフォント、塗りつぶし、罫線、表示形式、XF を 1 回の呼び出しで登録します。
 
-::: info Python の評価境界
-Python は `evaluate_formula_array(sheet, row, col, formula)` で配列全体を返し、`evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` で条件付き書式の述語を評価します。一般的なスカラー `evaluate_formula_text` は公開していません。`comment_count(sheet)` / `get_comments(sheet)` でコメントを列挙でき、`paginate(sheet)` はページ形状と改ページ情報を含む完全な `PaginationResult` を返します。
-:::
+`set_sheet_visibility()` は `SheetVisibility.VISIBLE`、`HIDDEN`、`VERY_HIDDEN` を受け取り、`get_sheet_view()` は `tab_hidden` に加えて解決済みの 3 状態を返します。`set_range_xf_index()` はセル書式（XF）インデックスを両端を含む矩形へ適用し、存在しないセルを書式付きの空セルとして作成します。
 
-`get_iterative()` は `set_iterative()` 後の `{ enabled, max_iterations, max_change }` を返します。エンジンは `max_iterations` を `32767` までに制限し、制限後の値を報告します。`set_sheet_visibility()` は `SheetVisibility.VISIBLE`、`HIDDEN`、`VERY_HIDDEN` を受け取り、`get_sheet_view()` は `tab_hidden` に加えて解決済みの 3 状態を返します。`pivot_field_add_item_at()` はキャッシュの共有項目インデックスで手動フィルター項目を指定でき、空白の項目も表現できます。`pivot_field_add_item()` に空のラベルを渡す方法では空白の項目を指定できません。`set_iterative_enabled(enabled)` と `add_batch()` は Python だけのバインディングです。前者は保存済みの上限と閾値を保ったまま反復計算を切り替え、後者はフォント・塗りつぶし・罫線・表示形式・XF を 1 回の呼び出しで登録します。
+`table_create()` の `column_names` は `ref` の列数と一致させます。見出しセルは呼び出し側が書き込みます。`table_update()` は `None` を渡した項目を変更せず、既存テーブルの AutoFilter は範囲を変えても条件と拡張を保ちます。`get_auto_filter_xml()` / `set_auto_filter_xml()` はシートの AutoFilter を `<autoFilter>` の XML 断片のまま読み書きし、空文字列を渡すと削除します。行や列を挿入・削除すると、AutoFilter の `ref` と、モデル化した条件・並べ替えのオフセットもセルと一緒に移動します。解析しないワークシート XML はバイト列のまま保持します。
 
-ワークシートの印刷設定は `set_page_setup()`、`set_page_margins()`、`set_print_options()`、`set_header_footer()`、`set_print_area()`、`set_print_titles()`、`add_row_break()`、`add_col_break()` で作成します。`set_range_xf_index()` はセル書式（XF）インデックスを両端を含む矩形へ適用し、存在しないセルを書式付きの空セルとして作成します。`DataValidationInput` の `allow_blank` を省略した既定値は `False` です。空セルを許可する場合は `allow_blank=True` を指定してください。
+`add_hyperlink_range()` は両端を含む矩形に 1 つのハイパーリンクを追加し、読み出した `Hyperlink` には `last_row` と `last_col` が入ります。`DataValidationInput` で `allow_blank` を省略した場合の既定値は `False` です。空セルを許可する場合は `allow_blank=True` を指定してください。
+
+条件付き書式の表示データは `ColorScale`、`DataBar`、`IconSet` で表します。`DataBar` は `x14` の制御項目 `gradient`、`axis_position`（`0` は自動、`1` は中央、`2` はなし）、`negative_fill`、`border`、`negative_border`、`axis_color`、`direction`（`0` はシートの読み方向、`1` は左から右、`2` は右から左）を持ちます。省略した項目はモデルの既定値を使い、保存と読み込みをまたいで保持されます。
+
+新しく作成したピボットキャッシュには、保存前にワークシートの参照元を設定してください。たとえば `set_pivot_cache_worksheet_source(cache_id, PivotWorksheetSource(ref="A1:C10", sheet="Data"))` です。参照元のない新規キャッシュは保存に失敗します。読み込んだキャッシュは参照元のメタデータを保持し、参照元がワークシート以外や外部データの場合もあります。`pivot_field_add_item_at()` はキャッシュの共有項目インデックスで手動フィルター項目を指定します。空白の項目を指定できるのはこの方法だけで、`pivot_field_add_item()` に空のラベルを渡しても指定できません。
 
 `get_cells_in_range(sheet, cell_range, cursor=None, limit=None)` は、行・列の順序で `(cells, next_cursor)` を返します。各 `Cell` は `row`、`col`、`formula`、`value` を持ちます。`next_cursor` が `None` になるまで次の呼び出しへ渡してください。`limit` の省略または 0 は最大 65,536 件を選びます。数式セル、空白でない値、スピルの仮想セルを含み、スタイルだけを持つ空セルは含みません。`list_invalid_cells()` も同じページング規則に従います。
 
@@ -139,8 +201,6 @@ AutoFilter の条件と行の表示状態は別に管理します。`evaluate_au
 `paginate(sheet)` は `page_count`、`print_area`、`horizontal_breaks`、`vertical_breaks`、`paper`、`margins`、`printable`、`scale`、`page_order`、`print_titles`、`pages`、`horizontal_break_manual`、`vertical_break_manual` を持つ `PaginationResult` を返します。`paper` はポイント単位の寸法、向き、用紙コードを認識できたかを持ちます。`pages` の各 `PageLayout` は `area_index`、両端を含むセル範囲、原点、拡大縮小後の寸法を持ちます。印刷範囲の指定がない場合も `print_area` は空のままですが、ページ分割は使用範囲へフォールバックします。手動改ページのリストは対応する改ページリストと同じ順序です。
 
 `set_formula()` は不正な数式を `kParserUnexpectedToken` として拒否し、既存の数式とキャッシュ値を変更しません。保存済みの XLSX / XLSB に不正な数式が含まれる場合は読み込みできますが、`recalc()` 後のセル値は `#NAME?` になります。単発の `eval_formula()` はアドホック評価のため、不正な入力を `#NAME?` の値として返します。
-
-正確なメソッド一覧は、パッケージに含まれる type stub と docstring を確認してください。
 
 `iter_cells(sheet)` は、書式だけの空白セル、`set_blank` で書き込んだセル、スピル先のセルを含む書き込み済み座標を `(row, col)` の昇順で列挙します。未書き込みの隙間は含みません。列挙中はシートを変更しないでください。`get_cells_in_range()` とは異なり、明示的に書き込んだ空白セルも対象です。詳しくは [ワークブック操作](/ja/workbook/operations)を参照してください。
 
@@ -206,9 +266,9 @@ elif value.kind is ValueKind.ERROR:
 
 Python の `Value` が持つのは `error_code` だけで、`error_text` というフィールドはありません。`formulon.error_display_name(value.error_code)` で `#DIV/0!` や `#VALUE!` の表示文字列を得られます。
 
-## エラー処理
+## エラー処理 {#error-handling}
 
-`FormulonError` はホスト側の失敗（バイト列不正・ハンドル失効・入出力エラー・エンジン内部失敗）を表します。Excel のセルエラーは値です。
+`FormulonError` はホスト側の失敗を表します。不正なバイト列、範囲外のインデックス、`set_formula()` に渡した不正なテキスト、`close()` 後の呼び出し、エンジン内部の失敗が該当します。例外は `status`（数値の `fm_status_t`）、`status_name`（`kParserUnexpectedToken` など）、`message`、`context` を持ちます。負のシート番号のように C ABI の整数の幅に収まらない引数は、エンジンを呼ぶ前に `ValueError` を送出します。Excel のセルエラーは例外ではなく値です。
 
 ```python
 import formulon

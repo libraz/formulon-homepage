@@ -3,7 +3,7 @@
 Formulon is useful in CI when spreadsheet outputs are part of your product contract. Formula or calculated-value changes become explicit diffs that PR reviewers can classify.
 
 ::: info Glossary: parity runner
-A repo-internal test runner that evaluates shared fixtures across every available channel (WASM, Python, CLI) and reports both *missing* channels (binding not built) and *mismatched* results (channels disagree on a value). Run with `make parity-test`. Native Node is not wired into the parity runner yet — there is no channel to compare it against.
+A test runner in the Formulon source repository that evaluates shared fixtures through every channel that has been built (the CLI, the npm WASM package, and the Python wheel). It reports *missing* channels (not built) separately from *mismatched* results (channels disagree on a value), and skips with exit code 77 when fewer than two channels are available. Run it with `make parity-test`. It does not cover Native Node.
 :::
 
 ## Snapshot formulas

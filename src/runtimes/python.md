@@ -1,108 +1,39 @@
 # Python Integration
 
-The Python package is intended for scripts, notebooks, tests, and data pipelines that need Excel-compatible recalculation and workbook editing without launching Excel.
+The `formulon` package recalculates and edits Excel workbooks from scripts, notebooks, tests, and data pipelines without launching Excel.
+
+## Install and first call
+
+```sh
+python -m pip install formulon==0.15.1
+```
+
+```python
+import formulon
+from formulon import Workbook
+
+print(formulon.eval_formula("=SUM(1,2,3)").to_python())  # 6.0
+
+with Workbook.create_default() as wb:
+    wb.set_number(0, 1, 0, 21)          # Sheet1!A2
+    wb.set_formula(0, 0, 0, "=A2*2")    # Sheet1!A1
+    wb.recalc()
+    print(wb.get_value(0, 0, 0).to_python())  # 42.0
+```
+
+Coordinates are zero-based `(sheet, row, col)`. The `with` block releases the workbook on exit, including when an exception is raised; call `close()` yourself where a context manager does not fit.
 
 ::: tip Best fit
 Use Python when the spreadsheet is part of a batch job or analysis workflow. Use WASM when the workbook should stay in the browser.
 :::
 
-::: info Glossary: wasmtime
-A standalone WebAssembly runtime maintained by the Bytecode Alliance. The Formulon Python package ships a portable `formulon_capi.wasm` and uses `wasmtime` to load it at import time — so the wheel is `py3-none-any` and works wherever a `wasmtime` wheel is available.
-:::
-
-::: info Glossary: C ABI
-A flat C function interface exposed by the Formulon native library. Bindings call into it through a shared contract; the Python wrapper, the CLI, and the WASM build all sit on top of the same C ABI. See [C ABI](/development/bindings).
-:::
-
-Typical use cases:
-
-- validating formulas in uploaded workbooks,
-- recalculating reports in batch jobs,
-- comparing workbook output against checked-in goldens,
-- extracting calculated values for downstream systems,
-- editing workbook structure, styles, comments, validations, conditional formats, and PivotTables from Python.
-
-Keep workbook IO at the edges of your script and make the selected profile explicit in test fixtures.
-
 ## Packaging
 
-The PyPI package does not ship a platform-native `libformulon`. It ships one `py3-none-any` wheel with `formulon_capi.wasm` and a pure-Python wrapper; `wasmtime` supplies the platform-specific runtime that loads the module. There is no Cython, pybind11, or NumPy dependency at runtime.
+The PyPI package is one `py3-none-any` wheel for Python 3.9 and later. It contains `formulon_capi.wasm`, the [C ABI](/api/c) compiled to WebAssembly, and a pure-Python wrapper. `pip` also installs `wasmtime`, which supplies the platform-specific runtime. There is no Cython, pybind11, or NumPy dependency.
 
-## API scope
-
-`Workbook` mirrors the C ABI surface exposed by the npm bindings. In addition to `load -> mutate -> recalc -> save`, the wrapper exposes sheet and matrix edits, defined names, partial recalc, geometry, workbook theme and effective styles, typed sheet/table AutoFilters, validation checks, merges, comments and threaded-comment people, hyperlinks, validations, styles, visual conditional-format payloads (`ColorScale`, `DataBar`, `IconSet`), DXFs, images and drawing objects, PivotTables with report layout and pivot-cache worksheet-source access, dependency tracing, spill inspection, function metadata, sheet view/protection, calc policy, and external links.
-
-Tables can be authored with `table_create()`, `table_update()`, and `table_remove()`. `column_names` must match the width of `ref`, and the caller still writes the header cells. `table_update()` preserves fields passed as `None`; an existing table AutoFilter keeps its criteria and extensions when its range is retargeted. Worksheet-level AutoFilter XML is available through `get_auto_filter_xml()` / `set_auto_filter_xml()` as a complete opaque `<autoFilter>` fragment; an empty string clears it. `add_hyperlink_range()` adds a hyperlink over an inclusive rectangle, and read-back `Hyperlink` values include `last_row` and `last_col`.
-
-Python's `DataBar` exposes the full `x14` controls: `gradient`, `axis_position` (`0` automatic, `1` middle, `2` none), `negative_fill`, `border`, `negative_border`, and `axis_color`. Omitted values use the model defaults and the settings survive save and load. For a newly authored PivotTable, set `PivotWorksheetSource(ref="A1:C10", sheet="Data")` with `set_pivot_cache_worksheet_source()` before saving; a new cache without a worksheet source fails to save. Loaded caches retain their supported source metadata, which may describe a non-worksheet or external source.
-
-Python can author worksheet presentation metadata as well as read it back. Use `set_sheet_visibility()` with `SheetVisibility.VISIBLE`, `HIDDEN`, or `VERY_HIDDEN`; `get_sheet_view()` returns the resolved three-state `visibility`. Use `set_page_setup()`, `set_page_margins()`, `set_print_options()`, `set_header_footer()`, `set_print_area()`, `set_print_titles()`, `add_row_break()`, and `add_col_break()` for typed print settings. `set_range_xf_index()` applies one cell-style XF index across an inclusive rectangle and materializes missing cells as styled blanks. `pivot_field_add_item_at()` addresses a cache shared-item index, including the blank pivot member; a label-based empty string cannot identify it.
-
-When a data-validation input omits `allow_blank`, Python uses `False`. Pass `allow_blank=True` to allow empty cells. Row/column structural edits remap an AutoFilter's `ref` range and modeled criteria/sort offsets with the moved cells; worksheet XML that remains opaque is preserved byte-for-byte.
-
-The wrapper also exposes sheet geometry (`get_cell_rect_pt`, width and height helpers), theme colors/fonts and effective styles, typed AutoFilter evaluation, `validate_value()` / `list_invalid_cells()`, threaded comments, and image/drawing-object access. See [presentation](/workbook/presentation), [filters and validation](/workbook/filters-validation), and [comments and images](/workbook/comments-images).
-
-Workbook-independent locale helpers use the same full Excel profile ids as `set_excel_profile_id()`:
-
-```python
-from formulon import Workbook
-
-profile = "mac-365-de_DE"
-display_text = Workbook.localize_formula("=SUM(1.5,TRUE)", profile)
-stored_text = Workbook.canonicalize_formula(display_text, profile)
-facts = Workbook.locale_facts(profile)
-```
-
-The helpers rewrite or inspect formula text for a display locale. They do not change workbook state, and `set_excel_profile_id()` remains the setting that controls evaluation. `Workbook.function_metadata()` returns locale-invariant structural metadata; merge translated descriptions and signatures with `formulon.merge_function_metadata(..., locale)` using a BCP-47 UI locale. The engine's 28 profiles include 14 Mac profiles and 14 Windows profiles; all Mac profiles and `win-365-ja_JP` have Excel measurements, while the other 13 Windows profiles use estimated locale data.
-
-The main runtime difference is threading: Python drives the C ABI through `wasmtime`, so `recalc()` is serial under WASM. Python exposes no `recalc_parallel()` or `recalcParallel()` API; use `@libraz/formulon/threads`, the native Node binding, or the CLI's `--threads` when the parallel scheduler is required. The default npm WASM entry is also serial. With the same calculation core, engine/profile, and workbook inputs, results should match the other surfaces; documented surface differences still apply.
-
-`set_formula()` rejects malformed text with the `kParserUnexpectedToken` host status and leaves an existing cell unchanged. A malformed formula already stored in an XLSX or XLSB file can be loaded and produces `#NAME?` when recalculated; the one-shot `eval_formula()` helper returns that error as a value for malformed input.
-
-The PyPI WASM build parses worksheet XML with a DOM parser, one worksheet at a time. Peak parse memory therefore follows the largest worksheet XML part and must fit within the 32-bit WASM address space. Native CLI parsing switches to streaming above 256 KiB. Every surface first inflates the worksheet part into memory whole (the zip reader caps this at 100 MiB per entry and 256 MiB per load), so the CLI's streaming parser skips the DOM tree but not that buffer.
-
-::: info Evaluator and workbook parity
-Python exposes `evaluate_formula_array(sheet, row, col, formula)` for full array results and `evaluate_cf_formula(sheet, row, col, anchor_row, anchor_col, formula)` for conditional-format predicates. It does not expose general scalar `evaluate_formula_text`. Comments are enumerable with `comment_count(sheet)` and `get_comments(sheet)`, images and drawing objects have typed accessors, and `paginate(sheet)` returns page geometry. `error_display_name(error_code)` gives the Excel literal for an error ordinal.
-Python has broad workbook parity, but does not mirror every C ABI entry point: the iterative-progress callback is not exposed. It exposes phonetic text through `set_phonetic()` and `get_phonetic()`, plus span-preserving `set_phonetic_runs()` / `get_phonetic_runs()` and `set_phonetic_properties()` / `get_phonetic_properties()` for the guide's rendering settings. Use mutation plus recalc for a general scalar evaluated in workbook context.
+::: info Glossary: wasmtime
+A standalone WebAssembly runtime maintained by the Bytecode Alliance. `formulon` loads its module through `wasmtime` at import time, so the one wheel works on every platform that has a `wasmtime` wheel.
 :::
-
-<DiagramLayers :layers="[
-  { title: 'Python workbook surface', nodes: ['array evaluation', 'CF evaluation', 'comment enumeration', 'pagination'] },
-  { title: 'Exposed on', nodes: [
-    { label: 'Shared C ABI', note: 'same workbook model' },
-    { label: 'Python wrapper' }
-  ] },
-  { title: 'Scalar boundary', nodes: [{ label: 'evaluate_formula_text', note: 'not exposed on Python' }] }
-]" />
-
-## Error handling
-
-`FormulonError` means the host operation failed: invalid bytes, a bad handle, IO trouble, or an internal engine failure. Excel cell errors are returned as `Value(kind=ValueKind.ERROR)`.
-
-```python
-import formulon
-from formulon import ValueKind, FormulonError
-
-try:
-    value = formulon.eval_formula("=1/0")
-    assert value.kind is ValueKind.ERROR  # cell error
-except FormulonError as e:
-    # host error: not a cell error
-    raise
-```
-
-## Lifetime
-
-Use `Workbook` as a context manager. The wrapper releases the native handle on exit, even if an exception is raised inside the block:
-
-```python
-from formulon import Workbook
-
-with Workbook.create_default() as wb:
-    wb.set_formula(0, 0, 0, "=SUM(1,2,3)")
-    wb.recalc()
-    print(wb.get_value(0, 0, 0).to_python())
-```
 
 ## Batch recalculation pattern
 
@@ -122,6 +53,18 @@ with open("output.xlsx", "wb") as f:
 ```
 
 This is the canonical pattern: `load → mutate → recalc → save`. See [Python batch recalculation](/scenarios/python-batch) for a fuller example.
+
+## Differences from the other runtimes
+
+- `recalc()` is serial. Python has no `recalc_parallel()`; use `@libraz/formulon/threads`, Native Node, or the CLI's `--threads` when the parallel scheduler is required.
+- There is no scalar `evaluate_formula_text()`. `eval_formula()` evaluates against a fresh workbook, and `Workbook.evaluate_formula_array()` evaluates read-only against a loaded one.
+- Worksheet parsing has the same memory ceiling as the npm WASM build; see [Memory limits](/runtimes/wasm#memory-limits).
+
+[Method differences](/api/surfaces#method-differences) lists the remaining per-binding gaps.
+
+## Errors
+
+A host-side failure such as invalid bytes, an out-of-range sheet, or malformed formula text in `set_formula()` raises `FormulonError`. An Excel cell error is a value: `get_value()` returns `Value(kind=ValueKind.ERROR)`. [Python API](/api/python#error-handling) lists the exception attributes.
 
 ## Read next
 

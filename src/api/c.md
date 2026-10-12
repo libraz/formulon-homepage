@@ -2,7 +2,7 @@
 
 The C11 ABI is the integration surface for a custom language binding or a native host. It is a flat API over an opaque `fm_workbook_t` handle; the shipped Python, CLI, and WASM surfaces use the same model. Public record layouts are part of the contract and must match the header used to build the client.
 
-Include `formulon_c.h` from a source build and link the Formulon core library. The public header is the exhaustive reference; this page covers the ownership and lifetime rules that a binding must implement correctly.
+The ABI is not shipped as a prebuilt package. Build from source ([Build from source](/development/build-from-source)), include `src/c_api/formulon_c.h`, and link the `formulon_static` archive, or the shared `formulon` library that `-DFM_BUILD_C_API_SHARED=ON` adds. The header is the exhaustive reference; this page covers the ownership and lifetime rules a binding must implement correctly, plus a map of the function families.
 
 ## Minimal workbook round trip
 
@@ -50,13 +50,18 @@ To begin from an existing `.xlsx` or `.xlsb`, call `fm_workbook_load(input_bytes
 | Value | Owner | Rule |
 | --- | --- | --- |
 | `fm_workbook_t *` | caller | Release with `fm_workbook_destroy()`. `NULL` is allowed. |
-| Save bytes | caller after a successful save | Release only with `fm_buffer_free()`, never `free()` or `delete[]`. |
+| Byte buffers from `fm_workbook_save`, `fm_workbook_save_as`, `fm_workbook_save_with_diagnostics`, `fm_sheet_snapshot_range_style`, `fm_sheet_snapshot_image` | caller after success | Release only with `fm_buffer_free()`, never `free()` or `delete[]`. |
 | `fm_value_t.u.text` and text getters | workbook | Copy before another successful scratch-backed read, any mutation, or handle destruction. |
 | Error message and context | current thread | Copy before the next API call on that thread. |
+| Formula text from `fm_formula_localize` / `fm_formula_canonicalize` | current thread | Valid until the next call to either function on that thread. |
+| `fm_version_string()`, `fm_status_string()`, `fm_error_display_name()`, function names, locale facts | process | Static; never free. |
 | `fm_cell_range_t *` | caller | Release with `fm_cell_range_destroy()`. Cell text and formulas in the snapshot remain valid until destruction. |
 | `fm_pagination_t *` | caller | Release with `fm_pagination_destroy()`. All pagination getters read the owned result. |
+| `fm_cf_results_t *` from `fm_workbook_cf_evaluate_range` | caller | Release with `fm_cf_results_destroy()`. |
+| `fm_cell_nodes_t *` from `fm_workbook_precedents` / `fm_workbook_dependents` | caller | Release with `fm_cell_nodes_destroy()`. |
+| `fm_pivot_cells_t *` from `fm_workbook_pivot_layout` | caller | Release with `fm_pivot_cells_destroy()`. |
 
-Save calls reset their output pointer and length on failure, and `fm_buffer_free(NULL)` is safe. That makes the unconditional cleanup in the example valid.
+Every call that returns an owned handle or buffer sets the output to `NULL` (and the length to `0`) before validation and leaves it there on failure, and `fm_buffer_free(NULL)` is safe. That makes the unconditional cleanup in the example valid.
 
 `fm_sheet_cells_in_range()` returns an owned page snapshot through `fm_cell_range_t`. The page contains populated cells and spill phantoms in row-major order; `fm_cell_range_count()`, `fm_cell_range_at()`, and `fm_cell_range_next_cursor()` read it without touching workbook scratch storage. Later workbook mutations do not change the snapshot. Destroy every successful page with `fm_cell_range_destroy()` and pass its cursor to the next call.
 
@@ -66,9 +71,9 @@ Cell-level Excel errors such as `#DIV/0!` are values (`FM_VAL_ERROR`), not faile
 
 A workbook handle belongs to one external caller thread at a time. Do not concurrently read, mutate, or recalculate the same handle. `fm_workbook_recalc_parallel()` may create internal worker threads for one call, but it does not make independent calls on that handle safe. Separate handles can be driven concurrently.
 
-## Workbook additions
+## Selected contracts
 
-The C ABI exposes the new binding-parity operations directly. `fm_workbook_get_iterative()` reads `enabled`, `max_iterations`, and `max_change`; `fm_workbook_set_iterative()` clamps the iteration cap to `32767` and the getter reports the clamped value. `fm_sheet_set_visibility()` accepts `FM_SHEET_VISIBLE`, `FM_SHEET_HIDDEN`, or `FM_SHEET_VERY_HIDDEN`, while `fm_sheet_get_view()` reports both the legacy `tab_hidden` flag and the authoritative three-state `visibility`.
+`fm_workbook_get_iterative()` reads `enabled`, `max_iterations`, and `max_change`; `fm_workbook_set_iterative()` clamps the iteration cap to `32767` and the getter reports the clamped value. `fm_sheet_set_visibility()` accepts `FM_SHEET_VISIBLE`, `FM_SHEET_HIDDEN`, or `FM_SHEET_VERY_HIDDEN`, while `fm_sheet_get_view()` reports both the legacy `tab_hidden` flag and the authoritative three-state `visibility`.
 
 Typed worksheet print setters cover page setup, margins, print options, header/footer, print area, print titles, and manual row/column breaks (`fm_sheet_set_page_setup`, `fm_sheet_set_page_margins`, `fm_sheet_set_print_options`, `fm_sheet_set_header_footer`, `fm_sheet_set_print_area`, `fm_sheet_set_print_titles`, `fm_sheet_add_row_break`, and `fm_sheet_add_col_break`). Raw XML setters validate well-formed, bounded fragments before storing them. `fm_sheet_set_range_xf_index()` applies one style XF index over an inclusive rectangle and materializes styled blank cells.
 
@@ -85,33 +90,136 @@ The public records use fixed layouts. In the current header, `fm_cell_xf` is 128
 Function metadata is structural and locale-invariant. Use the profile-based helpers when a host needs Excel's display spelling:
 
 ```c
+/* Status checks omitted. */
 const char* localized = NULL;
-const char* localized_name = "SUM";
 const char* canonical = NULL;
-const char* localized_formula = NULL;
-const char* canonical_formula = NULL;
+const char* shown = NULL;
+const char* stored = NULL;
+char shown_copy[256];
 fm_locale_facts_t facts = {0};
 
-fm_function_localize("SUM", "mac-365-de_DE", &localized);
-fm_function_canonicalize(localized_name, "mac-365-de_DE", &canonical);
-fm_formula_localize("=SUM(1.5,TRUE)", "mac-365-de_DE", &localized_formula);
-fm_formula_canonicalize(localized_formula, "mac-365-de_DE", &canonical_formula);
+fm_function_localize("SUM", "mac-365-de_DE", &localized);        /* "SUMME" */
+fm_function_canonicalize(localized, "mac-365-de_DE", &canonical); /* "SUM" */
+fm_formula_localize("=SUM(1.5,TRUE)", "mac-365-de_DE", &shown);
+/* The next call reuses the thread-local buffer `shown` points into. */
+snprintf(shown_copy, sizeof shown_copy, "%s", shown);
+fm_formula_canonicalize(shown_copy, "mac-365-de_DE", &stored);
 fm_locale_facts("mac-365-de_DE", &facts);
 ```
 
-Function-name and locale-fact strings are process-static views described in `formulon_c.h`; callers do not free them. Formula-text results point into a thread-local buffer and remain valid until the next formula-localization call on that thread, so copy them when retaining them. All five functions take a profile id, not a numeric locale code. `fm_locale_facts_t` reports separators, Boolean names, date order, currency, `measured`, and the separate `collation_measured` flag; only `mac-*` profiles have measured text collation.
+All five functions take a profile id, not a numeric locale code. `fm_locale_facts_t` reports separators, Boolean names, date order, currency, `measured`, and the separate `collation_measured` flag; only `mac-*` profiles have measured text collation.
 
-`fm_text_compare()` compares two UTF-8 texts and writes an order sign (`-1`, `0`, or `1`) using `fm_collation_strength_t`: `FM_COLLATION_COMPARE`, `FM_COLLATION_DYNAMIC`, or `FM_COLLATION_CLASSIC_EXACT`. `fm_collation_classes()` writes one dense class id per `fm_value_t` and the class count. Within one call, equal ids require the same value kind; text uses the selected fold, numbers treat `-0` as `0`, and blanks share one class. Ids ascend in SORT order (numbers, text, booleans, errors, blanks) and are meaningful only for that call, so classify saved and current values together when matching a selection.
+`fm_text_compare(a, b, profile_id, strength, &order)` writes `-1`, `0`, or `1` for two UTF-8 texts under `FM_COLLATION_COMPARE`, `FM_COLLATION_DYNAMIC`, or `FM_COLLATION_CLASSIC_EXACT`. `fm_collation_classes(values, count, profile_id, strength, class_ids, &class_count)` writes one dense class id per `fm_value_t`, ascending in SORT order and meaningful only within that call. The profile id comes before the strength here, unlike the JavaScript and Python argument order. [Text collation](/compatibility/text-collation) defines the folds and class rules.
 
 `fm_workbook_set_formula()` validates formula text before changing the cell. A malformed formula returns the `kParserUnexpectedToken` status and leaves the previous formula and cached state unchanged. A malformed formula already present in an XLSX or XLSB file is loaded as stored text; recalculation exposes `#NAME?` as a cell error rather than failing the workbook load.
 
 Named styles use `fm_cell_style_record_t` with `name`, `xf_id`, `builtin_id`, `i_level`, `hidden`, and `custom_builtin`. Read them with `fm_styles_get_cell_style()` and write them with `fm_styles_set_cell_style()`. `xf_id` indexes the named-style `cellStyleXfs` table; `builtin_id` is `0..53` or `FM_CELL_STYLE_BUILTIN_ID_NONE` for a custom style. `i_level` is `0..6` for the built-in `RowLevel_n` / `ColLevel_n` styles and `0` otherwise. The returned `name` is workbook-owned; the setter copies its input.
 
-`fm_sheet_set_column_style()` / `fm_sheet_clear_column_style()` and `fm_sheet_set_row_style()` / `fm_sheet_clear_row_style()` assign or remove cell-style XFs on axis spans while retaining width, height, hidden, and outline attributes. Index `0` is the default XF. `fm_cell_clear_xf_index()` removes the explicit cell assignment so a blank cell inherits row, column, or workbook defaults; setting the cell XF to `0` keeps an explicit Normal assignment and is different from clearing it. `fm_sheet_range_style_bases()` lists the XFs that some cell of a selection resolves to; build patched records and pass them to `fm_sheet_remap_range_style()` for an attribute-only change. `fm_sheet_snapshot_range_style()` and `fm_sheet_restore_range_style()` provide an opaque undo capture without changing values or formulas. See [Workbook operations](/workbook/operations) for the canonical selection rules.
+Row and column styles (`fm_sheet_set_column_style()`, `fm_sheet_set_row_style()` and their `clear` counterparts), `fm_cell_clear_xf_index()`, and the `fm_sheet_range_style_bases()` → `fm_sheet_remap_range_style()` edit with its `fm_sheet_snapshot_range_style()` / `fm_sheet_restore_range_style()` undo capture follow the rules in [Workbook operations](/workbook/operations). The snapshot is an opaque byte buffer released with `fm_buffer_free()`. Theme script fonts (`fm_workbook_theme_script_font_count()` / `_at()`, `fm_workbook_set_theme_script_font()`) follow [Presentation and geometry](/workbook/presentation).
 
-`fm_workbook_theme_script_font_count()` and `fm_workbook_theme_script_font_at()` expose the major and minor theme font sets, including the 47 default Office script entries when no theme part exists. `fm_workbook_set_theme_script_font()` changes or appends one script. On theme readback, a `Jpan` entry supplies the corresponding East Asian face only when that font set's `<a:ea typeface>` is empty; an explicit `<a:ea typeface>` takes precedence. A missing theme part receives the full default set first. The script must be four ASCII letters and the typeface must be non-empty.
+## Function families
 
-The same header groups range snapshots, display text (`fm_workbook_get_display_text`, `fm_workbook_format_value`), geometry, AutoFilter and validation operations, threaded comments and persons, and image / drawing operations. Their pointer lifetimes are stated beside each declaration; copy scratch-backed strings before another successful read or mutation.
+Every declaration in `formulon_c.h` states its pointer lifetime beside it. The tables below are generated from every `FM_API` declaration in `src/c_api/formulon_c.h`. A summary is the first sentence of the declaration's Doxygen comment; declarations grouped under one comment share its summary.
+
+### Library, diagnostics and logging {#library}
+
+<ApiReferenceTable surface="c" family="library" />
+
+### Workbook lifecycle and I/O {#lifecycle}
+
+<ApiReferenceTable surface="c" family="lifecycle" />
+
+### Sheets and structure {#sheets}
+
+<ApiReferenceTable surface="c" family="sheets" />
+
+### Cells {#cells}
+
+<ApiReferenceTable surface="c" family="cells" />
+
+### Recalculation {#calculation}
+
+<ApiReferenceTable surface="c" family="calculation" />
+
+### Read-only evaluation {#evaluation}
+
+<ApiReferenceTable surface="c" family="evaluation" />
+
+### Profiles, locale and text {#profiles}
+
+<ApiReferenceTable surface="c" family="profiles" />
+
+### Defined names {#names}
+
+<ApiReferenceTable surface="c" family="names" />
+
+### Tables {#tables}
+
+<ApiReferenceTable surface="c" family="tables" />
+
+### Dependencies, spills and external links {#dependencies}
+
+<ApiReferenceTable surface="c" family="dependencies" />
+
+### Sheet view and protection {#view}
+
+<ApiReferenceTable surface="c" family="view" />
+
+### Rows, columns and geometry {#rows-columns}
+
+<ApiReferenceTable surface="c" family="rows-columns" />
+
+### Display text {#display}
+
+<ApiReferenceTable surface="c" family="display" />
+
+### Styles {#styles}
+
+<ApiReferenceTable surface="c" family="styles" />
+
+### Themes and colors {#themes}
+
+<ApiReferenceTable surface="c" family="themes" />
+
+### Merges {#merges}
+
+<ApiReferenceTable surface="c" family="merges" />
+
+### Comments and hyperlinks {#comments-links}
+
+<ApiReferenceTable surface="c" family="comments-links" />
+
+### Threaded comments and persons {#threaded-comments}
+
+<ApiReferenceTable surface="c" family="threaded-comments" />
+
+### AutoFilter {#filters}
+
+<ApiReferenceTable surface="c" family="filters" />
+
+### Data validation {#validation}
+
+<ApiReferenceTable surface="c" family="validation" />
+
+### Conditional formats {#conditional-formats}
+
+<ApiReferenceTable surface="c" family="conditional-formats" />
+
+### Images and drawings {#images}
+
+<ApiReferenceTable surface="c" family="images" />
+
+### Print settings and pagination {#print}
+
+<ApiReferenceTable surface="c" family="print" />
+
+### PivotTables {#pivots}
+
+<ApiReferenceTable surface="c" family="pivots" />
+
+### Pivot caches {#pivot-caches}
+
+<ApiReferenceTable surface="c" family="pivot-caches" />
 
 ## Where to go next
 

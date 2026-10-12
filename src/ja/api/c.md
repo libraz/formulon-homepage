@@ -2,7 +2,7 @@
 
 C11 ABI は、独自の言語バインディングやネイティブホストから使うための API です。内部構造を公開しない `fm_workbook_t` ハンドルを中心とするフラットな API で、配布中の Python、CLI、WASM も同じモデルを使います。公開レコードのレイアウトも契約の一部であり、クライアントのビルドに使ったヘッダーと一致させる必要があります。
 
-ソースからビルドした `formulon_c.h` ヘッダーを取り込み、計算コアのライブラリをリンクしてください。公開ヘッダーが完全なリファレンスです。このページでは、バインディング実装で守るべき所有権と寿命のルールを説明します。
+C ABI はビルド済みパッケージとしては配布していません。[ソースからビルド](/ja/development/build-from-source) し、`src/c_api/formulon_c.h` を取り込んで、`formulon_static` アーカイブ、または `-DFM_BUILD_C_API_SHARED=ON` で追加される共有ライブラリ `formulon` をリンクします。ヘッダーが完全なリファレンスです。このページでは、バインディング実装で守るべき所有権と寿命のルールと、関数群の一覧を示します。
 
 ## 最小のワークブック往復
 
@@ -43,18 +43,25 @@ int main(void) {
 
 既存の `.xlsx` または `.xlsb` から始める場合は、`fm_workbook_create()` の代わりに `fm_workbook_load(input_bytes, input_len, &wb)` を呼びます。読み込み処理はバイト列からコンテナ形式を判別します。
 
+`fm_workbook_create_for_profile(profile_id, &wb)` は、指定した Excel プロファイルの新規ワークブック既定値で 1 シートのワークブックを作成します。プロファイルを記録し、ロケールごとの本文用フォントとふりがな用フォント、`Normal` スタイルと最初のシート名、セル XF の配置、ふりがな設定、ページ余白、実測済みの Mac の行の高さと基本列幅を設定します。`fm_workbook_create()` は通常の Calibri 11 のワークブックを作成します。プロファイル用ファクトリはテーマパートを書き出さないため、既定の Office テーマとして扱われます。
+
 ## 所有権と参照
 
 | 値 | 所有者 | ルール |
 | --- | --- | --- |
 | `fm_workbook_t *` | 呼び出し側 | `fm_workbook_destroy()` で解放します。`NULL` でも構いません。 |
-| 保存バイト列 | 保存成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
+| `fm_workbook_save`、`fm_workbook_save_as`、`fm_workbook_save_with_diagnostics`、`fm_sheet_snapshot_range_style`、`fm_sheet_snapshot_image` が返すバイト列 | 成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
 | `fm_value_t.u.text` とテキスト取得結果 | ワークブック | 次の一時バッファを使う読み取りの成功、変更、ハンドル破棄の前にコピーします。 |
 | エラーメッセージとコンテキスト | 現在のスレッド | 同じスレッドで次の API を呼ぶ前にコピーします。 |
+| `fm_formula_localize` / `fm_formula_canonicalize` が返す数式テキスト | 現在のスレッド | 同じスレッドでどちらかの関数を次に呼ぶまで有効です。 |
+| `fm_version_string()`、`fm_status_string()`、`fm_error_display_name()`、関数名、ロケール情報 | プロセス | 静的な領域です。解放しません。 |
 | `fm_cell_range_t *` | 呼び出し側 | `fm_cell_range_destroy()` で解放します。スナップショット内のセルのテキストと数式は破棄まで有効です。 |
 | `fm_pagination_t *` | 呼び出し側 | `fm_pagination_destroy()` で解放します。ページ分割の getter は所有済みの結果を読み取ります。 |
+| `fm_workbook_cf_evaluate_range` が返す `fm_cf_results_t *` | 呼び出し側 | `fm_cf_results_destroy()` で解放します。 |
+| `fm_workbook_precedents` / `fm_workbook_dependents` が返す `fm_cell_nodes_t *` | 呼び出し側 | `fm_cell_nodes_destroy()` で解放します。 |
+| `fm_workbook_pivot_layout` が返す `fm_pivot_cells_t *` | 呼び出し側 | `fm_pivot_cells_destroy()` で解放します。 |
 
-保存 API は失敗時に出力ポインターと長さを初期値へ戻し、`fm_buffer_free(NULL)` は安全です。そのため、例のように無条件で後処理できます。テキスト取得結果は次の一時バッファを使う読み取りや変更で無効になるため、必要なら呼び出し側でコピーしてください。
+所有するハンドルやバッファを返す呼び出しは、検証の前に出力を `NULL`（長さは `0`）にし、失敗時もそのまま残します。`fm_buffer_free(NULL)` も安全なので、例のように無条件で後処理できます。
 
 `fm_sheet_cells_in_range()` は `fm_cell_range_t` を使う、呼び出し側が所有するページのスナップショットを返します。ページには、値または数式を持つセルとスピルの仮想セルが行・列の順序で入ります。`fm_cell_range_count()`、`fm_cell_range_at()`、`fm_cell_range_next_cursor()` はワークブックの一時バッファを使わずにページを読み取ります。後続のワークブック変更はスナップショットを変更しません。成功したページはすべて `fm_cell_range_destroy()` で破棄し、次の呼び出しにはカーソルを渡してください。
 
@@ -64,15 +71,13 @@ int main(void) {
 
 1 つのワークブックハンドルは、同時には 1 つの外部呼び出しスレッドから使います。同じハンドルを並行して読み取り、変更、再計算してはいけません。`fm_workbook_recalc_parallel()` は 1 回の呼び出しの内部でワーカースレッドを作る場合がありますが、別々の API 呼び出しを安全にはしません。別々のハンドルは並行して使えます。
 
-## ワークブック操作
+## 主な契約
 
-C ABI では、各バインディングで使うワークブック操作を直接呼び出せます。`fm_workbook_get_iterative()` は `enabled`、`max_iterations`、`max_change` を読み出します。`fm_workbook_set_iterative()` は反復回数の上限を `32767` に制限し、getter は制限後の値を返します。`fm_sheet_set_visibility()` は `FM_SHEET_VISIBLE`、`FM_SHEET_HIDDEN`、`FM_SHEET_VERY_HIDDEN` を受け取り、`fm_sheet_get_view()` は従来の `tab_hidden` と正規の 3 状態 `visibility` を返します。
+`fm_workbook_get_iterative()` は `enabled`、`max_iterations`、`max_change` を読み出します。`fm_workbook_set_iterative()` は反復回数の上限を `32767` に制限し、getter は制限後の値を返します。`fm_sheet_set_visibility()` は `FM_SHEET_VISIBLE`、`FM_SHEET_HIDDEN`、`FM_SHEET_VERY_HIDDEN` を受け取り、`fm_sheet_get_view()` は従来の `tab_hidden` と正規の 3 状態 `visibility` を返します。
 
 ワークシートの印刷設定 API は、ページ設定、余白、印刷オプション、ヘッダー / フッター、印刷範囲、印刷タイトル、手動の行 / 列改ページを扱います（`fm_sheet_set_page_setup`、`fm_sheet_set_page_margins`、`fm_sheet_set_print_options`、`fm_sheet_set_header_footer`、`fm_sheet_set_print_area`、`fm_sheet_set_print_titles`、`fm_sheet_add_row_break`、`fm_sheet_add_col_break`）。未モデル化の XML 設定 API は、保存前に整形式でサイズ制限内の断片かを検証します。`fm_sheet_set_range_xf_index()` はセル書式（XF）インデックスを両端を含む矩形へ適用し、書式付きの空セルを作成します。
 
 `fm_workbook_pivot_field_add_item_at()` はキャッシュの共有項目インデックスで手動フィルター項目を指定します。空白のピボット項目を表現できる形式で、ラベル形式の `fm_workbook_pivot_field_add_item()` に空文字列を渡しても指定できません。
-
-`fm_workbook_create_for_profile(profile_id, &wb)` は、指定した Excel プロファイルの新規ワークブック既定値で 1 シートのワークブックを作成します。プロファイルを記録し、ロケールごとの本文用フォントとふりがな用フォント、`Normal` スタイルと最初のシート名、セル XF の配置、ふりがな設定、ページ余白、実測済みの Mac の行の高さと基本列幅を設定します。`fm_workbook_create()` は通常の Calibri 11 のワークブックを作成します。プロファイル用ファクトリはテーマパートを書き出さないため、既定の Office テーマとして扱われます。
 
 外部ワークブック参照はメタデータとキャッシュ済み値を入力にします。XLSX と XLSB の読み込みは `[1]Sheet1!A1` のようなインデックス形式と、`[Book1.xlsx]Sheet1!A1` のような名前 / パス形式の両方を受け付けます。エンジンはパッケージに保存された値だけを使い、参照先のワークブックを開いたりネットワークへアクセスしたりしません。`fm_workbook_external_link_count()` と `fm_workbook_external_link_at()` でリンクレコードを取得し、ホスト側で互換性を確認できます。
 
@@ -85,33 +90,136 @@ C ABI では、各バインディングで使うワークブック操作を直�
 関数メタデータは構造情報で、ロケールに依存しません。Excel の表示名を必要とするホストは、プロファイル単位の関数を使います。
 
 ```c
+/* ステータスの確認は省略しています。 */
 const char* localized = NULL;
-const char* localized_name = "SUM";
 const char* canonical = NULL;
-const char* localized_formula = NULL;
-const char* canonical_formula = NULL;
+const char* shown = NULL;
+const char* stored = NULL;
+char shown_copy[256];
 fm_locale_facts_t facts = {0};
 
-fm_function_localize("SUM", "mac-365-de_DE", &localized);
-fm_function_canonicalize(localized_name, "mac-365-de_DE", &canonical);
-fm_formula_localize("=SUM(1.5,TRUE)", "mac-365-de_DE", &localized_formula);
-fm_formula_canonicalize(localized_formula, "mac-365-de_DE", &canonical_formula);
+fm_function_localize("SUM", "mac-365-de_DE", &localized);        /* "SUMME" */
+fm_function_canonicalize(localized, "mac-365-de_DE", &canonical); /* "SUM" */
+fm_formula_localize("=SUM(1.5,TRUE)", "mac-365-de_DE", &shown);
+/* 次の呼び出しは shown が指すスレッドローカルバッファを再利用します。 */
+snprintf(shown_copy, sizeof shown_copy, "%s", shown);
+fm_formula_canonicalize(shown_copy, "mac-365-de_DE", &stored);
 fm_locale_facts("mac-365-de_DE", &facts);
 ```
 
-関数名とロケール情報の文字列は `formulon_c.h` に記載されたプロセス静的な参照で、呼び出し側が解放する必要はありません。数式テキストの結果はスレッドローカルバッファを指し、そのスレッドで次に数式ローカライズ関数を呼ぶまで有効です。保持する場合はコピーしてください。5 つの関数は数値ロケールコードではなくプロファイル ID を受け取ります。`fm_locale_facts_t` は区切り文字、真偽値名、日付順、通貨、`measured`、テキスト照合の実測値を示す `collation_measured` を返します。テキスト照合の実測値を持つのは `mac-*` プロファイルだけです。
+5 つの関数は数値のロケールコードではなくプロファイル ID を受け取ります。`fm_locale_facts_t` は区切り文字、真偽値名、日付順、通貨、`measured`、テキスト照合の実測値かを示す `collation_measured` を返します。テキスト照合の実測値を持つのは `mac-*` プロファイルだけです。
 
-`fm_text_compare()` は `fm_collation_strength_t`（`FM_COLLATION_COMPARE`、`FM_COLLATION_DYNAMIC`、`FM_COLLATION_CLASSIC_EXACT`）で選んだ折りたたみ方に従って 2 つの UTF-8 テキストを比較し、`-1`、`0`、`1` の符号を書き込みます。`fm_collation_classes()` は `fm_value_t` ごとの密なクラス ID とクラス数を書き込みます。1 回の呼び出しの中で同じ ID になるのは値の種類も一致する場合だけで、テキストは選択した強度、数値は `-0` と `0` を同じ値、空白は 1 クラスとして扱います。ID は SORT の順序（数値、テキスト、真偽値、エラー、空白）に並び、呼び出しの外では意味を持たないため、保存済みの値と現在の値を同じ呼び出しで分類して選択を照合してください。
+`fm_text_compare(a, b, profile_id, strength, &order)` は、`FM_COLLATION_COMPARE`、`FM_COLLATION_DYNAMIC`、`FM_COLLATION_CLASSIC_EXACT` のいずれかの規則で 2 つの UTF-8 テキストを比較し、`-1`、`0`、`1` を書き込みます。`fm_collation_classes(values, count, profile_id, strength, class_ids, &class_count)` は `fm_value_t` ごとに密なクラス ID を書き込みます。ID は SORT の順序で昇順に振られ、その呼び出しの中だけで意味を持ちます。C ではプロファイル ID が強度より前に来るため、JavaScript や Python とは引数の順序が異なります。比較規則とクラスの規則は [テキスト照合](/ja/compatibility/text-collation) を参照してください。
 
 `fm_workbook_set_formula()` はセルを変更する前に数式全体を検証します。不正な数式は `kParserUnexpectedToken` ステータスを返し、既存の数式とキャッシュ状態を変更しません。XLSX または XLSB に保存済みの不正な数式は、保存されたテキストのまま読み込めます。再計算後はワークブックの読み込み失敗ではなく、セルの `#NAME?` エラー値として現れます。
 
 名前付きスタイルは、`name`、`xf_id`、`builtin_id`、`i_level`、`hidden`、`custom_builtin` を持つ `fm_cell_style_record_t` で表します。`fm_styles_get_cell_style()` で読み取り、`fm_styles_set_cell_style()` で追加または置換します。`xf_id` は名前付きスタイルの `cellStyleXfs` テーブルを指します。`builtin_id` は `0..53`、カスタムスタイルでは `FM_CELL_STYLE_BUILTIN_ID_NONE` です。`i_level` は組み込みの `RowLevel_n` / `ColLevel_n` スタイルで `0..6`、それ以外では `0` です。読み取り結果の `name` はワークブックが所有し、setter は入力文字列をコピーします。
 
-`fm_sheet_set_column_style()` / `fm_sheet_clear_column_style()` と `fm_sheet_set_row_style()` / `fm_sheet_clear_row_style()` は、幅、高さ、非表示、アウトラインなどの属性を残して軸範囲のセル書式 XF を設定または解除します。インデックス `0` は既定 XF です。`fm_cell_clear_xf_index()` はセルの明示的な割り当てを解除し、空白セルが行、列、ワークブックの既定値を継承できるようにします。セル XF を `0` に設定すると明示的な Normal の割り当てが残るため、解除とは異なります。`fm_sheet_range_style_bases()` で選択範囲のセルが実際に解決する XF を取得し、変更後のレコードを `fm_sheet_remap_range_style()` に渡すと、値と数式を保った属性だけの変更になります。`fm_sheet_snapshot_range_style()` と `fm_sheet_restore_range_style()` はスタイルの復元に使う不透明なスナップショットを提供します。選択範囲の規則と標準的な操作手順は [ワークブック操作](/ja/workbook/operations) を参照してください。
+行と列のスタイル（`fm_sheet_set_column_style()`、`fm_sheet_set_row_style()` と対応する `clear` 関数）、`fm_cell_clear_xf_index()`、`fm_sheet_range_style_bases()` → `fm_sheet_remap_range_style()` による変更と、その取り消しに使う `fm_sheet_snapshot_range_style()` / `fm_sheet_restore_range_style()` は [ワークブック操作](/ja/workbook/operations) の規則に従います。スナップショットは不透明なバイト列で、`fm_buffer_free()` で解放します。テーマのスクリプト別フォント（`fm_workbook_theme_script_font_count()` / `_at()`、`fm_workbook_set_theme_script_font()`）は [表示とレイアウト](/ja/workbook/presentation) を参照してください。
 
-`fm_workbook_theme_script_font_count()` と `fm_workbook_theme_script_font_at()` は、テーマの major / minor フォントセットを公開します。テーマパートがない場合も既定の Office テーマにある 47 個のスクリプト項目を返します。`fm_workbook_set_theme_script_font()` は 1 つのスクリプトを変更または追加します。テーマの読み取り時は、`Jpan` の項目が対応する東アジア書体として使われるのは、そのフォントセットの `<a:ea typeface>` が空の場合だけです。`<a:ea typeface>` に明示値があれば、そちらが優先されます。テーマパートがない場合は変更前に既定の全項目を作成し、スクリプトは 4 個の ASCII 英字、書体名は空でない文字列にしてください。
+## 関数群
 
-同じヘッダーには、範囲スナップショット、表示文字列（`fm_workbook_get_display_text`、`fm_workbook_format_value`）、寸法、AutoFilter と入力規則、スレッドコメントと人物、画像と描画の API も含まれます。ポインターの寿命は各宣言の近くに記載されているため、別の成功した読み取りや変更の前に一時バッファの文字列をコピーしてください。
+ポインターの寿命は `formulon_c.h` の各宣言の近くに記載しています。次の一覧は `src/c_api/formulon_c.h` のすべての `FM_API` 宣言から生成したものです。説明列は宣言に付いた Doxygen コメントの最初の 1 文で、API 自身の英語のテキストをそのまま載せています。1 つのコメントの下にまとめて宣言された関数は、その説明を共有します。
+
+### ライブラリ、診断、ログ {#library}
+
+<ApiReferenceTable surface="c" family="library" />
+
+### ワークブックのライフサイクルと入出力 {#lifecycle}
+
+<ApiReferenceTable surface="c" family="lifecycle" />
+
+### シートと構造 {#sheets}
+
+<ApiReferenceTable surface="c" family="sheets" />
+
+### セル {#cells}
+
+<ApiReferenceTable surface="c" family="cells" />
+
+### 再計算 {#calculation}
+
+<ApiReferenceTable surface="c" family="calculation" />
+
+### 読み取り専用の評価 {#evaluation}
+
+<ApiReferenceTable surface="c" family="evaluation" />
+
+### プロファイル、ロケール、テキスト {#profiles}
+
+<ApiReferenceTable surface="c" family="profiles" />
+
+### 定義名 {#names}
+
+<ApiReferenceTable surface="c" family="names" />
+
+### テーブル {#tables}
+
+<ApiReferenceTable surface="c" family="tables" />
+
+### 依存関係、スピル、外部リンク {#dependencies}
+
+<ApiReferenceTable surface="c" family="dependencies" />
+
+### シートの表示と保護 {#view}
+
+<ApiReferenceTable surface="c" family="view" />
+
+### 行、列、ジオメトリ {#rows-columns}
+
+<ApiReferenceTable surface="c" family="rows-columns" />
+
+### 表示テキスト {#display}
+
+<ApiReferenceTable surface="c" family="display" />
+
+### スタイル {#styles}
+
+<ApiReferenceTable surface="c" family="styles" />
+
+### テーマと色 {#themes}
+
+<ApiReferenceTable surface="c" family="themes" />
+
+### セルの結合 {#merges}
+
+<ApiReferenceTable surface="c" family="merges" />
+
+### コメントとハイパーリンク {#comments-links}
+
+<ApiReferenceTable surface="c" family="comments-links" />
+
+### スレッド形式のコメントと人物 {#threaded-comments}
+
+<ApiReferenceTable surface="c" family="threaded-comments" />
+
+### オートフィルター {#filters}
+
+<ApiReferenceTable surface="c" family="filters" />
+
+### データの入力規則 {#validation}
+
+<ApiReferenceTable surface="c" family="validation" />
+
+### 条件付き書式 {#conditional-formats}
+
+<ApiReferenceTable surface="c" family="conditional-formats" />
+
+### 画像と描画オブジェクト {#images}
+
+<ApiReferenceTable surface="c" family="images" />
+
+### 印刷設定とページ分割 {#print}
+
+<ApiReferenceTable surface="c" family="print" />
+
+### ピボットテーブル {#pivots}
+
+<ApiReferenceTable surface="c" family="pivots" />
+
+### ピボットキャッシュ {#pivot-caches}
+
+<ApiReferenceTable surface="c" family="pivot-caches" />
 
 ## 次に読むもの
 

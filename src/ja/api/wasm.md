@@ -20,18 +20,11 @@ const Module = await createFormulon()
 
 `@libraz/formulon` は単一スレッドの実行入口です。通常のメモリを使うため、ブラウザでオリジン間分離なしに読み込めます。`recalcParallel` でワーカーを使う場合は `@libraz/formulon/threads` を読み込んでください。この入口は付属の `@libraz/formulon/formulon_threads.wasm` を使い、ブラウザではオリジン間分離が必要です。どちらの入口も同じ API と宣言ファイルを公開します。
 
-| API | 用途 |
-| --- | --- |
-| `Module.evalFormula(formula)` | 新規ワークブックで 1 つの数式を評価 |
-| `Module.Workbook.createDefault()` | `Sheet1` 付きワークブック |
-| `Module.Workbook.createForProfile(profileId)` | 指定した Excel プロファイルのロケール既定値で 1 シートのワークブックを作成 |
-| `Module.Workbook.createEmpty()` | sheet 0 個のワークブック |
-| `Module.Workbook.loadBytes(bytes)` | メモリ上のワークブックを読み込む（`.xlsx` / `.xlsb` を自動判別） |
-| `Module.versionString()` | エンジンバージョン |
-| `Module.errorDisplayName(errorCode)` | エラーコードの Excel 表示文字列 |
-| `Module.statusString(status)` | status の名前 |
-| `Module.lastErrorMessage()` | 直近の診断メッセージ |
-| `Module.lastErrorContext()` | 直近の診断 context |
+`createFormulon(opts?)` は Emscripten の設定として `locateFile(path, prefix)`、`print(msg)`、`printErr(msg)`、`noInitialRun`、`noExitRuntime` を受け取ります。バンドラが `.wasm` ファイルを別の URL から配信する場合は `locateFile` を指定します。
+
+解決された `Module` はライブラリ関数と `Workbook` の静的ファクトリを持ちます。すべて [関数とメソッド](#main-workbook-methods) に一覧があります。`Module.evalFormula(formula)` は新規ワークブックの `Sheet1!A1` を基準に読み取り専用で評価し、配列の結果は左上の要素だけを返します。`Workbook.createForProfile(profileId)` に不明な ID を渡すと `isValid()` が `false` のワークブックを返し、`Workbook.loadBytes(bytes)` は `.xlsx` か `.xlsb` かをバイト列から判別します。`setLogMinLevel(level)` と `setLogSink(sink)` はプロセス全体の状態を変更します。既定値の `LogLevel.Off` では何も出力しません。`sink(record: Uint8Array)` は JSON レコードを 1 件ずつ受け取り、その配列は呼び出し中だけ有効です。`null` を渡すと stderr への出力に戻ります。
+
+パッケージは名前付きエクスポートとして `mergeFunctionMetadata(base, entry, locale)` も公開します。WASM の状態に触れない純粋な JavaScript のヘルパーです。[プロファイルと数式テキスト](#profiles-and-formula-text) を参照してください。
 
 ## 結果の形式
 
@@ -54,8 +47,6 @@ Excel セルエラーは `ValueKind.Error`。Status の失敗とは区別され�
 
 JavaScript バインディングは、C ABI を呼び出す前に引数の型と整数への変換を検証します。プリミティブ型の誤り、`Symbol`、`BigInt`、有限でない値や小数の整数引数、安全な整数でないカーソル、形の違う入れ子レコードは、結果を返さずに `TypeError` または `RangeError` を送出することがあります。型が正しい引数をエンジンが拒否した場合は `Status.ok === false` を返し、ワークブックは変更しません。
 
-条件付き書式のデータには、ルールの方向とアイコンセットの下限がそのまま含まれます。`dataBar.direction` は `0` がシートの読み方向、`1` が左から右、`2` が右から左です。`iconSet.floor` は下限を表す `CfValueObjectInput` で、ルール追加時は省略でき、アイコンセット規則を読み出すと必ず含まれます。`CfMatch` の評価結果には同じ方向が `CfMatch.barDirection` として含まれます。
-
 ## 値の種類
 
 ```ts
@@ -71,19 +62,23 @@ enum ValueKind {
 }
 ```
 
-`getValue()` は `CellResult`（`{ status, value }`）を返します。一方、`evalFormula()`、`evaluateFormulaText()`、`evaluateConditionalFormula()` は同じ `status` / `value` を持つ `EvalResult` の戻り値を返します。いずれも `value` フィールドは `kind` でデータの種類が分かれる `Value` です。数値は `value.number`、真偽値は `value.boolean`（`0` または `1`）、テキストは `value.text`、エラーは `value.errorCode`（`formulon::ErrorCode` の値）で読み取ります。`errorText` というフィールドは存在しません（各コードの意味は [エラーモデル](/ja/compatibility/errors) を参照）。`Array` / `Ref` / `Lambda` は現時点で `Value` に追加のデータを持たず、これらのフィールドは将来の拡張のために C ABI 側で予約されているだけです。ラムダの数式テキストを読むには、ワークブックの `getLambdaText(sheet, row, col)` を別途呼び出します。
+`getValue()` は `CellResult`（`{ status, value }`）を返します。一方、`evalFormula()`、`evaluateFormulaText()`、`evaluateConditionalFormula()` は同じ `status` / `value` を持つ `EvalResult` の戻り値を返します。いずれも `value` フィールドは `kind` でデータの種類が分かれる `Value` です。数値は `value.number`、真偽値は `value.boolean`（`0` または `1`）、テキストは `value.text`、エラーは `value.errorCode`（`formulon::ErrorCode` の値）で読み取ります。`errorText` というフィールドは存在しません（各コードの意味は [エラーモデル](/ja/compatibility/errors) を参照）。`Array` / `Ref` / `Lambda` の値は `Value` にデータを持ちません。ラムダの数式テキストはワークブックの `getLambdaText(sheet, row, col)` で、配列の中身は `evaluateFormulaArray()` で読み取ります。
 
 宣言ファイルは、次の enum グループも公開します。
 
 | 分野 | enum |
 | --- | --- |
+| 値 | `ValueKind`、`ErrorCode`（`Null = 0`、`Div0 = 1`、… `Python = 15`、`Unknown = 16`。`Value.errorCode` の値で、`setError` の引数にも使う） |
 | 寸法と表示 | `GeometryMode`（`Display = 0`、`Print = 1`）、`DisplayStatus`（`Ok = 0`、`Overflow = 1`、`InvalidFormat = 2`） |
 | AutoFilter | `FilterKind`、`FilterOperator`、`DynamicFilterType`、`SortBy`、`SortMethod`、`DateTimeGrouping` |
 | 入力規則 | `ValidationErrorStyle`（`Stop = 0`、`Warning = 1`、`Information = 2`） |
+| 条件付き書式 | `CfMatchKind`（`DifferentialFormat = 0`、`ColorScale = 1`、`DataBar = 2`、`IconSet = 3`） |
 | テーマとスタイル | `ColorContext`、`ColorResolution`、`ThemeSource`、`EffectiveStyleSource` |
 | 画像と描画 | `ImageFormat`、`DrawingObjectKind`、`AnchorKind`、`AnchorEditAs` |
+| ピボットテーブル | `PivotAxis`、`PivotAggregation`、`PivotShowValuesAs`、`PivotFilterType`、`PivotFilterValueKind`、`PivotDateGrouping`、`PivotCalendar`、`PivotReportLayout`、`PivotCellKind`、定数 `PIVOT_SHOW_AS_BASE_PREVIOUS` / `PIVOT_SHOW_AS_BASE_NEXT` |
 | テキスト照合 | `CollationStrength`（`Compare = 0`、`Dynamic = 1`、`ClassicExact = 2`） |
-| ワークブック状態 | `CalcMode`、`SheetVisibility`、`WorkbookFormat` |
+| ワークブック状態 | `CalcMode`（ファイルに往復保存するだけの情報で、エンジンはどのモードでも未計算のセルを再計算する）、`SheetVisibility`、`WorkbookFormat`、`ExternalLinkKind` |
+| ログ | `LogLevel`（`Debug = 0`、`Info = 1`、`Warn = 2`、`Error = 3`、`Off = 4`） |
 
 フィルター関連の enum は対応する OOXML の序数に従います。`ImageFormat` は `Unknown` に加えて `Png`、`Jpeg`、`Gif`、`Bmp` を表します。全メンバーは宣言ファイルを参照してください。
 
@@ -108,7 +103,7 @@ try {
 
 `delete()` は必ず呼んでください。
 
-## コンテナ形式
+## コンテナ形式 {#container-format}
 
 `save()` は常に OOXML `.xlsx` を書き出します。`saveAs(format)` で書き出すコンテナ形式を明示できます。
 
@@ -157,9 +152,9 @@ if (!cleared.ok) throw new Error(cleared.message)
 
 `pinnedNow()` は `{ status, now }` を返します。`now` は固定中なら `CivilTime` オブジェクト、ホストの時計に従う場合や呼び出しが失敗した場合は `null` です。`setPinnedNow()` は `year` 1900–9999、`month` 1–12、月ごとの実在する日、`hour` 0–23、`minute` / `second` 0–59 を検証します。不正な値は正規化せず、失敗した `Status` を返します。値はタイムスタンプではなく年月日・時分秒のフィールドとして保持するため、タイムゾーンの解釈はありません。固定の設定・解除ではキャッシュ済みの数式値を再計算しないため、必要に応じて `recalc()` を明示的に呼び出してください。固定はファイル状態ではなくワークブックのモデル状態です。保存時には記録されず、読み込み直後のワークブックは固定されていません。
 
-## プロファイルと数式テキスト
+## プロファイルと数式テキスト {#profiles-and-formula-text}
 
-既定の Excel プロファイルは `win-365-en_US` です。プロファイルはワークブックの実行時状態であり、保存されません。読み込み後にも `setExcelProfileId()` を呼び出してください。利用できるプロファイル ID は 28 個で、14 個のロケールに対して Mac / Windows 版があります。ロケール情報はすべての `mac-*` と `win-365-ja_JP` で Excel の実測値、残り 13 個の Windows プロファイルは推定値です。`localeFacts().facts.collationMeasured` は別の項目で、テキスト照合の実測値を持つのは `mac-*` だけです。
+新しいワークブックは `win-365-en_US` プロファイルを使います。プロファイルはワークブックの状態で、ロケールに依存する評価、数値と日付の表示、テキスト比較、Excel 上のローカライズされた名前を決めます。数式の入力は英語の正規形のままなので、画面に表示した数式は下記のヘルパーで変換してから保存します。プロファイル ID はファイルに書き込まれないため、読み込み後に `setExcelProfileId()` で設定し直してください。ID は `{mac,win}-365-{ja_JP,en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}` の 28 個です。ロケール情報はすべての `mac-*` と `win-365-ja_JP` で Excel の実測値、残り 13 個の Windows プロファイルは推定値です。
 
 `createDefault()` は Calibri 11 を含む通常の 1 シート既定値を使います。`createForProfile(profileId)` は選択したプロファイルを記録し、本文用フォントと必要なロケールのふりがな用フォント、ローカライズされた `Normal` スタイルと最初のシート名、セル XF の配置、ふりがな設定、ページ余白、Mac の行の高さと基本列幅を設定します。テーマパートは書き出さないため、新しいワークブックは既定の Office テーマとして読み取られます。Windows の行と列の寸法はエンジンの既定値を使います。
 
@@ -184,33 +179,119 @@ try {
 
 `localizeFormula()` は関数名、引数と配列の区切り文字、小数点、真偽値名、エラー名を変換します。文字列、引用符付きシート名、外部修飾子、構造化参照の角括弧は保持します。`canonicalizeFormula()` は逆方向に変換します。どちらもテキストの変換だけを行い、数式を検証したりワークブックに設定したりはしません。評価時の挙動は `setExcelProfileId()` で選び、`setFormula()` には英語の不変な保存形式を渡してください。
 
-`functionMetadata()` は、保存用の関数名、引数の数、対応状況など、ロケールに依存しない構造情報だけを返します。人が読むシグネチャと説明文のフィールドは現在空です。画面向けの説明はホスト側の `mergeFunctionMetadata()` で補えます。このヘルパーの BCP-47 UI ロケールは、エンジンのプロファイル ID とは別です。`localeFacts()` は選択したプロファイルの区切り文字、真偽値名、日付順、通貨、ローカライズ済みエラー名を返します。
+`localeFacts()` は選択したプロファイルの区切り文字、真偽値名、日付順、通貨、ローカライズ済みエラー名を返します。`facts.collationMeasured` が true になるのは `mac-*` だけで、`win-365-ja_JP` を含む Windows プロファイルでは false です。
 
-`compareText(a, b, strength, profileId)` はテキストの順序の符号（`-1`、`0`、`1`）を `order` に返します。`CollationStrength` は通常の比較、動的配列の検索、従来の完全一致検索で使うテキストの折りたたみ方を選びます。`collationClasses(values, strength, profileId)` は `Value` ごとの密な `classIds` とクラス数を返します。1 回の呼び出しの中で同じ ID になるのは値の種類も一致する場合だけで、ID は SORT の順序（数値、テキスト、真偽値、エラー、空白）に並びます。テキストは選択した強度で比較し、`-0` と `0` は同じ数値、空白は 1 クラスです。ID は呼び出しの外では意味を持たないため、保存済みの値と現在の値を同じ呼び出しで分類して選択を照合してください。
+`compareText(a, b, strength, profileId)` は `{ status, order }` を返し、`order` は `-1`、`0`、`1` のいずれかです。`collationClasses(values, strength, profileId)` は `{ status, classIds, classCount }` を返します。ID は入力の `Value` ごとに 1 つ、SORT の順序で昇順に振られ、その呼び出しの中だけで意味を持ちます。`CollationStrength` ごとの比較規則とクラスの規則は [テキスト照合](/ja/compatibility/text-collation) を参照してください。
 
-## 主なワークブックメソッド
+`functionMetadata(name)` は、保存用の関数名、引数の数、対応状況など、ロケールに依存しない構造情報だけを返します。人が読むシグネチャと説明文のフィールドは空です。`functionNames()` は関数の一覧を返します。画面向けの説明はホスト側で `mergeFunctionMetadata(base, entry, locale)` を使って補います。このヘルパーの BCP-47 UI ロケールは、エンジンのプロファイル ID とは別です。
+
+## 関数とメソッド {#main-workbook-methods}
+
+インストール済みの `@libraz/formulon` に含まれる `dist/formulon.d.ts` から生成した一覧です。`Module.` で始まる名前は `createFormulon()` が返すオブジェクトのメンバー、`Workbook.` で始まる名前は静的ファクトリ、`createFormulon` と `mergeFunctionMetadata` はパッケージのエクスポートで、それ以外はすべて `Workbook` インスタンスのメソッドです。説明列は宣言に付いたドキュメントコメントの最初の 1 文で、API 自身の英語のテキストをそのまま載せています。コメントのない宣言では空欄です。
+
+### ライブラリ、診断、ログ {#library}
+
+<ApiReferenceTable surface="wasm" family="library" />
+
+### ワークブックのライフサイクルと入出力 {#lifecycle}
+
+<ApiReferenceTable surface="wasm" family="lifecycle" />
+
+### シートと構造 {#sheets}
+
+<ApiReferenceTable surface="wasm" family="sheets" />
+
+### セル {#cells}
+
+<ApiReferenceTable surface="wasm" family="cells" />
+
+### 再計算 {#calculation}
+
+<ApiReferenceTable surface="wasm" family="calculation" />
+
+### 読み取り専用の評価 {#evaluation}
+
+<ApiReferenceTable surface="wasm" family="evaluation" />
+
+### プロファイル、ロケール、テキスト {#profiles}
+
+<ApiReferenceTable surface="wasm" family="profiles" />
+
+### 定義名 {#names}
+
+<ApiReferenceTable surface="wasm" family="names" />
+
+### テーブル {#tables}
+
+<ApiReferenceTable surface="wasm" family="tables" />
+
+### 依存関係、スピル、外部リンク {#dependencies}
+
+<ApiReferenceTable surface="wasm" family="dependencies" />
+
+### シートの表示と保護 {#view}
+
+<ApiReferenceTable surface="wasm" family="view" />
+
+### 行、列、ジオメトリ {#rows-columns}
+
+<ApiReferenceTable surface="wasm" family="rows-columns" />
+
+### 表示テキスト {#display}
+
+<ApiReferenceTable surface="wasm" family="display" />
+
+### スタイル {#styles}
+
+<ApiReferenceTable surface="wasm" family="styles" />
+
+### テーマと色 {#themes}
+
+<ApiReferenceTable surface="wasm" family="themes" />
+
+### セルの結合 {#merges}
+
+<ApiReferenceTable surface="wasm" family="merges" />
+
+### コメントとハイパーリンク {#comments-links}
+
+<ApiReferenceTable surface="wasm" family="comments-links" />
+
+### スレッド形式のコメントと人物 {#threaded-comments}
+
+<ApiReferenceTable surface="wasm" family="threaded-comments" />
+
+### オートフィルター {#filters}
+
+<ApiReferenceTable surface="wasm" family="filters" />
+
+### データの入力規則 {#validation}
+
+<ApiReferenceTable surface="wasm" family="validation" />
+
+### 条件付き書式 {#conditional-formats}
+
+<ApiReferenceTable surface="wasm" family="conditional-formats" />
+
+### 画像と描画オブジェクト {#images}
+
+<ApiReferenceTable surface="wasm" family="images" />
+
+### 印刷設定とページ分割 {#print}
+
+<ApiReferenceTable surface="wasm" family="print" />
+
+### ピボットテーブル {#pivots}
+
+<ApiReferenceTable surface="wasm" family="pivots" />
+
+### ピボットキャッシュ {#pivot-caches}
+
+<ApiReferenceTable surface="wasm" family="pivot-caches" />
+
+## メソッドの補足 {#method-notes}
 
 `cellCount()` / `cellAt()` は、書式だけの空白セル、`setBlank` で書き込んだセル、スピル先のセルを含む書き込み済み座標を列挙します。未書き込みの隙間は含まず、インデックスは連続した整数で `(row, col)` の昇順です。列挙中はシートを変更しないでください。値や数式のある範囲の列挙とは対象が異なります。詳しくは [ワークブック操作](/ja/workbook/operations)を参照してください。
-
-| 分類 | メソッド |
-| --- | --- |
-| シート | `addSheet`, `removeSheet`, `renameSheet`, `moveSheet`, `sheetCount`, `sheetName` |
-| セル | `setNumber`、`setBool`、`setError`、`setText`、`setBlank`、`setFormula`、`getValue`、`getFormula`、`getFormulaR1C1`、`localizeFormula`、`canonicalizeFormula`、`cellCount`、`cellAt`、`getLambdaText`、ふりがなの取得 / 設定 |
-| 範囲 | `getCellsInRange`、`getMergesInRange`、`setRangeXfIndex`、`listInvalidCells` |
-| 計算 | `recalc`、`recalcParallel`、`partialRecalc`、`evaluateFormulaText`、`evaluateFormulaArray`、`evaluateConditionalFormula`、`setIterative`、`getIterative`、`setIterativeProgress`、`calcMode`、`setCalcMode`、`pinnedNow`、`setPinnedNow`、`clearPinnedNow`、`paginate` |
-| 保存 | `save`, `saveAs`, `saveWithDiagnostics`, `readDiagnostics` |
-| プロファイルと数式テキスト | `excelProfileId`、`setExcelProfileId`、`localizeFunctionName`、`canonicalizeFunctionName`、`localizeFormula`、`canonicalizeFormula`、`localeFacts`、`compareText`、`collationClasses` |
-| 定義名 / テーブル | `definedNameCount`, `definedNameAt`, `setDefinedName`, `tableCount`, `tableAt` |
-| 構造 | `insertRows`, `deleteRows`, `insertCols`, `deleteCols` |
-| 寸法とレイアウト | `getCellRectPt`、`getColumnWidthPt`、`getRowHeightPt`、`getWidthModel`、`columnCharsToPt`、`columnPtToChars`、シート表示、保護、行 / 列レイアウト、型付き印刷設定 |
-| 表示 | `getDisplayText`、`formatValue` |
-| テーマとスタイル | `getTheme`、`setThemeColors`、`setThemeFonts`、`setThemeScriptFont`、`resolveColor`、`getEffectiveStyle`、行 / 列スタイルの設定と解除、`getCellXfIndex`、`setCellXfIndex`、`clearCellXfIndex`、`setRangeXfIndex`、`rangeStyleBases`、`remapRangeStyle`、`snapshotRangeStyle`、`restoreRangeStyle`、`getFont` / `addFont`、`setFont`、`setDefaultFont`、`setCellStyle`、`removeCellStyle` |
-| フィルター | `getAutoFilter` / `setAutoFilter` / `removeAutoFilter`、`applyAutoFilter`、`clearAutoFilter`、`evaluateAutoFilter`、テーブル向けの対応 API |
-| 入力規則 | `getValidations`、`addValidation`、`removeValidationAt`、`clearValidations`、`validateValue`、`listInvalidCells` |
-| スレッドコメント | `getThreadedComments`、`addThreadedComment`、`editThreadedComment`、`setThreadResolved`、`removeThreadedComment`、`getPersons`、`addPerson`、`removePerson` |
-| 画像と描画 | `probeImage`、`listDrawingObjects`、`getImage`、`insertImage`、`removeImage` |
-| ワークブックデータ | コメント（`getCommentResult`）、ハイパーリンク、条件付き書式、ピボットレイアウトとキャッシュ項目フィルター、外部リンク |
-| 内部参照 | `precedents`, `dependents`, `functionMetadata`, `functionNames`, `spillInfo` |
 
 `setCellPhoneticRuns()` は、注釈対象テキストを UTF-16 の位置で順序付けた、重ならない区間に分割して設定します。`setCellPhoneticProperties()` は、読み仮名とは独立してフォント、かな種別、配置を変更します。セルの値を書き換えると、区間とプロパティの両方が消去されます。
 
@@ -224,19 +305,19 @@ try {
 
 `setRangeXfIndex(sheet, firstRow, firstCol, lastRow, lastCol, xfIndex)` はセル書式（XF）インデックスを両端を含む矩形へ適用し、存在しないセルを書式付きの空セルとして作成します。
 
-`setColumnStyle()` / `clearColumnStyle()` と `setRowStyle()` / `clearRowStyle()` は、行または列のほかの属性を残してセル書式 XF だけを設定または解除します。インデックス `0` は既定 XF です。`clearCellXfIndex()` はセルの明示的な割り当てを解除し、空白セルが行、列、ワークブックの既定値を継承できるようにします。`setCellXfIndex(..., 0)` は明示的な Normal XF を残すため、解除とは異なります。`getEffectiveStyle().source` で `Cell` と `Row`、`Column`、`Default` を区別できます。
+行と列のスタイル、`clearCellXfIndex()` と `setCellXfIndex(..., 0)` の違い、`rangeStyleBases()` → `remapRangeStyle()` による属性だけの変更と、その取り消しに使う `snapshotRangeStyle()` / `restoreRangeStyle()` は [ワークブック操作](/ja/workbook/operations) で説明しています。`getEffectiveStyle().source` は、スタイルの出どころが `Cell`、`Row`、`Column`、`Default` のどれかを返します。
 
-`rangeStyleBases()` は選択範囲のセルが実際に解決するセル XF のインデックスを昇順で返します。各基底を変更した XF に置き換えて `remapRangeStyle()` に渡すと、値と数式を保った属性だけの変更になります。`snapshotRangeStyle()` は対象の行 / 列スタイルと保存済みセルの割り当てを取得し、`restoreRangeStyle()` は値、数式、ふりがな、コメントを変更せずに復元します。選択範囲の規則と標準的な操作手順は [ワークブック操作](/ja/workbook/operations) を参照してください。
-
-`setFormula()` は不正な数式を `kParserUnexpectedToken` として拒否し、失敗前のセル状態を保ちます。保存済みファイルに不正な数式文字列が含まれている場合は読み込み自体は成功しますが、再計算後のセル値は文字どおりの `#NAME?` になります。`evalFormula()` のアドホック評価は `#NAME?` を値として返し、成功ステータスのままです。
+`setFormula()` は不正な数式を `kParserUnexpectedToken` として拒否し、失敗前のセル状態を保ちます。保存済みファイルに不正な数式文字列が含まれている場合は読み込み自体は成功しますが、再計算後のセル値は `#NAME?` エラーになります。`evalFormula()` のアドホック評価は `#NAME?` を値として返し、成功ステータスのままです。
 
 `getCellsInRange(sheet, range, cursor, limit)` は、行・列の順序で `{ status, cells, nextCursor }` を返します。各 `RangeCell` は `row`、`col`、`formula`、`value` を持ちます。最初のページでは `cursor` を省略し、完了して `nextCursor` が `null` になるまで値を次の呼び出しへ渡してください。`limit` の省略または 0 は最大 65,536 件を選びます。数式セル、空白でない値、スピルの仮想セルを含み、スタイルだけを持つ空セルは含みません。`listInvalidCells()` も同じカーソルと上限を使います。
 
 寸法 API の `GeometryMode.Display` は 96 DPI の画面向けモデル、`GeometryMode.Print` はページ分割に使う DPI に依存しないモデルを選びます。表示 API は日付シリアルが暦の範囲外になる場合など、値が書式の表現可能な範囲を外れると `DisplayStatus.Overflow` と `########` を返します。書式コードが不正な場合は `DisplayStatus.InvalidFormat` として General 表示へフォールバックします。
 
-`setCellStyle(record)` は名前付きセルスタイルを追加または置換します。JavaScript のレコードは `{ name, xfId?, builtinId?, iLevel?, hidden?, customBuiltin? }` です。省略した項目は `xfId: 0`、カスタムスタイルを表す `builtinId`、レベル 0、両方のフラグ `false` になります。`xfId` は名前付きスタイルの `cellStyleXfs` テーブルを指し、セル単位の `cellXfs` テーブルは指しません。`getEffectiveStyle()` は、セル、行、列、ワークブック既定値のどこから書式を解決したかと、テーマを解決した色を返します。
+`setCellStyle(record)` は名前付きセルスタイルを追加または置換します。JavaScript のレコードは `{ name, xfId?, builtinId?, iLevel?, hidden?, customBuiltin? }` です。省略した項目は `xfId: 0`、カスタムスタイルを表す `builtinId`、レベル 0、両方のフラグ `false` になります。`xfId` は名前付きスタイルの `cellStyleXfs` テーブルを指し、セル単位の `cellXfs` テーブルは指しません。
 
-`getTheme()` は 4 つのテーマ書体に加えて、テーマ内の順序で `majorScripts` と `minorScripts` を返します。テーマパートがない場合も、既定の Office テーマにある 47 個のスクリプト項目を返します。`setThemeScriptFont(major, script, typeface)` は 1 つのスクリプトを変更または追加します。読み取り時は、`Jpan` の項目が対応する東アジア書体として使われるのは、そのフォントセットの `<a:ea typeface>` が空の場合だけです。`<a:ea typeface>` に明示値があれば、そちらが優先されます。テーマパートがない場合は変更前に既定の全項目を作成し、`script` は 4 個の ASCII 英字、`typeface` は空でない文字列にしてください。
+`getTheme()` は 4 つのテーマ書体に加えて `majorScripts` と `minorScripts` を返し、`setThemeScriptFont(major, script, typeface)` はスクリプトの項目を 1 つ変更または追加します。既定値と `Jpan` へのフォールバック規則は [表示とレイアウト](/ja/workbook/presentation) を参照してください。
+
+条件付き書式のレコードの `dataBar.direction` は、`0` がシートの読み方向、`1` が左から右、`2` が右から左です。評価結果では同じ値が `CfMatch.barDirection` に入ります。`iconSet.floor` は下限を表す `CfValueObjectInput` で、ルール追加時は省略でき、アイコンセット規則を読み出すと必ず含まれます。
 
 `pivotFieldAddItemAt(sheet, pivotIdx, fieldIdx, cacheIndex, visible)` は、結び付いたキャッシュ項目の共有項目インデックスで手動フィルター項目を指定します。空白のピボット項目を指定できる唯一の形式です。`pivotFieldAddItem()` に空の名前を渡す方法は文字列比較なので空白の項目には一致しません。まだ解決できないインデックスは受け付けますが、フィルターは適用しません。
 
@@ -253,8 +334,6 @@ AutoFilter の条件と行の表示状態は別に管理します。`evaluateAut
 
 `evaluateFormulaArray(sheet, row, col, formula)` は配列全体を `EvalArrayResult`（`rows` × `cols` の `cells`）として返します。範囲を指す定義名は配列として評価され、スピル先の仮想セルも列挙されます。
 :::
-
-`INDIRECT(ref_text, FALSE)` は R1C1 文法を選択します。絶対参照は `R5C2` のように書き、相対軸は `R[-1]C` のように数式を置いたセルを基準に解決します。`R` または `C` だけを指定すると現在の行または列を表し、1 軸だけを持つ参照の端点はもう一方の軸全体を対象にします（`R5` は `5:5` と同じく 5 行全体です）。`a1` 引数は別文法への切り替えを追加するのではなく文法を選択するため、`FALSE` に A1 文字列を渡した場合と、`TRUE` に R1C1 文字列を渡した場合は `#REF!` になります。相対 R1C1 参照を、基準となる数式セルを持たないその場限りの評価入口から評価した場合も `#REF!` になります。
 
 以下の図は、同じワークブックに対する 3 つの経路を対比したものです。
 

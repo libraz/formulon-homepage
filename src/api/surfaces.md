@@ -3,23 +3,23 @@
 | Surface | Package | Runtime |
 | --- | --- | --- |
 | JavaScript / WASM | `@libraz/formulon` | Browser, worker, Node |
-| Native Node | `@libraz/formulon-native` | Node.js N-API addon. Not published to npm — build from a source checkout and stage the binary for the deployment OS / architecture. Release CI targets darwin-arm64, linux-x64, and linux-arm64. See [Native Node](/runtimes/node-native) |
-| Python | `formulon` | py3 wheel using wasmtime |
-| CLI | `formulon-cli-<os>-<arch>` | Standalone binary |
-| C ABI | headers and native library | Custom hosts |
+| Native Node | `@libraz/formulon-native` | Node.js N-API addon. Not published to npm; build it from a source checkout ([Native Node](/runtimes/node-native)). Release CI builds darwin-arm64, linux-x64, and linux-arm64 |
+| Python | `formulon` | `py3-none-any` wheel run by `wasmtime` |
+| CLI | `formulon-<version>-<os>-<arch>.tar.gz` on GitHub Releases | Standalone `formulon` binary for darwin-arm64, linux-x64, linux-arm64 |
+| C ABI | `src/c_api/formulon_c.h` + `formulon_static` (or shared `formulon`) | Custom hosts, built from source |
 | MCP | `@libraz/formulon-mcp` | stdio MCP server for agents |
 | Spreadsheet UI | `@libraz/formulon-cell` | Browser spreadsheet UI kit |
 
-All surfaces use the same calculation core. Packaging and host differences can also include documented compatibility gaps, so compare the stated surface boundaries when exact parity matters.
+All surfaces use the same calculation core. They differ in packaging, host language, memory ownership, and the method differences listed [below](#method-differences).
 
 <DiagramLayers label="C++17 calculation core -> C ABI -> WASM / Native Node / Python / CLI; WASM -> formulon-cell and formulon-mcp" :layers="[
   { title: 'Core', nodes: ['C++17 calculation core'] },
-  { title: 'C ABI', nodes: ['headers + native library'] },
+  { title: 'C ABI', nodes: ['formulon_c.h + core library'] },
   { title: 'Surfaces', nodes: [
       'WASM (@libraz/formulon)',
       'Native Node (packages/npm-native)',
-      { label: 'Python (formulon)', note: 'geometry/theme, typed filters + validation, comments/images' },
-      'CLI (formulon-cli-<os>-<arch>)'
+      'Python (formulon)',
+      'CLI (formulon)'
     ]
   },
   { title: 'Built on WASM', nodes: ['formulon-cell (UI kit)', 'formulon-mcp (stdio agent server)'] }
@@ -35,23 +35,36 @@ A packaging boundary on top of the shared C++17 engine. Every surface speaks to 
 
 | Surface | Maturity | Notes |
 | --- | --- | --- |
-| WASM | broadest JS API | Full generated `formulon.d.ts`, browser and Node support |
-| Python | broad workbook API | wasmtime-backed wrapper, context-manager workbook lifecycle |
+| WASM | broadest JS API | Generated `formulon.d.ts`; browser, worker, and Node |
+| Python | broad workbook API | `wasmtime`-backed wrapper; `with` block releases the workbook |
 | CLI | focused tools | `eval`, `recalc`, `dump`, `paginate` |
-| Native Node | shared calculation API | Shared Workbook methods through a native N-API addon, including geometry and theme, typed AutoFilters, validation checks, comments and images, phonetic guides, iterative read-back, three-state visibility, print authoring, range XF assignment, and cache-index pivot items; within the JavaScript bindings, `createTable`, `updateTable`, `removeTable`, AutoFilter XML, and `addCellStyleXf` remain WASM-only |
-| C ABI | binding contract | Stable low-level contract for packaged surfaces |
+| Native Node | WASM method set, native binary | Same result envelopes and value semantics as WASM, minus the rows marked below |
+| C ABI | binding contract | Every entry point the other surfaces wrap |
 | MCP | agent-facing surface | Built on top of WASM; allowlisted method dispatch |
 | `formulon-cell` | UI kit | Embeddable spreadsheet surface with TypeScript, React, and Vue entrypoints |
 
-::: info Python parity boundary
-Python has broad workbook parity, including geometry and effective-style/theme access, typed sheet and table AutoFilters, validation checks, whole-array `evaluate_formula_array()`, conditional-format `evaluate_cf_formula()`, phonetic text get/set, comment enumeration (`comment_count()` / `get_comments()`), image and drawing-object access, `paginate()`, iterative-settings read-back, three-state sheet visibility, typed print-setting authoring, range XF assignment, and cache-index pivot items. Explicit omissions are the general scalar `evaluate_formula_text()` and the iterative-progress callback; Python does not mirror every C ABI entry point.
-:::
+## Method differences
 
-Python also exposes visual conditional-format payloads, DXFs, pivot report layout, pivot-cache worksheet-source access, and the same `allow_blank=False` default for omitted data-validation input. See [presentation](/workbook/presentation), [filters and validation](/workbook/filters-validation), and [comments and images](/workbook/comments-images) for the typed workbook surfaces.
+The three library bindings share the workbook model, geometry, themes and styles, typed AutoFilters, validation, comments, images, PivotTables, print settings, and profile helpers. These are the rows where they differ:
+
+| Capability | WASM | Native Node | Python |
+| --- | --- | --- | --- |
+| Release a workbook | `delete()` | `dispose()` (GC finalizer as fallback) | `close()` or a `with` block |
+| Memory estimate | — | `memoryUsage()` | `memory_usage()` |
+| Parallel recalc | `recalcParallel()`; workers only on `@libraz/formulon/threads` | `recalcParallel()` | — |
+| Scalar read-only evaluation | `evaluateFormulaText()` | `evaluateFormulaText()` | — (use `evaluate_formula_array()`) |
+| Iterative-progress callback | `setIterativeProgress()` | `setIterativeProgress()` | — |
+| Log sink | `setLogSink()` | `setLogSink()` | — (`set_log_min_level()` only) |
+| Table authoring | `createTable()` / `updateTable()` / `removeTable()` | — | `table_create()` / `table_update()` / `table_remove()` |
+| Worksheet AutoFilter XML | `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` | — | `get_auto_filter_xml()` / `set_auto_filter_xml()` |
+| Named-style XF records | `addCellStyleXf()` | — | `add_cell_style_xf()` |
+| Bulk style registration, enable-only iterative toggle | — | — | `add_batch()`, `set_iterative_enabled()` |
+
+The CLI exposes a fixed subset: `--threads` for parallel recalc, `--iterative`, and the four subcommands.
 
 ## When surfaces disagree
 
-If two surfaces produce different values for the same workbook and the same profile, treat it as a bug or a documented compatibility gap. The parity runner under `make parity-test` exercises shared fixtures across available channels and reports both *missing* and *mismatched* results. Shared calculation methods use the same result envelopes and value semantics across Native Node and WASM; the remaining method differences are the explicit WASM-only authoring groups listed above. Other differences are operational, such as native threads, copy costs, and the WASM memory ceiling.
+If two surfaces produce different values for the same workbook and the same profile, treat it as a bug or a documented compatibility gap. The repository's `make parity-test` runner evaluates shared fixtures through the CLI, the npm WASM package, and the Python wheel, and reports channels that were not built separately from mismatched values. Other differences are operational, such as native threads, copy costs, and the WASM memory ceiling.
 
 ## Read next
 
