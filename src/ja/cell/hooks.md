@@ -42,8 +42,12 @@ import {
   useSpreadsheet,
   useSpreadsheetEvent,
   type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
 } from '@libraz/formulon-cell-react'
 import '@libraz/formulon-cell/styles.css'
+
+// A module constant keeps the prop stable while the inspector re-renders.
+const ui: SpreadsheetUiOptions = { profile: 'embedded', features: { shortcuts: true, clipboard: true } }
 
 export function SheetWithInspector() {
   const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
@@ -74,7 +78,7 @@ export function SheetWithInspector() {
     <section className="sheet-layout">
       <div className="sheet-host">
         <Spreadsheet
-          ui={{ profile: 'embedded', features: { shortcuts: true, clipboard: true } }}
+          ui={ui}
           toolbar={false}
           locale="ja"
           onReady={setInstance}
@@ -130,7 +134,7 @@ export function SheetWithInspector() {
 
 `onReady` が呼ばれる前もフックを常に呼び出します。インスタンスの準備後にインスペクターだけを切り替え、`<Spreadsheet>` 要素はマウントしたままにします。
 
-上のセル数は `selection.range` にある主選択範囲の値です。非連続選択で全範囲の合計が必要な場合は、`selection.extraRanges` も明示的に加算します。`Ctrl` または `Cmd` を押しながらドラッグすると別の範囲を追加できます。`Ctrl+Enter` / `Cmd+Enter` は現在の編集内容を選択したすべての範囲へ書き込みます。リボンの書式設定とクリアもすべての範囲を処理し、各範囲を現在のポリシーで認可します。`selectionChange` イベントが返すのはアクティブセル、アンカー、主選択範囲だけで、`extraRanges` はアダプターのフックとストアの状態から取得します。
+上のセル数は `selection.range` にある主選択範囲の値です。非連続選択で全範囲の合計が必要な場合は、`selection.extraRanges` も明示的に加算します（ユーザーは `Ctrl` または `Cmd` を押しながらドラッグして範囲を追加します）。`selectionChange` イベントが返すのはアクティブセル、アンカー、主選択範囲だけで、`extraRanges` はアダプターのフックとストアの状態から取得します。
 
 ## Vue: 同じインスペクターを SFC で作る
 
@@ -146,9 +150,11 @@ import {
   useSpreadsheet,
   useSpreadsheetEvent,
   type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
 } from '@libraz/formulon-cell-vue'
 import '@libraz/formulon-cell/styles.css'
 
+const ui: SpreadsheetUiOptions = { profile: 'embedded', features: { shortcuts: true, clipboard: true } }
 const instance = shallowRef<SpreadsheetInstance | null>(null)
 const lastEdit = ref<string | null>(null)
 const rejection = ref<string | null>(null)
@@ -209,7 +215,7 @@ onBeforeUnmount(() => {
   <section class="sheet-layout">
     <div class="sheet-host">
       <Spreadsheet
-        :ui="{ profile: 'embedded', features: { shortcuts: true, clipboard: true } }"
+        :ui="ui"
         :toolbar="false"
         locale="ja"
         style="width: 100%; height: 420px"
@@ -315,7 +321,7 @@ return (
 )
 ```
 
-React では `strings` が `null` の間にフォールバックを使います。Vue では、インスタンスが準備されるまで空のフォールバック辞書が返るため、テンプレートまたは算出プロパティで `strings.value.statusBar?.ready` のように未定義のラベルを参照しないよう確認します。
+React では `strings` が `null` の間にフォールバックを使います。Vue では、インスタンスが準備されるまで空のフォールバック辞書が返るため、テンプレートまたは算出プロパティで `strings.value.statusBar?.ready` のように未定義のラベルを参照しないよう確認します。どちらのアダプターでも、インスタンスが準備されるまで `locale` は `'ja'` を返します。上の例のように、準備ができるまではロケールに連動するコントロールを無効にしてください。
 
 ## ユースケース: スプレッドシートの状態からホスト表示を導出する
 

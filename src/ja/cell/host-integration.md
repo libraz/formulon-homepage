@@ -24,9 +24,7 @@ function downloadWorkbook() {
 }
 ```
 
-新しいワークブックでは `workbook` を省略して `Spreadsheet.mount()` に作成させるか、先にデータを投入するために `WorkbookHandle.createDefault()` を明示的に呼びます。`setWorkbook(nextWorkbook)` を使うと、ホスト要素を作り直さずにワークブックを差し替えられます。
-
-初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
+新しいワークブックでは `workbook` を省略して `Spreadsheet.mount()` に作成させるか、先にデータを投入するために `WorkbookHandle.createDefault()` を明示的に呼びます。`setWorkbook(nextWorkbook)` を使うと、ホスト要素を作り直さずにワークブックを差し替えられます。インスタンスがどのハンドルを破棄するかは [インストール](/ja/cell/install#host-sizing) を参照してください。
 
 ## Watch Window のワークブック名を更新する
 
@@ -74,7 +72,7 @@ function disposeHostBindings() {
 }
 ```
 
-`uploadStatus` プロパティと `setUploadStatus()` は、ホストの保存状態をステータスバーへ表示するために使います。保存を開始したか、成功したかはホストが判断します。
+マウントオプションの `uploadStatus`（React と Vue ではプロパティ）と `setUploadStatus()` は、ホストの保存状態をステータスバーへ表示するために使います。保存を開始したか、成功したかはホストが判断します。
 
 ```ts
 const instance = await Spreadsheet.mount(host, { uploadStatus: 'saved' })
@@ -111,25 +109,9 @@ if (result.status === 'rejected') reportRejectedChanges(result.rejected)
 
 ユーザーが元に戻す操作に含める場合は `history: 'record'`、サーバーなどから取得した新しいデータ一式として扱う場合は `history: 'reset'` を使います。結果には `applied`、`rejected`、`status`、`revision` が含まれ、適用済みの結果は `changeBatch` でも通知されます。拒否の表示には戻り値か `instance.commands.subscribe()` を使ってください。
 
-## 閲覧専用または入力フォームを更新する
+## ユーザーの権限に合わせる
 
-`viewerPolicy()` は選択とコピーを許可する閲覧用に向いています。`fixedFormPolicy()` は、ホストが渡した範囲で値入力、値の消去、貼り付け、オートフィルを開始時から許可します。両方ともコアパッケージから公開され、React / Vue アダプターのプロパティにも渡せます。
-
-```ts
-import { fixedFormPolicy } from '@libraz/formulon-cell'
-
-const editable = [{ sheet: 0, r0: 1, c0: 1, r1: 12, c1: 3 }]
-const instance = await Spreadsheet.mount(host, {
-  policy: fixedFormPolicy(editable),
-  viewport: {
-    range: { sheet: 0, r0: 0, c0: 0, r1: 14, c1: 4 },
-    tabNavigation: 'editable',
-    tabBoundary: 'stop',
-  },
-})
-```
-
-別の権限モデルでは `operations`、`editable`、`selection`、`copy` を持つ `InteractionPolicy` を指定します。ユーザーの権限が変わったら `setPolicy()` を呼びます。
+操作ポリシーはアプリケーションの状態として保持し、ユーザーの権限が変わったら `instance.setPolicy()` を呼びます。たとえば閲覧者には `viewerPolicy()`、編集者には `fixedFormPolicy(ranges)` を渡します。ヘルパーと `InteractionPolicy` のフィールドは [オプション](/ja/cell/options#operation-policy) で説明しています。
 
 <CellEmbedDemo scenario="host-sync" />
 
@@ -158,7 +140,7 @@ instance.print('pdf')
 
 `PrinterProfile.printableBounds` の単位はインチです。ネイティブ API が用紙オプションを返す場合は `printerProfilesFromHostDevices()` を使えます。プリンターの検出と更新のタイミングはホストが管理します。受け付ける用紙サイズと向きは公開された `PrinterProfile` 型で確認できます。
 
-## ネイティブの画面キャプチャ
+## ネイティブの画面キャプチャ {#native-screen-capture}
 
 挿入 > スクリーンショット > 画面の領域の操作は、ホストが渡した `captureScreenClip` フックを呼び出せます。ブラウザでは省略でき、ネイティブシェルでは画像 URL または `{ src, alt }` を返します。
 

@@ -24,9 +24,7 @@ function downloadWorkbook() {
 }
 ```
 
-For a new workbook, omit `workbook` and let `Spreadsheet.mount()` create one, or create it explicitly with `WorkbookHandle.createDefault()` when the host needs to seed data first. `setWorkbook(nextWorkbook)` replaces the active workbook without rebuilding the host element.
-
-A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.
+For a new workbook, omit `workbook` and let `Spreadsheet.mount()` create one, or create it explicitly with `WorkbookHandle.createDefault()` when the host needs to seed data first. `setWorkbook(nextWorkbook)` replaces the active workbook without rebuilding the host element. [Install](/cell/install#host-sizing) explains which handles the instance disposes.
 
 ## Live workbook name in Watch Window
 
@@ -74,7 +72,7 @@ function disposeHostBindings() {
 }
 ```
 
-The optional `uploadStatus` prop and `setUploadStatus()` method let the status bar reflect a host save state. The host decides when a save starts and whether it succeeded.
+The optional `uploadStatus` mount option (a prop in React and Vue) and the `setUploadStatus()` method let the status bar reflect a host save state. The host decides when a save starts and whether it succeeded.
 
 ```ts
 const instance = await Spreadsheet.mount(host, { uploadStatus: 'saved' })
@@ -111,25 +109,9 @@ if (result.status === 'rejected') reportRejectedChanges(result.rejected)
 
 Use `history: 'record'` when the update belongs in the user's undo flow. Use `history: 'reset'` for a fresh trusted snapshot from a server or another host source. The result reports `applied`, `rejected`, `status`, and `revision`; applied results also trigger `changeBatch`. Handle rejection using the returned result or `instance.commands.subscribe()`.
 
-## Update a read-only or form embed
+## Follow the user's role
 
-`viewerPolicy()` is suitable for a viewer that still allows selection and copying. `fixedFormPolicy()` starts with value entry, clear, paste, and fill in the ranges supplied by the host. Both are exported from the core package and can be passed through the React/Vue adapters.
-
-```ts
-import { fixedFormPolicy } from '@libraz/formulon-cell'
-
-const editable = [{ sheet: 0, r0: 1, c0: 1, r1: 12, c1: 3 }]
-const instance = await Spreadsheet.mount(host, {
-  policy: fixedFormPolicy(editable),
-  viewport: {
-    range: { sheet: 0, r0: 0, c0: 0, r1: 14, c1: 4 },
-    tabNavigation: 'editable',
-    tabBoundary: 'stop',
-  },
-})
-```
-
-For a different permission model, provide an `InteractionPolicy` with `operations`, `editable`, `selection`, and `copy` settings. Keep the policy in application state and call `setPolicy()` when the user's role changes.
+Keep the interaction policy in application state and call `instance.setPolicy()` when the user's role changes, for example `viewerPolicy()` for a reviewer and `fixedFormPolicy(ranges)` for an editor. The helpers and the `InteractionPolicy` fields are described in [Options](/cell/options#interaction-policy).
 
 <CellEmbedDemo scenario="host-sync" />
 

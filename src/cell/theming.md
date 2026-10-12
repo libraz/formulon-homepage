@@ -52,11 +52,9 @@ const instance = await Spreadsheet.mount(host, {
   ui: { theme: 'paper' },
   overlays: { root: overlayPortal },
 })
-
-instance.setTheme('paper')
 ```
 
-Place `overlayPortal` inside the same `.report-editor` wrapper. This applies the overrides to menus and dialogs outside the grid subtree while keeping them scoped to this spreadsheet. A custom theme name is accepted, but the bundled theme selectors no longer match it, so a custom name must define every required palette token.
+Place `overlayPortal` inside the same `.report-editor` wrapper. This applies the overrides to menus and dialogs outside the grid subtree while keeping them scoped to this spreadsheet.
 
 ## Public grid tokens
 
@@ -88,18 +86,7 @@ The page view tokens (`--fc-page-*`), menu icon tokens, motion tokens, and full 
 
 ## Coordinate a separate ribbon
 
-The toolbar uses its own `--fc-tb-*` token group. A toolbar mounted inside `.fc-host` follows the grid accent automatically. For a standalone `SpreadsheetToolbar`, set the toolbar tokens on its wrapper.
-
-```css
-.app-toolbar {
-  --fc-tb-accent: #0f766e;
-  --fc-tb-accent-strong: #115e59;
-  --fc-tb-ribbon-bg: #ffffff;
-  --fc-tb-ribbon-hover: #f0fdfa;
-}
-```
-
-Use the core stylesheet together with the adapter toolbar stylesheet when using React or Vue's separate toolbar component. A single-call `toolbar` mount already sits under the spreadsheet host.
+The ribbon reads its own `--fc-tb-*` tokens; [Ribbon toolbar](/cell/toolbar#styling) explains which follow the grid accent and how to theme a separate toolbar.
 
 ## Overlay and modal colors
 

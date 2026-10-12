@@ -14,12 +14,13 @@ description: パッケージの入口、スプレッドシートのマウント�
 | フレームワークを使わず DOM にマウント | `@libraz/formulon-cell` → `Spreadsheet` |
 | ワークブックを読み書き | `@libraz/formulon-cell` → `WorkbookHandle` |
 | 表示する UI プロファイルまたはプラットフォームを選択 | `@libraz/formulon-cell` → `presets`、`resolveSpreadsheetUiOptions`、`resolveSpreadsheetPlatform` |
-| ホスト側のリボンを作る | `@libraz/formulon-cell` → `buildRibbonModel`、`RibbonProfile` |
+| 独立したリボンのマウント、リボンモデルの取得 | `@libraz/formulon-cell` → `Spreadsheet.mountToolbar`、`buildRibbonModel`、`RibbonProfile`。[リボンツールバー](/ja/cell/toolbar) を参照 |
 | 閲覧専用または入力フォームの制限 | `@libraz/formulon-cell` → `viewerPolicy`、`fixedFormPolicy` |
-| 組み込み UI の追加・置換 | `@libraz/formulon-cell` → 拡張ファクトリと `Extension` 型 |
+| 組み込み UI の追加・置換 | `@libraz/formulon-cell` または `@libraz/formulon-cell/extensions` → 拡張ファクトリーと `Extension` 型 |
+| ロケール辞書を 1 つだけ読み込む | `@libraz/formulon-cell/i18n/ja`（`en`、`de`、`fr`、`zh`、`ko`、`th` も同様） |
 | React コンポーネントとフック | `@libraz/formulon-cell-react` |
 | Vue コンポーネントとコンポーザブル | `@libraz/formulon-cell-vue` |
-| スタイルシート | `@libraz/formulon-cell/styles.css` と、独立したツールバーを使う場合のアダプター用スタイルシート |
+| スタイルシート | `@libraz/formulon-cell/styles.css`（グリッド、ダイアログ、リボン、全テーマ） |
 
 パッケージ直下からはコマンドヘルパーと公開型も利用できます。完全なシンボル一覧は、インストールしたバージョンの型宣言を参照してください。このページでは主な部品の使い分けを説明します。
 
@@ -43,9 +44,7 @@ function closeView() {
 }
 ```
 
-新しいワークブックには `createDefault()`、ファイルや API のバイト列には `loadBytes()` を使います。先にデータを準備する場合は `Spreadsheet.mount()` にハンドルを渡します。`WorkbookHandle.save()` は、ホストがダウンロードまたはアップロードできるバイト列を返します。
-
-初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
+新しいワークブックには `createDefault()`、ファイルや API から受け取った `.xlsx` のバイト列には `loadBytes()` を使います。先にデータを準備する場合は `Spreadsheet.mount()` にハンドルを渡します。`save()` は、ホストがダウンロードまたはアップロードできる `.xlsx` のバイト列を返します。複数のセルにまとめて書き込む場合は `workbook.withBatchedRecalc(() => { … })` で囲むと、セルごとではなく最後に 1 回だけ再計算します。インスタンスがどのハンドルを破棄するかは [インストール](/ja/cell/install#host-sizing) を参照してください。
 
 ## マウントと実行中のインスタンス
 
@@ -72,71 +71,46 @@ instance.dispose()
 
 | メンバ | 用途 |
 | --- | --- |
-| `workbook` | ワークブックの読み書き、再計算、保存を行います。 |
+| `workbook`、`setWorkbook()` | ワークブックの読み書き、再計算、保存を行い、別のワークブックに差し替えます。 |
 | `applyChanges()` | サーバー、インポート、フォームから信頼済みの変更を適用します。 |
-| `setPolicy()`、`setViewportOptions()` | マウント後の権限または埋め込み範囲を変更します。 |
-| `setContextMenu()`、`setOverlayOptions()` | メニューやダイアログをホストのレイアウトに合わせます。 |
-| `setUi()`、`setFeatures()`、`setExtensions()` | マウント中の UI を調整します。 |
-| `openFunctionArguments()` | 関数ピッカーまたは Mac の関数の引数パレットを開きます。 |
-| `locale`、`setLocale()` | マウント済み UI のロケール、ワークブックプロファイル、数式編集プロファイルを読み書きします。`setLocale()` は切り戻したときに `false` を返します。 |
-| `i18n`、`setTheme()` | 辞書を操作し、表示テーマを切り替えます。 |
-| `on()` | 型付きの名前付きイベントを購読します。 |
-| `print()`、`captureScreenClip()` | 印刷とキャプチャのホスト処理を呼び出します。 |
+| `commands` | ポリシーに従うユーザー編集の実行（`execute()`）、可否の確認（`canExecute()`）、拒否を含むすべての結果の購読（`subscribe()`）。 |
+| `undo()`、`redo()`、`history` | ホスト側のボタンから元に戻す・やり直しを実行します。どちらも適用できる操作がなければ `false` を返します。 |
+| `recalc()` | ワークブックを再計算して再描画します。 |
+| `setPolicy()`、`setViewportOptions()`、`setContextMenu()`、`setOverlayOptions()`、`setUi()`、`setFeatures()`、`setExtensions()`、`setToolbar()`、`setTheme()` | マウント後にオプションを変更します。[オプション](/ja/cell/options#runtime-changes) を参照してください。 |
+| `locale`、`setLocale()`、`i18n` | UI のロケールと計算プロファイルの取得・変更、辞書の登録と上書き。`setLocale()` は切り戻したときに `false` を返します。 |
+| `open…Dialog()`、`openFindReplace()`、`openFormatDialog()`、`openPageSetup()` など | ホスト UI から組み込みダイアログを開きます。[モーダルとダイアログ](/ja/cell/modals#open-a-built-in-dialog-from-host-ui) を参照してください。 |
+| `openWatchWindow()`、`closeWatchWindow()`、`toggleWatchWindow()` | ウォッチ ウィンドウのパネルを表示します。 |
+| `tracePrecedents()`、`traceDependents()`、`clearTraces()` | アクティブセルから参照元・参照先のトレース矢印を描画または消去します。トレース系のメソッドは追加した矢印の数を返します。 |
+| `setSheetProtected()`、`toggleSheetProtection()`、`isSheetProtected()` | アクティブシートを保護します。パスワードと許可する操作も指定できます。 |
+| `addSlicer()`、`removeSlicer()` | テーブルの列にスライサーを追加します。オプトインの `slicer` 機能が必要です。 |
+| `print()`、`captureScreenClip()`、`setUploadStatus()`、`setMacroRecording()` | 印刷、キャプチャ、ステータス表示のホスト処理。[ホスト統合](/ja/cell/host-integration) を参照してください。 |
+| `formula`、`cells` | ホスト関数のレジストリと、セルの独自表示の登録先。[セルの独自表示とホスト関数](/ja/cell/custom-cells) を参照してください。 |
+| `toolbar`、`features`、`use()`、`remove()` | マウント済みのリボン（[リボンツールバー](/ja/cell/toolbar#toolbarinstance) を参照）、拡張のハンドル、拡張の登録と削除。 |
+| `store` | インスタンスごとのリアクティブな状態（選択、レイアウト、セル）。 |
+| `on()`、`off()` | 名前付きイベントを購読・解除します。 |
 | `dispose()` | UI とイベント購読を解放します。 |
 
-## プリセット
+## プリセットと拡張 {#extensions}
 
-`presets` は複数の機能フラグをまとめたショートカットです。
+`presets.minimal()`、`presets.standard()`、`presets.full()` は、トップレベルの `features` オプションに渡す `FeatureFlags` オブジェクトを返します。UI プロファイルの `minimal`、`standard`、`full` も同じ構成です。それぞれで有効になる機能と、`ui.features` と `features` の組み合わせ方は [オプション](/ja/cell/options#ui-profile-and-feature-switches) を参照してください。ファクトリー、独自の拡張、組み込み機能の置き換えは [拡張](/ja/cell/extensions) で説明しています。
 
-| プリセット | 開始点 |
-| --- | --- |
-| `presets.minimal()` | コンパクトなグリッドと基本編集、ステータス表示です。 |
-| `presets.standard()` | 一般的な移動、クリップボード、選択、分析機能です。 |
-| `presets.full()` | 組み込みスプレッドシート UI を広く有効にします。 |
+## ホスト関数 {#host-functions}
 
-埋め込みコンポーネントでは、リボンや印刷の表示もまとめて制御できる `ui: { profile: 'embedded' }` が開始点として分かりやすくなります。個別のスイッチは `ui.features` に指定します。`ui.features` と `features` の両方に同じキーを渡した場合は、明示した `features` が優先されます。
-
-```ts
-const instance = await Spreadsheet.mount(host, {
-  ui: {
-    profile: 'embedded',
-    theme: 'paper',
-    features: { contextMenu: false, sheetTabs: false },
-  },
-  features: { clipboard: true },
-})
-```
-
-## 拡張 {#extensions}
-
-拡張は、特定の UI 機能やホスト連携を追加します。組み込みファクトリはパッケージ直下と `@libraz/formulon-cell/extensions` から利用できます。組み込みを置き換える場合は対応する機能フラグを無効にしてから、同じ ID の拡張を渡します。
-
-```ts
-import { Spreadsheet, findReplace, presets } from '@libraz/formulon-cell'
-
-const instance = await Spreadsheet.mount(host, {
-  features: { ...presets.minimal(), findReplace: false },
-  extensions: [findReplace()],
-})
-```
-
-合成パターンと組み込み機能のグループは [拡張](/ja/cell/extensions) を参照してください。
-
-`openFindReplace()` などのインスタンスメソッドは組み込み機能を開きます。`extensions` で追加したダイアログは `instance.features[id]` のハンドルを使って開いてください。組み込み機能を無効にすると、その起動メソッドも動作しません。
+マウントオプションの `functions` と `seed`、`instance.formula` のレジストリは [セルの独自表示とホスト関数](/ja/cell/custom-cells#host-functions) で説明しています。
 
 ## イベント
 
 `instance.on(name, handler)` は解除関数を返します。イベントのデータは TypeScript で型付けされています。
 
-| イベント | 用途 |
-| --- | --- |
-| `changeBatch` | 適用されたセル更新に反応します。 |
-| `cellChange` | 値または数式をホスト側へ反映します。 |
-| `selectionChange` | インスペクターやホスト操作の状態を更新します。 |
-| `workbookChange` | ワークブックの差し替えに反応します。 |
-| `localeChange` | ロケールの選択を保存します。 |
-| `themeChange` | テーマの選択を保存または同期します。 |
-| `recalc` | 再計算に依存するホスト表示を更新します。 |
+| イベント | データ | 用途 |
+| --- | --- | --- |
+| `changeBatch` | `ChangeBatchResult`（`status`、`applied`、`rejected`、`revision`） | 適用されたセル更新に反応します。拒否されたユーザー編集は `instance.commands.subscribe()` に届きます。 |
+| `cellChange` | `{ addr, value, formula }` | 値または数式をホスト側へ反映します。 |
+| `selectionChange` | `{ active, anchor, range }` | インスペクターやホスト操作の状態を更新します。 |
+| `workbookChange` | `{ workbook }` | ワークブックの差し替えに反応します。 |
+| `localeChange` | `{ locale, strings }` | ロケールの選択を保存します。 |
+| `themeChange` | `{ theme }` | テーマの選択を保存または同期します。 |
+| `recalc` | `{ dirty }`（前回の再計算以降に編集されたセルの `sheet:row:col` キー） | 再計算に依存するホスト表示を更新します。再計算された参照先のセルは含まれません。 |
 
 ```ts
 const unsubscribe = instance.on('selectionChange', ({ active, range }) => {
@@ -162,14 +136,7 @@ instance.openFunctionArguments(undefined, { category: 'math' })
 instance.openFunctionArguments('SUM', { category: 'text' }) // category は無視されます
 ```
 
-公開されている `RibbonProfile` は `default` と `excel365Mac` です。ホスト側のツールバーに対応するリボンモデルを作れます。
-
-```ts
-import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
-
-const profile: RibbonProfile = 'excel365Mac'
-const tabs = buildRibbonModel('ja', { profile })
-```
+リボンのコマンドは `ToolbarInstance.applyCommand(id)` で実行でき、コマンド ID は `buildRibbonModel()` で一覧できます。[リボンツールバー](/ja/cell/toolbar#tabs-and-display) を参照してください。
 
 書式コマンドは主選択範囲と `selection.extraRanges` のすべてを対象にします。名前付きスタイルは、`includedGroups` に含まれる書式グループを選択したすべての範囲に適用します。セルの書式設定ダイアログには下線スタイルのセレクターがあります。書式変更前にすべての範囲をポリシーで確認し、拒否された場合は操作全体を中止します。セルの保護によって、書式を適用できるセルが別途制限されることがあります。
 
@@ -262,6 +229,8 @@ instance.setTheme('brand') // 独自パレットの定義が必要です
 - [言語を切り替える](/ja/cell/language-switching) — セレクター、実行時 API、ワークブックプロファイル、数式、拒否される場合を説明します。
 - [埋め込み](/ja/cell/embedding) ─ full、minimal、embedded の使い分け
 - [プラットフォームと Mac UI](/ja/cell/platform) ─ プラットフォーム解決、Mac ダイアログ、引数ヘルプ
+- [リボンツールバー](/ja/cell/toolbar) ─ インラインと独立したリボン、タブ構成、コマンドの実行
+- [セルの独自表示とホスト関数](/ja/cell/custom-cells) ─ 表示フォーマッターとホスト関数のレジストリ
 - [React / Vue アダプター](/ja/cell/frameworks) ─ コンポーネントのプロパティ、イベント、フック、コンポーザブル
 - [ホスト統合](/ja/cell/host-integration) ─ ファイル、保存状態、印刷、ネイティブフック
 - [拡張](/ja/cell/extensions) ─ 任意 UI の追加、置換、削除

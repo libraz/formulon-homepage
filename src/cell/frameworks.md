@@ -13,30 +13,37 @@ Import the core stylesheet once in the application. Give the component a height 
 
 ```tsx
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell-react/toolbar.css'
 import {
   Spreadsheet,
   fixedFormPolicy,
+  type ContextMenuOptions,
+  type SpreadsheetUiOptions,
+  type ViewportOptions,
 } from '@libraz/formulon-cell-react'
 
+// Module constants keep the prop references stable across renders.
 const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+const ui: SpreadsheetUiOptions = {
+  profile: 'embedded',
+  theme: 'paper',
+  features: { shortcuts: true, clipboard: true },
+}
+const policy = fixedFormPolicy([formRange])
+const viewport: ViewportOptions = {
+  range: formRange,
+  tabNavigation: 'editable',
+  tabBoundary: 'stop',
+}
+const contextMenu: ContextMenuOptions = { mode: 'disabled' }
 
 export function OrderForm() {
   return (
     <div className="cell-frame">
       <Spreadsheet
-        ui={{
-          profile: 'embedded',
-          theme: 'paper',
-          features: { shortcuts: true, clipboard: true },
-        }}
-        policy={fixedFormPolicy([formRange])}
-        viewport={{
-          range: formRange,
-          tabNavigation: 'editable',
-          tabBoundary: 'stop',
-        }}
-        contextMenu={{ mode: 'disabled' }}
+        ui={ui}
+        policy={policy}
+        viewport={viewport}
+        contextMenu={contextMenu}
         onReady={(instance) => console.log('spreadsheet ready', instance)}
         onChangeBatch={(event) => console.log('applied batch', event.revision)}
         onCellChange={(event) => console.log('draft changed', event.addr, event.value)}
@@ -59,12 +66,9 @@ export function OrderForm() {
 
 `onReady` receives the live `SpreadsheetInstance`. Keep it when an outer button, save action, or host dialog needs to call methods such as `applyChanges()`, `print()`, or `openFindReplace()`. `policy` controls what a user may edit, while `viewport` controls the visible and navigable area; using both is useful for forms embedded in a larger screen.
 
-The adapter applies prop changes to the mounted instance. Changing `theme`, `locale`, `strings`, `ui`, `features`, `extensions`, `policy`, `viewport`, `contextMenu`, `overlays`, or host status props does not require a remount.
+The adapter applies prop changes to the mounted instance by calling the matching setter, so changing `workbook`, `ui`, `toolbar`, `theme`, `locale`, `strings`, `features`, `extensions`, `policy`, `viewport`, `contextMenu`, `overlays`, the printer props, or the status props does not remount. Pass stable object references (state, `useMemo`, or a module constant): a new object literal on every render counts as a change and re-applies the setting.
 
-For a host-owned language menu, keep the instance from `onReady` and call `instance.setLocale(next)`. It updates the UI and workbook profile together and returns `false` when an edit, visible modal, Find/Replace panel, comment editor, filter menu, profile write, or Mac Function Arguments palette prevents the change; the blocked surface stays open with its draft and the current locale stays active. `onLocaleChange` runs after an accepted change. The built-in selector is opt-in through `ui.features.localeSwitcher`. See [Language switching](/cell/language-switching) for the full formula, value, and failure flow.
-
-When `policy` is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu even when other feature flags are true. See [Options](/cell/options#interaction-policy) for the policy and UI relationship.
-
+A changed `locale` prop calls `instance.setLocale()`. When that call is rejected, for example because an edit or dialog is open, React reports it through `onError` and `onLocaleChange` with the locale that stayed active; see [Language switching](/cell/language-switching#change-language-from-the-host).
 ## A complete Vue mount
 
 The Vue package exposes the same options as props and the same lifecycle surface as kebab-case events.
@@ -72,12 +76,27 @@ The Vue package exposes the same options as props and the same lifecycle surface
 ```vue
 <script setup lang="ts">
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell-vue/toolbar.css'
-import { fixedFormPolicy, Spreadsheet } from '@libraz/formulon-cell-vue'
+import {
+  fixedFormPolicy,
+  Spreadsheet,
+  type CellChangeEvent,
+  type ContextMenuOptions,
+  type SpreadsheetUiOptions,
+  type ViewportOptions,
+} from '@libraz/formulon-cell-vue'
 
+// Constants in setup keep the prop references stable across re-renders.
 const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+const ui: SpreadsheetUiOptions = {
+  profile: 'embedded',
+  theme: 'paper',
+  features: { shortcuts: true, clipboard: true },
+}
+const policy = fixedFormPolicy([formRange])
+const viewport: ViewportOptions = { range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }
+const contextMenu: ContextMenuOptions = { mode: 'disabled' }
 
-function saveDraft(event: { addr: unknown; value: unknown }) {
+function saveDraft(event: CellChangeEvent) {
   console.log('draft changed', event.addr, event.value)
 }
 </script>
@@ -85,10 +104,10 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 <template>
   <div class="cell-frame">
     <Spreadsheet
-      :ui="{ profile: 'embedded', theme: 'paper', features: { shortcuts: true, clipboard: true } }"
-      :policy="fixedFormPolicy([formRange])"
-      :viewport="{ range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }"
-      :context-menu="{ mode: 'disabled' }"
+      :ui="ui"
+      :policy="policy"
+      :viewport="viewport"
+      :context-menu="contextMenu"
       @cell-change="saveDraft"
       @change-batch="(event) => console.log(event.status)"
     />
@@ -116,7 +135,8 @@ Both adapters forward these options to `Spreadsheet.mount()`:
 | Option | Typical use |
 | --- | --- |
 | `ui` | Choose `embedded`, `minimal`, `standard`, `excel365`, or `full`, set a theme, and choose a `platform` of `default`, `mac`, or `auto`. |
-| `toolbar` | Mount the ribbon in the component, or pass toolbar options. |
+| `theme` | Override `ui.theme` with `paper`, `ink`, `contrast`, or a custom name. |
+| `toolbar` | Mount the ribbon in the component, or pass toolbar options. Omitted follows the `ui` profile; with no `ui`, no ribbon. See [Ribbon toolbar](/cell/toolbar). |
 | `policy` | Create a read-only viewer or restrict edits to form cells. |
 | `viewport` | Limit the visible area and configure Tab navigation. |
 | `contextMenu` | Keep the built-in menu, transform its items, or hand it to the host. |
@@ -126,12 +146,13 @@ Both adapters forward these options to `Spreadsheet.mount()`:
 | `locale`, `strings` | Set the UI language and override labels. Use `ui.features.localeSwitcher` for the optional built-in selector. |
 | `features`, `extensions` | Toggle built-in UI and add selected extensions. |
 | `getFunctionArgumentHelp` | Supply typed argument labels, descriptions, or reference URLs to the Mac palette. |
-| `functions` | Register host-side formula functions before mount. |
-| `printerProfiles`, `refreshPrinterProfiles` | Connect printing to native or Electron printer data. |
+| `functions` | Register host functions for formula autocomplete and `instance.formula`; see [Custom cells and host functions](/cell/custom-cells#host-functions). |
+| `seed` | Fill a component-created workbook before the first render. |
+| `printerProfiles`, `printerProfileId`, `refreshPrinterProfiles` | Connect printing to native or Electron printer data. |
 | `captureScreenClip` | Supply a host screenshot picker for Screen Clipping. |
 | `uploadStatus`, `macroRecording` | Drive optional status-bar indicators. |
 
-The React component additionally accepts `className`, `style`, `children`, `onReady`, `onError`, and `errorFallback`. Vue accepts `class`, `style`, the `ready` and `error` events, and an `error-fallback` function.
+The React component additionally accepts `className`, `style`, `onReady`, `onError`, `errorFallback`, a `ref` (a `SpreadsheetRef` with `instance`), and `children` (nodes, or a function that receives the live instance). Vue accepts `class`, `style`, the `ready` and `error` events, and an `error-fallback` function.
 
 ## Events and hooks
 
@@ -151,46 +172,9 @@ React hooks and Vue composables connect selection, derived display values, chang
 
 The `selection-change` event contains only the active cell, anchor, and primary range. Use `useSelection()` or `useSpreadsheet()` to read `state.selection.extraRanges` when a host panel needs all disjoint ranges.
 
-## The toolbar component
+## The toolbar component {#toolbar-component}
 
-`SpreadsheetToolbar` is useful when the ribbon belongs in a layout separate from the spreadsheet component. In React, import it from `@libraz/formulon-cell-react`; in Vue, import the default component from `@libraz/formulon-cell-vue/toolbar.vue`. Pass the instance received from `onReady` or a component ref.
-
-```tsx
-import { SpreadsheetToolbar } from '@libraz/formulon-cell-react'
-
-<SpreadsheetToolbar
-  instance={instance}
-  activeTab={activeTab}
-  locale="en"
-  onTabChange={setActiveTab}
-  onToolbarReady={setToolbar}
-  dropdownActions={{
-    applyProtectAction: () => openHostDialog('protect'),
-  }}
-/>
-```
-
-```vue
-<script setup lang="ts">
-import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
-import { ref } from 'vue'
-import type { RibbonTab, SpreadsheetInstance } from '@libraz/formulon-cell-vue'
-
-defineProps<{ instance: SpreadsheetInstance }>()
-const activeTab = ref<RibbonTab>('home')
-</script>
-
-<template>
-  <SpreadsheetToolbar
-    :instance="instance"
-    locale="en"
-    :active-tab="activeTab"
-    @tab-change="activeTab = $event"
-  />
-</template>
-```
-
-Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. Use `SpreadsheetToolbar` when the surrounding application owns the layout or title bar. The toolbar component accepts shared tab definitions and callbacks for host actions such as scripts, add-ins, spelling, translation, and drawing.
+`SpreadsheetToolbar` mounts the ribbon outside the `Spreadsheet` component; [Ribbon toolbar](/cell/toolbar) covers its props, the inline `toolbar` option, and styling.
 
 ## Mount errors and framework fallbacks
 
@@ -209,5 +193,6 @@ Use `toolbar` on `Spreadsheet` when the ribbon should be part of the same host. 
 - [Language switching](/cell/language-switching) — the host API, optional selector, formula profile, and rollback behavior.
 - [Embedding](/cell/embedding) — vanilla mounting, options, and modal placement.
 - [Platform and Mac UI](/cell/platform) — platform selection, Mac ribbon, and argument help.
+- [Ribbon toolbar](/cell/toolbar) — `SpreadsheetToolbar`, the inline ribbon, and dropdown handlers.
 - [Host integration](/cell/host-integration) — saving, status indicators, printing, and host callbacks.
 - [Internationalization](/cell/i18n) — runtime locale and string overrides.

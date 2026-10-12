@@ -133,9 +133,9 @@ instance.setOverlayOptions({
 
 Call `instance.setOverlayOptions(undefined)` when the host returns to its normal page layout and should use the default portal placement.
 
-## Open a built-in dialog from host UI
+## Open a built-in dialog from host UI {#open-a-built-in-dialog-from-host-ui}
 
-The mounted instance exposes direct entry points for built-in dialogs. The matching feature must be enabled by the selected profile or feature flags:
+The mounted instance exposes direct entry points for built-in dialogs. An opener does nothing when the feature that owns its dialog is off:
 
 ```ts
 openFormatButton.addEventListener('click', () => {
@@ -159,11 +159,26 @@ namesButton.addEventListener('click', () => {
 })
 ```
 
-Other entry points include `openHyperlinkDialog()`, `openPageSetup()`, `openConditionalDialog()`, `openPasteSpecial()`, `openEvaluateFormulaDialog()`, and `openPivotTableDialog()`. Use the shipped package declarations for each method's current optional argument shape.
+| Opener | Feature that must be on |
+| --- | --- |
+| `openFormatDialog(tab?)`, `openDataValidationDialog()` | `formatDialog` |
+| `openFindReplace(tab?)`, `closeFindReplace()` | `findReplace` |
+| `openCommentDialog({ mode? })` | `commentDialog` (`ui.features.comments`) |
+| `openNamedRangeDialog()`, `openDefineNameDialog()` | `namedRanges` |
+| `openHyperlinkDialog()` | `hyperlink` |
+| `openConditionalDialog()` | `conditional` (`ui.features.conditionalFormatting`) |
+| `openPasteSpecial()`, `pasteSpecial(options)` | `pasteSpecial` |
+| `openPageSetup(tab?)` | `pageSetup` |
+| `openGoTo()`, `openGoToSpecial()` | `gotoSpecial` |
+| `openIterativeDialog()` | `iterative` |
+| `openFunctionArguments(name?, { category? })` | `fxDialog` |
+| `openQuickAnalysis()` | `quickAnalysis` |
+| `openWorkbookObjects()`, `openPivotFieldList()`, `openActivePivotFieldList()` | `workbookObjects` |
+| `openPivotTableDialog({ placement? })` | `pivotTableDialog` (`ui.features.pivotTable`) |
+| `openInsertCopiedCells()` | None. |
+| `openEvaluateFormulaDialog()`, `openExternalLinksDialog()`, `openCfRulesDialog()`, `openCellStylesGallery()`, `openFilterDropdown()` | None. |
 
-The Mac ribbon opens Goal Seek, Consolidate, Subtotal, Sparkline, Slicer, and Workbook Statistics dialogs. See [Platform and Mac UI](/cell/platform) for the command IDs and limits when the host supplies its own toolbar.
-
-`openDataValidationDialog()` requires `formatDialog: true`; `validation` controls cell validation assistance and list dropdowns. The other entry points require the feature that owns the corresponding built-in dialog.
+While an interaction policy is active, most openers stay inert because their features are off; see [Options](/cell/options#interaction-policy). The Mac ribbon also opens Goal Seek, Consolidate, Subtotal, Sparkline, Slicer, and Workbook Statistics; [Platform and Mac UI](/cell/platform#mac-ribbon-dialogs) lists their command IDs for a host-owned toolbar.
 
 If the matching feature is disabled, enable it in the profile or pass the corresponding feature flag:
 
@@ -182,4 +197,4 @@ const instance = await Spreadsheet.mount(host, {
 
 Host-owned dialogs can use the same overlay root. Open them from a context-menu action, a toolbar callback, or an application command, and dispose the spreadsheet instance when the surrounding view closes.
 
-Instance methods such as `openFindReplace()` target built-in features. For a dialog supplied through `extensions`, use the handle exposed by `instance.features[id]`; disabling the built-in also disables its instance opener. See [Extensions](/cell/extensions).
+When a dialog is replaced through `extensions`, most openers keep targeting the built-in; [Extensions](/cell/extensions#replace-a-built-in-surface) lists the exceptions and how to open a replacement.

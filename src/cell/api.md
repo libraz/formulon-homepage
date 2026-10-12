@@ -14,12 +14,13 @@ Most applications use three pieces from `@libraz/formulon-cell`: `WorkbookHandle
 | Mount the vanilla DOM component | `@libraz/formulon-cell` → `Spreadsheet` |
 | Load or save workbook data | `@libraz/formulon-cell` → `WorkbookHandle` |
 | Select a UI profile or platform | `@libraz/formulon-cell` → `presets`, `resolveSpreadsheetUiOptions`, `resolveSpreadsheetPlatform` |
-| Build a host-owned ribbon | `@libraz/formulon-cell` → `buildRibbonModel`, `RibbonProfile` |
+| Mount a separate ribbon or read its model | `@libraz/formulon-cell` → `Spreadsheet.mountToolbar`, `buildRibbonModel`, `RibbonProfile`; see [Ribbon toolbar](/cell/toolbar) |
 | Restrict a viewer or form | `@libraz/formulon-cell` → `viewerPolicy`, `fixedFormPolicy` |
-| Add or replace optional UI | `@libraz/formulon-cell` → extension factories and `Extension` types |
+| Add or replace optional UI | `@libraz/formulon-cell` or `@libraz/formulon-cell/extensions` → extension factories and `Extension` types |
+| Load one locale dictionary | `@libraz/formulon-cell/i18n/en` (also `ja`, `de`, `fr`, `zh`, `ko`, `th`) |
 | React component and hooks | `@libraz/formulon-cell-react` |
 | Vue component and composables | `@libraz/formulon-cell-vue` |
-| Styles | `@libraz/formulon-cell/styles.css` and an adapter toolbar stylesheet when using a separate toolbar component |
+| Styles | `@libraz/formulon-cell/styles.css` (grid, dialogs, ribbon, all themes) |
 
 The root entry point also exports command helpers and public types. Keep the generated type declarations beside the version you install for the complete symbol list; this page explains how the main pieces fit together.
 
@@ -43,9 +44,7 @@ function closeView() {
 }
 ```
 
-Use `createDefault()` for a new workbook and `loadBytes()` for bytes obtained from a file or an API. Pass the handle to `Spreadsheet.mount()` when the host must prepare or load data first. `WorkbookHandle.save()` returns bytes for the host to download or upload.
-
-A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.
+Use `createDefault()` for a new workbook and `loadBytes()` for `.xlsx` bytes obtained from a file or an API. Pass the handle to `Spreadsheet.mount()` when the host must prepare or load data first. `save()` returns `.xlsx` bytes for the host to download or upload. Wrap a multi-cell write in `workbook.withBatchedRecalc(() => { … })` to recalculate once at the end instead of after every cell. [Install](/cell/install#host-sizing) explains which handles the instance disposes.
 
 ## Mounting and the live instance
 
@@ -72,71 +71,46 @@ The returned `SpreadsheetInstance` is the main host API:
 
 | Member | Use it for |
 | --- | --- |
-| `workbook` | Read, modify, recalculate, load, or save workbook data. |
+| `workbook`, `setWorkbook()` | Read, modify, recalculate, or save workbook data; swap in another workbook. |
 | `applyChanges()` | Apply a trusted batch from a server, import, or form. |
-| `setPolicy()`, `setViewportOptions()` | Change permissions or the embedded area after mount. |
-| `setContextMenu()`, `setOverlayOptions()` | Coordinate menus and dialogs with the host layout. |
-| `setUi()`, `setFeatures()`, `setExtensions()` | Adjust the UI surface while it is mounted. |
-| `openFunctionArguments()` | Open the function picker or Mac Function Arguments palette. |
-| `locale`, `setLocale()` | Read or change the mounted UI locale, workbook profile, and formula editing profile. `setLocale()` returns `false` when the change is rolled back. |
-| `i18n`, `setTheme()` | Work with dictionaries and change the visual theme. |
-| `on()` | Subscribe to stable named events. |
-| `print()`, `captureScreenClip()` | Invoke host-facing print and capture actions. |
+| `commands` | Run policy-checked user edits (`execute()`), ask `canExecute()`, and `subscribe()` to every batch result, including rejections. |
+| `undo()`, `redo()`, `history` | Drive the undo stack from host buttons. Both methods return `false` when no step was applied. |
+| `recalc()` | Recalculate the workbook and repaint. |
+| `setPolicy()`, `setViewportOptions()`, `setContextMenu()`, `setOverlayOptions()`, `setUi()`, `setFeatures()`, `setExtensions()`, `setToolbar()`, `setTheme()` | Change mount options after mount; see [Options](/cell/options#runtime-changes). |
+| `locale`, `setLocale()`, `i18n` | Read or change the UI locale and calculation profile; register and extend dictionaries. `setLocale()` returns `false` when the change is rolled back. |
+| `open…Dialog()`, `openFindReplace()`, `openFormatDialog()`, `openPageSetup()`, … | Open a built-in dialog from host UI; see [Modals and dialogs](/cell/modals#open-a-built-in-dialog-from-host-ui). |
+| `openWatchWindow()`, `closeWatchWindow()`, `toggleWatchWindow()` | Show the Watch Window panel. |
+| `tracePrecedents()`, `traceDependents()`, `clearTraces()` | Draw or clear formula trace arrows from the active cell. The trace methods return the count of arrows added. |
+| `setSheetProtected()`, `toggleSheetProtection()`, `isSheetProtected()` | Protect the active sheet, optionally with a password and permission set. |
+| `addSlicer()`, `removeSlicer()` | Add a slicer for a table column. Requires the opt-in `slicer` feature. |
+| `print()`, `captureScreenClip()`, `setUploadStatus()`, `setMacroRecording()` | Host-facing print, capture, and status actions; see [Host integration](/cell/host-integration). |
+| `formula`, `cells` | Host function registry and custom cell formatters; see [Custom cells and host functions](/cell/custom-cells). |
+| `toolbar`, `features`, `use()`, `remove()` | The mounted ribbon (see [Ribbon toolbar](/cell/toolbar#toolbarinstance)), extension handles, and extension registration. |
+| `store` | Per-instance reactive state (selection, layout, cells). |
+| `on()`, `off()` | Subscribe to named events. |
 | `dispose()` | Release the mounted UI and event subscriptions. |
 
-## Presets
+## Presets and extensions {#extensions}
 
-`presets` is a shorthand for a group of feature flags. It is useful when the application wants a known starting set of built-in features and then needs to adjust a few flags.
+`presets.minimal()`, `presets.standard()`, and `presets.full()` return `FeatureFlags` objects for the top-level `features` option; the `minimal`, `standard`, and `full` UI profiles use the same sets. [Options](/cell/options#ui-profile-and-feature-switches) lists what each one turns on and how `ui.features` and `features` combine. [Extensions](/cell/extensions) covers the factories, custom extensions, and replacing a built-in.
 
-| Preset | Starting point |
-| --- | --- |
-| `presets.minimal()` | A compact grid with basic editing and status feedback. |
-| `presets.standard()` | Common navigation, clipboard, selection, and analysis tools. |
-| `presets.full()` | The broadest built-in spreadsheet surface. |
+## Host functions {#host-functions}
 
-For an embedded component, `ui: { profile: 'embedded' }` is the clearer starting point because it also controls ribbon and print visibility. Pass `features` for individual switches; when both `ui.features` and `features` are supplied, the explicit `features` values win.
-
-```ts
-const instance = await Spreadsheet.mount(host, {
-  ui: {
-    profile: 'embedded',
-    theme: 'paper',
-    features: { contextMenu: false, sheetTabs: false },
-  },
-  features: { clipboard: true },
-})
-```
-
-## Extensions
-
-An extension adds a focused UI feature or host integration. Built-in factories are exported from the root package and from `@libraz/formulon-cell/extensions`. Disable the matching feature before supplying a replacement with the same id.
-
-```ts
-import { Spreadsheet, findReplace, presets } from '@libraz/formulon-cell'
-
-const instance = await Spreadsheet.mount(host, {
-  features: { ...presets.minimal(), findReplace: false },
-  extensions: [findReplace()],
-})
-```
-
-See [Extensions](/cell/extensions) for the composition pattern and the built-in feature groups.
-
-Instance methods such as `openFindReplace()` target the built-in feature. For a dialog supplied through `extensions`, call the handle exposed by `instance.features[id]`; disabling the built-in also disables its instance opener.
+The `functions` and `seed` mount options and the `instance.formula` registry are covered in [Custom cells and host functions](/cell/custom-cells#host-functions).
 
 ## Events
 
 `instance.on(name, handler)` returns an unsubscribe function. The event payloads are typed in TypeScript.
 
-| Event | Use it for |
-| --- | --- |
-| `changeBatch` | React to an applied cell batch. |
-| `cellChange` | Mirror a changed value or formula. |
-| `selectionChange` | Update an inspector or host command state. |
-| `workbookChange` | React to a workbook replacement. |
-| `localeChange` | Persist a locale selection. |
-| `themeChange` | Persist or coordinate a theme selection. |
-| `recalc` | Refresh host content that depends on calculated cells. |
+| Event | Payload | Use it for |
+| --- | --- | --- |
+| `changeBatch` | `ChangeBatchResult`: `status`, `applied`, `rejected`, `revision` | React to an applied cell batch. Rejected user edits reach `instance.commands.subscribe()` instead. |
+| `cellChange` | `{ addr, value, formula }` | Mirror a changed value or formula. |
+| `selectionChange` | `{ active, anchor, range }` | Update an inspector or host command state. |
+| `workbookChange` | `{ workbook }` | React to a workbook replacement. |
+| `localeChange` | `{ locale, strings }` | Persist a locale selection. |
+| `themeChange` | `{ theme }` | Persist or coordinate a theme selection. |
+| `recalc` | `{ dirty }`: `sheet:row:col` keys of the cells edited since the previous pass | Refresh host content that depends on calculated cells. Recomputed dependents are not listed. |
 
 ```ts
 const unsubscribe = instance.on('selectionChange', ({ active, range }) => {
@@ -162,14 +136,7 @@ instance.openFunctionArguments(undefined, { category: 'math' })
 instance.openFunctionArguments('SUM', { category: 'text' }) // category is ignored
 ```
 
-The published `RibbonProfile` values are `default` and `excel365Mac`. Build a model for a host-owned toolbar with the matching profile:
-
-```ts
-import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
-
-const profile: RibbonProfile = 'excel365Mac'
-const tabs = buildRibbonModel('en', { profile })
-```
+Ribbon commands run through `ToolbarInstance.applyCommand(id)`, and `buildRibbonModel()` lists their IDs; see [Ribbon toolbar](/cell/toolbar#tabs-and-display).
 
 Formatting commands include the selected range and every `selection.extraRanges`. Named styles apply their `includedGroups` across all selected areas. The Format Cells dialog exposes the underline style selector. Policy authorization checks every area before applying the formatting action; a denial aborts the whole action. Cell protection can separately limit which cells receive formatting.
 
@@ -262,6 +229,8 @@ Built-in themes are `paper`, `ink`, and `contrast`. A custom name selects host C
 - [Language switching](/cell/language-switching) — the selector, runtime host API, workbook profiles, formulas, and rejection cases.
 - [Embedding](/cell/embedding) — choose options for a full, minimal, or embedded surface.
 - [Platform and Mac UI](/cell/platform) — platform resolution, Mac dialogs, and argument help.
+- [Ribbon toolbar](/cell/toolbar) — the inline and separate ribbon, tab sets, and command dispatch.
+- [Custom cells and host functions](/cell/custom-cells) — display formatters and the host function registry.
 - [React and Vue adapters](/cell/frameworks) — component props, events, hooks, and composables.
 - [Host integration](/cell/host-integration) — files, save state, printing, and native hooks.
 - [Extensions](/cell/extensions) — add, replace, and remove optional UI.

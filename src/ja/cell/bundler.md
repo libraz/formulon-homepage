@@ -5,7 +5,7 @@ description: formulon-cell と WASM アセットをブラウザで読み込む�
 
 # バンドラ設定
 
-`formulon-cell` はブラウザ向けの ESM パッケージです。公開のスタイルシートを読み込みます。WASM ファイルは `@libraz/formulon` のローダーが読み込みます。
+`formulon-cell` はブラウザ向けの ESM パッケージです。エンジンパッケージ `@libraz/formulon` は Emscripten でビルドされており、自身の JavaScript と同じ場所にある `.wasm` ファイルを `import.meta.url` から探します。そのためバンドラ側では、このパッケージを加工せずにアセットを出力するだけで済みます。
 
 ## Vite
 
@@ -24,7 +24,7 @@ export default defineConfig({
 })
 ```
 
-依存関係の除外により、Vite の依存関係の事前バンドルを避け、パッケージを通常のアプリケーションビルドで扱えます。ES2022 のターゲットは、ブラウザ向けパッケージが使う ESM 機能をサポートします。
+除外を指定すると、開発サーバーの事前バンドルによってエンジンの JavaScript が `.wasm` ファイルと別の場所へ移されることを防げます。エンジンの初期化関数がトップレベル `await` を使うため、ターゲットは ES2022 が必要です。
 
 ```ts
 // ブラウザのエントリーポイント
@@ -45,4 +45,4 @@ webpack、esbuild などを使う場合も、パッケージをブラウザ向�
 - 生成された `.wasm` アセットがコピーされ、配信されることを確認します。
 - マウント先の要素に高さを指定します。バンドラ設定だけではレイアウトの高さは決まりません。
 
-標準ローダーは単一スレッドで動作し、`SharedArrayBuffer` を使いません。アプリケーションが別途スレッド版の Formulon エントリーポイントを読み込む場合は、そのエントリーポイントの配信要件を確認してください。
+標準ローダーは単一スレッドで動作し、ワーカーを起動せず、`SharedArrayBuffer` も使いません。`@libraz/formulon/threads` を直接読み込むアプリケーションだけが、Vite 設定の `worker: { format: 'es' }` とクロスオリジン分離ヘッダー（`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Embedder-Policy: require-corp`）を必要とします。

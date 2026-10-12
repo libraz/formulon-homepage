@@ -37,18 +37,11 @@ console.log(resolved) // 'mac' または 'default'
 instance.setUi({ profile: 'excel365', platform: 'mac', theme: 'paper' })
 ```
 
-`setUi()` は現在のワークブックを保ったまま、プロファイル、プラットフォーム、テーマを再解決します。省略した項目は既定値に戻るため、維持したい UI 設定もまとめて渡します。マウント時に渡したトップレベルの `features`、`theme`、`toolbar` も再適用します。Mac から別のプラットフォームへ変更すると、開いている数式パレットを閉じ、保留中の編集下書きを破棄します。ワークブック自体は置き換えません。トップレベルの設定だけを変更する場合は `setFeatures()`、`setTheme()`、`setToolbar()` を使います。優先順位は [オプション](/ja/cell/options) を参照してください。
+`setUi()` はワークブックを置き換えません。省略した項目は既定値に戻るため、維持したい UI 設定もまとめて渡してください。Mac から別のプラットフォームへ変更すると、開いている数式パレットを閉じ、保留中の下書きを破棄します。トップレベルのオプションとの優先順位は [オプション](/ja/cell/options#ui-profile-and-feature-switches) を参照してください。
 
 ## Mac リボン
 
-Mac のプラットフォームには、専用のリボンタブ、ショートカット、ダイアログがあります。独立したツールバーを作るホストは、公開されているリボンモデルを明示的に選べます。
-
-```ts
-import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
-
-const profile: RibbonProfile = 'excel365Mac'
-const tabs = buildRibbonModel('ja', { profile })
-```
+Mac のプラットフォームには、専用のリボンタブ、ショートカット、ダイアログがあります。Mac のタブ構成、`mac.` で始まるコマンド ID、独立したツールバー向けの `excel365Mac` のリボンモデルは [リボンツールバー](/ja/cell/toolbar#platform-differences) を参照してください。
 
 組み込みの Mac リボンは `ui.platform: 'mac'` で使えます。描画タブには黒と赤のペン、鉛筆、蛍光ペン、消しゴム、トラックパッドの操作があります。インクはマウント中のセッション用イラスト層に保存され、1 ストロークは最大 2,000 点です。ワークブックのデータには書き込まれず、`.xlsx` に保存されません。ストロークを確定する前に、現在のポリシーで対象セルが認可されます。
 
@@ -60,7 +53,7 @@ const tabs = buildRibbonModel('ja', { profile })
 | `Command+Control+V` | 対応する機能が有効な場合、形式を選択して貼り付けを開きます。 |
 | `Option+Left` / `Option+Right` | 前または次のシートへ移動します。 |
 
-## 関数の引数パレット
+## 関数の引数パレット {#function-arguments-palette}
 
 Mac の関数の引数パレットはモーダルではありません。開くとインライン編集または数式バーの下書きを一時停止し、キャンセルで下書きの文字列、フォーカス、キャレットまたは選択範囲を復元します。複合数式の関数呼び出し内にキャレットがある場合も同じです。引数を編集すると、周囲の数式を保ったまま対象の関数呼び出しだけが変更されます。ピッカーは現在のワークブックから関数カタログを読み、カテゴリ別に表示します。「最近使った関数」には、マウント中のスプレッドシートで挿入に成功した関数を記録します。
 
@@ -124,9 +117,9 @@ defineProps<{ getFunctionArgumentHelp: FunctionArgumentHelpProvider }>()
 
 :::
 
-## Mac リボンのダイアログ
+## Mac リボンのダイアログ {#mac-ribbon-dialogs}
 
-これらのダイアログは Mac リボンから開きます。ホスト側のツールバーでは、表のコマンド ID を `ToolbarInstance.applyCommand(id)` に渡します。フレームワークのアダプターでは `onToolbarReady` からツールバーのインスタンスを取得できます。戻り値の真偽値は、対応するハンドラーが見つかったかどうかを表します。ゴール シーク、統合、小計は、ワークブックを変更する前にインスタンスのポリシーを確認します。
+これらのダイアログは Mac リボンから開きます。ホストから開く場合は、表のコマンド ID を `ToolbarInstance.applyCommand(id)` に渡します。[リボンツールバー](/ja/cell/toolbar#toolbarinstance) を参照してください。ゴール シーク、統合、小計は、ワークブックを変更する前にインスタンスのポリシーを確認します。
 
 | リボンの経路 | コマンド ID | 対応範囲と上限 |
 | --- | --- | --- |
@@ -142,7 +135,8 @@ defineProps<{ getFunctionArgumentHelp: FunctionArgumentHelpProvider }>()
 ## 関連ページ
 
 - [オプション](/ja/cell/options) — プロファイル、プラットフォーム、機能、ポリシーの解決。
-- [API 一覧](/ja/cell/api) — リゾルバーの型、リボンモデル、ホストヘルパー。
+- [リボンツールバー](/ja/cell/toolbar) — リボンのマウント、タブ構成、コマンドの実行。
+- [API 一覧](/ja/cell/api) — リゾルバーの型とホストヘルパー。
 - [React / Vue アダプター](/ja/cell/frameworks) — アダプターのプロパティとイベント境界。
 - [フックとコンポーザブル](/ja/cell/hooks) — ホストパネルでの複数範囲の状態。
 - [デモ](/ja/cell/demo) — ヘッダーで既定、Mac、自動を切り替える例。

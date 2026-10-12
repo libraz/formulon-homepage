@@ -52,11 +52,9 @@ const instance = await Spreadsheet.mount(host, {
   ui: { theme: 'paper' },
   overlays: { root: overlayPortal },
 })
-
-instance.setTheme('paper')
 ```
 
-`overlayPortal` は同じ `.report-editor` ラッパー内に置きます。グリッドの外側にあるメニューやダイアログにも上書きを適用しながら、このスプレッドシートの範囲に限定できます。独自のテーマ名も指定できますが、組み込みテーマのセレクターが一致しなくなるため、必要なパレットトークンをすべて定義してください。
+`overlayPortal` は同じ `.report-editor` ラッパー内に置きます。グリッドの外側にあるメニューやダイアログにも上書きを適用しながら、このスプレッドシートの範囲に限定できます。
 
 ## 公開グリッドトークン
 
@@ -88,18 +86,7 @@ instance.setTheme('paper')
 
 ## 独立したリボンを調整する
 
-ツールバーは独自の `--fc-tb-*` トークングループを使います。`.fc-host` 内にマウントしたツールバーは、グリッドのアクセントカラーに自動で追従します。独立した `SpreadsheetToolbar` では、ラッパーへツールバートークンを設定します。
-
-```css
-.app-toolbar {
-  --fc-tb-accent: #0f766e;
-  --fc-tb-accent-strong: #115e59;
-  --fc-tb-ribbon-bg: #ffffff;
-  --fc-tb-ribbon-hover: #f0fdfa;
-}
-```
-
-React または Vue の独立したツールバーを使う場合は、コアのスタイルシートとアダプター用ツールバーのスタイルシートを読み込みます。`toolbar` オプションで 1 回のマウントを行う場合は、ツールバーがスプレッドシートのホスト要素の中に配置されます。
+リボンは専用の `--fc-tb-*` トークンを使います。グリッドのアクセントカラーに追従するトークンと、独立したツールバーの色の設定方法は [リボンツールバー](/ja/cell/toolbar#styling) を参照してください。
 
 ## オーバーレイとモーダルの色
 

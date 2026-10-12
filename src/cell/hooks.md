@@ -42,8 +42,12 @@ import {
   useSpreadsheet,
   useSpreadsheetEvent,
   type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
 } from '@libraz/formulon-cell-react'
 import '@libraz/formulon-cell/styles.css'
+
+// A module constant keeps the prop stable while the inspector re-renders.
+const ui: SpreadsheetUiOptions = { profile: 'embedded', features: { shortcuts: true, clipboard: true } }
 
 export function SheetWithInspector() {
   const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
@@ -74,7 +78,7 @@ export function SheetWithInspector() {
     <section className="sheet-layout">
       <div className="sheet-host">
         <Spreadsheet
-          ui={{ profile: 'embedded', features: { shortcuts: true, clipboard: true } }}
+          ui={ui}
           toolbar={false}
           locale="en"
           onReady={setInstance}
@@ -130,7 +134,7 @@ Give the spreadsheet host a real height. The imported core stylesheet supplies t
 
 The hook calls remain unconditional even before `onReady` fires. Keep the spreadsheet component mounted while the inspector changes; conditionally render the inspector contents instead of replacing the `<Spreadsheet>` element after the instance becomes ready.
 
-The count above describes the primary rectangle in `selection.range`. A disjoint selection can also have `selection.extraRanges`; add those ranges explicitly when the host panel needs a total across every selected rectangle. Hold `Ctrl` or `Cmd` while dragging to add another area. `Ctrl+Enter` / `Cmd+Enter` writes the current edit to every selected area. Ribbon formatting and Clear also visit every area and authorize each area against the active policy. The `selectionChange` event still reports only the active cell, anchor, and primary range; the adapter hooks and store state carry `extraRanges`.
+The count above describes the primary rectangle in `selection.range`. A disjoint selection can also have `selection.extraRanges`; add those ranges explicitly when the host panel needs a total across every selected rectangle (users add an area by holding `Ctrl` or `Cmd` while dragging). The `selectionChange` event reports only the active cell, anchor, and primary range; the adapter hooks and store state carry `extraRanges`.
 
 ## Vue: the same inspector as an SFC
 
@@ -146,9 +150,11 @@ import {
   useSpreadsheet,
   useSpreadsheetEvent,
   type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
 } from '@libraz/formulon-cell-vue'
 import '@libraz/formulon-cell/styles.css'
 
+const ui: SpreadsheetUiOptions = { profile: 'embedded', features: { shortcuts: true, clipboard: true } }
 const instance = shallowRef<SpreadsheetInstance | null>(null)
 const lastEdit = ref<string | null>(null)
 const rejection = ref<string | null>(null)
@@ -209,7 +215,7 @@ onBeforeUnmount(() => {
   <section class="sheet-layout">
     <div class="sheet-host">
       <Spreadsheet
-        :ui="{ profile: 'embedded', features: { shortcuts: true, clipboard: true } }"
+        :ui="ui"
         :toolbar="false"
         locale="en"
         style="width: 100%; height: 420px"
@@ -315,7 +321,7 @@ return (
 )
 ```
 
-Use a fallback while `strings` is `null` in React. In Vue, the composable returns an empty fallback dictionary until the instance is ready, so guard nested labels in a template or computed value.
+Use a fallback while `strings` is `null` in React. In Vue, the composable returns an empty fallback dictionary until the instance is ready, so guard nested labels in a template or computed value. In both adapters `locale` reads `'ja'` until the instance is ready, so disable a locale-bound control until then, as above.
 
 ## Use case: derive a host view from spreadsheet state
 

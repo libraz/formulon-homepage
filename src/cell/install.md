@@ -20,7 +20,7 @@ npm install @libraz/formulon-cell-react@0.9.0 react react-dom
 npm install @libraz/formulon-cell-vue@0.9.0 vue
 ```
 
-Import the core stylesheet once in the browser entry point. The package export is `@libraz/formulon-cell/styles.css`.
+Import the core stylesheet once in the browser entry point. `@libraz/formulon-cell/styles.css` covers the grid, dialogs, overlays, the ribbon, and all three built-in themes. The individual files under `@libraz/formulon-cell/styles/` (`tokens.css`, `paper.css`, `ink.css`, `contrast.css`, `toolbar.css`) exist for setups that assemble the stylesheet themselves.
 
 ```ts
 import '@libraz/formulon-cell/styles.css'
@@ -67,6 +67,10 @@ try {
 
 // Register disposeView with the surrounding view's cleanup hook.
 ```
+
+::: tip Two locale arguments
+The `locale` passed to `createDefault()` only picks the workbook's default font. The `locale` passed to `mount()` selects the UI language and the calculation profile (number formats, separators, localized function names). When `mount()` receives no `locale`, the UI starts in Japanese, so pass the language your application uses.
+:::
 
 `WorkbookHandle.createDefault()` loads the default Formulon WASM package. The current default loader does not require `SharedArrayBuffer` or COOP/COEP headers. A failed WASM or WebAssembly initialization rejects the promise; handle that failure at the host boundary instead of leaving an empty surface.
 

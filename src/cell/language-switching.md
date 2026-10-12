@@ -9,16 +9,6 @@ description: Keep formulon-cell labels, formula syntax, workbook profiles, and h
 
 ## Try the complete flow
 
-::: info Current release
-This page follows the current cell release. Install the three packages at the same pinned version:
-
-```sh
-npm install @libraz/formulon-cell@0.9.0 @libraz/formulon-cell-react@0.9.0 @libraz/formulon-cell-vue@0.9.0
-```
-
-The packages use `@libraz/formulon@0.15.1` and require Node.js 22 or later. See [Install](/cell/install) for the peer dependencies and the quick start.
-:::
-
 <LocaleSwitchDemo />
 
 The demo keeps one workbook mounted while it changes the selector, UI labels, workbook profile, calculated value, and localized input. It compares the localized display with the canonical formula preserved in the workbook. The failure behavior for an open modal, Find/Replace panel, comment editor, filter menu, Mac Function Arguments palette, or rejected profile write is documented below.
@@ -59,9 +49,9 @@ The built-in dictionaries are `en`, `ja`, `de`, `fr`, `zh`, `ko`, and `th`. Thei
 
 Any valid region tag with one of these built-in language bases maps to the same profile suffix: for example, `en-GB` uses the English `windows-en_US` or `mac-en_US` profile. The tag remains the committed `instance.locale`; the built-in selector represents it with the short `en` option. Script, variant, and private-use tags stay custom and do not select a profile.
 
-`localeSwitcher` is off by default, including in the full UI profile. Enable it with `ui.features.localeSwitcher: true`, or change it after mount with `instance.setFeatures({ localeSwitcher: true })`. A mount with an interaction `policy` restricts built-in UI to the policy-safe editing surface and disables the selector; keep a host-owned language control and call `instance.setLocale()` when the application uses a policy.
+`localeSwitcher` is off by default in every profile. Enable it with `ui.features.localeSwitcher: true`, or after mount with `setFeatures()`. An active interaction `policy` hides the selector, so a policy-bound application needs its own language control that calls `instance.setLocale()`.
 
-## Change language from the host
+## Change language from the host {#change-language-from-the-host}
 
 ```ts
 function changeLanguage(next: string) {
@@ -144,7 +134,13 @@ The adapters forward `locale`, `strings`, and `ui.features.localeSwitcher` to th
 
 ```tsx [React]
 import { useState } from 'react'
-import { Spreadsheet, type SpreadsheetInstance } from '@libraz/formulon-cell-react'
+import {
+  Spreadsheet,
+  type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
+} from '@libraz/formulon-cell-react'
+
+const ui: SpreadsheetUiOptions = { profile: 'embedded' }
 
 export function LanguageControl() {
   const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
@@ -153,7 +149,7 @@ export function LanguageControl() {
     <>
       <Spreadsheet
         locale="en"
-        ui={{ profile: 'embedded', features: { localeSwitcher: false } }}
+        ui={ui}
         onReady={setInstance}
         onLocaleChange={({ locale }) => savePreference(locale)}
       />
@@ -169,15 +165,20 @@ export function LanguageControl() {
 ```vue [Vue]
 <script setup lang="ts">
 import { shallowRef } from 'vue'
-import { Spreadsheet, type SpreadsheetInstance } from '@libraz/formulon-cell-vue'
+import {
+  Spreadsheet,
+  type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
+} from '@libraz/formulon-cell-vue'
 
+const ui: SpreadsheetUiOptions = { profile: 'embedded' }
 const instance = shallowRef<SpreadsheetInstance | null>(null)
 </script>
 
 <template>
   <Spreadsheet
     locale="en"
-    :ui="{ profile: 'embedded', features: { localeSwitcher: false } }"
+    :ui="ui"
     @ready="instance = $event"
     @locale-change="({ locale }) => savePreference(locale)"
   />

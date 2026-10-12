@@ -7,7 +7,7 @@ description: formulon-cell の表計算 UI キットをインストールして�
 
 cell の各パッケージは `@libraz/formulon@0.15.1` を使い、Node.js 22 以降が必要です。
 
-コアパッケージと、それが共有依存として使う `zustand` をインストールします。
+コアパッケージと、そのピア依存関係である `zustand` をインストールします。
 
 ```sh
 npm install @libraz/formulon-cell@0.9.0 zustand
@@ -20,7 +20,7 @@ npm install @libraz/formulon-cell-react@0.9.0 react react-dom
 npm install @libraz/formulon-cell-vue@0.9.0 vue
 ```
 
-ブラウザのエントリーポイントでコアのスタイルシートを 1 回読み込みます。公開の読み込み先は `@libraz/formulon-cell/styles.css` です。
+ブラウザのエントリーポイントでコアのスタイルシートを 1 回読み込みます。`@libraz/formulon-cell/styles.css` には、グリッド、ダイアログ、オーバーレイ、リボン、3 つの組み込みテーマがすべて含まれます。`@libraz/formulon-cell/styles/` 以下の個別ファイル（`tokens.css`、`paper.css`、`ink.css`、`contrast.css`、`toolbar.css`）は、スタイルシートを自分で組み立てる場合に使います。
 
 ```ts
 import '@libraz/formulon-cell/styles.css'
@@ -68,6 +68,10 @@ try {
 // disposeView を周囲のビューの終了処理に登録します。
 ```
 
+::: tip 2 か所の locale 指定
+`createDefault()` に渡す `locale` は、ワークブックの既定フォントを決めるだけです。UI の言語と計算プロファイル（数値書式、区切り文字、ローカライズされた関数名）は `mount()` に渡す `locale` で決まります。`mount()` に `locale` を渡さないと UI は日本語で始まるため、アプリケーションの言語を指定してください。
+:::
+
 `WorkbookHandle.createDefault()` は Formulon の標準 WASM パッケージを読み込みます。現在の標準ローダーは `SharedArrayBuffer` や COOP/COEP ヘッダーを必要としません。WASM または WebAssembly の初期化に失敗すると Promise が拒否されるため、ホスト側でエラーを処理してください。
 
 `Spreadsheet.mount()` の `onError` でもエラーを受け取れます。標準ではコアのエラーパネルが表示されます。フレームワークやホスト側でフォールバックを描画する場合は `renderError: false` を指定します。
@@ -80,7 +84,7 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-## ホストのサイズ
+## ホストのサイズ {#host-sizing}
 
 グリッドはマウント先の要素いっぱいに表示されます。ホスト要素、または高さが確定している親レイアウトに高さを指定します。flex レイアウトでは、ホストを含むパネルに `min-height: 0` が必要になる場合があります。
 

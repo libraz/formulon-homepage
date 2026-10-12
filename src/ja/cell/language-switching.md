@@ -9,16 +9,6 @@ description: 利用者の言語変更に合わせて、formulon-cell の表示�
 
 ## 一連の動作を試す
 
-::: info 現行リリース
-このページは cell の現行リリースに対応しています。3 つのパッケージを同じバージョンで固定してインストールします。
-
-```sh
-npm install @libraz/formulon-cell@0.9.0 @libraz/formulon-cell-react@0.9.0 @libraz/formulon-cell-vue@0.9.0
-```
-
-各パッケージは `@libraz/formulon@0.15.1` を使い、Node.js 22 以降が必要です。peer dependency とクイックスタートは [インストール](/ja/cell/install) を参照してください。
-:::
-
 <LocaleSwitchDemo />
 
 このデモでは、ワークブックをマウントしたまま、セレクター、UI のラベル、ワークブックプロファイル、計算結果、ローカライズされた入力を順に切り替えます。ワークブックに保持された正規数式と、ローカライズされた表示を比較できます。モーダル、検索と置換、コメント編集、フィルターメニュー、Mac の関数の引数パレットが開いている場合と、エンジンがプロファイル変更を拒否した場合の動作は、以下で説明します。
@@ -59,9 +49,9 @@ console.log(instance.workbook.spreadsheetProfileId()) // 'windows-de_DE'
 
 組み込み言語を基底に持つ正しい地域タグは、同じプロファイル接尾辞へマッピングされます。たとえば `en-GB` は英語の `windows-en_US` または `mac-en_US` プロファイルを使います。`instance.locale` には指定したタグが確定値として残り、組み込みセレクターでは短い `en` の選択肢として表示されます。script、variant、private-use タグはカスタム ID のままで、プロファイルを選びません。
 
-`localeSwitcher` は full プロファイルでも初期状態では無効です。`ui.features.localeSwitcher: true` で有効にするか、マウント後に `instance.setFeatures({ localeSwitcher: true })` を呼びます。`policy` を指定したマウントでは組み込み UI がポリシーで許可された編集面に制限され、セレクターも無効になります。ポリシーを使う場合はホスト側の言語コントロールから `instance.setLocale()` を呼び出してください。
+`localeSwitcher` はどのプロファイルでも初期状態では無効です。`ui.features.localeSwitcher: true` で有効にするか、マウント後に `setFeatures()` で有効にします。操作 `policy` が有効な間はセレクターが表示されないため、ポリシーを使うアプリケーションでは `instance.setLocale()` を呼ぶ言語コントロールを自分で用意してください。
 
-## ホスト側から切り替える
+## ホスト側から切り替える {#change-language-from-the-host}
 
 ```ts
 function changeLanguage(next: string) {
@@ -145,7 +135,13 @@ const facts = instance.workbook.localeFacts()
 
 ```tsx [React]
 import { useState } from 'react'
-import { Spreadsheet, type SpreadsheetInstance } from '@libraz/formulon-cell-react'
+import {
+  Spreadsheet,
+  type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
+} from '@libraz/formulon-cell-react'
+
+const ui: SpreadsheetUiOptions = { profile: 'embedded' }
 
 export function LanguageControl() {
   const [instance, setInstance] = useState<SpreadsheetInstance | null>(null)
@@ -154,7 +150,7 @@ export function LanguageControl() {
     <>
       <Spreadsheet
         locale="en"
-        ui={{ profile: 'embedded', features: { localeSwitcher: false } }}
+        ui={ui}
         onReady={setInstance}
         onLocaleChange={({ locale }) => savePreference(locale)}
       />
@@ -170,15 +166,20 @@ export function LanguageControl() {
 ```vue [Vue]
 <script setup lang="ts">
 import { shallowRef } from 'vue'
-import { Spreadsheet, type SpreadsheetInstance } from '@libraz/formulon-cell-vue'
+import {
+  Spreadsheet,
+  type SpreadsheetInstance,
+  type SpreadsheetUiOptions,
+} from '@libraz/formulon-cell-vue'
 
+const ui: SpreadsheetUiOptions = { profile: 'embedded' }
 const instance = shallowRef<SpreadsheetInstance | null>(null)
 </script>
 
 <template>
   <Spreadsheet
     locale="en"
-    :ui="{ profile: 'embedded', features: { localeSwitcher: false } }"
+    :ui="ui"
     @ready="instance = $event"
     @locale-change="({ locale }) => savePreference(locale)"
   />

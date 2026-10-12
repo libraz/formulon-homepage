@@ -90,7 +90,7 @@ instance.applyChanges([
 ])
 ```
 
-`fixedFormPolicy()` accepts a range list, an `EditableCells` predicate, or an object containing `ranges` or `predicate`. The helper allows value entry, clearing, paste, and fill in the declared cells. Use an explicit `InteractionPolicy` when the form needs a different set of operations. While a policy is active, built-in UI is limited to the formula bar, clipboard, shortcuts, wheel scrolling, and context menu; other built-ins remain unavailable even when their flags are true. See [Options](/cell/options#interaction-policy).
+`fixedFormPolicy()` accepts a range list, an `EditableCells` predicate, or an object containing `ranges` or `predicate`. The helper allows value entry, clearing, paste, and fill in the declared cells. Use an explicit `InteractionPolicy` when the form needs a different set of operations; [Options](/cell/options#interaction-policy) lists the fields and explains how a policy also limits the built-in UI.
 
 <CellEmbedDemo scenario="form" />
 
@@ -109,7 +109,7 @@ const result = instance.applyChanges(
 if (result.status === 'rejected') showUpdateError(result.rejected)
 ```
 
-## Use case: host-owned toolbar and menu
+## Use case: host-owned toolbar and menu {#host-owned-toolbar}
 
 Start with a small UI profile and let the application own the surrounding controls:
 
@@ -148,7 +148,7 @@ For a built-in menu with one host action, use `mode: 'builtIn'` and a `transform
 import type { ContextMenuOptions } from '@libraz/formulon-cell'
 
 const contextMenu: ContextMenuOptions = {
-  mode: 'builtIn' as const,
+  mode: 'builtIn',
   transform: ({ defaultItems }) => [
     ...defaultItems,
     {
@@ -162,29 +162,11 @@ const contextMenu: ContextMenuOptions = {
 
 Use `{ mode: 'disabled' }` when the host supplies another interaction surface or when a compact viewer should have no right-click menu.
 
-## Runtime changes
+## Runtime changes and lifecycle
 
-Settings can change after mount without replacing the workbook:
+Every option above can change after mount without replacing the workbook, for example `instance.setPolicy(viewerPolicy())` when a user's role changes. The setters are listed in [Options](/cell/options#runtime-changes).
 
-```ts
-instance.setUi({ profile: 'minimal', theme: 'ink' })
-instance.setPolicy(viewerPolicy())
-instance.setViewportOptions({
-  range: { sheet: 0, r0: 0, c0: 0, r1: 30, c1: 6 }
-})
-instance.setContextMenu({ mode: 'disabled' })
-instance.setOverlayOptions({ root: modalSurface })
-instance.setTheme('paper')
-instance.setToolbar(false)
-```
-
-Use `setFeatures()` for a direct `FeatureFlags` update. `setUi()` preserves the workbook while resolving a profile, platform, and its UI switches; the original top-level `features`, `theme`, and `toolbar` options are also reapplied. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change those values directly. See [Options](/cell/options) for the precedence rules and [Platform and Mac UI](/cell/platform) for platform changes.
-
-<CellEmbedDemo scenario="host-sync" />
-
-## Lifecycle
-
-Keep the instance and the workbook under the same view owner. Dispose both when the view is removed:
+Keep the instance and the workbook under the same view owner and dispose both when the view is removed:
 
 ```ts
 const instance = await Spreadsheet.mount(host, { workbook })
@@ -195,6 +177,4 @@ function closeView() {
 }
 ```
 
-For asynchronous mounts, keep the host's unmount path safe when initialization rejects. Framework adapters expose the same lifecycle through their component props and events.
-
-A workbook supplied to the initial mount remains caller-owned. The instance owns its default-created workbook and any replacement passed to `setWorkbook()`. After replacement, dispose the original caller-owned handle once it is no longer used; the instance disposes its current replacement.
+For asynchronous mounts, keep the unmount path safe when initialization rejects. [Install](/cell/install#host-sizing) explains which workbook the instance disposes for you; React and Vue adapters dispose the instance with the component.

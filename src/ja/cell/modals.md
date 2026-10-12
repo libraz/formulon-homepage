@@ -133,9 +133,9 @@ instance.setOverlayOptions({
 
 通常のページレイアウトへ戻り、既定のポータル配置を使う場合は `instance.setOverlayOptions(undefined)` を呼びます。
 
-## ホスト UI から組み込みダイアログを開く
+## ホスト UI から組み込みダイアログを開く {#open-a-built-in-dialog-from-host-ui}
 
-マウントしたインスタンスには、組み込みダイアログを起動するメソッドがあります。選択したプロファイルまたは機能フラグで、対応する機能を有効にしてください。
+マウントしたインスタンスには、組み込みダイアログを起動するメソッドがあります。ダイアログを持つ機能が無効な場合、起動メソッドは何もしません。
 
 ```ts
 openFormatButton.addEventListener('click', () => {
@@ -159,11 +159,26 @@ namesButton.addEventListener('click', () => {
 })
 ```
 
-ほかに `openHyperlinkDialog()`、`openPageSetup()`、`openConditionalDialog()`、`openPasteSpecial()`、`openEvaluateFormulaDialog()`、`openPivotTableDialog()` があります。各メソッドの現在のオプション引数は、配布パッケージの型宣言を参照してください。
+| 起動メソッド | 有効にする機能 |
+| --- | --- |
+| `openFormatDialog(tab?)`、`openDataValidationDialog()` | `formatDialog` |
+| `openFindReplace(tab?)`、`closeFindReplace()` | `findReplace` |
+| `openCommentDialog({ mode? })` | `commentDialog`（`ui.features.comments`） |
+| `openNamedRangeDialog()`、`openDefineNameDialog()` | `namedRanges` |
+| `openHyperlinkDialog()` | `hyperlink` |
+| `openConditionalDialog()` | `conditional`（`ui.features.conditionalFormatting`） |
+| `openPasteSpecial()`、`pasteSpecial(options)` | `pasteSpecial` |
+| `openPageSetup(tab?)` | `pageSetup` |
+| `openGoTo()`、`openGoToSpecial()` | `gotoSpecial` |
+| `openIterativeDialog()` | `iterative` |
+| `openFunctionArguments(name?, { category? })` | `fxDialog` |
+| `openQuickAnalysis()` | `quickAnalysis` |
+| `openWorkbookObjects()`、`openPivotFieldList()`、`openActivePivotFieldList()` | `workbookObjects` |
+| `openPivotTableDialog({ placement? })` | `pivotTableDialog`（`ui.features.pivotTable`） |
+| `openInsertCopiedCells()` | なし |
+| `openEvaluateFormulaDialog()`、`openExternalLinksDialog()`、`openCfRulesDialog()`、`openCellStylesGallery()`、`openFilterDropdown()` | なし |
 
-Mac リボンからは、ゴール シーク、統合、小計、スパークライン、スライサー、ブック統計のダイアログを開けます。ホストが独自のツールバーを用意する場合の起動方法と制限は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
-
-`openDataValidationDialog()` を使うには `formatDialog: true` が必要です。`validation` はセル入力の検証補助やリストのドロップダウンを制御します。ほかの起動メソッドには、それぞれ対応する組み込みダイアログの機能フラグが必要です。
+操作ポリシーが有効な間は、対応する機能が無効になるため、ほとんどの起動メソッドは動作しません。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。Mac リボンからは、ゴール シーク、統合、小計、スパークライン、スライサー、ブック統計も開けます。ホスト側のツールバーから呼ぶためのコマンド ID は [プラットフォームと Mac UI](/ja/cell/platform#mac-ribbon-dialogs) にあります。
 
 対応する機能が無効な場合は、プロファイルまたは機能フラグで有効にします。
 
@@ -182,4 +197,4 @@ const instance = await Spreadsheet.mount(host, {
 
 ホスト側で作るダイアログにも同じオーバーレイの配置先を使えます。コンテキストメニューの `action`、ツールバーのコールバック、アプリケーションのコマンドから開き、周囲のビューが閉じるときにスプレッドシートのインスタンスを破棄します。
 
-`openFindReplace()` などのインスタンスメソッドは組み込み機能を開きます。`extensions` で追加したダイアログは `instance.features[id]` のハンドルを使って開いてください。組み込み機能を無効にすると、その起動メソッドも動作しません。[拡張](/ja/cell/extensions) も参照してください。
+`extensions` でダイアログを置き換えても、ほとんどの起動メソッドは組み込みのダイアログを対象にします。例外と、置き換えたダイアログの開き方は [拡張](/ja/cell/extensions#replace-a-built-in-surface) を参照してください。

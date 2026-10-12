@@ -5,7 +5,7 @@ description: Configure a browser bundler for formulon-cell and its WASM asset.
 
 # Bundler setup
 
-`formulon-cell` is an ESM browser package. Import the package stylesheet from its public export and let the `@libraz/formulon` package resolve its own WASM asset.
+`formulon-cell` is an ESM browser package. The engine package `@libraz/formulon` is an Emscripten build that locates its `.wasm` file next to its own JavaScript through `import.meta.url`, so the bundler only has to leave that package intact and emit the asset.
 
 ## Vite
 
@@ -24,7 +24,7 @@ export default defineConfig({
 })
 ```
 
-The dependency exclusion prevents Vite from pre-bundling the package wrappers; the normal application build handles them. The ES2022 target supports the ESM features used by the browser package.
+The exclusion keeps Vite's dev-server pre-bundling from moving the engine JavaScript away from its `.wasm` file. The ES2022 target is required because the engine factory uses top-level `await`.
 
 ```ts
 // browser entry point
@@ -45,4 +45,4 @@ When initialization fails in the deployed application, inspect the browser netwo
 - Verify that the generated `.wasm` asset is copied and served.
 - Give the mounted host a height; bundler configuration cannot provide layout size.
 
-The default loader is single-threaded and does not use `SharedArrayBuffer`. If an application separately imports a threaded Formulon entry point, its hosting requirements belong to that separate integration.
+The default loader is single-threaded, starts no workers, and does not use `SharedArrayBuffer`. Only an application that imports `@libraz/formulon/threads` directly needs `worker: { format: 'es' }` in the Vite config and the cross-origin isolation headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`).

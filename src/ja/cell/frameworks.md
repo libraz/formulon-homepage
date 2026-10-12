@@ -13,30 +13,37 @@ description: formulon-cell を React / Vue から利用し、コアと同じ UI 
 
 ```tsx
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell-react/toolbar.css'
 import {
   Spreadsheet,
   fixedFormPolicy,
+  type ContextMenuOptions,
+  type SpreadsheetUiOptions,
+  type ViewportOptions,
 } from '@libraz/formulon-cell-react'
 
+// モジュール定数にすると、再描画をまたいでプロパティの参照が変わりません。
 const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+const ui: SpreadsheetUiOptions = {
+  profile: 'embedded',
+  theme: 'paper',
+  features: { shortcuts: true, clipboard: true },
+}
+const policy = fixedFormPolicy([formRange])
+const viewport: ViewportOptions = {
+  range: formRange,
+  tabNavigation: 'editable',
+  tabBoundary: 'stop',
+}
+const contextMenu: ContextMenuOptions = { mode: 'disabled' }
 
 export function OrderForm() {
   return (
     <div className="cell-frame">
       <Spreadsheet
-        ui={{
-          profile: 'embedded',
-          theme: 'paper',
-          features: { shortcuts: true, clipboard: true },
-        }}
-        policy={fixedFormPolicy([formRange])}
-        viewport={{
-          range: formRange,
-          tabNavigation: 'editable',
-          tabBoundary: 'stop',
-        }}
-        contextMenu={{ mode: 'disabled' }}
+        ui={ui}
+        policy={policy}
+        viewport={viewport}
+        contextMenu={contextMenu}
         onReady={(instance) => console.log('spreadsheet ready', instance)}
         onChangeBatch={(event) => console.log('applied batch', event.revision)}
         onCellChange={(event) => console.log('draft changed', event.addr, event.value)}
@@ -59,10 +66,9 @@ export function OrderForm() {
 
 `onReady` は動作中の `SpreadsheetInstance` を受け取ります。外側の保存ボタンやホスト側ダイアログから `applyChanges()`、`print()`、`openFindReplace()` などを呼ぶ場合に保持します。`policy` は編集可能な操作を制御し、`viewport` は表示と移動の範囲を制御します。大きな画面内にフォームを埋め込む場合は、両方を組み合わせます。
 
-アダプターはマウント後のプロパティ変更を動作中のインスタンスへ反映します。`theme`、`locale`、`strings`、`ui`、`features`、`extensions`、`policy`、`viewport`、`contextMenu`、`overlays`、ホスト側のステータスプロパティを変更しても再マウントは必要ありません。`policy` が有効な間は、ほかの機能フラグが有効でも組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに限られます。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。
+アダプターは、プロパティが変わると対応するメソッドを動作中のインスタンスに対して呼びます。そのため `workbook`、`ui`、`toolbar`、`theme`、`locale`、`strings`、`features`、`extensions`、`policy`、`viewport`、`contextMenu`、`overlays`、プリンター関連、ステータス表示のプロパティを変更しても再マウントされません。プロパティには参照が変わらない値（state、`useMemo`、モジュール定数）を渡してください。描画のたびに新しいオブジェクトリテラルを渡すと変更とみなされ、設定が毎回適用し直されます。
 
-ホスト側の言語メニューでは、`onReady` で受け取ったインスタンスを保持して `instance.setLocale(next)` を呼びます。UI とワークブックプロファイルをまとめて更新し、編集、表示中のモーダル、検索と置換、コメント編集、フィルターメニュー、プロファイル書き込み、Mac の関数の引数パレットによって切り替えられない場合は `false` を返します。拒否された画面は下書きを保持したまま開いた状態になり、現在のロケールも維持されます。受け付けた変更の後に `onLocaleChange` が発生します。組み込みセレクターは `ui.features.localeSwitcher` で明示的に有効にします。数式、値、失敗時の流れは [言語を切り替える](/ja/cell/language-switching) を参照してください。
-
+`locale` プロパティが変わると `instance.setLocale()` が呼ばれます。編集中やダイアログ表示中などの理由で拒否された場合、React は `onError` と、維持されたロケールを持つ `onLocaleChange` で通知します。詳しくは [言語を切り替える](/ja/cell/language-switching#change-language-from-the-host) を参照してください。
 ## Vue でのマウント例
 
 Vue パッケージは同じオプションをプロパティとして渡せます。テンプレート内のイベント名は `@cell-change` のようにケバブケースで記述します。
@@ -70,12 +76,27 @@ Vue パッケージは同じオプションをプロパティとして渡せま�
 ```vue
 <script setup lang="ts">
 import '@libraz/formulon-cell/styles.css'
-import '@libraz/formulon-cell-vue/toolbar.css'
-import { fixedFormPolicy, Spreadsheet } from '@libraz/formulon-cell-vue'
+import {
+  fixedFormPolicy,
+  Spreadsheet,
+  type CellChangeEvent,
+  type ContextMenuOptions,
+  type SpreadsheetUiOptions,
+  type ViewportOptions,
+} from '@libraz/formulon-cell-vue'
 
+// setup 内の定数にすると、再描画をまたいでプロパティの参照が変わりません。
 const formRange = { sheet: 0, r0: 0, c0: 0, r1: 20, c1: 3 }
+const ui: SpreadsheetUiOptions = {
+  profile: 'embedded',
+  theme: 'paper',
+  features: { shortcuts: true, clipboard: true },
+}
+const policy = fixedFormPolicy([formRange])
+const viewport: ViewportOptions = { range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }
+const contextMenu: ContextMenuOptions = { mode: 'disabled' }
 
-function saveDraft(event: { addr: unknown; value: unknown }) {
+function saveDraft(event: CellChangeEvent) {
   console.log('draft changed', event.addr, event.value)
 }
 </script>
@@ -83,10 +104,10 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 <template>
   <div class="cell-frame">
     <Spreadsheet
-      :ui="{ profile: 'embedded', theme: 'paper', features: { shortcuts: true, clipboard: true } }"
-      :policy="fixedFormPolicy([formRange])"
-      :viewport="{ range: formRange, tabNavigation: 'editable', tabBoundary: 'stop' }"
-      :context-menu="{ mode: 'disabled' }"
+      :ui="ui"
+      :policy="policy"
+      :viewport="viewport"
+      :context-menu="contextMenu"
       @cell-change="saveDraft"
       @change-batch="(event) => console.log(event.status)"
     />
@@ -114,7 +135,8 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 | オプション | 主な用途 |
 | --- | --- |
 | `ui` | `embedded`、`minimal`、`standard`、`excel365`、`full` の UI、テーマ、`default`、`mac`、`auto` の `platform` を選びます。 |
-| `toolbar` | コンポーネント内にリボンを表示します。 |
+| `theme` | `ui.theme` を `paper`、`ink`、`contrast`、または独自の名前で上書きします。 |
+| `toolbar` | コンポーネント内にリボンを表示するか、リボンのオプションを渡します。省略すると `ui` のプロファイルに従い、`ui` もなければリボンは表示されません。[リボンツールバー](/ja/cell/toolbar) を参照してください。 |
 | `policy` | 閲覧専用または入力セルだけ編集できるフォームを作ります。 |
 | `viewport` | 表示・移動できるセル範囲と Tab 移動を設定します。 |
 | `contextMenu` | 組み込みメニュー、変換したメニュー、ホスト側メニューを選びます。 |
@@ -124,12 +146,13 @@ function saveDraft(event: { addr: unknown; value: unknown }) {
 | `locale`、`strings` | UI 言語とラベルの上書きを設定します。組み込みセレクターは `ui.features.localeSwitcher` で有効にします。 |
 | `features`、`extensions` | 組み込み UI の切り替えと追加機能を設定します。 |
 | `getFunctionArgumentHelp` | Mac のパレットに型付きの引数ラベル、説明、参照 URL を渡します。 |
-| `functions` | マウント前にホスト側の数式関数を登録します。 |
-| `printerProfiles`、`refreshPrinterProfiles` | ネイティブ / Electron のプリンター情報を接続します。 |
+| `functions` | 数式の入力候補と `instance.formula` で使うホスト関数を登録します。[セルの独自表示とホスト関数](/ja/cell/custom-cells#host-functions) を参照してください。 |
+| `seed` | コンポーネントが作成したワークブックへ、最初の描画前に値を入れます。 |
+| `printerProfiles`、`printerProfileId`、`refreshPrinterProfiles` | ネイティブ / Electron のプリンター情報を接続します。 |
 | `captureScreenClip` | 画面領域キャプチャをホストから提供します。 |
 | `uploadStatus`、`macroRecording` | ステータスバーの表示をホストから更新します。 |
 
-React には `className`、`style`、`children`、`onReady`、`onError`、`errorFallback` もあります。Vue には `class`、`style`、`ready`、`error` イベント、`error-fallback` 関数があります。
+React には `className`、`style`、`onReady`、`onError`、`errorFallback`、`ref`（`instance` を持つ `SpreadsheetRef`）、`children`（ノード、または動作中のインスタンスを受け取る関数）もあります。Vue には `class`、`style`、`ready`、`error` イベント、`error-fallback` 関数があります。
 
 ## イベントとフック / コンポーザブル
 
@@ -149,46 +172,9 @@ React のフックと Vue のコンポーザブルは、選択状態、必要な
 
 `selection-change` イベントに含まれるのはアクティブセル、アンカー、主選択範囲だけです。ホストパネルで非連続の範囲も読む場合は、`useSelection()` または `useSpreadsheet()` から `state.selection.extraRanges` を取得します。
 
-## ツールバーコンポーネント
+## ツールバーコンポーネント {#toolbar-component}
 
-リボンをスプレッドシートと別のレイアウトへ置く場合は `SpreadsheetToolbar` を使います。React では `@libraz/formulon-cell-react` から、Vue では `@libraz/formulon-cell-vue/toolbar.vue` のデフォルトコンポーネントとしてインポートします。`onReady` またはコンポーネントの `ref` から取得したインスタンスを渡します。
-
-```tsx
-import { SpreadsheetToolbar } from '@libraz/formulon-cell-react'
-
-<SpreadsheetToolbar
-  instance={instance}
-  activeTab={activeTab}
-  locale="ja"
-  onTabChange={setActiveTab}
-  onToolbarReady={setToolbar}
-  dropdownActions={{
-    applyProtectAction: () => openHostDialog('protect'),
-  }}
-/>
-```
-
-```vue
-<script setup lang="ts">
-import SpreadsheetToolbar from '@libraz/formulon-cell-vue/toolbar.vue'
-import { ref } from 'vue'
-import type { RibbonTab, SpreadsheetInstance } from '@libraz/formulon-cell-vue'
-
-defineProps<{ instance: SpreadsheetInstance }>()
-const activeTab = ref<RibbonTab>('home')
-</script>
-
-<template>
-  <SpreadsheetToolbar
-    :instance="instance"
-    locale="ja"
-    :active-tab="activeTab"
-    @tab-change="activeTab = $event"
-  />
-</template>
-```
-
-リボンを同じホストに含める場合は `Spreadsheet` の `toolbar` を使います。アプリケーションがタイトルバーや全体のレイアウトを所有する場合は `SpreadsheetToolbar` を使います。ツールバーはタブ一覧と、スクリプト、アドイン、スペルチェック、翻訳、描画などのホスト操作用コールバックを受け取ります。
+`SpreadsheetToolbar` は `Spreadsheet` コンポーネントの外にリボンをマウントします。プロパティ、インラインの `toolbar` オプション、スタイルは [リボンツールバー](/ja/cell/toolbar) を参照してください。
 
 ## マウントエラーとフォールバック
 
@@ -207,5 +193,6 @@ const activeTab = ref<RibbonTab>('home')
 - [言語を切り替える](/ja/cell/language-switching) — ホスト API、任意のセレクター、数式プロファイル、切り戻しを説明します。
 - [埋め込み](/ja/cell/embedding) ─ vanilla のマウント、オプション、モーダル配置
 - [プラットフォームと Mac UI](/ja/cell/platform) ─ プラットフォーム、Mac リボン、引数ヘルプ
+- [リボンツールバー](/ja/cell/toolbar) ─ `SpreadsheetToolbar`、インラインのリボン、ドロップダウンの処理
 - [ホスト統合](/ja/cell/host-integration) ─ 保存、ステータス表示、印刷、ホストコールバック
 - [国際化](/ja/cell/i18n) ─ 実行時ロケールと文字列上書き

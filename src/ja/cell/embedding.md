@@ -90,7 +90,7 @@ instance.applyChanges([
 ])
 ```
 
-`fixedFormPolicy()` は範囲の配列、`EditableCells` の判定関数、または `ranges` / `predicate` を持つオブジェクトを受け取ります。ヘルパーは宣言したセルへの値入力、値の消去、貼り付け、オートフィルを許可します。フォームに別の操作を許可する場合は `InteractionPolicy` を明示します。ポリシーが有効な間、組み込み UI は数式バー、クリップボード、ショートカット、ホイール操作、コンテキストメニューに限られます。ほかの組み込み機能は機能フラグが有効でも利用できません。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。
+`fixedFormPolicy()` は範囲の配列、`EditableCells` の判定関数、または `ranges` / `predicate` を持つオブジェクトを受け取ります。ヘルパーは宣言したセルへの値入力、値の消去、貼り付け、オートフィルを許可します。フォームに別の操作を許可する場合は `InteractionPolicy` を明示します。フィールドの一覧と、ポリシーが組み込み UI も制限する点は [オプション](/ja/cell/options#operation-policy) で説明しています。
 
 <CellEmbedDemo scenario="form" />
 
@@ -109,7 +109,7 @@ const result = instance.applyChanges(
 if (result.status === 'rejected') showUpdateError(result.rejected)
 ```
 
-## 利用例: ホスト側のツールバーとメニュー
+## 利用例: ホスト側のツールバーとメニュー {#host-owned-toolbar}
 
 小さい UI プロファイルから始め、周囲のコントロールをアプリケーション側で管理します。
 
@@ -148,7 +148,7 @@ const instance = await Spreadsheet.mount(host, {
 import type { ContextMenuOptions } from '@libraz/formulon-cell'
 
 const contextMenu: ContextMenuOptions = {
-  mode: 'builtIn' as const,
+  mode: 'builtIn',
   transform: ({ defaultItems }) => [
     ...defaultItems,
     {
@@ -162,27 +162,9 @@ const contextMenu: ContextMenuOptions = {
 
 ホスト側に別の操作面がある場合や、コンパクトなビューアーで右クリックメニューを出さない場合は `{ mode: 'disabled' }` を使います。
 
-## 実行時の変更
+## 実行時の変更とライフサイクル
 
-ワークブックを置き換えずに、マウント後の設定を変更できます。
-
-```ts
-instance.setUi({ profile: 'minimal', theme: 'ink' })
-instance.setPolicy(viewerPolicy())
-instance.setViewportOptions({
-  range: { sheet: 0, r0: 0, c0: 0, r1: 30, c1: 6 }
-})
-instance.setContextMenu({ mode: 'disabled' })
-instance.setOverlayOptions({ root: modalSurface })
-instance.setTheme('paper')
-instance.setToolbar(false)
-```
-
-`FeatureFlags` を直接更新する場合は `setFeatures()` を使います。`setUi()` はワークブックを保ったまま、プロファイル、プラットフォーム、UI スイッチを解決し、初回マウント時のトップレベルの `features`、`theme`、`toolbar` も再適用します。これらを直接変更する場合は、対応する `setFeatures()`、`setTheme()`、`setToolbar()` を使います。優先順位は [オプション](/ja/cell/options)、プラットフォーム変更は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
-
-<CellEmbedDemo scenario="host-sync" />
-
-## ライフサイクル
+ここまでのオプションは、ワークブックを置き換えずにマウント後も変更できます。たとえばユーザーの権限が変わったら `instance.setPolicy(viewerPolicy())` を呼びます。変更用のメソッドは [オプション](/ja/cell/options#runtime-changes) にまとめています。
 
 インスタンスとワークブックを同じビューの所有者で管理し、ビューを外すときに両方を破棄します。
 
@@ -195,6 +177,4 @@ function closeView() {
 }
 ```
 
-非同期マウントが失敗した場合も、ホストのアンマウント処理が安全に動くようにします。フレームワークアダプターでは、同じライフサイクルをコンポーネントのプロパティとイベントで扱えます。
-
-初回の `mount()` に渡したワークブックは呼び出し元が管理します。`mount()` が作成したワークブックと、`setWorkbook()` に渡した差し替え先はインスタンスが管理し、不要になった時点で破棄します。最初に渡したワークブックは、差し替え後に呼び出し元で破棄してください。
+非同期マウントが失敗した場合も、アンマウント処理が安全に動くようにします。インスタンスがどのワークブックを破棄するかは [インストール](/ja/cell/install#host-sizing) で説明しています。React と Vue のアダプターは、コンポーネントと一緒にインスタンスを破棄します。

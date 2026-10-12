@@ -37,18 +37,11 @@ console.log(resolved) // 'mac' or 'default'
 instance.setUi({ profile: 'excel365', platform: 'mac', theme: 'paper' })
 ```
 
-`setUi()` keeps the current workbook and re-resolves the profile, platform, and theme. Pass the complete desired UI configuration: omitted fields return to their defaults. It also reapplies the top-level `features`, `theme`, and `toolbar` overrides supplied at mount. Changing away from Mac closes an open formula palette and discards its suspended draft; the workbook itself is not replaced. Use `setFeatures()`, `setTheme()`, or `setToolbar()` when only one top-level setting should change. See [Options](/cell/options) for precedence rules.
+`setUi()` does not replace the workbook. Pass the complete desired UI configuration, because omitted fields return to their defaults. Changing away from Mac closes an open formula palette and discards its suspended draft. See [Options](/cell/options#ui-profile-and-feature-switches) for how `setUi()` interacts with the top-level options.
 
 ## Mac ribbon
 
-The Mac platform supplies its own ribbon tabs, shortcuts, and dialog routes. A host that builds a separate toolbar can select the published ribbon model explicitly:
-
-```ts
-import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
-
-const profile: RibbonProfile = 'excel365Mac'
-const tabs = buildRibbonModel('en', { profile })
-```
+The Mac platform supplies its own ribbon tabs, shortcuts, and dialog routes. [Ribbon toolbar](/cell/toolbar#platform-differences) covers the Mac tab set, `mac.` command IDs, and the `excel365Mac` ribbon model for a separate toolbar.
 
 The built-in Mac ribbon is available through `ui.platform: 'mac'`. Its Draw tab exposes black and red pens, a pencil, a highlighter, an eraser, and trackpad controls. Ink is stored in the mounted session illustration layer, with at most 2,000 points per stroke; it is not written to workbook data or persisted in an `.xlsx` file. The active policy still authorizes the affected cells before a stroke is committed.
 
@@ -126,7 +119,7 @@ defineProps<{ getFunctionArgumentHelp: FunctionArgumentHelpProvider }>()
 
 ## Mac ribbon dialogs
 
-The Mac ribbon opens these dialogs. A host-owned toolbar can dispatch the listed command through `ToolbarInstance.applyCommand(id)`; framework adapters expose the toolbar instance through `onToolbarReady`. The boolean return value reports whether a handler matched. Goal Seek, Consolidate, and Subtotal check the instance policy before changing workbook data.
+The Mac ribbon opens these dialogs. A host can open one by passing its command ID to `ToolbarInstance.applyCommand(id)`; see [Ribbon toolbar](/cell/toolbar#toolbarinstance). Goal Seek, Consolidate, and Subtotal check the instance policy before changing workbook data.
 
 | Ribbon route | Command ID | Supported behavior and limits |
 | --- | --- | --- |
@@ -142,7 +135,8 @@ Subtotal and other Mac data changes remain policy-controlled and undoable. See [
 ## Related pages
 
 - [Options](/cell/options) — profile, platform, feature, and policy resolution.
-- [API surface](/cell/api) — resolver types, ribbon models, and host helpers.
+- [Ribbon toolbar](/cell/toolbar) — mounting the ribbon, tab sets, and command dispatch.
+- [API surface](/cell/api) — resolver types and host helpers.
 - [React and Vue adapters](/cell/frameworks) — adapter props and event boundaries.
 - [Hooks and composables](/cell/hooks) — multi-range state in host panels.
 - [Demo](/cell/demo) — switch the demo header between Default, Mac, and Auto.

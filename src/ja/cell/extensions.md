@@ -5,35 +5,11 @@ description: formulon-cell の任意 UI 機能を選択し、置き換え、合�
 
 # 拡張
 
-拡張は、グリッドの周囲に任意の UI を追加する単位です。プリセットまたは `ui.profile` で開始する UI を選び、`features` で組み込み機能を切り替え、`extensions` で組み込みファクトリやホスト側機能を追加します。
+拡張は、`id` と `setup()` 関数を持つオブジェクトです。スプレッドシートはマウント時に `setup()` を呼び、返されたハンドルをスプレッドシートと一緒に破棄します。組み込みのダイアログやパネルも拡張として実装されているため、同じ仕組みで追加、置き換え、削除ができます。
 
-## 開始する UI を選ぶ
-
-表示する周辺 UI を選ぶ場合は UI プロファイルを使います。
-
-| プロファイル | 向いている用途 |
-| --- | --- |
-| `embedded` | 既存の画面内に置くフォームやビューアーです。 |
-| `minimal` | 周辺 UI を最小限にした編集用グリッドです。 |
-| `standard` | 一般的なスプレッドシート領域です。 |
-| `full` または `excel365` | デスクトップ型の広い UI です。 |
-
-```ts
-const instance = await Spreadsheet.mount(host, {
-  ui: {
-    profile: 'embedded',
-    features: { contextMenu: false, sheetTabs: false },
-  },
-})
-```
-
-`presets.minimal()`、`presets.standard()`、`presets.full()` は `FeatureFlags` オブジェクトが必要な場合に使います。プリセットへ明示的なフラグを追加して、1 つの機能を調整できます。
-
-<CellEmbedDemo scenario="profiles" />
+3 つのオプションを組み合わせて使います。`ui.profile` またはプリセットで開始時の構成を選び、`features` で組み込み機能を切り替え、`extensions` で拡張オブジェクトを追加します。プロファイルとスイッチの一覧は [オプション](/ja/cell/options#ui-profile-and-feature-switches) を参照してください。
 
 ## 組み込み機能を切り替える
-
-`ui.features` には、移動とレビュー、編集と書式、ワークブックの作成、ホスト側の状態表示、任意の `localeSwitcher` に対応するスイッチがあります。低レベルの `FeatureFlags` では対応する組み込み ID を使います。スイッチの一覧は [オプション](/ja/cell/options) を参照してください。
 
 ```ts
 import { presets, Spreadsheet } from '@libraz/formulon-cell'
@@ -50,11 +26,7 @@ const instance = await Spreadsheet.mount(host, {
 instance.setFeatures({ ...presets.standard(), clipboard: false })
 ```
 
-profile を使う場合は `ui.features`、すでに `FeatureFlags` を組み立てている場合は `features` が便利です。両方に同じキーを渡した場合は明示した `features` が優先されます。
-
-インスタンスに `policy` を指定すると、ほかの機能フラグが有効でも組み込み UI はポリシーが対応する経路に限られます。ホスト側のコマンド用に拡張を追加する前に、[操作ポリシー](/ja/cell/options#operation-policy)を確認してください。
-
-`localeSwitcher` は full プロファイルを含めて初期状態では無効です。パッケージのセレクターを表示する場合は `ui.features.localeSwitcher` またはマウント後の `setFeatures()` で有効にします。セレクターは [言語を切り替える](/ja/cell/language-switching) の `instance.setLocale()` と同じホスト API を呼び出します。操作ポリシーが有効な場合はセレクターが抑止されるため、ホスト側のコントロールを用意してください。
+`setFeatures()` はフラグ全体を置き換えます。変更したいキーだけを渡すのではなく、プリセットを展開し直してください。プロファイルを読みやすく設定するなら `ui.features`、組み立て済みの `FeatureFlags` があるなら `features` が便利です。両方に同じキーを渡した場合は `features` が優先されます。[操作ポリシー](/ja/cell/options#operation-policy) が有効な間は、これらのフラグにかかわらずほとんどの組み込み機能が無効になります。
 
 ## 組み込み拡張を選んで追加する
 
@@ -78,16 +50,15 @@ const instance = await Spreadsheet.mount(host, {
 })
 ```
 
-公開ファクトリは次のような利用者向けのグループに分かれます。
+多くのファクトリーは、置き換える機能フラグと同じ名前です。公開ファクトリーは次のとおりです。
 
 - 移動とレビュー: `contextMenu`、`findReplace`、`goToSpecialDialog`、`quickAnalysis`、`watchWindow`、`viewToolbar`
 - 編集と書式: `clipboard`、`pasteSpecial`、`formatDialog`、`formatPainter`、`borderDraw`、`validationList`
-- ワークブック作成: `conditionalDialog`、`namedRangeDialog`、`hyperlinkDialog`、`commentDialog`、`iterativeDialog`、`pageSetupDialog`
+- ワークブック作成: `conditionalDialog`、`namedRangeDialog`、`hyperlinkDialog`、`commentDialog`、`hoverComment`、`iterativeDialog`、`pageSetupDialog`
 - オブジェクトと集計: `charts`、`illustrations`、`pivotTableDialog`、`slicer`、`workbookObjects`
 - ホスト側のコントロール: `statusBar`、`wheel`
-- 言語: `localeSwitcher`（明示的な有効化が必要。ホスト側では `instance.setLocale()` を使います）
 
-これらのファクトリはパッケージ直下と `@libraz/formulon-cell/extensions` から利用できます。
+`allBuiltIns()` は、既定で有効なファクトリーを 1 つの配列で返します。すべてのフラグを無効にして、拡張だけで画面を組み立てる場合に使います。数式バー、シート見出し、言語セレクター、入力候補、エラーインジケーターには機能フラグがありますが、ファクトリーはありません。ファクトリーはパッケージ直下と `@libraz/formulon-cell/extensions` から読み込めます。
 
 ## 小さなホスト拡張を作る
 
@@ -118,9 +89,9 @@ const saveShortcut: Extension = {
 await Spreadsheet.mount(host, { extensions: [saveShortcut] })
 ```
 
-`setup()` に渡される情報には、ホスト要素、ワークブックを取得する関数、ストア、操作履歴、i18n コントローラ、セル更新や他の拡張を取得するヘルパーがあります。登録したものは `dispose()` で解除します。返すハンドルには `open()` や `refresh()` のようなアプリケーション用メソッドも追加でき、`instance.features[id]` から取得できます。
+`setup()` のコンテキストには、ホスト要素とその内部要素（`grid`、`formulabar`、`statusbar`、`canvas`、読み上げ用の `a11y` ライブリージョン）、`getWb()`、`store`、`history`、`i18n`、`refreshCells()`、`invalidate()`、ほかの拡張のハンドルを取得する `resolve(id)`、`onWorkbookChange()` が含まれます。`setWorkbook()` でワークブックが差し替わるため、ワークブックは常に `getWb()` から取得してください。拡張が登録したものは `dispose()` で解除します。ハンドルには、`setWorkbook()` の後に呼ばれる `rebindWorkbook()` と、ロケール変更後に呼ばれる `setStrings()` も実装できます。`open()` のようなアプリケーション用メソッドを追加することもでき、ハンドルは `instance.features[id]` から取得できます。任意の `priority` で `setup()` の実行順を指定できます（小さいほど先、既定は 50）。
 
-## 組み込み UI を置き換える
+## 組み込み UI を置き換える {#replace-a-built-in-surface}
 
 アプリケーション固有の実装を使う場合は、組み込みフラグを無効にし、同じ id の拡張を登録します。
 
@@ -141,7 +112,7 @@ await Spreadsheet.mount(host, {
 
 メニュー項目だけを変更する場合は `contextMenu` マウントオプションを使います。既存のダイアログの配置は [モーダルとオーバーレイ](/ja/cell/modals) の `overlays` で調整します。
 
-`openFindReplace()` などのインスタンスメソッドは組み込み機能を開きます。`extensions` で追加したダイアログは `instance.features[id]` のハンドルを使って開いてください。組み込み機能を無効にすると、その起動メソッドも動作しません。
+`openFindReplace()` など多くの起動メソッドは組み込み機能を対象にしており、組み込み機能を無効にすると何もしません。置き換えた拡張は、そのハンドル `instance.features[id]` から開いてください。例外は 3 つです。`openQuickAnalysis()`、`openWorkbookObjects()`（`openPivotFieldList()` も同様）、`openPivotTableDialog()` は、ID が `quickAnalysis`、`workbookObjects`、`pivotTableDialog` の拡張が登録されていれば、その `open()`（または `openPivotFieldList()`）を先に呼びます。
 
 ## マウント後に更新・削除する
 
@@ -153,7 +124,7 @@ instance.remove('findReplace')
 instance.setExtensions([formatDialog()])
 ```
 
-`remove()` は該当するカスタム拡張があれば破棄して `true` を返します。組み込み機能の表示は `setFeatures()` で切り替えます。独自ハンドルのメソッドを使う場合だけ参照を保持し、外側の参照を破棄する前に拡張のライフサイクルから `dispose()` できるようにします。
+`use()` は拡張を 1 つ追加します。同じ ID の拡張がすでにある場合は置き換えます。`remove(id)` は該当する拡張を破棄して `true` を返し、その ID の拡張がなければ `false` を返します。`setExtensions()` は `extensions` または `use()` で追加したすべての拡張を破棄してから、新しい一覧をマウントします。どのメソッドも組み込み機能の有効・無効は変えません。組み込み機能は `setFeatures()` で切り替えます。
 
 ## 次に読むページ
 
