@@ -22,6 +22,7 @@ import {
   kindLabel,
   statusText
 } from './engine'
+import FormulaInput from './FormulaInput.vue'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -84,6 +85,9 @@ const copy = computed(() =>
         modeStandalone: '単体 (evalFormula)',
         modeWorkbook: 'ワークブック参照 (evaluateFormulaText)',
         formulaLabel: '数式',
+        standaloneHint:
+          '単体評価ではセル参照を解決できません。数値・文字列・配列定数を使ってください。',
+        workbookHint: 'A2:A4 は都市名、B2:B4 は売上、C2:C4 は費用です。参照範囲を数式に使えます。',
         evaluate: '評価',
         presets: 'サンプル',
         seed: `シードデータ — 数式は ${cellAddress(ANCHOR.row, ANCHOR.col)} に入力したものとして評価されます`,
@@ -100,6 +104,10 @@ const copy = computed(() =>
         modeStandalone: 'Standalone (evalFormula)',
         modeWorkbook: 'With references (evaluateFormulaText)',
         formulaLabel: 'Formula',
+        standaloneHint:
+          'Use numbers, text or array constants; cell references are unavailable in standalone mode.',
+        workbookHint:
+          'A2:A4 contains cities, B2:B4 revenue and C2:C4 costs. These ranges are available to your formula.',
         evaluate: 'Evaluate',
         presets: 'Presets',
         seed: `Seed data — the formula is evaluated as if entered at ${cellAddress(ANCHOR.row, ANCHOR.col)}`,
@@ -246,13 +254,14 @@ onBeforeUnmount(() => {
       </table>
     </div>
 
-    <label class="demo-field">
-      <span class="demo-label">{{ copy.formulaLabel }}</span>
-      <span class="demo-field__row">
-        <input v-model="formula" type="text" class="demo-input" spellcheck="false" @keyup.enter="evaluate" />
-        <button type="button" class="demo-button" @click="evaluate">{{ copy.evaluate }}</button>
-      </span>
-    </label>
+    <FormulaInput
+      v-model="formula"
+      :label="copy.formulaLabel"
+      :action-label="copy.evaluate"
+      :placeholder="mode === 'standalone' ? '=ROUND(PI(), 4)' : '=SUM(B2:B4)'"
+      :context-hint="mode === 'standalone' ? copy.standaloneHint : copy.workbookHint"
+      @submit="evaluate"
+    />
 
     <div class="demo-row">
       <span class="demo-label">{{ copy.presets }}</span>

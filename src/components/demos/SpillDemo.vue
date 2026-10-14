@@ -27,6 +27,7 @@ import {
   isErrorValue,
   statusText
 } from './engine'
+import FormulaInput from './FormulaInput.vue'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -84,6 +85,8 @@ const copy = computed(() =>
         description:
           '配列を返す数式を、まず evaluateFormulaArray() でワークブックを書き換えずに形のまま取得し、次に下のシートの実際のセルへ書き込んで spillInfo() でスピル範囲を確認します。',
         formulaLabel: '配列数式',
+        inputHint:
+          'A2:A6 は果物名、B2:B6 は数量です。SEQUENCE や FILTER の結果を D2 から展開します。',
         presets: 'サンプル',
         previewTitle: 'プレビュー (書き込みなし)',
         shape: '形状',
@@ -101,6 +104,8 @@ const copy = computed(() =>
         description:
           'An array formula is first read back with evaluateFormulaArray(), which returns the whole shape without mutating the workbook, then written into a real cell of the sheet below so spillInfo() can report the region the engine engaged.',
         formulaLabel: 'Array formula',
+        inputHint:
+          'A2:A6 contains fruit names and B2:B6 quantities. Results from SEQUENCE or FILTER spill from D2.',
         presets: 'Presets',
         previewTitle: 'Preview (nothing is written)',
         shape: 'Shape',
@@ -269,19 +274,14 @@ onBeforeUnmount(() => {
     @run="start"
     @reset="reset"
   >
-    <label class="demo-field">
-      <span class="demo-label">{{ copy.formulaLabel }}</span>
-      <span class="demo-field__row">
-        <input
-          v-model="formula"
-          type="text"
-          class="demo-input"
-          spellcheck="false"
-          @keyup.enter="apply"
-        />
-        <button type="button" class="demo-button" @click="apply">{{ copy.commit }}</button>
-      </span>
-    </label>
+    <FormulaInput
+      v-model="formula"
+      :label="copy.formulaLabel"
+      :action-label="copy.commit"
+      :placeholder="'=FILTER(A2:B6, B2:B6>4)'"
+      :context-hint="copy.inputHint"
+      @submit="apply"
+    />
 
     <div class="demo-row">
       <span class="demo-label">{{ copy.presets }}</span>

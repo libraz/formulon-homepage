@@ -20,6 +20,7 @@ import { useData } from 'vitepress'
 import { computed, onBeforeUnmount, ref } from 'vue'
 import DemoFrame from './DemoFrame.vue'
 import { type Engine, formatValue, getEngine, isErrorValue, kindLabel, statusText } from './engine'
+import FormulaInput from './FormulaInput.vue'
 
 const { lang } = useData()
 const isJa = computed(() => lang.value === 'ja')
@@ -90,6 +91,8 @@ const copy = computed(() =>
         cellTitle: 'セルのエラー (値として返る)',
         hostTitle: 'ホストの失敗 (別経路)',
         formulaLabel: '数式',
+        inputHint:
+          'A1:B2 には 4・9・16・25 が入っています。=1/0 や =SQRT(-1) でエラーを、IFERROR でその処理を試せます。',
         evaluate: '評価',
         probes: 'サンプル',
         statusLabel: 'status.ok',
@@ -114,6 +117,8 @@ const copy = computed(() =>
         cellTitle: 'Cell error (arrives as a value)',
         hostTitle: 'Host failure (separate channel)',
         formulaLabel: 'Formula',
+        inputHint:
+          'A1:B2 contains 4, 9, 16 and 25. Try =1/0 or =SQRT(-1), then wrap the expression in IFERROR.',
         evaluate: 'Evaluate',
         probes: 'Probes',
         statusLabel: 'status.ok',
@@ -250,19 +255,14 @@ onBeforeUnmount(() => {
       <p class="demo-hint">{{ copy.codesHint }}</p>
     </div>
 
-    <label class="demo-field">
-      <span class="demo-label">{{ copy.formulaLabel }}</span>
-      <span class="demo-field__row">
-        <input
-          v-model="formula"
-          type="text"
-          class="demo-input"
-          spellcheck="false"
-          @keyup.enter="evaluate"
-        />
-        <button type="button" class="demo-button" @click="evaluate">{{ copy.evaluate }}</button>
-      </span>
-    </label>
+    <FormulaInput
+      v-model="formula"
+      :label="copy.formulaLabel"
+      :action-label="copy.evaluate"
+      :placeholder="'=IFERROR(1/0, &quot;fallback&quot;)'"
+      :context-hint="copy.inputHint"
+      @submit="evaluate"
+    />
 
     <div class="demo-row">
       <span class="demo-label">{{ copy.probes }}</span>
