@@ -1,6 +1,6 @@
 ---
 title: テキスト照合
-description: 測定済みの Mac 規則、推定の Windows 規則、関数ごとの強度で、文字列の比較、並べ替え、グループ化、検索を確認します。
+description: 測定済みの Mac 規則、Windows の単語順規則、関数ごとの強度で、文字列の比較、並べ替え、グループ化、検索を確認します。
 ---
 
 # テキスト照合
@@ -25,9 +25,9 @@ Mac プロファイルの `compare` は測定済みの展開と、比較専用�
 
 すべての `mac-*` プロファイルは、Mac Excel の測定表から生成した順序保存キーを使います。キーには主、第 2、動的、比較専用の第 3 段階の重みと、単語ソート記号や末尾の無視可能な記号に関する測定規則が含まれます。各ロケールに専用の表と数式 Oracle があり、単一の Unicode 照合器をそのまま使っているわけではありません。
 
-Windows プロファイルは、Windows Excel 365 ja-JP で実測したロケール対応の照合器で比較し、Windows の単語順に従います。ハイフンとアポストロフィは、ほかの差がすべて同じ場合にだけ順序に影響し、`æ` は `ae` と等しく、半角かなは全角かなより前、カタカナはひらがなより前に並びます。タイ語の前置母音は位置を保ち、ハングルは漢字より前に並びます。`dynamic` と `classic exact` の経路では、Windows の挙動に合わせて半角濁点かなを合成します。照合順序は、すべての Windows プロファイルで実測済みとは報告されません。`win-365-ja_JP` も例外ではありませんが、区切り文字などのロケール情報は実測済みです。`localeFacts(profileId).facts.collationMeasured` は Mac で true、Windows で false となり、この区別を表します。
+Windows プロファイルは、同じロケール表から、Windows Excel 365 ja-JP で実測したホスト規則（Windows の単語順）でキーを作ります。ハイフンとアポストロフィは、ほかの差がすべて同じ場合にだけ順序に影響し、`æ` は `ae` と等しく、半角かなは全角かなより前、カタカナはひらがなより前に並びます。タイ語の前置母音は位置を保ち、子音より前に並びます。幅の違いは比較強度でだけ区別され、かなの種類は動的強度でも区別されます。漢字の順序はロケールごとの規則に従います。照合順序は、すべての Windows プロファイルで実測済みとは報告されません。`win-365-ja_JP` も例外ではありませんが、区切り文字などのロケール情報は実測済みです。`localeFacts(profileId).facts.collationMeasured` は Mac で true、Windows で false となり、この区別を表します。
 
-この違いは小さな再現例で確認できます。実測済み Mac 日本語プロファイルでは `æ` が `ae` の後に並ぶため `"æ"="ae"` は `FALSE` ですが、Windows 日本語プロファイルでは `TRUE` です。ハイフン、かな、非ラテン文字でも差が出ます。テストでは実行したマシンに依存せず、プロファイルを固定してください。
+この違いは小さな再現例で確認できます。実測済み Mac 日本語プロファイルでは `"æ"="ae"` は `FALSE` ですが、Windows 日本語プロファイルでは `TRUE` です。ハイフン、かな、非ラテン文字でも差が出ます。テストでは実行したマシンに依存せず、プロファイルを固定してください。
 
 ## 測定された区別
 
@@ -37,10 +37,11 @@ Windows プロファイルは、Windows Excel 365 ja-JP で実測したロケー
 
 - 測定済み Mac の `ja_JP`、`en_US`、`ko_KR`、`th_TH` では、動的操作で `ｶﾞ` と `ガ`、`Ａ` と `A`、`ア` と `あ` が同じグループになります。Mac の `zh_CN` と `zh_TW` では動的操作でも `ア` と `あ` を区別しますが、動的強度では `Ａ` と `A`、`ｶﾞ` と `ガ` を同じグループにします。
 - `zh_CN` と `zh_TW` の比較強度では `A` と `Ａ`、`ｶﾞ` と `ガ` を区別します。動的強度では幅の違いを折りたたみます。
-- Windows の比較経路では `ｶﾞ` と `ガ` を区別します。動的および完全一致の経路では、その濁点付き半角列を合成します。単独の `ｱ` と全角 `ア` は、テストした動的経路でも区別されます。
+- Windows プロファイルでは、`ｶﾞ` / `ガ`、`ｱ` / `ア`、`Ａ` / `A` を比較強度では区別し、動的強度ではそれぞれ同じグループにまとめ、完全一致では区別します。`ア` と `あ` は動的強度でも区別され、カタカナが先に並びます。
 
 ### アクセントと展開
 
+- Mac と Windows のプロファイルは、比較の前に基本文字と後続の結合文字（U+0300〜U+036F）を合成します。そのため `"a"&UNICHAR(769)` は比較、並べ替え、動的な検索で `á` と等しくなります。完全一致検索では区別されます。
 - 測定済み Mac の英語表では、比較で `straße` と `strasse` が等しくなり、`straße` は `strasze` より先になります。完全一致検索では `ß` と `ss` を区別します。
 - フランス語で測定された順序は `cote < coté < côte < côté` です。
 - ドイツ語では `ä < ae` と `äz > aea` がテストされています。
@@ -49,7 +50,7 @@ Windows プロファイルは、Windows Excel 365 ja-JP で実測したロケー
 ### かな記号、タイ語、ハングル
 
 - Mac 日本語では `かー` と `かあ` が比較で等しく、`かゝ` と `かか` も等しくなります。一方 `がゝ` は `がか` より後です。末尾の長音記号が隣の文字と常に交換可能になるわけではありません。
-- 測定されたタイ語の順序はプロファイルごとに異なります。`mac-365-ja_JP` と `win-365-ja_JP` では `กา` が `เก` より前になり、テストした `mac-365-zh_CN` では `เก` が `กา` より前になります。これはラテン文字のアルファベット順ではなく、前置母音の規則です。
+- 測定されたタイ語の順序はプロファイルごとに異なります。`mac-365-ja_JP` では `กา` が `เก` より前になり、`mac-365-zh_CN` と Windows プロファイルでは `เก` が `กา` より前になります。これはラテン文字のアルファベット順ではなく、前置母音の規則です。
 - Mac の `ja_JP`、`en_US`、`ko_KR`、`th_TH` では、比較でハングルを分解します。`각` は `가` と U+11A8 の組と等しく、`간` は `가나` より後です。`zh_CN` の表では `각` と分解列を区別します。`ko_KR` には独自の KS X 1001 読み順もあります。
 
 ### 漢字と句読点の順序
@@ -85,7 +86,7 @@ Python の `collation_classes(values, strength, profile_id)` は `class_ids` と
 
 ## 3 つのバインディングで同じ式を比較する
 
-次の例は同じワークブック API を使い、実測済みの `mac-365-ja_JP` 照合と推定値の `win-365-ja_JP` 照合を比較します。`SORT` を動的強度で実行し、スピルした 2 セルを表示します。出力は現在の WASM と Native の成果物で確認しており、Python バインディングも同じ C ABI を呼び出します。
+次の例は同じワークブック API を使い、実測済みの `mac-365-ja_JP` 照合と Windows の単語順による `win-365-ja_JP` 照合を比較します。`SORT` を動的強度で実行し、スピルした 2 セルを表示します。出力は現在の WASM と Native の成果物で確認しており、Python バインディングも同じ C ABI を呼び出します。
 
 ::: code-group
 
@@ -98,7 +99,7 @@ try {
   for (const profile of ['mac-365-ja_JP', 'win-365-ja_JP'] as const) {
     const status = wb.setExcelProfileId(profile)
     if (!status.ok) throw new Error(status.message)
-    if (!wb.setFormula(0, 0, 0, '=SORT({"ß";"ss"})').ok) throw new Error('setFormula failed')
+    if (!wb.setFormula(0, 0, 0, '=SORT({"coop";"co-op"})').ok) throw new Error('setFormula failed')
     if (!wb.recalc().ok) throw new Error('recalc failed')
     console.log(profile, [0, 1].map(row => wb.getDisplayText(0, row, 0).text))
   }
@@ -114,7 +115,7 @@ const wb = Workbook.createDefault()
 for (const profile of ['mac-365-ja_JP', 'win-365-ja_JP'] as const) {
   const status = wb.setExcelProfileId(profile)
   if (!status.ok) throw new Error(status.message)
-  if (!wb.setFormula(0, 0, 0, '=SORT({"ß";"ss"})').ok) throw new Error('setFormula failed')
+  if (!wb.setFormula(0, 0, 0, '=SORT({"coop";"co-op"})').ok) throw new Error('setFormula failed')
   if (!wb.recalc().ok) throw new Error('recalc failed')
   console.log(profile, [0, 1].map(row => wb.getDisplayText(0, row, 0).text))
 }
@@ -127,7 +128,7 @@ from formulon import Workbook
 with Workbook.create_default() as wb:
     for profile in ("mac-365-ja_JP", "win-365-ja_JP"):
         wb.set_excel_profile_id(profile)
-        wb.set_formula(0, 0, 0, '=SORT({"ß";"ss"})')
+        wb.set_formula(0, 0, 0, '=SORT({"coop";"co-op"})')
         wb.recalc()
         print(profile, [wb.get_display_text(0, row, 0)[0] for row in (0, 1)])
 ```
@@ -137,11 +138,11 @@ with Workbook.create_default() as wb:
 3 つとも次の内容に相当する出力になります。
 
 ```text
-mac-365-ja_JP [ 'ß', 'ss' ]
-win-365-ja_JP [ 'ss', 'ß' ]
+mac-365-ja_JP [ 'co-op', 'coop' ]
+win-365-ja_JP [ 'coop', 'co-op' ]
 ```
 
-これは動的配列操作の比較です。`="ß"="ss"`、完全一致の `MATCH`、`UNIQUE` が同じ強度だという意味ではありません。ワークブックで使う関数ごとにテストしてください。
+これは動的配列操作の比較です。`="co-op"="coop"`、完全一致の `MATCH`、`UNIQUE` が同じ強度だという意味ではありません。ワークブックで使う関数ごとにテストしてください。
 
 ## プロファイルと強度を組み合わせてテストする
 

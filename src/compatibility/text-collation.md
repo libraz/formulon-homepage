@@ -1,6 +1,6 @@
 ---
 title: Text collation
-description: Compare, sort, group, and look up text with measured Mac rules, estimated Windows rules, and function-specific strengths.
+description: Compare, sort, group, and look up text with measured Mac rules, Windows word-sort rules, and function-specific strengths.
 ---
 
 # Text Collation
@@ -25,9 +25,9 @@ On Mac profiles, `compare` includes measured expansions and the compare-only ter
 
 Every `mac-*` profile uses an order-preserving key generated from measured Mac Excel tables. The key contains primary, secondary, dynamic, and compare-only tertiary weights, plus the measured rules for word-sort symbols and trailing ignorable marks. Each locale has its own table and its own formula oracle; the tables are not a universal Unicode collation.
 
-The Windows profiles collate with the locale-aware collator measured on Windows Excel 365 ja-JP, following Windows word sort. Hyphen and apostrophe count only after every other difference, `æ` equals `ae`, half-width kana sort before full-width and katakana before hiragana, Thai prefix vowels keep their position, and Hangul sorts before Han. Dynamic and classic-exact paths additionally compose half-width voiced kana where the Windows behavior requires it. Collation order is reported as not measured for every Windows profile, including `win-365-ja_JP`, whose scalar locale facts are measured. `localeFacts(profileId).facts.collationMeasured` distinguishes the two: true for Mac profiles and false for Windows profiles.
+The Windows profiles build keys from the same locale tables under host rules measured on Windows Excel 365 ja-JP, a Windows word sort. Hyphen and apostrophe count only after every other difference, `æ` equals `ae`, half-width kana sort before full-width and katakana before hiragana, and Thai prefix vowels keep their position and sort before the consonants. Width differs only at comparison strength, kana type also at dynamic strength. Han order follows the locale's own rule. Collation order is reported as not measured for every Windows profile, including `win-365-ja_JP`, whose scalar locale facts are measured. `localeFacts(profileId).facts.collationMeasured` distinguishes the two: true for Mac profiles and false for Windows profiles.
 
-This difference is visible in a small, reproducible example. On the measured Mac Japanese profile `æ` sorts after `ae`, so `"æ"="ae"` is `FALSE`; on the Windows Japanese profile it is `TRUE`. The two profiles also differ for hyphens, kana, and non-Latin text. Pin the profile in tests instead of depending on the machine where the test happens to run.
+This difference is visible in a small, reproducible example. On the measured Mac Japanese profile `"æ"="ae"` is `FALSE`; on the Windows Japanese profile it is `TRUE`. The two profiles also differ for hyphens, kana, and non-Latin text. Pin the profile in tests instead of depending on the machine where the test happens to run.
 
 ## Measured distinctions
 
@@ -37,11 +37,12 @@ The following examples are taken from the collation fixtures and unit tests. The
 
 - On measured Mac `ja_JP`, `en_US`, `ko_KR`, and `th_TH`, dynamic operations group `ｶﾞ` with `ガ`, `Ａ` with `A`, and `ア` with `あ`. Mac `zh_CN` and `zh_TW` retain a kana distinction for `ア` and `あ` in dynamic operations, while still grouping `Ａ` with `A` and `ｶﾞ` with `ガ` at dynamic strength.
 - For `zh_CN` and `zh_TW`, comparison strength keeps `A` and `Ａ` distinct and keeps `ｶﾞ` and `ガ` distinct. Their dynamic strength folds those width variants.
-- The Windows comparison path keeps `ｶﾞ` and `ガ` distinct, while its dynamic and classic-exact paths compose that voiced half-width sequence. A bare `ｱ` and full-width `ア` remain distinct in the tested dynamic path.
+- On Windows profiles, comparison strength keeps `ｶﾞ` / `ガ`, `ｱ` / `ア`, and `Ａ` / `A` distinct, dynamic strength groups each pair, and classic exact keeps them distinct. `ア` and `あ` stay distinct at dynamic strength, with katakana first.
 
 ### Accents and expansions
 
 - In the measured Mac English table, comparison treats `straße` and `strasse` as equal, while `straße` sorts before `strasze`. Classic exact lookup keeps `ß` and `ss` distinct.
+- Mac and Windows profiles compose a base letter with following combining marks (U+0300–U+036F) before comparing, so `"a"&UNICHAR(769)` equals `á` in comparisons, sorting, and dynamic lookups; classic exact lookup keeps them distinct.
 - The French order tested is `cote < coté < côte < côté`.
 - The German order tests `ä < ae` and `äz > aea`.
 - The Spanish test places `ñ` after `nz`; the English table places `ñ` before `nz`.
@@ -49,7 +50,7 @@ The following examples are taken from the collation fixtures and unit tests. The
 ### Kana marks, Thai, and Hangul
 
 - In Mac Japanese, `かー` compares equal to `かあ`, `かゝ` equals `かか`, and `がゝ` sorts after `がか`. A trailing prolonged mark is not interchangeable with every neighboring character.
-- The measured Thai order is profile-specific: `mac-365-ja_JP` and `win-365-ja_JP` put `กา` before `เก`, while the tested `mac-365-zh_CN` order puts `เก` before `กา`. This is a prefix-vowel rule, not a general Latin-like alphabet order.
+- The measured Thai order is profile-specific: `mac-365-ja_JP` puts `กา` before `เก`, while `mac-365-zh_CN` and the Windows profiles put `เก` before `กา`. This is a prefix-vowel rule, not a general Latin-like alphabet order.
 - Mac `ja_JP`, `en_US`, `ko_KR`, and `th_TH` decompose Hangul for comparison: `각` equals `가` followed by U+11A8, and `간` sorts after `가나`. The `zh_CN` table keeps `각` distinct from that decomposed sequence. `ko_KR` also has its own KS X 1001 reading order.
 
 ### Han and punctuation order
@@ -85,7 +86,7 @@ Python's `collation_classes(values, strength, profile_id)` returns a `CollationC
 
 ## Compare the same formula on three bindings
 
-The following examples compare measured `mac-365-ja_JP` collation with estimated `win-365-ja_JP` collation through the same workbook API. They run `SORT` at dynamic strength and print the two spilled cells. The output was checked against the current WASM and native artifacts; the Python binding calls the same C ABI surface.
+The following examples compare measured `mac-365-ja_JP` collation with Windows word-sort `win-365-ja_JP` collation through the same workbook API. They run `SORT` at dynamic strength and print the two spilled cells. The output was checked against the current WASM and native artifacts; the Python binding calls the same C ABI surface.
 
 ::: code-group
 
@@ -98,7 +99,7 @@ try {
   for (const profile of ['mac-365-ja_JP', 'win-365-ja_JP'] as const) {
     const status = wb.setExcelProfileId(profile)
     if (!status.ok) throw new Error(status.message)
-    if (!wb.setFormula(0, 0, 0, '=SORT({"ß";"ss"})').ok) throw new Error('setFormula failed')
+    if (!wb.setFormula(0, 0, 0, '=SORT({"coop";"co-op"})').ok) throw new Error('setFormula failed')
     if (!wb.recalc().ok) throw new Error('recalc failed')
     console.log(profile, [0, 1].map(row => wb.getDisplayText(0, row, 0).text))
   }
@@ -114,7 +115,7 @@ const wb = Workbook.createDefault()
 for (const profile of ['mac-365-ja_JP', 'win-365-ja_JP'] as const) {
   const status = wb.setExcelProfileId(profile)
   if (!status.ok) throw new Error(status.message)
-  if (!wb.setFormula(0, 0, 0, '=SORT({"ß";"ss"})').ok) throw new Error('setFormula failed')
+  if (!wb.setFormula(0, 0, 0, '=SORT({"coop";"co-op"})').ok) throw new Error('setFormula failed')
   if (!wb.recalc().ok) throw new Error('recalc failed')
   console.log(profile, [0, 1].map(row => wb.getDisplayText(0, row, 0).text))
 }
@@ -127,7 +128,7 @@ from formulon import Workbook
 with Workbook.create_default() as wb:
     for profile in ("mac-365-ja_JP", "win-365-ja_JP"):
         wb.set_excel_profile_id(profile)
-        wb.set_formula(0, 0, 0, '=SORT({"ß";"ss"})')
+        wb.set_formula(0, 0, 0, '=SORT({"coop";"co-op"})')
         wb.recalc()
         print(profile, [wb.get_display_text(0, row, 0)[0] for row in (0, 1)])
 ```
@@ -137,11 +138,11 @@ with Workbook.create_default() as wb:
 All three print the equivalent of:
 
 ```text
-mac-365-ja_JP [ 'ß', 'ss' ]
-win-365-ja_JP [ 'ss', 'ß' ]
+mac-365-ja_JP [ 'co-op', 'coop' ]
+win-365-ja_JP [ 'coop', 'co-op' ]
 ```
 
-The code compares a dynamic-array operation. It does not imply that `="ß"="ss"`, exact `MATCH`, and `UNIQUE` have the same strength. Test each function surface that matters to the workbook.
+The code compares a dynamic-array operation. It does not imply that `="co-op"="coop"`, exact `MATCH`, and `UNIQUE` have the same strength. Test each function surface that matters to the workbook.
 
 ## Test profile and strength together
 
