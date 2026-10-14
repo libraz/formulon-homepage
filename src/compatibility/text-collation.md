@@ -27,7 +27,29 @@ Every `mac-*` profile uses an order-preserving key generated from measured Mac E
 
 The Windows profiles build keys from the same locale tables under host rules measured on Windows Excel 365 ja-JP, a Windows word sort. Hyphen and apostrophe count only after every other difference, `æ` equals `ae`, half-width kana sort before full-width and katakana before hiragana, and Thai prefix vowels keep their position and sort before the consonants. Width differs only at comparison strength, kana type also at dynamic strength. Han order follows the locale's own rule. Collation order is reported as not measured for every Windows profile, including `win-365-ja_JP`, whose scalar locale facts are measured. `localeFacts(profileId).facts.collationMeasured` distinguishes the two: true for Mac profiles and false for Windows profiles.
 
-This difference is visible in a small, reproducible example. On the measured Mac Japanese profile `"æ"="ae"` is `FALSE`; on the Windows Japanese profile it is `TRUE`. The two profiles also differ for hyphens, kana, and non-Latin text. Pin the profile in tests instead of depending on the machine where the test happens to run.
+### Results that differ between Mac and Windows
+
+The same formula can return different results on the two Japanese profiles. Each row below was evaluated on `mac-365-ja_JP` and `win-365-ja_JP`; the Windows column matches the Windows Excel 365 ja-JP goldens. Pin the profile in tests instead of depending on the machine where the test happens to run.
+
+| Formula | `mac-365-ja_JP` | `win-365-ja_JP` | Rule on Windows |
+| --- | --- | --- | --- |
+| `="Ａ"="A"` | `TRUE` | `FALSE` | Comparison keeps full-width and half-width apart. |
+| `="ｱ"="ア"` | `TRUE` | `FALSE` | The same width rule applies to kana. |
+| `="ア"="あ"` | `TRUE` | `FALSE` | Comparison keeps katakana and hiragana apart. |
+| `="æ"="ae"` | `FALSE` | `TRUE` | Ligatures expand to their letters. |
+| `="ß"="ss"` | `TRUE` | `TRUE` | Both profiles treat `ß` as `ss` when comparing. |
+| `=SORT({"coop";"co-op"})` | `co-op`, `coop` | `coop`, `co-op` | A hyphen counts only after every other difference. |
+| `=SORT({"あ";"ア"})` | `あ`, `ア` | `ア`, `あ` | Katakana sorts before hiragana. Mac treats the two as equal and keeps the input order. |
+| `=SORT({"กา";"เก"})` | `กา`, `เก` | `เก`, `กา` | A Thai prefix vowel sorts before the consonants. |
+| `=SORT({"家";"가"})` | `家`, `가` | `가`, `家` | Hangul sorts before Han. |
+| `=ROWS(UNIQUE({"ア";"あ"}))` | `1` | `2` | Dynamic strength still distinguishes kana type. |
+| `=XMATCH("Ａ",{"A"})` | `1` | `1` | Dynamic strength ignores width on both profiles. |
+| `=MATCH("Ａ",{"A"},0)` | `1` | `#N/A` | Classic exact lookup keeps width apart. |
+| `=MATCH("あ",{"ア"},0)` | `1` | `#N/A` | Classic exact lookup keeps kana type apart. |
+| `=COUNTIF(A1:A2,"ＡＢＣ")` with `ＡＢＣ` and `ABC` | `2` | `1` | Criteria compare full-width letters as distinct. |
+| `=COUNTIF(A1:A2,"１２３")` with `１２３` and `123` | `2` | `2` | Criteria fold full-width digits first, so both cells match. |
+
+Other `win-*` profiles apply the same host rules to their own locale tables, so the width, kana, hyphen, and ligature rows carry over; Han order follows each locale. [How far compatibility goes](/compatibility/edge-cases#text-by-host) has a live demo of further Mac and Windows differences in `MATCH`, `CODE`, and `LENB`.
 
 ## Measured distinctions
 

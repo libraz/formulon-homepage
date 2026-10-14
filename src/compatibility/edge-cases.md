@@ -44,7 +44,7 @@ Text that looks like a logical value is just as uneven. `IF` accepts the text `"
 
 <CompatCasesDemo group="coercion" />
 
-## Text comparison by locale and by host
+## Text comparison by locale and by host {#text-by-host}
 
 Whether two strings match depends on the locale and on the operating system Excel runs on. Under the Japanese profiles, `SUMIF` criteria treat hiragana and katakana as the same character, and the same for full-width and half-width forms, circled digits and plain digits, `ß` and `ss`. They do not treat `ä` as `a`. The English and German profiles keep the long-vowel mark `ー` distinct; the Japanese profile folds it into the vowel it extends.
 
