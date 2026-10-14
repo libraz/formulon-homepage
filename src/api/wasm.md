@@ -274,6 +274,10 @@ Generated from `dist/formulon.d.ts` in the installed `@libraz/formulon` package.
 
 <ApiReferenceTable surface="wasm" family="images" />
 
+### Charts {#charts}
+
+<ApiReferenceTable surface="wasm" family="charts" />
+
 ### Print settings and pagination {#print}
 
 <ApiReferenceTable surface="wasm" family="print" />
@@ -322,7 +326,7 @@ Data-validation input defaults `allowBlank` to `false` when omitted. Pass `allow
 
 AutoFilter criteria are stored separately from row visibility. Use `evaluateAutoFilter()` to inspect matches and `applyAutoFilter()` to update hidden rows; `clearAutoFilter()` removes criteria while retaining the AutoFilter range. Validation methods check proposed values without storing them, and `listInvalidCells()` enumerates existing violations.
 
-`probeImage()` reads PNG, JPEG, GIF, or BMP dimensions without touching the workbook. `listDrawingObjects()` returns anchored objects in document order; `getImage()` copies picture bytes, `insertImage()` preserves existing drawing content, and `removeImage()` removes the picture and releases its media when no other object references it. Threaded-comment methods include replies and person records; removing a person fails while a comment or mention still refers to that person.
+`probeImage()` reads PNG, JPEG, GIF, or BMP dimensions without touching the workbook. `listDrawingObjects()` returns anchored objects in document order; `getImage()` copies picture bytes, `insertImage()` preserves existing drawing content, and `removeDrawing()` removes a picture or chart and releases its media when no other object references it. Chart methods are described in [Charts](/workbook/charts). Threaded-comment methods include replies and person records; removing a person fails while a comment or mention still refers to that person.
 
 `paginate(sheet)` returns the resolved print layout in one result: `printArea`, `horizontalBreaks`, `verticalBreaks`, `pageCount`, `paper`, `margins`, `printable`, `scale`, `pageOrder`, `printTitles`, `pages`, `horizontalBreakManual`, and `verticalBreakManual`, together with `status`. `paper` reports point dimensions, orientation, and whether the stored paper code was known. `pages` lists physical pages in print order with `areaIndex`, inclusive cell bounds, origin, and scaled size. A missing declared print area leaves `printArea` empty while pagination falls back to the used range; the manual-break arrays parallel their break arrays.
 

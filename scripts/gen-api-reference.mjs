@@ -97,7 +97,8 @@ const FAMILIES = [
     id: 'conditional-formats',
     match: /conditional_format|^cf_|_cf_range$|^evaluate_cf_range$/
   },
-  { id: 'images', match: /image|drawing_object/ },
+  { id: 'images', match: /image|drawing/ },
+  { id: 'charts', match: /chart/ },
   {
     id: 'print',
     match:
@@ -118,6 +119,7 @@ const MATCH_ORDER = [
   'comments-links',
   'validation',
   'conditional-formats',
+  'charts',
   'images',
   'print',
   'evaluation',

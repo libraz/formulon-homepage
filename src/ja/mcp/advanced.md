@@ -92,13 +92,13 @@
 - ワークシートテーブル、AutoFilter、ピボットキャッシュ、ピボットテーブル、フィールド軸と順序、データフィールド、フィルター、日付グループ、ネイティブピボットテーブルのレイアウト
 - シート表示、保護、グリッド線、表示フラグ
 - フォント、塗りつぶし、罫線、表示形式、セルスタイル、差分書式、セル XF、範囲 XF。行・列スタイル（`setColumnStyle`、`clearColumnStyle`、`setRowStyle`、`clearRowStyle`）、属性だけの範囲書式（`rangeStyleBases`、`remapRangeStyle`）、`clearCellXfIndex`、`clearColumnWidth` を含みます
-- テーマのスクリプトフォントとリセット（`setThemeScriptFont`、`resetTheme`）、画像の配置と重なり順（`setImageAnchor`、`setImageZOrder`）
+- テーマのスクリプトフォントとリセット（`setThemeScriptFont`、`resetTheme`）、画像とグラフの配置と重なり順（`setDrawingAnchor`、`setDrawingZOrder`）
 - ロケールと照合順序の取得（`localizeFormula`、`canonicalizeFormula`、`localeFacts`、`compareText`、`collationClasses`）。読み取り専用で、セッションを変更ありにしません。照合クラス ID は単純な JSON 配列で返ります
 - 結合、コメント、ハイパーリンク、入力規則、条件付き書式、ふりがな、外部リンク
 
 疎なセル・結合範囲の取得（`getCellsInRange`、`getMergesInRange`）、A1 / R1C1 数式の取得、表示テキストと値の書式変換、ジオメトリと列幅モデル、テーマの色・フォント、有効なスタイル、シート・テーブルの型付き AutoFilter、入力規則の検査、スレッドコメントと人物、描画・画像の取得と削除も許可されています。呼び出す前に、正確なメソッドとレコードの項目を確認してください。フィルターの適用は行の表示状態を変え、依存する数式を再計算待ちにします。更新後の `SUBTOTAL` や `AGGREGATE` の値を読む前に `formulon_recalc_session` を呼んでください。
 
-`probeImage` と `insertImage` はバイナリ入力を取るため、低レベルの JSON 呼び出しでは使えません。ファイルの挿入や画像バイトの取得には、[画像操作](/ja/mcp/layout-preview#images) の `formulon_image_operation` を使います。`snapshotImage` / `restoreImage` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。不透明なバイト列を往復させるため、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないからです。
+`probeImage` と `insertImage` はバイナリ入力を取るため、低レベルの JSON 呼び出しでは使えません。ファイルの挿入や画像バイトの取得には、[画像操作](/ja/mcp/layout-preview#images) の `formulon_image_operation` を使います。`snapshotDrawing` / `restoreDrawing` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。不透明なバイト列を往復させるため、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないからです。
 
 `save`、`saveAs`、`saveWithDiagnostics` はセッション管理を迂回するため許可されません。保存は `outputPath` を明示した `formulon_save_session` を使います。`delete`、`isValid`、JavaScript コールバックを受け取る `setIterativeProgress` も JSON 呼び出しには適さないため許可されません。
 

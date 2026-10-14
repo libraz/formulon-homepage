@@ -158,6 +158,10 @@ Generated from the package type stubs (`formulon/__init__.pyi`) and the docstrin
 
 <ApiReferenceTable surface="python" family="images" />
 
+### Charts {#charts}
+
+<ApiReferenceTable surface="python" family="charts" />
+
 ### Print settings and pagination {#print}
 
 <ApiReferenceTable surface="python" family="print" />
@@ -194,7 +198,7 @@ A newly created pivot cache must get a worksheet source before the workbook is s
 
 Geometry methods accept `GeometryMode.DISPLAY` for the 96-DPI screen model or `GeometryMode.PRINT` for the DPI-stable pagination model. `get_display_text()` and `format_value()` return `DisplayStatus.OVERFLOW` with `########` when a value is outside the format's representable range, and `DisplayStatus.INVALID_FORMAT` when the format code is malformed; malformed formats fall back to General rendering.
 
-`probe_image()` reads PNG, JPEG, GIF, or BMP dimensions without changing the workbook. `list_drawing_objects()` returns anchored objects in document order; `get_image()` copies picture bytes, `insert_image()` preserves existing drawing content, and `remove_image()` removes the picture and releases its media when no other object references it. Threaded-comment methods include replies and person records; removing a person fails while a comment or mention still refers to that person.
+`probe_image()` reads PNG, JPEG, GIF, or BMP dimensions without changing the workbook. `list_drawing_objects()` returns anchored objects in document order; `get_image()` copies picture bytes, `insert_image()` preserves existing drawing content, and `remove_drawing()` removes a picture or chart and releases its media when no other object references it. Threaded-comment methods include replies and person records; removing a person fails while a comment or mention still refers to that person.
 
 AutoFilter criteria are stored separately from row visibility. Use `evaluate_auto_filter()` to inspect matches and `apply_auto_filter()` to update hidden rows; `clear_auto_filter()` removes criteria while retaining the AutoFilter range. Validation methods check proposed values without storing them, and `list_invalid_cells()` enumerates existing violations.
 

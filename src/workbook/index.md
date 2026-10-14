@@ -14,6 +14,7 @@ This section explains how Formulon models, edits, recalculates, and saves workbo
 - [Filters and validation](/workbook/filters-validation) — visible rows and proposed-value checks.
 - [Conditional formats](/workbook/conditional-formats) — rules, differential formats, and evaluation for rendering.
 - [Comments and images](/workbook/comments-images) — threaded discussions and anchored pictures.
+- [Charts](/workbook/charts) — read, create, and edit charts, and resolve their series against cell values.
 - [Recalculation](/workbook/recalculation) — dirty cells, dependencies, iterative settings, partial recalc.
 - [Dynamic arrays](/workbook/dynamic-arrays) — spill behavior and shape-sensitive recalculation.
 - [File formats](/workbook/file-formats) — OOXML, XLSB, and preservation boundaries.

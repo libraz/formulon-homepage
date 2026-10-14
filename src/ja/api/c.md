@@ -50,7 +50,7 @@ int main(void) {
 | 値 | 所有者 | ルール |
 | --- | --- | --- |
 | `fm_workbook_t *` | 呼び出し側 | `fm_workbook_destroy()` で解放します。`NULL` でも構いません。 |
-| `fm_workbook_save`、`fm_workbook_save_as`、`fm_workbook_save_with_diagnostics`、`fm_sheet_snapshot_range_style`、`fm_sheet_snapshot_image` が返すバイト列 | 成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
+| `fm_workbook_save`、`fm_workbook_save_as`、`fm_workbook_save_with_diagnostics`、`fm_sheet_snapshot_range_style`、`fm_sheet_snapshot_drawing` が返すバイト列 | 成功後の呼び出し側 | `fm_buffer_free()` だけで解放します。`free()` や `delete[]` は使いません。 |
 | `fm_value_t.u.text` とテキスト取得結果 | ワークブック | 次の一時バッファを使う読み取りの成功、変更、ハンドル破棄の前にコピーします。 |
 | エラーメッセージとコンテキスト | 現在のスレッド | 同じスレッドで次の API を呼ぶ前にコピーします。 |
 | `fm_formula_localize` / `fm_formula_canonicalize` が返す数式テキスト | 現在のスレッド | 同じスレッドでどちらかの関数を次に呼ぶまで有効です。 |
@@ -208,6 +208,10 @@ fm_locale_facts("mac-365-de_DE", &facts);
 ### 画像と描画オブジェクト {#images}
 
 <ApiReferenceTable surface="c" family="images" />
+
+### グラフ {#charts}
+
+<ApiReferenceTable surface="c" family="charts" />
 
 ### 印刷設定とページ分割 {#print}
 

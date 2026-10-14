@@ -14,6 +14,7 @@
 - [フィルターと入力規則](/ja/workbook/filters-validation) ─ 表示行の判定と入力候補の検証
 - [条件付き書式](/ja/workbook/conditional-formats) ─ ルール、差分書式、描画のための評価
 - [コメントと画像](/ja/workbook/comments-images) ─ スレッドでの会話と画像の配置
+- [グラフ](/ja/workbook/charts) ─ グラフの読み取り・作成・編集と、セル値に対する系列の解決
 - [再計算](/ja/workbook/recalculation) ─ 再計算待ちセル・依存関係・反復計算・部分再計算
 - [動的配列](/ja/workbook/dynamic-arrays) ─ スピルと形状に応じた再計算
 - [ファイル形式](/ja/workbook/file-formats) ─ OOXML、XLSB、保持境界

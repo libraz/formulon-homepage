@@ -277,6 +277,10 @@ try {
 
 <ApiReferenceTable surface="wasm" family="images" />
 
+### グラフ {#charts}
+
+<ApiReferenceTable surface="wasm" family="charts" />
+
 ### 印刷設定とページ分割 {#print}
 
 <ApiReferenceTable surface="wasm" family="print" />
@@ -325,7 +329,7 @@ try {
 
 AutoFilter の条件と行の表示状態は別に管理します。`evaluateAutoFilter()` で一致結果を確認し、`applyAutoFilter()` で非表示行を更新してください。`clearAutoFilter()` は範囲を残したまま条件を削除します。入力規則 API は値を保存せずに候補値を検証し、`listInvalidCells()` は既存の違反を列挙します。
 
-`probeImage()` はワークブックを変更せず、PNG、JPEG、GIF、BMP の画像形式と寸法を読み取ります。`listDrawingObjects()` はシートのアンカー付きオブジェクトを文書順で返します。`getImage()` は画像バイト列をコピーし、`insertImage()` は既存の描画を保持します。`removeImage()` は画像を削除し、他のオブジェクトがメディアを参照しなくなった場合にメディアも解放します。スレッドコメント API は返信と人物レコードを含み、コメントやメンションが参照している人物は削除できません。
+`probeImage()` はワークブックを変更せず、PNG、JPEG、GIF、BMP の画像形式と寸法を読み取ります。`listDrawingObjects()` はシートのアンカー付きオブジェクトを文書順で返します。`getImage()` は画像バイト列をコピーし、`insertImage()` は既存の描画を保持します。`removeDrawing()` は画像またはグラフを削除し、他のオブジェクトがメディアを参照しなくなった場合にメディアも解放します。グラフ用のメソッドは[グラフ](/ja/workbook/charts)にまとめています。スレッドコメント API は返信と人物レコードを含み、コメントやメンションが参照している人物は削除できません。
 
 `paginate(sheet)` は、`status` とともに `printArea`、`horizontalBreaks`、`verticalBreaks`、`pageCount`、`paper`、`margins`、`printable`、`scale`、`pageOrder`、`printTitles`、`pages`、`horizontalBreakManual`、`verticalBreakManual` を返します。`paper` はポイント単位の寸法、向き、用紙コードを認識できたかを持ちます。`pages` は印刷順の物理ページを並べ、`areaIndex`、両端を含むセル範囲、原点、拡大縮小後の寸法を含みます。印刷範囲の指定がない場合も `printArea` は空のままですが、ページ分割は使用範囲へフォールバックします。手動改ページの配列は対応する改ページ配列と同じ順序です。
 

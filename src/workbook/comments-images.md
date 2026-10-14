@@ -1,6 +1,6 @@
 # Comments and images
 
-The workbook model separates cell notes, threaded discussions, people, and drawing objects. The APIs expose their stored metadata and media bytes; they do not render drawings.
+The workbook model separates cell notes, threaded discussions, people, and drawing objects. Charts are drawing objects too; the drawing methods below apply to them, and chart content is covered in [Charts](/workbook/charts). The APIs expose their stored metadata and media bytes; they do not render drawings.
 
 ## Threaded comments and people
 
@@ -10,15 +10,15 @@ Each thread keeps Excel's legacy note stub synchronized. Row and column insertio
 
 The C calls are `fm_sheet_threaded_comment_count`, `fm_sheet_threaded_comment_at`, `fm_sheet_add_threaded_comment`, `fm_sheet_edit_threaded_comment`, `fm_sheet_set_thread_resolved`, `fm_sheet_remove_threaded_comment`, `fm_workbook_person_count`, `fm_workbook_person_at`, `fm_workbook_add_person`, and `fm_workbook_remove_person`. WASM and Native Node use the matching camelCase methods; Python uses snake_case.
 
-## Image bytes and drawing anchors
+## Image bytes and drawing anchors {#drawing-anchors}
 
 `probeImage(bytes)` recognizes PNG, JPEG, GIF, and BMP bytes and returns `ImageFormat` plus pixel dimensions without changing the workbook. `listDrawingObjects(sheet)` lists pictures, charts, shapes, groups, connectors, and other anchored objects. Picture metadata includes the object id, anchor kind, `AnchorEditAs`, cell coordinates, offsets and sizes in EMU (English Metric Units; 12,700 per point), name, description, media path, and image format. `getImage(sheet, objectId)` returns a copy of picture bytes.
 
-`insertImage` accepts a one-cell or two-cell anchor. Existing absolute anchors can be read through `listDrawingObjects`, but this API cannot insert an absolute anchor. `AnchorEditAs` controls how a two-cell picture follows edits. A zero width or height uses the probed pixel size in EMU. `removeImage` removes the picture while leaving other drawing objects; unused media is removed when no object references it. One-cell and two-cell picture anchors update with row and column insertions and deletions.
+`insertImage` accepts a one-cell or two-cell anchor. Existing absolute anchors can be read through `listDrawingObjects`, but this API cannot insert an absolute anchor. `AnchorEditAs` controls how a two-cell picture follows edits. A zero width or height uses the probed pixel size in EMU. `removeDrawing` removes a picture or chart while leaving other drawing objects; unused media is removed when no object references it. One-cell and two-cell picture anchors update with row and column insertions and deletions.
 
-`setImageAnchor` moves or resizes an existing picture while keeping its id, name, crop, rotation, flips, and other picture elements. It accepts one-cell or two-cell placements; a zero width or height keeps the current size. `setImageZOrder` moves the picture to an object-list index, where `0` is the back and the last index is the top. `snapshotImage` captures an opaque, versioned byte string containing the picture's list position, element, relationships, and media. `restoreImage` replaces the picture with the same id at its recorded position, or accepts `{ newId: true }` to add a copy on top with a fresh id. A snapshot can be restored into another sheet. Parsed OOXML drawings are required; retained XLSB drawings report `kIoDrawingUnparseable`.
+`setDrawingAnchor` moves or resizes an existing picture or chart while keeping its id, name, and other elements (for a picture, crop, rotation, and flips). It accepts one-cell or two-cell placements; a zero width or height keeps the current size. `setDrawingZOrder` moves the picture or chart to an object-list index, where `0` is the back and the last index is the top. `snapshotDrawing` captures an opaque, versioned byte string containing the object's list position, element, relationships, and media or chart parts. `restoreDrawing` replaces the object with the same id at its recorded position, or accepts `{ newId: true }` to add a copy on top with a fresh id. A snapshot can be restored into another sheet. Parsed OOXML drawings are required; retained XLSB drawings report `kIoDrawingUnparseable`.
 
-The C calls are `fm_workbook_probe_image`, `fm_sheet_drawing_object_count`, `fm_sheet_drawing_object_at`, `fm_sheet_get_image`, `fm_sheet_insert_image`, `fm_sheet_remove_image`, `fm_sheet_set_image_anchor`, `fm_sheet_set_image_z_order`, `fm_sheet_snapshot_image`, and `fm_sheet_restore_image`. The renderer, hit testing, and chart or shape editing remain outside this API.
+The C calls are `fm_workbook_probe_image`, `fm_sheet_drawing_object_count`, `fm_sheet_drawing_object_at`, `fm_sheet_get_image`, `fm_sheet_insert_image`, `fm_sheet_remove_drawing`, `fm_sheet_set_drawing_anchor`, `fm_sheet_set_drawing_z_order`, `fm_sheet_snapshot_drawing`, and `fm_sheet_restore_drawing`. The renderer, hit testing, and shape editing remain outside this API.
 
 ::: code-group
 
@@ -38,12 +38,12 @@ try {
   const inserted = checked(wb.insertImage(0, png, { row: 0, col: 0, name: 'dot' }), 'insertImage')
   console.log(checked(wb.listDrawingObjects(0), 'listDrawingObjects'))
   console.log(checked(wb.getImage(0, inserted.objectId), 'getImage').bytes.length)
-  const snapshot = checked(wb.snapshotImage(0, inserted.objectId), 'snapshotImage')
-  checked(wb.setImageAnchor(0, inserted.objectId, { row: 2, col: 0 }), 'setImageAnchor')
-  checked(wb.setImageZOrder(0, inserted.objectId, 0), 'setImageZOrder')
-  checked(wb.removeImage(0, inserted.objectId), 'removeImage')
-  checked(wb.restoreImage(0, snapshot.bytes), 'restoreImage')
-  checked(wb.removeImage(0, inserted.objectId), 'removeImage restored picture')
+  const snapshot = checked(wb.snapshotDrawing(0, inserted.objectId), 'snapshotDrawing')
+  checked(wb.setDrawingAnchor(0, inserted.objectId, { row: 2, col: 0 }), 'setDrawingAnchor')
+  checked(wb.setDrawingZOrder(0, inserted.objectId, 0), 'setDrawingZOrder')
+  checked(wb.removeDrawing(0, inserted.objectId), 'removeDrawing')
+  checked(wb.restoreDrawing(0, snapshot.bytes), 'restoreDrawing')
+  checked(wb.removeDrawing(0, inserted.objectId), 'removeDrawing restored picture')
   console.log(checked(wb.getThreadedComments(0), 'threads').comments.length, checked(wb.getPersons(), 'persons').persons.length)
 } finally { wb.delete() }
 ```
@@ -63,12 +63,12 @@ try {
   const inserted = checked(wb.insertImage(0, png, { row: 0, col: 0, name: 'dot' }), 'insertImage')
   console.log(checked(wb.listDrawingObjects(0), 'listDrawingObjects'))
   console.log(checked(wb.getImage(0, inserted.objectId), 'getImage').bytes.length)
-  const snapshot = checked(wb.snapshotImage(0, inserted.objectId), 'snapshotImage')
-  checked(wb.setImageAnchor(0, inserted.objectId, { row: 2, col: 0 }), 'setImageAnchor')
-  checked(wb.setImageZOrder(0, inserted.objectId, 0), 'setImageZOrder')
-  checked(wb.removeImage(0, inserted.objectId), 'removeImage')
-  checked(wb.restoreImage(0, snapshot.bytes), 'restoreImage')
-  checked(wb.removeImage(0, inserted.objectId), 'removeImage restored picture')
+  const snapshot = checked(wb.snapshotDrawing(0, inserted.objectId), 'snapshotDrawing')
+  checked(wb.setDrawingAnchor(0, inserted.objectId, { row: 2, col: 0 }), 'setDrawingAnchor')
+  checked(wb.setDrawingZOrder(0, inserted.objectId, 0), 'setDrawingZOrder')
+  checked(wb.removeDrawing(0, inserted.objectId), 'removeDrawing')
+  checked(wb.restoreDrawing(0, snapshot.bytes), 'restoreDrawing')
+  checked(wb.removeDrawing(0, inserted.objectId), 'removeDrawing restored picture')
   console.log(checked(wb.getThreadedComments(0), 'threads').comments.length, checked(wb.getPersons(), 'persons').persons.length)
 } finally { wb.dispose() }
 ```
@@ -83,12 +83,12 @@ try:
         object_id = wb.insert_image(0, png, row=0, col=0, name='dot')
         print(wb.list_drawing_objects(0))
         print(len(wb.get_image(0, object_id)))
-        snapshot = wb.snapshot_image(0, object_id)
-        wb.set_image_anchor(0, object_id, row=2, col=0)
-        wb.set_image_z_order(0, object_id, 0)
-        wb.remove_image(0, object_id)
-        wb.restore_image(0, snapshot)
-        wb.remove_image(0, object_id)
+        snapshot = wb.snapshot_drawing(0, object_id)
+        wb.set_drawing_anchor(0, object_id, row=2, col=0)
+        wb.set_drawing_z_order(0, object_id, 0)
+        wb.remove_drawing(0, object_id)
+        wb.restore_drawing(0, snapshot)
+        wb.remove_drawing(0, object_id)
         print(len(wb.get_threaded_comments(0)), len(wb.get_persons()))
 except FormulonError as exc:
     raise RuntimeError(str(exc)) from exc

@@ -158,6 +158,10 @@ print(order, classes.class_ids, classes.class_count)
 
 <ApiReferenceTable surface="python" family="images" />
 
+### グラフ {#charts}
+
+<ApiReferenceTable surface="python" family="charts" />
+
 ### 印刷設定とページ分割 {#print}
 
 <ApiReferenceTable surface="python" family="print" />
@@ -194,7 +198,7 @@ Python にはスカラーの `evaluate_formula_text()` がありません。`eva
 
 寸法メソッドは 96 DPI の画面向けモデルに `GeometryMode.DISPLAY`、ページ分割に使う DPI に依存しないモデルに `GeometryMode.PRINT` を指定します。`get_display_text()` と `format_value()` は、値が書式の表現可能な範囲を外れると `DisplayStatus.OVERFLOW` と `########` を返し、書式コードが不正な場合は `DisplayStatus.INVALID_FORMAT` として General 表示へフォールバックします。
 
-`probe_image()` はワークブックを変更せず、PNG、JPEG、GIF、BMP の画像形式と寸法を読み取ります。`list_drawing_objects()` はシートのアンカー付きオブジェクトを文書順で返します。`get_image()` は画像バイト列をコピーし、`insert_image()` は既存の描画を保持します。`remove_image()` は画像を削除し、他のオブジェクトがメディアを参照しなくなった場合にメディアも解放します。スレッドコメント API は返信と人物レコードを含み、コメントやメンションが参照している人物は削除できません。
+`probe_image()` はワークブックを変更せず、PNG、JPEG、GIF、BMP の画像形式と寸法を読み取ります。`list_drawing_objects()` はシートのアンカー付きオブジェクトを文書順で返します。`get_image()` は画像バイト列をコピーし、`insert_image()` は既存の描画を保持します。`remove_drawing()` は画像またはグラフを削除し、他のオブジェクトがメディアを参照しなくなった場合にメディアも解放します。スレッドコメント API は返信と人物レコードを含み、コメントやメンションが参照している人物は削除できません。
 
 AutoFilter の条件と行の表示状態は別に管理します。`evaluate_auto_filter()` で一致結果を確認し、`apply_auto_filter()` で非表示行を更新してください。`clear_auto_filter()` は範囲を残したまま条件を削除します。入力規則 API は値を保存せずに候補値を検証し、`list_invalid_cells()` は既存の違反を列挙します。
 

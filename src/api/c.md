@@ -50,7 +50,7 @@ To begin from an existing `.xlsx` or `.xlsb`, call `fm_workbook_load(input_bytes
 | Value | Owner | Rule |
 | --- | --- | --- |
 | `fm_workbook_t *` | caller | Release with `fm_workbook_destroy()`. `NULL` is allowed. |
-| Byte buffers from `fm_workbook_save`, `fm_workbook_save_as`, `fm_workbook_save_with_diagnostics`, `fm_sheet_snapshot_range_style`, `fm_sheet_snapshot_image` | caller after success | Release only with `fm_buffer_free()`, never `free()` or `delete[]`. |
+| Byte buffers from `fm_workbook_save`, `fm_workbook_save_as`, `fm_workbook_save_with_diagnostics`, `fm_sheet_snapshot_range_style`, `fm_sheet_snapshot_drawing` | caller after success | Release only with `fm_buffer_free()`, never `free()` or `delete[]`. |
 | `fm_value_t.u.text` and text getters | workbook | Copy before another successful scratch-backed read, any mutation, or handle destruction. |
 | Error message and context | current thread | Copy before the next API call on that thread. |
 | Formula text from `fm_formula_localize` / `fm_formula_canonicalize` | current thread | Valid until the next call to either function on that thread. |
@@ -208,6 +208,10 @@ Every declaration in `formulon_c.h` states its pointer lifetime beside it. The t
 ### Images and drawings {#images}
 
 <ApiReferenceTable surface="c" family="images" />
+
+### Charts {#charts}
+
+<ApiReferenceTable surface="c" family="charts" />
 
 ### Print settings and pagination {#print}
 
