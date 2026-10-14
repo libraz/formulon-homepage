@@ -5,19 +5,19 @@ description: Install and mount the formulon-cell spreadsheet UI kit.
 
 # Install
 
-The current cell packages use `@libraz/formulon@0.15.1` and require Node.js 22 or later.
+The current cell packages use `@libraz/formulon@0.15.2` and require Node.js 22 or later.
 
 Install the core package and its `zustand` peer dependency:
 
 ```sh
-npm install @libraz/formulon-cell@0.9.0 zustand
+npm install @libraz/formulon-cell@0.9.1 zustand
 ```
 
 For framework applications, install one adapter as well:
 
 ```sh
-npm install @libraz/formulon-cell-react@0.9.0 react react-dom
-npm install @libraz/formulon-cell-vue@0.9.0 vue
+npm install @libraz/formulon-cell-react@0.9.1 react react-dom
+npm install @libraz/formulon-cell-vue@0.9.1 vue
 ```
 
 Import the core stylesheet once in the browser entry point. `@libraz/formulon-cell/styles.css` covers the grid, dialogs, overlays, the ribbon, and all three built-in themes. The individual files under `@libraz/formulon-cell/styles/` (`tokens.css`, `paper.css`, `ink.css`, `contrast.css`, `toolbar.css`) exist for setups that assemble the stylesheet themselves.

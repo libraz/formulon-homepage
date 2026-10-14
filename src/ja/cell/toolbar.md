@@ -9,12 +9,11 @@ description: formulon-cell のリボンをスプレッドシートのホスト�
 
 ```ts
 import '@libraz/formulon-cell/styles.css'
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet, type RibbonTab } from '@libraz/formulon-cell'
+import { Spreadsheet, type RibbonTab } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(host, {
   ui: { profile: 'excel365' },
   toolbar: {
-    ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
     activeTab: (localStorage.getItem('ribbon-tab') as RibbonTab | null) ?? 'home',
     onTabChange: (tab) => localStorage.setItem('ribbon-tab', tab),
   },
@@ -41,11 +40,10 @@ formulon-cell のほかの部分と同じく、リボンもベータ版です。
 リボンをレイアウトの別の場所に置く場合は、独立したツールバーを使います。
 
 ```ts
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(sheetHost, { ui: { profile: 'excel365' }, toolbar: false })
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
-  ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
   dynamicDropdowns: true,
   onCommand: (id, applied) => {
     if (!applied) handleHostCommand(id)
@@ -69,12 +67,11 @@ React は `@libraz/formulon-cell-react` から `SpreadsheetToolbar` をエクス
 ::: code-group
 
 ```ts [Vanilla]
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(sheetHost, { ui: { profile: 'excel365' }, toolbar: false })
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
   activeTab: 'home',
-  ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
   dynamicDropdowns: { applyProtectAction: (action) => openProtectDialog(action) },
   hooks: { review: { spelling: () => openSpellChecker() } },
   onTabChange: (tab) => saveActiveTab(tab),
@@ -84,7 +81,6 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 ```tsx [React]
 import { useState } from 'react'
 import {
-  EXCEL365_STANDARD_RIBBON_TABS,
   Spreadsheet,
   SpreadsheetToolbar,
   type RibbonTab,
@@ -110,7 +106,6 @@ export function Editor() {
         activeTab={tab}
         onTabChange={setTab}
         locale="ja"
-        ribbonTabs={EXCEL365_STANDARD_RIBBON_TABS}
         dropdownActions={dropdownActions}
         onSpellingReview={() => openSpellChecker()}
         onToolbarReady={setToolbar}
@@ -125,7 +120,6 @@ export function Editor() {
 <script setup lang="ts">
 import { shallowRef, ref } from 'vue'
 import {
-  EXCEL365_STANDARD_RIBBON_TABS,
   Spreadsheet,
   type RibbonTab,
   type SpreadsheetInstance,
@@ -146,7 +140,6 @@ const tab = ref<RibbonTab>('home')
       :instance="instance"
       :active-tab="tab"
       locale="ja"
-      :ribbon-tabs="EXCEL365_STANDARD_RIBBON_TABS"
       :dropdown-actions="dropdownActions"
       :on-spelling-review="openSpellChecker"
       @tab-change="tab = $event"
@@ -222,7 +215,7 @@ const tab = ref<RibbonTab>('home')
 | `onFormulaBarChange(visible)` | 数式バーの切り替えが変わった後。 |
 | `onCommand(id, applied)` | コマンドを実行した後。組み込みの処理が見つからなかった場合、`applied` は `false` です。ホスト独自のコマンド ID をここで処理できます。 |
 
-バックステージは `toolbar.setBackstageOpen(true)` を呼んだときだけ開きます。ファイルタブを選んだだけでは開きません。ファイルメニューを持つホストでは、次のように両者をつなげます。
+ファイルタブを選ぶと、アクティブなタブが切り替わり `onTabChange('file')` が呼ばれるだけです。バックステージはホストがこのコールバックから自前で表示します。`toolbar.setBackstageOpen(true)` は `createBackstageView` が返す要素を表示し、戻るボタンまたは Escape で閉じて、直前のアクティブなタブに戻ります。それ以外のバックステージ内の操作はホストが処理します。ファイルメニューを持つホストでは、次のように両者をつなげます。
 
 ```ts
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
@@ -268,7 +261,7 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 | `RIBBON_TABS` | 標準のタブに続けて任意のタブを並べたもの。 |
 | `EXCEL365_MAC_RIBBON_TABS` | ホーム、挿入、描画、ページレイアウト、数式、データ、校閲、表示、自動化。 |
 
-`ribbonTabs` を省略すると、既定のプラットフォームでは `RIBBON_TABS`、Mac では `EXCEL365_MAC_RIBBON_TABS` を表示します。通常は `EXCEL365_STANDARD_RIBBON_TABS` を渡し、任意のタブはホスト側で必要な処理を接続した場合だけ追加してください。`ribbonTabs` を明示すると Mac のタブ構成も置き換わります。タブは配列の順に並び、非表示や無効のタブはキーボード操作で飛ばされます。
+`ribbonTabs` を省略すると、既定のプラットフォームでは `EXCEL365_STANDARD_RIBBON_TABS`、Mac では `EXCEL365_MAC_RIBBON_TABS` を表示します。React と Vue のコンポーネントも同じ既定値です。描画、自動化、Acrobat のタブを使うには、`RIBBON_TABS` または `[...EXCEL365_STANDARD_RIBBON_TABS, ...OPTIONAL_RIBBON_TABS]` を明示的に渡します。これらはホスト側で必要な処理を接続した場合だけ追加してください。`ribbonTabs` を明示すると Mac のタブ構成も置き換わります。タブは配列の順に並び、非表示や無効のタブはキーボード操作で飛ばされます。
 
 `buildRibbonModel(lang, { tabs, profile })` は、リボンが描画するものと同じモデルを返します。タブは `id` と `label`、グループは `title`、コマンドは `id`、`label`、`title` と、任意の `disabledReason` を持ちます。`profile` は `RibbonProfile` で、`default` か `excel365Mac` です。ホスト側のコマンドパレットを作るときや、`applyCommand()` に渡すコマンド ID を調べるときに使います。
 
@@ -311,7 +304,7 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 | `onRunScript` | 自動化タブのスクリプトメニューにあるカスタムスクリプトの項目 | `applyScriptAction('custom')` |
 | `onAddIn` | アドインメニューの管理 | `applyAddInAction('manage')` |
 
-コンポーネントはコアのフックをこれらのプロパティで置き換えます。そのため、プロパティを省略したボタンは何もしません。フレームワークを使わない `mountToolbar()` では、スペル チェック、翻訳、アクセシビリティ チェックに組み込みの処理が残り、選択したセルについてのレポートを表示します。置き換える場合は `hooks.review` を渡します。スクリプトとアドインのボタンは先にメニューを開き、ユーザーが対応する項目を選ぶとコールバックが呼ばれます。`dropdownActions` に `applyScriptAction` や `applyAddInAction` を指定した場合は、そちらが優先されます。
+プロパティを渡すと、対応するコアのフックが置き換わります。プロパティを省略した場合、スペル チェック、翻訳、アクセシビリティ チェックは選択したセルについてのレポートを表示する組み込みの処理のままで、スクリプトとアドインの項目もコアのスクリプト・アドインの処理のままです。フレームワークを使わない `mountToolbar()` で校閲の処理を置き換えるには `hooks.review` を渡します。`onRunScript` や `onAddIn` を渡した場合も、置き換わるのはそれぞれの項目だけです。スクリプトとアドインのボタンは先にメニューを開き、ユーザーが対応する項目を選ぶとコールバックが呼ばれます。`dropdownActions` に `applyScriptAction` や `applyAddInAction` を指定した場合は、そちらが優先されます。
 
 ## プラットフォームによる違い {#platform-differences}
 

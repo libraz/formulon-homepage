@@ -85,12 +85,6 @@ instance.cells.registerFormatter({
 
 ラベルのないステータスコードでは `null` を返すため、そのセルは通常の表示に戻ります。
 
-## 独自のエディター
-
-`registerEditor(entry)` には、`id`、`match`、`priority`、`mount(host, input)` を持つ `CellEditorEntry` を渡します。`mount` は `readValue()`、`focus()`、`detach()` を持つ `CellEditorHandle` を返します。`resolveEditor(input)` は最初に一致した登録を返し、`registerEditor()` が返す関数で登録を解除できます。
-
-ただし、セル内エディターはまだこの登録を参照しません。登録したエディターは保持されるだけでマウントされず、セルに入力すると組み込みのエディターが開きます。現時点で独自の入力 UI を使うには、`selectionChange` のハンドラーやコンテキストメニューの項目からホストの UI を開き、結果を `instance.applyChanges()` で書き込んでください。[ホスト統合](/ja/cell/host-integration) を参照してください。
-
 ## ホスト関数 {#host-functions}
 
 マウントオプションの `functions` は、`{ name, impl, meta }` の各項目を `instance.formula` に登録します。後から追加する場合は `register()` を使います。
@@ -119,7 +113,7 @@ const removeNet = instance.formula.register(
 
 ### 数式バーとエンジンへの反映
 
-登録した名前は、`=` に続けて入力したときの数式の入力候補に表示されます。同じ文字で始まる組み込み関数より前に並びます。`meta`（`description`、`args`、`returnType`）は登録と一緒に保持され、`get()` で取得できますが、入力候補の一覧に表示されるのは名前だけです。
+登録した名前は、`=` に続けて入力したときの数式の入力候補に表示されます。同じ文字で始まる組み込み関数より前に並びます。`meta`（`description`、`args`、`returnType`）は登録と一緒に保持され、`get()` で取得できます。入力候補と引数ヘルプには `args` のシグネチャが表示されます。
 
 formulon エンジンにはユーザー定義関数を呼び出す仕組みがないため、再計算中に `impl` が呼ばれることはありません。`=TAX(A2)` のようなセルの数式を書いても、値はホスト関数から得られません。ホストのコードで値を計算し、結果をセルに書き込んでください。
 

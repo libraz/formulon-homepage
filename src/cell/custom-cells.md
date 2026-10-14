@@ -85,12 +85,6 @@ instance.cells.registerFormatter({
 
 A status code without a label returns `null`, so the cell falls back to its normal display.
 
-## Custom editors
-
-`registerEditor(entry)` accepts a `CellEditorEntry` with `id`, `match`, `priority`, and `mount(host, input)`, which returns a `CellEditorHandle` with `readValue()`, `focus()`, and `detach()`. `resolveEditor(input)` returns the first matching entry, and the function returned by `registerEditor()` removes it.
-
-The in-cell editor does not consult these entries yet: a registered editor is stored but never mounted, and typing in the cell still opens the built-in editor. For a custom input today, open host UI from a `selectionChange` handler or a context-menu item, and write the result with `instance.applyChanges()`; see [Host integration](/cell/host-integration).
-
 ## Host functions {#host-functions}
 
 The `functions` mount option registers each `{ name, impl, meta }` entry in `instance.formula`. Register more later with `register()`:
@@ -119,7 +113,7 @@ Names are case-insensitive and stored in upper case. After upper-casing, a name 
 
 ### What reaches the formula bar and the engine
 
-Registered names are offered in formula autocomplete as the user types after `=`, ahead of built-in functions with the same prefix. `meta` (`description`, `args`, `returnType`) is stored with the registration and returned by `get()`; the autocomplete list shows the names only.
+Registered names are offered in formula autocomplete as the user types after `=`, ahead of built-in functions with the same prefix. `meta` (`description`, `args`, `returnType`) is stored with the registration and returned by `get()`. Autocomplete and the argument helper show the `args` signature.
 
 The formulon engine has no callback for user functions, so recalculation never calls `impl`. A cell formula such as `=TAX(A2)` does not get its value from the host function. Calculate the value in host code and write the result into a cell:
 

@@ -9,12 +9,11 @@ Pass `toolbar` to `Spreadsheet.mount()` and the ribbon is mounted in the same ca
 
 ```ts
 import '@libraz/formulon-cell/styles.css'
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet, type RibbonTab } from '@libraz/formulon-cell'
+import { Spreadsheet, type RibbonTab } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(host, {
   ui: { profile: 'excel365' },
   toolbar: {
-    ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
     activeTab: (localStorage.getItem('ribbon-tab') as RibbonTab | null) ?? 'home',
     onTabChange: (tab) => localStorage.setItem('ribbon-tab', tab),
   },
@@ -41,11 +40,10 @@ Like the rest of formulon-cell, the ribbon is beta. Its tabs follow a desktop sp
 Use the separate form when the ribbon belongs somewhere else in the layout:
 
 ```ts
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(sheetHost, { ui: { profile: 'excel365' }, toolbar: false })
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
-  ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
   dynamicDropdowns: true,
   onCommand: (id, applied) => {
     if (!applied) handleHostCommand(id)
@@ -69,12 +67,11 @@ React exports `SpreadsheetToolbar` from `@libraz/formulon-cell-react`. Vue publi
 ::: code-group
 
 ```ts [Vanilla]
-import { EXCEL365_STANDARD_RIBBON_TABS, Spreadsheet } from '@libraz/formulon-cell'
+import { Spreadsheet } from '@libraz/formulon-cell'
 
 const instance = await Spreadsheet.mount(sheetHost, { ui: { profile: 'excel365' }, toolbar: false })
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
   activeTab: 'home',
-  ribbonTabs: EXCEL365_STANDARD_RIBBON_TABS,
   dynamicDropdowns: { applyProtectAction: (action) => openProtectDialog(action) },
   hooks: { review: { spelling: () => openSpellChecker() } },
   onTabChange: (tab) => saveActiveTab(tab),
@@ -84,7 +81,6 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 ```tsx [React]
 import { useState } from 'react'
 import {
-  EXCEL365_STANDARD_RIBBON_TABS,
   Spreadsheet,
   SpreadsheetToolbar,
   type RibbonTab,
@@ -110,7 +106,6 @@ export function Editor() {
         activeTab={tab}
         onTabChange={setTab}
         locale="en"
-        ribbonTabs={EXCEL365_STANDARD_RIBBON_TABS}
         dropdownActions={dropdownActions}
         onSpellingReview={() => openSpellChecker()}
         onToolbarReady={setToolbar}
@@ -125,7 +120,6 @@ export function Editor() {
 <script setup lang="ts">
 import { shallowRef, ref } from 'vue'
 import {
-  EXCEL365_STANDARD_RIBBON_TABS,
   Spreadsheet,
   type RibbonTab,
   type SpreadsheetInstance,
@@ -146,7 +140,6 @@ const tab = ref<RibbonTab>('home')
       :instance="instance"
       :active-tab="tab"
       locale="en"
-      :ribbon-tabs="EXCEL365_STANDARD_RIBBON_TABS"
       :dropdown-actions="dropdownActions"
       :on-spelling-review="openSpellChecker"
       @tab-change="tab = $event"
@@ -222,7 +215,7 @@ Every field is optional, so `{}` is a valid options object.
 | `onFormulaBarChange(visible)` | The formula bar toggle changes. |
 | `onCommand(id, applied)` | A command was dispatched. `applied` is `false` when no built-in handler matched, which lets the host handle its own command IDs as a fallback. |
 
-The backstage opens only through `toolbar.setBackstageOpen(true)`; selecting the File tab on its own does not open it. A host with a file menu can connect the two:
+Selecting the File tab only switches the active tab and fires `onTabChange('file')`; the host renders its own backstage from that callback. `toolbar.setBackstageOpen(true)` shows the view returned by `createBackstageView`, and Back or Escape closes it and restores the previously active tab. Other backstage actions are the host's to handle. A host with a file menu can connect the two:
 
 ```ts
 const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
@@ -268,7 +261,7 @@ Users can also change the display mode by double-clicking the active tab or pres
 | `RIBBON_TABS` | The standard set followed by the optional tabs. |
 | `EXCEL365_MAC_RIBBON_TABS` | Home, Insert, Draw, Page Layout, Formulas, Data, Review, View, Automate. |
 
-When `ribbonTabs` is omitted, the default platform renders `RIBBON_TABS` and the Mac platform renders `EXCEL365_MAC_RIBBON_TABS`. Pass `EXCEL365_STANDARD_RIBBON_TABS` and append optional tabs only when the host has wired what they need. An explicit `ribbonTabs` also replaces the Mac tab set. Tabs render in the order of the array, and keyboard navigation skips tabs that are hidden or disabled.
+When `ribbonTabs` is omitted, the default platform renders `EXCEL365_STANDARD_RIBBON_TABS` and the Mac platform renders `EXCEL365_MAC_RIBBON_TABS`; the React and Vue components share this default. The Draw, Automate, and Acrobat tabs need an explicit `RIBBON_TABS` or `[...EXCEL365_STANDARD_RIBBON_TABS, ...OPTIONAL_RIBBON_TABS]`, and should be added only when the host has wired what they need. An explicit `ribbonTabs` also replaces the Mac tab set. Tabs render in the order of the array, and keyboard navigation skips tabs that are hidden or disabled.
 
 `buildRibbonModel(lang, { tabs, profile })` returns the same model the ribbon renders: tabs with an `id` and `label`, groups with a `title`, and commands with an `id`, `label`, `title`, and optional `disabledReason`. `profile` is a `RibbonProfile`, either `default` or `excel365Mac`. Use it to build a host-owned command palette or to look up the command IDs to pass to `applyCommand()`:
 
@@ -311,7 +304,7 @@ The framework components route a few ribbon buttons to props:
 | `onRunScript` | The custom-script item in the Automate script menu | `applyScriptAction('custom')` |
 | `onAddIn` | Manage in the add-ins menu | `applyAddInAction('manage')` |
 
-The components replace the core hook with the prop, so a button whose prop is omitted does nothing. With vanilla `mountToolbar()`, Spelling, Translate, and Check Accessibility keep their built-in handlers, which show a report for the selected cells; pass `hooks.review` to replace them. The Script and Add-ins buttons open their menu first, and the callback runs when the user picks the matching item. A `dropdownActions` entry for `applyScriptAction` or `applyAddInAction` takes precedence over these props.
+A provided prop replaces the matching core hook. When a prop is omitted, Spelling, Translate, and Check Accessibility keep their built-in handlers, which show a report for the selected cells, and the Script and Add-ins items keep the core script and add-in actions; with vanilla `mountToolbar()`, pass `hooks.review` to replace the review handlers. A provided `onRunScript` or `onAddIn` handles only its own menu item. The Script and Add-ins buttons open their menu first, and the callback runs when the user picks the matching item. A `dropdownActions` entry for `applyScriptAction` or `applyAddInAction` takes precedence over these props.
 
 ## Platform differences {#platform-differences}
 
