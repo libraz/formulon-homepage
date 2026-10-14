@@ -133,14 +133,19 @@ const reset = () => {
   white-space: nowrap;
 }
 
+/* The floor keeps short formulas whole; on a narrow screen the grid scrolls. */
 .demo-grid.compat-cases td:first-child {
-  max-width: 10.5rem;
+  min-width: 16ch;
   white-space: normal;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
+/* Inline code is nowrap site-wide; a long formula must wrap inside its cell. */
 .compat-cases__formula {
   font-size: inherit;
+  white-space: normal;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .compat-cases__seed {
