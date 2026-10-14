@@ -110,7 +110,7 @@ A1 テキストは CLI 引数・数式文字列・MCP ツール入力など、�
 
 ## ロケール依存挙動
 
-現在の互換性プロファイルは、数値・真偽値・エラーの表記と解析、`TEXT()` の書式文字と名前、文字列の照合と型変換、`CODE()` / `CHAR()` と 2 バイト文字のコードページ、R1C1 の文字、`CELL()` のコード、`FORMULATEXT()` の関数名と区切り文字、`GROUPBY` / `PIVOTBY` のラベル、ピボットテーブルのラベルとレイアウトの既定値を制御します。数式は常に英語の関数名と保存用の区切り文字で入力し、CLI の出力はロケールに依存しません。既定は `win-365-en_US` です。14 のロケールに 28 のプロファイル ID があり、ID は `mac-365-<locale>` と `win-365-<locale>` の形で、`ja_JP`、`en_US`、`de_DE`、`fr_FR`、`zh_CN`、`ko_KR`、`th_TH`、`es_ES`、`es_MX`、`pt_BR`、`ru_RU`、`zh_TW`、`it_IT`、`nl_NL` に対応します。すべての `mac-*` と `win-365-ja_JP` は Excel との実測に基づき、その他の `win-*` は Mac の実測から推定しています。Mac プロファイルは比較、並べ替え、検索、グループ化、AutoFilter に各ロケールの Excel 実測照合順序を使います。Windows プロファイルは Windows の順序を実測していないため、文字列を大文字・小文字を区別せずバイト列で比較します。プロファイルはワークブックに保存されないため、読み込み後に再適用してください。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles) と [テキスト照合](/ja/compatibility/text-collation) を参照してください。
+現在の互換性プロファイルは、数値・真偽値・エラーの表記と解析、`TEXT()` の書式文字と名前、文字列の照合と型変換、`CODE()` / `CHAR()` と 2 バイト文字のコードページ、R1C1 の文字、`CELL()` のコード、`FORMULATEXT()` の関数名と区切り文字、`GROUPBY` / `PIVOTBY` のラベル、ピボットテーブルのラベルとレイアウトの既定値を制御します。数式は常に英語の関数名と保存用の区切り文字で入力し、CLI の出力はロケールに依存しません。既定は `win-365-en_US` です。14 のロケールに 28 のプロファイル ID があり、ID は `mac-365-<locale>` と `win-365-<locale>` の形で、`ja_JP`、`en_US`、`de_DE`、`fr_FR`、`zh_CN`、`ko_KR`、`th_TH`、`es_ES`、`es_MX`、`pt_BR`、`ru_RU`、`zh_TW`、`it_IT`、`nl_NL` に対応します。すべての `mac-*` と `win-365-ja_JP` は Excel との実測に基づき、その他の `win-*` は Mac の実測から推定しています。Mac プロファイルは比較、並べ替え、検索、グループ化、AutoFilter に各ロケールの Excel 実測照合順序を使います。Windows プロファイルは Windows Excel 365 ja-JP で実測した Windows の単語順を使います。プロファイルはワークブックに保存されないため、読み込み後に再適用してください。詳しくは [ロケールプロファイル](/ja/compatibility/locale-profiles) と [テキスト照合](/ja/compatibility/text-collation) を参照してください。
 
 ## 次に読むもの
 

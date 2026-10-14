@@ -13,7 +13,7 @@ Node がネイティブアドオン向けに提供する安定した C インタ
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
-git checkout v0.15.1
+git checkout v0.15.2
 make NODE_NATIVE_BUILD_DIR=build-node-native node-package
 ```
 

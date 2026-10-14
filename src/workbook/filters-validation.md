@@ -14,13 +14,13 @@ The C names are `fm_sheet_get_auto_filter`, `fm_sheet_set_auto_filter`, `fm_shee
 
 ### Text matching and ordering
 
-Text equality, custom criteria, and AutoFilter ordering use the workbook's active Excel compatibility profile. Every `mac-*` profile follows its measured Mac Excel collation across comparisons, sorting, lookups, grouping, and AutoFilters. `win-*` profiles compare text case-insensitively by bytes because Windows ordering is not measured. Profiles are runtime workbook state and are not saved in the file; apply the intended profile again after loading. See [Text collation](/compatibility/text-collation) for the comparison classes and examples.
+Text equality, custom criteria, and AutoFilter ordering use the workbook's active Excel compatibility profile. Every `mac-*` profile follows its measured Mac Excel collation across comparisons, sorting, lookups, grouping, and AutoFilters. `win-*` profiles follow the Windows word sort measured on Windows Excel 365 ja-JP. Profiles are runtime workbook state and are not saved in the file; apply the intended profile again after loading. See [Text collation](/compatibility/text-collation) for the comparison classes and examples.
 
 Value-list matching trims only leading and trailing U+0020 ASCII spaces from both the filter entry and the cell's shown text. Tabs, non-breaking spaces (U+00A0), and ideographic spaces (U+3000) remain significant.
 
 ## Data-validation checks
 
-`getValidations` reads stored rules and `addValidation` appends one. The rule payload uses OOXML ordinals: `type` 1–7 means whole, decimal, list, date, time, text length, or custom; `op` 0–7 means between, not-between, equal, not-equal, greater-than, less-than, greater-than-or-equal, or less-than-or-equal. `ValidationErrorStyle` is `Stop`, `Warning`, or `Information`.
+`getValidations` reads stored rules and `addValidation` appends one. The rule payload uses OOXML ordinals: `type` 1–7 means whole, decimal, list, date, time, text length, or custom; `op` 0–7 means between, not-between, equal, not-equal, greater-than, less-than, greater-than-or-equal, or less-than-or-equal. `ValidationErrorStyle` is `Stop`, `Warning`, or `Information`. Rule formulas are stored without a leading `=` and read back in that form; a formula that starts with `==` is rejected with `kParserUnexpectedToken`.
 
 `validateValue(sheet, row, col, value)` checks a proposed value without storing it. The result reports `hasRule`, `valid`, `ruleIndex`, and `errorStyle`; when rules overlap, the first stored rule wins. `listInvalidCells` returns populated cells that currently fail a rule in row-major order and supplies a resumable `nextCursor`. Setting a value does not automatically reject it. Custom formulas and rule bounds are evaluated against the stored workbook, not the proposed value.
 

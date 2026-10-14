@@ -4,7 +4,7 @@ A PivotTable has two separate parts: a **pivot cache** holding the source fields
 
 Formulon projects the configured cache into cells with `pivotLayout()`. It does not rebuild a pivot cache from a worksheet or run external connections. Populate a newly authored cache explicitly, and keep its declared worksheet source aligned with the source data.
 
-Pivot item grouping, labels, and order use the workbook's active Excel compatibility profile. Mac profiles use their measured locale collation; Windows profiles use case-insensitive byte ordering. The profile is runtime state and is not saved in the workbook. See [Text collation](/compatibility/text-collation).
+Pivot item grouping, labels, and order use the workbook's active Excel compatibility profile. Mac profiles use their measured locale collation; Windows profiles use the collation measured on Windows Excel 365 ja-JP (Windows word sort). The profile is runtime state and is not saved in the workbook. See [Text collation](/compatibility/text-collation).
 
 Caption filters (`LabelContains`, `LabelBeginsWith`, and authored begins / ends / contains predicates with their negations) use SEARCH-style wildcard matching under the active profile's compare collation. Case, width, and kana fold one character at a time; `*` matches a run, `?` matches one character, and `~` escapes the next wildcard. A loaded pivot matches the stored wildcard pattern when it refreshes, and API label filters use the same rule.
 
@@ -250,6 +250,12 @@ Each setting is its own call on `(sheet, pivotIndex, …)`. Python uses the snak
 | Value fields | `pivotDataFieldAdd`, `pivotDataFieldSet`, `pivotDataFieldClear` |
 | Label and value filters | `pivotFilterAdd`, `pivotFilterAt`, `pivotFilterRemoveAt`, `pivotFilterClear` |
 | Date grouping | `pivotFieldSetDateGroup`, `pivotFieldClearDateGroup` |
+
+`pivotFieldSetSort()` / `pivot_field_set_sort()` / `fm_workbook_pivot_field_set_sort` take a `PivotSortOrder`: `Descending` (`0`), `Ascending` (`1`), or `Manual` (`2`); any other value is rejected. `Manual` keeps the field's items in the order they were added with `pivotFieldAddItem()` and takes no by-field key; it is saved as `sortType="manual"`. For the other orders an empty by-field key sorts by label. An item added by label binds to the cache's shared item of that label, so its saved `<item x>` matches the cache.
+
+`pivotFieldAdd()` and `pivotFieldSetAxis()` keep the row and column field orders in step with the field's axis, so a field added on the row or column axis appears without a separate order call. `pivotSetRowFieldOrder()` / `pivotSetColFieldOrder()` set the axis's whole membership: fields left out of the list leave the axis, and a duplicate index is rejected. `pivotFieldClear()` empties both orders.
+
+`subtotalTop` defaults to `true` in the Python, Node, and WASM bindings, as in Excel: a group's subtotal sits on its own heading row. With `false`, compact and outline layouts head the group with a label-only row and close it with an `"<item> Total"` row in the locale's wording. A field with custom subtotal functions labels each subtotal row with the function name in the UI locale's wording (for example `East Max`) in Excel's fixed function order, and two or more functions place the subtotals below the group whatever `subtotalTop` says.
 
 ::: warning Label and value filters are not saved
 A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA` only while the workbook handle lives; `save()` does not write it. A `<filters>` block that Excel wrote is preserved on save but does not appear in `pivotFilterCount()`. Item visibility is the filter state that persists.

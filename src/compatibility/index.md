@@ -26,6 +26,6 @@ Formulon remains pre-1.0. Of the **526** recognized names, **511** are real impl
 | Formula functions | Local implementation count, service stubs, and validation guidance in [Formula coverage](/compatibility/formula-coverage) |
 | Files | Read / write / preserve boundaries in [File format support](/compatibility/file-format-support) |
 | Locale and language | The 28 profile IDs, locale facts, formula localization, and runtime editor links in [Locale profiles](/compatibility/locale-profiles) and [Workbook language](/workbook/language) |
-| Text behavior | Mac measured collation, Windows byte order, and per-function strength in [Text collation](/compatibility/text-collation) |
+| Text behavior | Mac measured collation, Windows word sort, and per-function strength in [Text collation](/compatibility/text-collation) |
 | Errors | `#VALUE!`, `#REF!`, parser failures, and host exceptions in [Error model](/compatibility/errors) |
 | Verification | Captured Excel values per profile, accepted divergences, and the closure checks in [Oracle testing](/compatibility/oracle-testing) |

@@ -60,9 +60,9 @@ with Workbook.create_default() as wb:
     wb.add_conditional_format(0, ConditionalFormatInput(
         sqref=[MergeRange(0, 0, 3, 0)],  # A1:A4
         type=1,  # cellIs
-        op_engaged=True, op=5,  # greater than
+        op=5,  # greater than
         formula1="70",
-        dxf_id_engaged=True, dxf_id=dxf_id,
+        dxf_id=dxf_id,
     ))
 
     for cell in wb.evaluate_cf_range(0, 0, 0, 3, 0):
@@ -73,13 +73,13 @@ with Workbook.create_default() as wb:
 
 :::
 
-Native Node (`@libraz/formulon-native`) has the same methods as the WASM package. Python's `ConditionalFormatInput` marks optional fields with an `_engaged` flag: `op_engaged`, `dxf_id_engaged`, `rank_engaged`, `std_dev_engaged`, and `time_period_engaged`. Without the flag the value is not stored. A `cellIs` rule with no operator never matches, and a rule with no `dxfId` matches without a format to apply.
+Native Node (`@libraz/formulon-native`) has the same methods as the WASM package. In Python's `ConditionalFormatInput`, `dxf_id`, `op`, `rank`, `std_dev`, and `time_period` are `Optional`: a value that is not `None` is stored, and `None` leaves the field out. `ConditionalFormat.op`, `rank`, `std_dev`, and `time_period` are `None` when the rule does not state them, so a rule read back can be passed to `add_conditional_format` unchanged. A `cellIs` rule with no operator never matches, and a rule with no `dxfId` matches without a format to apply.
 
 ## Differential formats
 
 `addDxf()` / `add_dxf()` appends a record to the workbook's `dxf` table and returns its index, which is the rule's `dxfId`. A record holds any of `font`, `fill`, `border`, and `numFmt` (Python: `font`, `fill`, `border`, `num_fmt_id` / `num_fmt_code`); a part left out does not change that aspect of the cell. Several rules can share one record. `getDxf()` / `get_dxf()` reads a record back and `dxfCount()` / `dxf_count()` returns the table size.
 
-For a fill, use `pattern: 1` (solid) and give `bgArgb` the colour as well as `fgArgb`: Excel draws a solid differential fill from its background colour. For a font, set only the fields to change, such as `bold` with `hasBold: true`, or `colorArgb`. The font's `size` is saved with the record, so keep the default 11 or set it to the body font size.
+For a fill, use `pattern: 1` (solid) and give `bgArgb` the colour as well as `fgArgb`: Excel draws a solid differential fill from its background colour. For a font, set only the fields to change, such as `bold` with `hasBold: true`, or `colorArgb`. A differential font carries `<sz>` only when `hasSize` is true. In JavaScript, leaving `size` out implies `hasSize: false`; in Python pass `has_size=False` for a font without a size. A font without one leaves the cell's size unchanged, whereas a font with `size` saves it with the record, so then keep the default 11 or set it to the body font size.
 
 ## Rule types and operators
 
@@ -103,7 +103,7 @@ The `cellIs` operator `op` counts `0` less than, `1` less than or equal, `2` equ
 
 `timePeriod` counts `0` today, `1` yesterday, `2` tomorrow, `3` last 7 days, `4` this week, `5` last week, `6` next week, `7` this month, `8` last month, `9` next month.
 
-Formula text goes in without a leading `=`. An expression is written for the top-left cell of the first range and shifts for the others, so `formula1: '$B1>100'` over `A1:C10` tests column B of each row. A non-empty formula that does not parse is rejected with `kParserUnexpectedToken` (1000). A contains rule matches like `SEARCH`, wildcards included, and begins-with and ends-with rules compare under the active profile's [collation](/compatibility/text-collation). To check what a predicate returns at one cell without adding a rule, use `evaluateConditionalFormula()` (see [Ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation)).
+Formula text is stored without a leading `=`, and `formula1` / `formula2` and formula-typed thresholds read back in that form (`$B1>100`, not `=$B1>100`). A formula that starts with `==` is rejected. An expression is written for the top-left cell of the bounding box of all the rule's ranges and shifts for the others, so `formula1: '$B1>100'` over `A1:C10` tests column B of each row. A non-empty formula, or a formula-typed threshold, that does not parse is rejected with `kParserUnexpectedToken` (1000). Text, blanks, errors, and time-period rules added without a formula get the formula Excel stores for them, anchored at the same cell, and `formula1` reads it back. A contains rule matches like `SEARCH`, wildcards included, and begins-with and ends-with rules compare under the active profile's [collation](/compatibility/text-collation). To check what a predicate returns at one cell without adding a rule, use `evaluateConditionalFormula()` (see [Ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation)).
 
 `priority` orders rules across the sheet: a lower number is evaluated first. When it is omitted or not positive, the new rule goes after every existing rule. With `stopIfTrue`, a match stops evaluation of lower-priority rules for that cell.
 
@@ -230,7 +230,7 @@ A **color scale** takes two or three thresholds and the same number of colours. 
 
 A **data bar** takes `min`, `max`, and `fill` (Python: `minimum`, `maximum`, `fill`), plus `showValue` and `minLengthPct` / `maxLengthPct` (defaults 10 and 90). It also carries the `x14` extension settings: `gradient`, `axisPosition` (`0` automatic, `1` middle, `2` none), `negativeFill`, `border`, `negativeBorder`, `axisColor`, and `direction` (`0` follows the sheet's reading direction, `1` left to right, `2` right to left). Omitted values use the model defaults: gradient fill, automatic axis, the positive fill for negative values, no border, and a black axis. The match gives the bar's length and axis position as percentages of the cell width, stated from the left edge; `barIsNegative` marks a negative value. The host mirrors the bar for a right-to-left rule, and for a `0` rule on a right-to-left sheet.
 
-An **icon set** takes `name`, the icon set ordinal, and the N−1 `thresholds` between the buckets of an N-icon set; `Three_Arrows` (`0`) takes two. The ordinals follow the OOXML names: `0` 3Arrows, `1` 3ArrowsGray, `2` 3Flags, `3` 3TrafficLights1, `4` 3TrafficLights2, `5` 3Signs, `6` 3Symbols, `7` 3Symbols2, `8` 4Arrows, `9` 4ArrowsGray, `10` 4RedToBlack, `11` 4Rating, `12` 4TrafficLights, `13` 5Arrows, `14` 5ArrowsGray, `15` 5Rating, `16` 5Quarters. `floor` is the lower bound of the lowest bucket and defaults to `percent 0`; a value below it gets no icon and no match. `iconIndex` counts from `0` for the lowest bucket, and `reverse` flips it. The `percent` flag is kept for round-trip only; each threshold's own `type` decides how it is read.
+An **icon set** takes `name`, the icon set ordinal, and exactly N−1 `thresholds` between the buckets of an N-icon set; `Three_Arrows` (`0`) takes two. Adding a rule with any other count is rejected with `kInvalidArgument`, and evaluation ignores thresholds past N−1 in a loaded rule. The ordinals follow the OOXML names: `0` 3Arrows, `1` 3ArrowsGray, `2` 3Flags, `3` 3TrafficLights1, `4` 3TrafficLights2, `5` 3Signs, `6` 3Symbols, `7` 3Symbols2, `8` 4Arrows, `9` 4ArrowsGray, `10` 4RedToBlack, `11` 4Rating, `12` 4TrafficLights, `13` 5Arrows, `14` 5ArrowsGray, `15` 5Rating, `16` 5Quarters. `floor` is the lower bound of the lowest bucket and defaults to `percent 0`; a value below it gets no icon and no match. `iconIndex` counts from `0` for the lowest bucket, and `reverse` flips it. The `percent` flag is kept for round-trip only; each threshold's own `type` decides how it is read.
 
 ## Read back and remove rules
 
@@ -288,11 +288,11 @@ with Workbook.create_default() as wb:
     dxf_id = wb.add_dxf(DifferentialFormat(fill=FillRecord(pattern=1, fg_argb=green, bg_argb=green)))
     sqref = [MergeRange(0, 0, 9, 0)]
     wb.add_conditional_format(0, ConditionalFormatInput(  # today
-        sqref=sqref, type=15, time_period_engaged=True, time_period=0,
-        dxf_id_engaged=True, dxf_id=dxf_id,
+        sqref=sqref, type=15, time_period=0,
+        dxf_id=dxf_id,
     ))
     wb.add_conditional_format(0, ConditionalFormatInput(  # duplicate values
-        sqref=sqref, type=16, dxf_id_engaged=True, dxf_id=dxf_id,
+        sqref=sqref, type=16, dxf_id=dxf_id,
     ))
     data = wb.save()
 

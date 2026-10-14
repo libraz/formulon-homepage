@@ -26,6 +26,6 @@ Formulon はまだ 1.0 未満です。認識する関数名 **526** 件のうち
 | 数式関数 | ローカル実装数、外部サービススタブ、検証ガイダンスを [数式カバレッジ](/ja/compatibility/formula-coverage) で確認 |
 | ファイル | 読み込み / 書き出し / 保持の境界を [ファイル形式サポート](/ja/compatibility/file-format-support) で確認 |
 | ロケールと言語 | 28 個のプロファイル ID、ロケール情報、数式ローカライズ、実行時エディターリンクを [ロケールプロファイル](/ja/compatibility/locale-profiles) と [ワークブックの言語](/ja/workbook/language) で確認 |
-| テキスト挙動 | Mac の実測照合、Windows のバイト順、関数ごとの強度を [テキスト照合](/ja/compatibility/text-collation) で確認 |
+| テキスト挙動 | Mac の実測照合、Windows の単語順、関数ごとの強度を [テキスト照合](/ja/compatibility/text-collation) で確認 |
 | エラー | `#VALUE!`、`#REF!`、パーサー失敗、ホスト例外の扱いを [エラーモデル](/ja/compatibility/errors) で確認 |
 | 検証 | プロファイルごとに取得した Excel の値、受け入れ済み差分、関数カタログの検証完了チェックを [Oracle テスト](/ja/compatibility/oracle-testing) で確認 |

@@ -179,7 +179,7 @@ print(wb.get_value(0, 0, 1).to_python())  # 66.0
 
 :::
 
-- `setDefinedNameScoped()` の第 3 引数は、ワークブック全体なら `-1`、シートローカルなら 0 始まりのシート番号です。数式に空文字列を渡すと名前を削除します。`definedNameCount()` / `definedNameAt(i)` は名前を `localSheetId` 付きで列挙します。Python では `iter_defined_names()` を使います。
+- `setDefinedNameScoped()` の第 3 引数は、ワークブック全体なら `-1`、シートローカルなら 0 始まりのシート番号です。名前の数式は先頭の `=` なしで保存され、読み戻しも同じ形です。`==` で始まる数式は `kParserUnexpectedToken` で拒否されます。数式に空文字列を渡すと名前を削除します。`definedNameCount()` / `definedNameAt(i)` は名前を `localSheetId` 付きで列挙します。Python では `iter_defined_names()` を使います。
 - `getMerges()` はシート上の結合をすべて返します。`removeMerge(range)` は範囲と重なる結合をすべて削除し、`removeMergeAt(i)` は番号で 1 つ、`clearMerges()` はすべてを削除します。
 - ハイパーリンクは、外部リンクなら `target` に URL を渡し、ブック内のリンクなら `target` を空にして `location` に A1 形式の移動先を渡します。`getHyperlinks()` で読み出し、`removeHyperlink(sheet, row, col)`、`removeHyperlinkAt()`、`clearHyperlinks()` で削除します。
 - `setRowHidden()` / `setColumnHidden()` と `setRowOutline()` / `setColumnOutline()`（レベルは 0〜255 に丸めます）が変えるのはレイアウトだけです。通常の数式は上の `SUM` のように非表示行も読みます。非表示行を除くのは `SUBTOTAL` の 101〜111 です。

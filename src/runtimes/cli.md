@@ -5,9 +5,9 @@ The `formulon` command runs the engine from shell scripts, CI jobs, and issue re
 ## Install and first run
 
 ```sh
-curl -LO https://github.com/libraz/formulon/releases/download/v0.15.1/formulon-0.15.1-linux-x64.tar.gz
-tar -xzf formulon-0.15.1-linux-x64.tar.gz
-./formulon-0.15.1-linux-x64/formulon eval '=SUM(1,2,3)'   # 6
+curl -LO https://github.com/libraz/formulon/releases/download/v0.15.2/formulon-0.15.2-linux-x64.tar.gz
+tar -xzf formulon-0.15.2-linux-x64.tar.gz
+./formulon-0.15.2-linux-x64/formulon eval '=SUM(1,2,3)'   # 6
 ```
 
 Archives exist for `linux-x64`, `linux-arm64`, and `darwin-arm64`, each with a `.sha256` file beside it. Move the `formulon` binary onto your `PATH` to use the commands below as written.

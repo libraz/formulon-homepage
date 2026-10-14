@@ -60,9 +60,9 @@ with Workbook.create_default() as wb:
     wb.add_conditional_format(0, ConditionalFormatInput(
         sqref=[MergeRange(0, 0, 3, 0)],  # A1:A4
         type=1,  # cellIs
-        op_engaged=True, op=5,  # greater than
+        op=5,  # greater than
         formula1="70",
-        dxf_id_engaged=True, dxf_id=dxf_id,
+        dxf_id=dxf_id,
     ))
 
     for cell in wb.evaluate_cf_range(0, 0, 0, 3, 0):
@@ -73,13 +73,13 @@ with Workbook.create_default() as wb:
 
 :::
 
-Native Node（`@libraz/formulon-native`）も WASM パッケージと同じメソッドを持ちます。Python の `ConditionalFormatInput` では、省略可能な項目に `_engaged` フラグが付いています。`op_engaged`、`dxf_id_engaged`、`rank_engaged`、`std_dev_engaged`、`time_period_engaged` の 5 つで、フラグを立てないと値は保存されません。演算子のない `cellIs` ルールはどのセルにも一致せず、`dxfId` のないルールは適用する書式がないまま一致します。
+Native Node（`@libraz/formulon-native`）も WASM パッケージと同じメソッドを持ちます。Python の `ConditionalFormatInput` では、`dxf_id`、`op`、`rank`、`std_dev`、`time_period` が `Optional` です。`None` でない値は保存され、`None` ならその項目は省かれます。ルールが指定していない `ConditionalFormat.op`、`rank`、`std_dev`、`time_period` は `None` で返るため、読み取ったルールをそのまま `add_conditional_format` に渡せます。演算子のない `cellIs` ルールはどのセルにも一致せず、`dxfId` のないルールは適用する書式がないまま一致します。
 
 ## 差分書式
 
 `addDxf()` / `add_dxf()` はワークブックの `dxf` テーブルにレコードを追加し、その番号を返します。この番号がルールの `dxfId` です。レコードには `font`、`fill`、`border`、`numFmt`（Python は `font`、`fill`、`border`、`num_fmt_id` / `num_fmt_code`）を必要なものだけ入れます。入れなかった項目は、セルのその部分の書式を変えません。1 つのレコードを複数のルールで共有できます。`getDxf()` / `get_dxf()` でレコードを読み出し、`dxfCount()` / `dxf_count()` でテーブルの件数を取得します。
 
-塗りつぶしは `pattern: 1`（単色）を指定し、色を `fgArgb` だけでなく `bgArgb` にも設定します。Excel は単色の差分書式を背景色で塗るためです。フォントは変更したい項目だけを設定します。太字なら `bold` と `hasBold: true`、文字色なら `colorArgb` です。フォントの `size` はレコードと一緒に保存されるので、既定値の 11 のままにするか、本文フォントのサイズに合わせてください。
+塗りつぶしは `pattern: 1`（単色）を指定し、色を `fgArgb` だけでなく `bgArgb` にも設定します。Excel は単色の差分書式を背景色で塗るためです。フォントは変更したい項目だけを設定します。太字なら `bold` と `hasBold: true`、文字色なら `colorArgb` です。差分書式のフォントは、`hasSize` が true のときだけ `<sz>` を持ちます。JavaScript では `size` を省略すると `hasSize: false` になり、Python ではサイズのないフォントに `has_size=False` を渡します。サイズのないフォントはセルのサイズを変えません。`size` を持つフォントはレコードと一緒に保存されるので、その場合は既定値の 11 のままにするか、本文フォントのサイズに合わせてください。
 
 ## ルールの種類と演算子
 
@@ -103,7 +103,7 @@ Native Node（`@libraz/formulon-native`）も WASM パッケージと同じメ�
 
 `timePeriod` は `0` 今日、`1` 昨日、`2` 明日、`3` 過去 7 日間、`4` 今週、`5` 先週、`6` 来週、`7` 今月、`8` 先月、`9` 来月です。
 
-数式は先頭の `=` を付けずに渡します。数式ルールは最初の範囲の左上セルを基準に書き、他のセルでは参照がずれます。たとえば `A1:C10` に `formula1: '$B1>100'` を設定すると、各行の B 列を判定します。空でない数式が解析できない場合は `kParserUnexpectedToken`（1000）で拒否されます。「指定の文字列を含む」ルールは `SEARCH` と同じくワイルドカード付きで照合し、「で始まる」「で終わる」ルールは実行中のプロファイルの [照合順序](/ja/compatibility/text-collation) で比較します。ルールを追加せずに 1 つのセルで判定式の結果を確かめるには `evaluateConditionalFormula()` を使います（[アドホック数式評価](/ja/workbook/operations#ad-hoc-formula-evaluation) を参照）。
+数式は先頭の `=` なしで保存され、`formula1` / `formula2` と数式型のしきい値も同じ形（`=$B1>100` ではなく `$B1>100`）で読み戻せます。`==` で始まる数式は拒否されます。数式ルールは、ルールのすべての範囲を囲む外接矩形の左上セルを基準に書き、他のセルでは参照がずれます。たとえば `A1:C10` に `formula1: '$B1>100'` を設定すると、各行の B 列を判定します。空でない数式や数式型のしきい値が解析できない場合は `kParserUnexpectedToken`（1000）で拒否されます。数式なしで追加した文字列、空白、エラー、期間のルールには Excel が保存する数式が設定され、同じセルを基準にして、`formula1` で読み戻せます。「指定の文字列を含む」ルールは `SEARCH` と同じくワイルドカード付きで照合し、「で始まる」「で終わる」ルールは実行中のプロファイルの [照合順序](/ja/compatibility/text-collation) で比較します。ルールを追加せずに 1 つのセルで判定式の結果を確かめるには `evaluateConditionalFormula()` を使います（[アドホック数式評価](/ja/workbook/operations#ad-hoc-formula-evaluation) を参照）。
 
 `priority` はシート全体でのルールの順序で、小さい番号から評価されます。省略するか 0 以下を指定すると、新しいルールは既存のすべてのルールの後ろに入ります。`stopIfTrue` を指定したルールが一致すると、そのセルでは優先順位の低いルールを評価しません。
 
@@ -230,7 +230,7 @@ with Workbook.create_default() as wb:
 
 **データバー** には `min`、`max`、`fill`（Python は `minimum`、`maximum`、`fill`）を渡し、`showValue` と `minLengthPct` / `maxLengthPct`（既定値は 10 と 90）も指定できます。`x14` 拡張の設定として `gradient`、`axisPosition`（`0` 自動、`1` 中央、`2` なし）、`negativeFill`、`border`、`negativeBorder`、`axisColor`、`direction`（`0` はシートの表示方向に従う、`1` 左から右、`2` 右から左）も持ちます。省略した項目はモデルの既定値になります。既定値はグラデーション、自動の軸、負の値には正の値と同じ塗りつぶし、罫線なし、黒い軸です。一致結果は棒の長さと軸の位置をセル幅に対するパーセントで返し、どちらも左端から測った値です。`barIsNegative` は負の値を示します。右から左のルールと、右から左のシートに置いた `0` のルールでは、ホストが棒を左右反転して描きます。
 
-**アイコンセット** には、アイコンセットの序数 `name` と、N 個のアイコンを分ける N−1 個の `thresholds` を渡します。`Three_Arrows`（`0`）なら 2 つです。序数は OOXML の名前の順で、`0` 3Arrows、`1` 3ArrowsGray、`2` 3Flags、`3` 3TrafficLights1、`4` 3TrafficLights2、`5` 3Signs、`6` 3Symbols、`7` 3Symbols2、`8` 4Arrows、`9` 4ArrowsGray、`10` 4RedToBlack、`11` 4Rating、`12` 4TrafficLights、`13` 5Arrows、`14` 5ArrowsGray、`15` 5Rating、`16` 5Quarters です。`floor` は最も低い区分の下限で、既定値は `percent 0` です。この値を下回るセルにはアイコンが付かず、一致にも含まれません。`iconIndex` は最も低い区分を `0` として数え、`reverse` を指定すると逆順になります。`percent` フラグは保存と読み込みで保持されるだけで、評価には使われません。しきい値の解釈は、それぞれのしきい値の `type` で決まります。
+**アイコンセット** には、アイコンセットの序数 `name` と、N 個のアイコンを分ける、ちょうど N−1 個の `thresholds` を渡します。`Three_Arrows`（`0`）なら 2 つです。個数が違うルールの追加は `kInvalidArgument` で拒否され、読み込んだルールの N−1 を超えるしきい値は評価時に無視されます。序数は OOXML の名前の順で、`0` 3Arrows、`1` 3ArrowsGray、`2` 3Flags、`3` 3TrafficLights1、`4` 3TrafficLights2、`5` 3Signs、`6` 3Symbols、`7` 3Symbols2、`8` 4Arrows、`9` 4ArrowsGray、`10` 4RedToBlack、`11` 4Rating、`12` 4TrafficLights、`13` 5Arrows、`14` 5ArrowsGray、`15` 5Rating、`16` 5Quarters です。`floor` は最も低い区分の下限で、既定値は `percent 0` です。この値を下回るセルにはアイコンが付かず、一致にも含まれません。`iconIndex` は最も低い区分を `0` として数え、`reverse` を指定すると逆順になります。`percent` フラグは保存と読み込みで保持されるだけで、評価には使われません。しきい値の解釈は、それぞれのしきい値の `type` で決まります。
 
 ## ルールの読み出しと削除
 
@@ -288,11 +288,11 @@ with Workbook.create_default() as wb:
     dxf_id = wb.add_dxf(DifferentialFormat(fill=FillRecord(pattern=1, fg_argb=green, bg_argb=green)))
     sqref = [MergeRange(0, 0, 9, 0)]
     wb.add_conditional_format(0, ConditionalFormatInput(  # today
-        sqref=sqref, type=15, time_period_engaged=True, time_period=0,
-        dxf_id_engaged=True, dxf_id=dxf_id,
+        sqref=sqref, type=15, time_period=0,
+        dxf_id=dxf_id,
     ))
     wb.add_conditional_format(0, ConditionalFormatInput(  # duplicate values
-        sqref=sqref, type=16, dxf_id_engaged=True, dxf_id=dxf_id,
+        sqref=sqref, type=16, dxf_id=dxf_id,
     ))
     data = wb.save()
 

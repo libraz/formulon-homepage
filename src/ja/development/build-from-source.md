@@ -11,10 +11,10 @@
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
-git checkout v0.15.1
+git checkout v0.15.2
 ```
 
-リリースタグ `v0.15.1` は、公開済みの npm・Python パッケージと、ここで説明するワークブック API に対応します。プロファイルに合わせたワークブックの作成、文字列比較ヘルパー、行・列・範囲のスタイル API が含まれます。
+リリースタグ `v0.15.2` は、公開済みの npm・Python パッケージと、ここで説明するワークブック API に対応します。プロファイルに合わせたワークブックの作成、文字列比較ヘルパー、行・列・範囲のスタイル API が含まれます。
 
 ネイティブビルドには CMake 3.20 以降と C++17 のコンパイラが必要です。WASM ビルドには `tools/wasm/emsdk-version.txt` で固定している Emscripten SDK が必要です。npm パッケージには Node 22 以降が必要です。サイズ検査を完全に実行するには `brotli` もインストールしてください。
 

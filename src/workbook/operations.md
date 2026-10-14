@@ -180,7 +180,7 @@ print(wb.get_value(0, 0, 1).to_python())  # 66.0
 
 :::
 
-- `setDefinedNameScoped()` takes `-1` for workbook scope or a zero-based sheet index. An empty formula removes the name. `definedNameCount()` / `definedNameAt(i)` enumerate names with their `localSheetId`; Python uses `iter_defined_names()`.
+- `setDefinedNameScoped()` takes `-1` for workbook scope or a zero-based sheet index. A defined-name formula is stored without a leading `=` and read back in that form; a formula that starts with `==` is rejected with `kParserUnexpectedToken`. An empty formula removes the name. `definedNameCount()` / `definedNameAt(i)` enumerate names with their `localSheetId`; Python uses `iter_defined_names()`.
 - `getMerges()` lists every merge on a sheet. `removeMerge(range)` removes each merge that overlaps the range, `removeMergeAt(i)` removes one by index, and `clearMerges()` removes all of them.
 - A hyperlink takes a URL as `target`, or an empty `target` and an A1 `location` for a destination inside the workbook. `getHyperlinks()` reads them back; `removeHyperlink(sheet, row, col)`, `removeHyperlinkAt()`, and `clearHyperlinks()` remove them.
 - `setRowHidden()` / `setColumnHidden()` and `setRowOutline()` / `setColumnOutline()` (level clamped to 0–255) change layout only. Ordinary formulas still read hidden rows, as `SUM` does above; `SUBTOTAL` 101–111 skips them.

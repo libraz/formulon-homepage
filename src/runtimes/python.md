@@ -5,7 +5,7 @@ The `formulon` package recalculates and edits Excel workbooks from scripts, note
 ## Install and first call
 
 ```sh
-python -m pip install formulon==0.15.1
+python -m pip install formulon==0.15.2
 ```
 
 ```python

@@ -18,6 +18,8 @@ An engine that rounds every result looks right on the first row and wrong on the
 
 The rest of the group follows the same pattern: Excel keeps 15 significant digits when it turns a number into text, `MROUND` works on the binary value rather than the decimal you typed, and a negative base with a fractional exponent is accepted only for odd roots such as `1/3`.
 
+On Windows profiles, `+ - * / ^ %`, `EXP`, and `LN` round the way Windows Excel does (x87 extended precision, then double), so results that land on a rounding tie match it to the last bit; aggregate functions and other builtins still compute in double. `^` and `POWER` also reproduce Excel's last bits: `8^(1/3)` is 1.9999999999999998, not 2, and `1.0001^1000` is 1.105165392603197.
+
 <CompatCasesDemo group="float" />
 
 ## Dates and times
@@ -28,7 +30,7 @@ Excel stores a date as a number: the count of days since the start of 1900, so 1
 
 Serial 60 is 1900-02-29, a day that never existed. Excel keeps it so old workbooks keep their dates, and `WORKDAY` will step onto it. A standard calendar library rejects the date, or shifts every serial before March 1900 by one day. Serial 0 formats as `1900/1/0`, not as the last day of 1899.
 
-Japanese era dates have their own rules. `DATEVALUE` rejects the first-year form `令和元年` but accepts `平成32年`, a year after the Heisei era ended. `TEXT` with the `ggge` era code prints `令和1年`; the `元年` spelling appears only when the format carries the `[$-ja-JP-x-gannen]` tag. `TIMEVALUE("12:60")` rolls over to 13:00 instead of failing.
+Japanese era dates have their own rules. `DATEVALUE` rejects the first-year form `令和元年` but accepts `平成32年`, a year after the Heisei era ended. `TEXT` with the `ggge` era code prints `令和1年`; the `元年` spelling appears only when the format carries the `[$-ja-JP-x-gannen]` tag. `TIMEVALUE("12:60")` rolls over to 13:00 instead of failing. On Windows ja-JP, `TEXT` accepts an array of formats, and `[$-LCID]` tags render Windows' own month and day names (`[$-411]mmm` is `1`, `[$-404]mmmm` is `一月`).
 
 Workbooks saved with the 1904 date system are read with that system: serial 0 is 1904-01-01, and a negative serial formats as a mirrored date (`-1904/1/2`) instead of an error.
 
@@ -46,7 +48,7 @@ Text that looks like a logical value is just as uneven. `IF` accepts the text `"
 
 Whether two strings match depends on the locale and on the operating system Excel runs on. Under the Japanese profiles, `SUMIF` criteria treat hiragana and katakana as the same character, and the same for full-width and half-width forms, circled digits and plain digits, `ß` and `ss`. They do not treat `ä` as `a`. The English and German profiles keep the long-vowel mark `ー` distinct; the Japanese profile folds it into the vowel it extends.
 
-Mac and Windows Excel disagree with each other even in the same locale. In the table below, Mac Excel's `MATCH` finds `あ` in a cell holding `ア` and Windows Excel does not. `CODE` and `LENB` answer from each platform's own legacy character set. Formulon returns each platform's answer when you select the matching profile.
+Mac and Windows Excel disagree with each other even in the same locale. In the table below, Mac Excel's `MATCH` finds `あ` in a cell holding `ア` and Windows Excel does not. `CODE` and `LENB` answer from each platform's own legacy character set: on Windows ja-JP, Hangul is the single CP932 byte `?`, so `CODE("한")` is 63 and `LENB("한글")` is 2. Formulon returns each platform's answer when you select the matching profile.
 
 Two cases that do not depend on the platform: a `COUNTIF` wildcard matches text only, so `"12*"` skips the number 1213, and `ASC` leaves `ヴ` as it is because no single half-width character represents it.
 
@@ -74,8 +76,6 @@ Matching Excel is the default, not an absolute rule. Each case where Formulon di
 | --- | --- | --- | --- |
 | Circular reference with iterative calculation off | Seeds one member with 0 and computes the rest: `A1=B1+1`, `B1=A1+1` gives 1 and 0 | `#REF!` in every cell of the cycle Excel's values depend on which member it seeds, so there is no single correct number. A host running without a UI gets no warning dialog, so an error value is the signal it can act on. |
 | `=WEEKNUM(DATE(2024,1,1),99)` | Mac: 1, Windows: `#NUM!` | `#NUM!` on both | `99` is not a valid return type; Formulon follows Windows and the documented contract. |
-| `"a"&UNICHAR(769)` compared with `"á"` | Mac: equal | Not equal | Formulon does not compose combining characters. This is a known gap, recorded so it is not mistaken for intended behavior. |
-| `BETA.INV` round trip in an ill-conditioned range | Excel's value | Differs by about 1E-6 | The inverse is poorly conditioned there; Formulon does not tune its solver to reproduce Excel's error. |
 | Page breaks at a print scale of 50% or less | Breaks stop following page geometry | Geometric pagination | Excel's break set at small scales does not follow from the page size and grows again at 25%. |
 
 Iterative financial functions (`RATE`, `IRR` and similar) are compared within a tolerance of 1E-9 absolute or 1E-6 relative, not bit for bit. `=RATE(10,-100,1000)` is `-1.96E-10` in Excel and 0 in Formulon. Both mean "zero" here, but they are not the same double.

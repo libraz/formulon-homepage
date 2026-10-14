@@ -5,7 +5,7 @@
 ## インストールと最初の呼び出し
 
 ```sh
-yarn add @libraz/formulon@0.15.1
+yarn add @libraz/formulon@0.15.2
 ```
 
 ```ts

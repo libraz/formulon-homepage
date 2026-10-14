@@ -4,7 +4,7 @@
 
 Formulon は、設定済みのキャッシュを `pivotLayout()` で投影します。`pivotLayout()` が返すセルはホストで表示するための結果で、ワークシートのセルへ自動的に書き込まれるわけではありません。元シートからピボットキャッシュを再構築したり、外部接続を実行したりはしません。新規キャッシュの内容は明示的に設定し、宣言したワークシートソースは元データと一致させます。
 
-ピボット項目のグループ化、ラベル、順序は、ワークブックで選択した Excel 互換性プロファイルを使います。Mac プロファイルは各ロケールの実測照合順序を使い、Windows プロファイルは大文字・小文字を区別しないバイト列順を使います。プロファイルは実行時の状態で、ワークブックには保存されません。詳しくは [テキスト照合](/ja/compatibility/text-collation) を参照してください。
+ピボット項目のグループ化、ラベル、順序は、ワークブックで選択した Excel 互換性プロファイルを使います。Mac プロファイルは各ロケールの実測照合順序を使い、Windows プロファイルは Windows Excel 365 ja-JP で実測した照合順序（Windows の単語順）を使います。プロファイルは実行時の状態で、ワークブックには保存されません。詳しくは [テキスト照合](/ja/compatibility/text-collation) を参照してください。
 
 キャプションフィルター（`LabelContains`、`LabelBeginsWith`、および保存された begins / ends / contains 条件とその否定条件）は、実行中のプロファイルの compare 照合順序で SEARCH と同じワイルドカード照合を行います。大文字・小文字、幅、かなは 1 文字ずつ折りたたみ、`*` は任意の連続、`?` は 1 文字、`~` は次のワイルドカードを文字どおり扱うエスケープです。読み込んだピボットは更新時に保存済みのワイルドカードパターンを照合し、API で設定したラベルフィルターも同じ規則を使います。
 
@@ -250,6 +250,12 @@ for cell in layout.cells:
 | 値フィールド | `pivotDataFieldAdd`、`pivotDataFieldSet`、`pivotDataFieldClear` |
 | ラベルフィルターと値フィルター | `pivotFilterAdd`、`pivotFilterAt`、`pivotFilterRemoveAt`、`pivotFilterClear` |
 | 日付のグループ化 | `pivotFieldSetDateGroup`、`pivotFieldClearDateGroup` |
+
+`pivotFieldSetSort()` / `pivot_field_set_sort()` / `fm_workbook_pivot_field_set_sort` は `PivotSortOrder` を受け取ります。`Descending`（`0`）、`Ascending`（`1`）、`Manual`（`2`）のいずれかで、それ以外の値は拒否されます。`Manual` はフィールドのアイテムを `pivotFieldAddItem()` で追加した順に保ち、by-field キーは取りません。保存時は `sortType="manual"` になります。それ以外の順序では、by-field キーが空ならラベルで並べ替えます。ラベルで追加したアイテムはキャッシュの共有アイテムのうち同じラベルのものに結び付くため、保存される `<item x>` はキャッシュと一致します。
+
+`pivotFieldAdd()` と `pivotFieldSetAxis()` は、行フィールドと列フィールドの順序をフィールドの配置先に合わせて保ちます。行軸や列軸に追加したフィールドは、順序を別に設定しなくても表示されます。`pivotSetRowFieldOrder()` / `pivotSetColFieldOrder()` は軸のメンバー全体を設定し、リストに含めなかったフィールドは軸から外れ、重複するインデックスは拒否されます。`pivotFieldClear()` は両方の順序を空にします。
+
+`subtotalTop` は Python、Node、WASM のバインディングで、Excel と同じく `true` が既定です。グループの小計はそのグループの見出し行に置かれます。`false` にすると、コンパクト形式とアウトライン形式ではグループをラベルだけの行で始め、ロケールに合わせた表記の「<アイテム> Total」行で閉じます。カスタム小計関数を持つフィールドでは、各小計行に UI ロケールの表記で関数名が付き（例: `East Max`）、行の順序は Excel の固定の関数順に従います。関数が 2 つ以上あるときは、`subtotalTop` の値にかかわらず小計はグループの下に置かれます。
 
 ::: warning ラベルフィルターと値フィルターは保存されない
 `pivotFilterAdd()` で追加したフィルターが `pivotLayout()` と `GETPIVOTDATA` に効くのは、ワークブックのハンドルが生きている間だけです。`save()` はこのフィルターを書き出しません。Excel が書いた `<filters>` ブロックは保存時にそのまま残りますが、`pivotFilterCount()` には現れません。保存されるフィルター状態は、アイテムの表示・非表示です。

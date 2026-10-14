@@ -64,7 +64,7 @@ print(out.deferred_feature_count, out.downgraded_formula_count)
 
 | XLSB feature | Current behavior |
 | --- | --- |
-| Styles (`BrtFmt` / `BrtXF`) | modeled and emitted |
+| Styles (`BrtFmt` / `BrtXF`) and differential formats (`BrtDXF`) | modeled and emitted; loading decodes `BrtDXF`, so conditional-format rules keep a resolvable `dxfId` and converting `.xlsb` to `.xlsx` keeps their formatting. An unedited styles table is written byte for byte, and after a style edit such as `addDxf()` the styles part is regenerated from the model |
 | Row/column layout, merges | modeled and emitted |
 | `date1904`, view/zoom/frozen panes | modeled and emitted |
 | Dynamic-array metadata and supported tokenized formulas | modeled and emitted |
