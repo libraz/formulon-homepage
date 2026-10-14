@@ -103,7 +103,7 @@ Evaluate the range to see which cells the rules hit, then save with `formulon_sa
 
 The cell-value `op` is 0 less than, 1 less than or equal, 2 equal, 3 not equal, 4 greater than or equal, 5 greater than, 6 between, 7 not between. This numbering differs from the data-validation `op` below. `timePeriod` is 0 today, 1 yesterday, 2 tomorrow, 3 last 7 days, 4 this week, 5 last week, 6 next week, 7 this month, 8 last month, 9 next month.
 
-Every rule needs `sqref`, one or more inclusive ranges. Formulas are written without the leading `=`. Relative references in a formula are read from the top-left cell of the first range, as in Excel, so a rule on `A2:D5` that shades every row whose status is Draft uses `$C2`:
+Every rule needs `sqref`, one or more inclusive ranges. Formulas are written without the leading `=`. Relative references in a formula are read from the top-left cell of the bounding box of all `sqref` ranges, as in Excel, so a rule on `A2:D5` that shades every row whose status is Draft uses `$C2`:
 
 ```json
 {
@@ -118,7 +118,7 @@ Every rule needs `sqref`, one or more inclusive ranges. Formulas are written wit
 }
 ```
 
-A formula that does not parse is rejected and nothing is added.
+A formula that does not parse, or that starts with `==`, is rejected and nothing is added. Formulas read back without a leading `=`, both before and after a save and reload. Text, blank, error, and date-period rules added without `formula1` carry the formula Excel derives for them, so `formula1` reads back populated.
 
 ### Styles for formula and comparison rules
 
@@ -131,7 +131,7 @@ Types 0, 1, and 5 to 17 show their result through `dxfId`. The `addDxf` record a
 | `border` | `left`, `right`, `top`, `bottom`, each `{style, colorArgb}` |
 | `numFmt` | `numFmtId` and `formatCode` |
 
-A `font` part always carries a size, which defaults to 11, so a font change on cells of another size should state `size`. A fill-only style leaves the font untouched. `formulon_workbook_api` with `operation: "describe"` and `method: "addDxf"` returns the full record declaration, and `getDxf` with the index reads a registered style back.
+A `font` part without `size` leaves the cell's font size unchanged; state `size` only to set one. A fill-only style leaves the font untouched. `formulon_workbook_api` with `operation: "describe"` and `method: "addDxf"` returns the full record declaration, and `getDxf` with the index reads a registered style back.
 
 ### Color scales, data bars, and icon sets
 
@@ -155,7 +155,7 @@ Types 2, 3, and 4 carry their own colors or icons and take no `dxfId`. The paylo
 }
 ```
 
-Threshold `type` is 0 number, 1 percent, 2 percentile, 3 min, 4 max, 5 formula, 6 automatic min, 7 automatic max; number, percent, percentile, and formula thresholds put their value in `value` as a string. A color scale has two or three thresholds and the same number of colors. A data bar needs `min`, `max`, and `fill`. An icon set needs `name` (0 to 16) and one threshold fewer than its icon count: two for the three-icon sets, three for four icons, four for five. Colors are `{r, g, b}` from 0 to 255, with `a` optional.
+Threshold `type` is 0 number, 1 percent, 2 percentile, 3 min, 4 max, 5 formula, 6 automatic min, 7 automatic max; number, percent, percentile, and formula thresholds put their value in `value` as a string. A color scale has two or three thresholds and the same number of colors. A data bar needs `min`, `max`, and `fill`. An icon set needs `name` (0 to 16) and exactly one threshold fewer than its icon count: two for the three-icon sets, three for four icons, four for five. Colors are `{r, g, b}` from 0 to 255, with `a` optional.
 
 ### Order, list, and removal
 
@@ -252,7 +252,7 @@ Amounts from 0 to 2,000, with an input prompt shown when the cell is selected:
 
 ### Custom formula
 
-A custom rule accepts the entry when the formula is true. Relative references follow the top-left cell of the first range, and the formula has no leading `=`. This one keeps region names in `A2:A21` unique:
+A custom rule accepts the entry when the formula is true. Relative references follow the top-left cell of the bounding box of all ranges, and the formula has no leading `=`. This one keeps region names in `A2:A21` unique:
 
 ```json
 {
@@ -300,6 +300,6 @@ Rules and styles live in the session until `formulon_save_session` writes them. 
 }
 ```
 
-The `.xlsx` file carries the rules, their dxf styles, and the validations. An `.xlsb` save also writes the rules and validations but reports `losses.deferredFeatures`, and when Formulon reopens that file the conditional formats no longer point at their styles. Use `.xlsx` for a workbook with conditional formatting, and read `losses` in the save response either way.
+The `.xlsx` file carries the rules, their dxf styles, and the validations. An `.xlsb` save also writes the rules, their dxf styles, and the validations, including when `addDxf` ran on a workbook loaded from `.xlsb`. Loading an `.xlsb` decodes its differential formats, so converting it to `.xlsx` keeps the conditional-format styling. Read `losses` in the save response either way.
 
 The full field lists are in the [tool reference](/mcp/tools#rich-workbook-objects). Discovery and the low-level call contract are in [Advanced API](/mcp/advanced).

@@ -33,7 +33,7 @@
 
 ## Excel プロファイル {#excel-profile}
 
-プロファイルは、数値・日付・真偽値のテキスト、`TEXT` の書式コード、照合順序（比較、検索、並べ替え）、`CHAR` / `CODE` のコードページ、2 バイト系関数（`*B`、`ASC`、`DBCS`）を決めます。プロファイル ID は `{mac|win}-365-<locale>` の形で、ロケールは `en_US`、`ja_JP`、`de_DE`、`fr_FR`、`es_ES`、`es_MX`、`pt_BR`、`it_IT`、`nl_NL`、`ru_RU`、`zh_CN`、`zh_TW`、`ko_KR`、`th_TH` です。`mac-*` は Mac 版 Excel から実測した値、`win-*` はそれと Windows ホストの規則から推定した値です。既定は `win-365-en_US` です。
+プロファイルは、数値・日付・真偽値のテキスト、`TEXT` の書式コード、照合順序（比較、検索、並べ替え）、`CHAR` / `CODE` のコードページ、2 バイト系関数（`*B`、`ASC`、`DBCS`）を決めます。プロファイル ID は `{mac|win}-365-<locale>` の形で、ロケールは `en_US`、`ja_JP`、`de_DE`、`fr_FR`、`es_ES`、`es_MX`、`pt_BR`、`it_IT`、`nl_NL`、`ru_RU`、`zh_CN`、`zh_TW`、`ko_KR`、`th_TH` です。`mac-*` は Mac 版 Excel から実測した値、`win-*` はそれと Windows ホストの規則から推定した値です。ただしテキストの照合順序は、Windows 版 Excel 365 で実測したロケール対応の照合を使います（`ß` は `ss` と等しく扱われ、厳密な（strength 2）比較でのみ区別されます。Mac と同じ挙動です）。既定は `win-365-en_US` です。
 
 `formulon_open_workbook`、`formulon_inspect_workbook`、`formulon_update_workbook` は任意の `profile` を受け取ります。新規ワークブックでは、そのロケールで Excel が作るとおりに本文フォント、Normal スタイル、シート名、余白を設定します。読み込んだファイルでは、オープン時の再計算の前に評価プロファイルを設定します。`profile` を省略すると、サーバーの環境変数 `FORMULON_MCP_PROFILE`、なければ `win-365-en_US` を使います。未知の ID はエラーです。環境変数の値が原因のときは、メッセージにそのことが示されます。
 
@@ -102,7 +102,7 @@
 
 `values` は数値、真偽値、文字列、`{"f":"=..."}`、`{"blank":true}`、セルを飛ばす `null` を受け取ります。応答には開始と終了の参照、`cellsWritten`、`errorCells` が入ります。セル変更は最初の書き込み前にアドレスを検証しますが、ネイティブエンジンが途中で失敗すると先に完了した書き込みが残り、セッションは変更あり（dirty）のままです。成功応答では適用結果を確認し、MCP ツールエラーの後は再試行前に対象範囲を読み取ってください。
 
-`formulon_sheet_operation` は `add`、`remove`、`rename`、`move` を処理します。対応するフィールドは `name`、`index`、`newName`、`fromIndex`、`toIndex` です。`formulon_set_defined_name` は `sheet` を省略するとワークブックスコープ、指定するとシートローカルスコープになり、空の `formula` で名前を削除します。`_xlnm.Print_Area` と `_xlnm.Print_Titles` はシートローカルで指定します。`formulon_edit_structure` は行や列を挿入・削除し、`formulon_set_sheet_view` はズーム、固定行・列、`hidden` または `visibility` を設定します。固定行・列を変更するときは `freezeRows` と `freezeCols` の両方を指定してください。片方を省略すると、その固定数は以前の値ではなく `0` になります。
+`formulon_sheet_operation` は `add`、`remove`、`rename`、`move` を処理します。対応するフィールドは `name`、`index`、`newName`、`fromIndex`、`toIndex` です。`formulon_set_defined_name` は `sheet` を省略するとワークブックスコープ、指定するとシートローカルスコープになり、空の `formula` で名前を削除します。保存された名前の式は先頭の `=` なしで読み返されます。`_xlnm.Print_Area` と `_xlnm.Print_Titles` はシートローカルで指定します。`formulon_edit_structure` は行や列を挿入・削除し、`formulon_set_sheet_view` はズーム、固定行・列、`hidden` または `visibility` を設定します。固定行・列を変更するときは `freezeRows` と `freezeCols` の両方を指定してください。片方を省略すると、その固定数は以前の値ではなく `0` になります。
 
 ## コメント、リンク、入力規則、結合 {#sheet-objects}
 

@@ -8,18 +8,18 @@ npm パッケージ `@libraz/formulon-mcp` は stdio MCP サーバーとして�
 
 ## 対話式セットアップ
 
-現在の公開版は `0.9.0` で、`@libraz/formulon` の依存範囲は `^0.15.1` です。以下のコマンドはこの版の初期化ツールを選びます。最新の公開版を実行する場合は `@0.9.0` を省略してください。
+現在の公開版は `0.9.1` で、`@libraz/formulon` の依存範囲は `^0.15.2` です。以下のコマンドはこの版の初期化ツールを選びます。最新の公開版を実行する場合は `@0.9.1` を省略してください。
 
 ターミナルで同梱のインストーラーを実行します。
 
 ```sh
-npx -y @libraz/formulon-mcp@0.9.0 init
+npx -y @libraz/formulon-mcp@0.9.1 init
 ```
 
 上のコマンドで固定されるのは初期化ツールだけです。`init` はクライアント設定へ、バージョンなしの `@libraz/formulon-mcp` を書き込みます。実行時のパッケージを固定するには、生成された各エントリの引数を次の形へ手動で変更します。
 
 ```json
-{ "args": ["-y", "@libraz/formulon-mcp@0.9.0"] }
+{ "args": ["-y", "@libraz/formulon-mcp@0.9.1"] }
 ```
 
 `init` を再実行すると、バージョンなしのパッケージ名でエントリが書き直されます。再実行後は実行時の固定をもう一度適用してください。
@@ -41,13 +41,13 @@ npx -y @libraz/formulon-mcp@0.9.0 init
 `0` を選ぶとホストの質問は省略され、プロファイルは書き込まれません。確認の前に、選んだプロファイルがプレビューに表示されます。`--profile <id>`（または `--profile=<id>`）を渡すと 2 つのメニューを省略できます。未知の ID はエラーで停止します。
 
 ```sh
-npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
+npx -y @libraz/formulon-mcp@0.9.1 init --profile win-365-ja_JP
 ```
 
 `--profile` で省略できるのはプロファイルのメニューだけです。対象の選択と最後の確認は引き続き標準入力から 1 行ずつ読むため、スクリプトから実行するときは回答をパイプで渡します。
 
 ```sh
-printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
+printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.9.1 init --profile win-365-ja_JP
 ```
 
 プロファイルはサーバーエントリの環境変数 `FORMULON_MCP_PROFILE` として書き込まれます。`init` を再実行するとエントリが書き直されるため、プロファイルなしで実行すると、以前に書き込んだプロファイルは消えます。
@@ -57,7 +57,7 @@ printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.9.0 init --profile win-365-ja_JP
 登録を削除するには次を実行します。
 
 ```sh
-npx -y @libraz/formulon-mcp@0.9.0 uninstall
+npx -y @libraz/formulon-mcp@0.9.1 uninstall
 ```
 
 削除メニューの既定値は 4 種類すべてのクライアントです。選択した設定ファイルから `formulon` のエントリを削除します。Node.js や他の MCP サーバーは削除しません。
@@ -71,7 +71,7 @@ JSON 設定を使うクライアントでは、既存の `mcpServers` オブジ�
   "mcpServers": {
     "formulon": {
       "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp@0.9.0"]
+      "args": ["-y", "@libraz/formulon-mcp@0.9.1"]
     }
   }
 }
@@ -82,7 +82,7 @@ Codex CLI で実行時パッケージを固定する TOML セクションは次�
 ```toml
 [mcp_servers.formulon]
 command = "npx"
-args = ["-y", "@libraz/formulon-mcp@0.9.0"]
+args = ["-y", "@libraz/formulon-mcp@0.9.1"]
 ```
 
 既定の Excel プロファイルを指定するには、エントリに `env` を追加します。
@@ -92,7 +92,7 @@ args = ["-y", "@libraz/formulon-mcp@0.9.0"]
   "mcpServers": {
     "formulon": {
       "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp@0.9.0"],
+      "args": ["-y", "@libraz/formulon-mcp@0.9.1"],
       "env": { "FORMULON_MCP_PROFILE": "win-365-ja_JP" }
     }
   }
@@ -102,7 +102,7 @@ args = ["-y", "@libraz/formulon-mcp@0.9.0"]
 ```toml
 [mcp_servers.formulon]
 command = "npx"
-args = ["-y", "@libraz/formulon-mcp@0.9.0"]
+args = ["-y", "@libraz/formulon-mcp@0.9.1"]
 env = { FORMULON_MCP_PROFILE = "win-365-ja_JP" }
 ```
 

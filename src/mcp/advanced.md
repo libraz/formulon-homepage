@@ -1,6 +1,6 @@
 # Advanced Workbook API
 
-The dedicated MCP tools cover common workbook work. The server declares `@libraz/formulon` with the `^0.15.1` dependency range; confirm the installed engine version in each catalog response. `formulon_workbook_api` and `formulon_workbook_call` expose a controlled route to additional methods in the installed Formulon `Workbook` class. The API catalog is read from the package that the server actually loaded, including its signatures, documentation, access mode, and referenced TypeScript declarations. Discover the method first, then call the exact installed signature.
+The dedicated MCP tools cover common workbook work. The server declares `@libraz/formulon` with the `^0.15.2` dependency range; confirm the installed engine version in each catalog response. `formulon_workbook_api` and `formulon_workbook_call` expose a controlled route to additional methods in the installed Formulon `Workbook` class. The API catalog is read from the package that the server actually loaded, including its signatures, documentation, access mode, and referenced TypeScript declarations. Discover the method first, then call the exact installed signature.
 
 ## Function lookup and Excel profiles
 
