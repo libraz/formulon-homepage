@@ -5,12 +5,12 @@
   "wasmSizeBudget": {
     "$comment": "Mirrors the defaults in the core repo's tools/bench/wasm_size_report.sh.",
     "uncompressed": {
-      "softBytes": 3670016,
-      "hardBytes": 3932160
+      "softBytes": 4456448,
+      "hardBytes": 4718592
     },
     "brotli": {
-      "softBytes": 1064960,
-      "hardBytes": 1081344
+      "softBytes": 1245184,
+      "hardBytes": 1310720
     }
   }
 }
