@@ -11,7 +11,7 @@ description: Embed an Excel-like spreadsheet UI in a browser application.
 formulon-cell targets desktop-spreadsheet behavior, but it is still beta. Basic workbook workflows work; dialogs, detailed control behavior, keyboard interaction, and accessibility are not yet guaranteed to match a desktop spreadsheet, and bugs may remain. Treat it as an integration surface to evaluate, not as a drop-in replacement or a finished end-user product.
 :::
 
-The current release is `0.9.1`. Install the core and adapter packages at the same version; the release uses `@libraz/formulon@0.15.2` and requires Node.js 22 or later. See [Install](/cell/install) for the commands and a first mount.
+The current release is `0.10.0`. Install the core and adapter packages at the same version; the release uses `@libraz/formulon@0.16.0` and requires Node.js 22 or later. See [Install](/cell/install) for the commands and a first mount.
 
 ## Packages
 
