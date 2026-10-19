@@ -23,59 +23,27 @@ const applyCrossOriginIsolationHeaders = (
   next()
 }
 
-// Rollup cannot statically analyse the Emscripten pthread spawn site, so the
-// options arguments are marked with @vite-ignore. The spawn site moved between
-// engine versions: older builds used dist/formulon.js, while newer builds use
-// thin ESM shims and place generated modules in dist/*_core.js. Include both
-// registry installs and unpacked local snapshots.
+// Rollup cannot statically analyse the Emscripten pthread spawn site in the
+// `./threads` build, so its options argument is marked with @vite-ignore.
+// Include both registry installs and unpacked local snapshots.
 const patchFormulonWorkerOptions = () => {
   const distFiles = [
-    'node_modules/@libraz/formulon/dist/formulon.js',
-    'node_modules/@libraz/formulon/dist/formulon_core.js',
-    'node_modules/@libraz/formulon/dist/formulon_threads.js',
     'node_modules/@libraz/formulon/dist/formulon_threads_core.js',
-    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon.js',
-    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_core.js',
-    'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_threads.js',
     'node_modules/@libraz/formulon-cell/node_modules/@libraz/formulon/dist/formulon_threads_core.js'
   ]
   const localFormulonRoot = demoPackageConfig.packageRoots.get('@libraz/formulon')
   if (localFormulonRoot)
-    for (const file of [
-      'formulon.js',
-      'formulon_core.js',
-      'formulon_threads.js',
-      'formulon_threads_core.js'
-    ])
-      distFiles.push(resolve(localFormulonRoot, 'dist', file))
+    distFiles.push(resolve(localFormulonRoot, 'dist', 'formulon_threads_core.js'))
   const files = distFiles.map((file) => resolve(process.cwd(), file))
 
   for (const file of files) {
     if (!existsSync(file)) continue
     const before = readFileSync(file, 'utf8')
-    const after = before
-      .replaceAll('/* -ignore */', '/* @vite-ignore */')
-      .replaceAll(
-        'new Worker(new URL("formulon.js",import.meta.url),workerOptions)',
-        'new Worker(new URL("formulon.js",import.meta.url),/* @vite-ignore */ workerOptions)'
-      )
-      .replaceAll(
-        'new Worker(new URL("formulon.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
-        'new Worker(new URL("formulon.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
-      )
-      .replaceAll(
-        'new Worker(new URL("formulon_threads_core.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
-        'new Worker(new URL("formulon_threads_core.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
-      )
-    // In the shim layout the pthread worker must boot the generated module
-    // itself: bundled through the side-effect-free shim, the worker is empty.
-    const patched = file.endsWith('formulon_core.js')
-      ? after.replaceAll(
-          'new Worker(new URL("formulon.js",import.meta.url)',
-          'new Worker(new URL("formulon_core.js",import.meta.url)'
-        )
-      : after
-    if (patched !== before) writeFileSync(file, patched)
+    const after = before.replaceAll(
+      'new Worker(new URL("formulon_threads_core.js",import.meta.url),{type:"module",workerData:"em-pthread",name:"em-pthread"})',
+      'new Worker(new URL("formulon_threads_core.js",import.meta.url),/* @vite-ignore */ {type:"module",workerData:"em-pthread",name:"em-pthread"})'
+    )
+    if (after !== before) writeFileSync(file, after)
   }
 }
 

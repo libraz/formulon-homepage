@@ -43,25 +43,25 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@vitejs/plugin-vue": "6.0.10",
-    "@vitest/browser-playwright": "5.0.3",
-    "@vue/compiler-dom": "^3.5.43",
+    "@vitest/browser-playwright": "5.0.5",
+    "@vue/compiler-dom": "^3.5.44",
     "@vue/test-utils": "2.5.1",
-    "playwright": "1.64.0",
+    "playwright": "1.64.1",
     "typescript": "^7.0.2",
     "vite": "8.3.4",
     "vitepress": "^1.6.4",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   },
   "dependencies": {
-    "@libraz/formulon": "0.15.2",
-    "@libraz/formulon-cell": "0.9.1",
-    "@libraz/formulon-cell-vue": "0.9.1",
-    "vue": "^3.5.43",
+    "@libraz/formulon": "0.16.0",
+    "@libraz/formulon-cell": "0.10.0",
+    "@libraz/formulon-cell-vue": "0.10.0",
+    "vue": "^3.5.44",
     "zustand": "^5.0.15"
   },
   "resolutions": {
-    "@libraz/formulon": "0.15.2",
-    "@libraz/formulon-cell": "0.9.1",
-    "@libraz/formulon-cell-vue": "0.9.1"
+    "@libraz/formulon": "0.16.0",
+    "@libraz/formulon-cell": "0.10.0",
+    "@libraz/formulon-cell-vue": "0.10.0"
   }
 }
