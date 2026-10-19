@@ -11,10 +11,10 @@ Clone the repository:
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
-git checkout v0.15.2
+git checkout v0.16.0
 ```
 
-The `v0.15.2` release tag matches the published npm and Python packages and the workbook APIs described here. It includes profile-shaped new workbooks, text comparison helpers, and the row, column, and range-style APIs.
+The `v0.16.0` release tag matches the published npm and Python packages and the workbook APIs described here. It includes the chart API, the percent-of and rank pivot value displays, and the row, column, and range-style APIs.
 
 Native builds require CMake 3.20 or newer and a C++17 toolchain. WASM builds require the Emscripten SDK pinned in `tools/wasm/emsdk-version.txt`. The npm package requires Node 22 or newer. Install `brotli` to run the complete size check.
 
