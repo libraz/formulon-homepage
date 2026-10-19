@@ -1,19 +1,18 @@
-// Generates src/data/api-reference.json from the engine's public declarations,
-// so the WASM / Python / C reference tables cannot drift from the source.
+// Generates src/data/api-reference.json from one immutable engine commit, so
+// the WASM / Python / C reference tables cannot drift from the source.
 //
 // Inputs, each parsed by a focused reader for the file's known shape:
-//   wasm    node_modules/@libraz/formulon/dist/formulon.d.ts (Workbook, the
-//           static factories, the module object, top-level exported functions)
+//   wasm    src/wasm/formulon.d.ts (Workbook, the static factories, the module
+//           object, top-level exported functions)
 //   python  $FORMULON_SRC/packages/python/formulon/__init__.pyi for signatures,
 //           docstrings from workbook.py / __init__.py / metadata.py
 //   c       $FORMULON_SRC/src/c_api/formulon_c.h (every FM_API declaration)
 //
 // Every symbol is assigned to exactly one family by the ordered FAMILIES table.
-// `--check` regenerates in memory and fails on drift. Python and C are read from
-// the sibling checkout's `v<installed version>` tag, not its working tree, so a
-// mid-release checkout cannot drift the docs. The checkout is optional
-// (Cloudflare builds the site alone): without it or the tag, only the WASM
-// surface and the version are compared. Doc pages must embed every family.
+// `--check` regenerates all surfaces from the recorded commit when that commit
+// is available. The checkout is optional (Cloudflare builds the site alone),
+// so without it the committed snapshot and its page-family coverage are still
+// validated. Use `--ref <full commit>` to generate a new release snapshot.
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -21,11 +20,24 @@ import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const OUT = path.join(root, 'src/data/api-reference.json')
-const PKG_DIR = path.join(root, 'node_modules/@libraz/formulon')
-const DTS = path.join(PKG_DIR, 'dist/formulon.d.ts')
+const FACTS = path.join(root, 'src/data/facts.json')
 const SRC = path.resolve(root, process.env.FORMULON_SRC ?? '../formulon')
+const REPOSITORY = 'https://github.com/libraz/formulon'
+const WASM_DTS = 'src/wasm/formulon.d.ts'
 const PY_DIR = 'packages/python/formulon'
 const C_HEADER = 'src/c_api/formulon_c.h'
+const SOURCE_FILES = {
+  wasm: [WASM_DTS],
+  python: [
+    `${PY_DIR}/__init__.pyi`,
+    `${PY_DIR}/workbook.py`,
+    `${PY_DIR}/__init__.py`,
+    `${PY_DIR}/metadata.py`
+  ],
+  c: [C_HEADER]
+}
+const REQUIRED_SURFACES = Object.keys(SOURCE_FILES)
+const docsVersion = JSON.parse(fs.readFileSync(FACTS, 'utf-8')).docsVersion
 const PAGES = {
   wasm: ['src/api/wasm.md', 'src/ja/api/wasm.md'],
   python: ['src/api/python.md', 'src/ja/api/python.md'],
@@ -242,8 +254,8 @@ function tsInterfaceMethods(lines, name) {
   return out
 }
 
-function parseWasm() {
-  const lines = fs.readFileSync(DTS, 'utf-8').split('\n')
+function parseWasm(commit) {
+  const lines = readSource(commit, WASM_DTS).split('\n')
   const symbols = []
   const add = (prefix, m) =>
     symbols.push({ name: prefix + m.name, signature: m.signature, doc: m.doc, key: snake(m.name) })
@@ -271,8 +283,8 @@ function rstToPlain(s) {
 }
 
 /** Docstrings of `def`s at `indent` inside `className` (or at module level when null). */
-function pyDocstrings(file, className, indent) {
-  const lines = readSource(file).split('\n')
+function pyDocstrings(commit, file, className, indent) {
+  const lines = readSource(commit, file).split('\n')
   const docs = new Map()
   const pad = ' '.repeat(indent)
   let inScope = className === null
@@ -299,12 +311,12 @@ function pyDocstrings(file, className, indent) {
   return docs
 }
 
-function parsePython() {
-  const lines = readSource(`${PY_DIR}/__init__.pyi`).split('\n')
-  const classDocs = pyDocstrings(`${PY_DIR}/workbook.py`, 'Workbook', 4)
+function parsePython(commit) {
+  const lines = readSource(commit, `${PY_DIR}/__init__.pyi`).split('\n')
+  const classDocs = pyDocstrings(commit, `${PY_DIR}/workbook.py`, 'Workbook', 4)
   const moduleDocs = new Map()
   for (const f of ['__init__.py', 'metadata.py', 'workbook.py']) {
-    for (const [k, v] of pyDocstrings(`${PY_DIR}/${f}`, null, 0))
+    for (const [k, v] of pyDocstrings(commit, `${PY_DIR}/${f}`, null, 0))
       if (!moduleDocs.has(k)) moduleDocs.set(k, v)
   }
   const symbols = []
@@ -349,8 +361,8 @@ function parsePython() {
 
 // --- C: formulon_c.h ---------------------------------------------------------
 
-function parseC() {
-  const lines = readSource(C_HEADER).split('\n')
+function parseC(commit) {
+  const lines = readSource(commit, C_HEADER).split('\n')
   const symbols = []
   let prevEnd = -2
   let prevDoc = ''
@@ -391,43 +403,58 @@ function finish(symbols) {
   return entries.map(({ order, ...e }) => e)
 }
 
-const installedVersion = JSON.parse(
-  fs.readFileSync(path.join(PKG_DIR, 'package.json'), 'utf-8')
-).version
-const TAG = `v${installedVersion}`
-
-/** A file from the sibling checkout as of the release tag. */
-function readSource(relPath) {
-  return execFileSync('git', ['-C', SRC, 'show', `${TAG}:${relPath}`], {
+/** Read one file from the sibling checkout at an immutable commit. */
+function readSource(commit, relPath) {
+  return execFileSync('git', ['-C', SRC, 'show', `${commit}:${relPath}`], {
     encoding: 'utf-8',
     maxBuffer: 64 * 1024 * 1024
   })
 }
 
-function tagExists() {
+function isCommit(ref) {
+  return typeof ref === 'string' && /^[a-f0-9]{40}$/.test(ref)
+}
+
+function commitExists(ref) {
+  if (!fs.existsSync(SRC) || !isCommit(ref)) return false
   try {
-    execFileSync('git', ['-C', SRC, 'rev-parse', '--verify', '--quiet', `${TAG}^{commit}`], {
-      stdio: 'ignore'
-    })
-    return true
+    const resolved = execFileSync(
+      'git',
+      ['-C', SRC, 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`],
+      { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }
+    ).trim()
+    return resolved === ref
   } catch {
     return false
   }
 }
 
-const haveSource = fs.existsSync(SRC) && tagExists()
+function sourceVersion(commit) {
+  return JSON.parse(readSource(commit, 'packages/npm/package.json')).version
+}
 
-function generate(withSource) {
-  const surfaces = { wasm: finish(parseWasm()) }
-  if (withSource) {
-    surfaces.python = finish(parsePython())
-    surfaces.c = finish(parseC())
+function generate(commit) {
+  const version = sourceVersion(commit)
+  if (version !== docsVersion) {
+    throw new Error(
+      `Source ${commit} is v${version}, but src/data/facts.json docsVersion is ${docsVersion}.`
+    )
   }
   return {
     $comment:
       'Generated by scripts/gen-api-reference.mjs from the engine declarations; do not edit.',
-    version: installedVersion,
-    surfaces
+    version,
+    source: {
+      repository: REPOSITORY,
+      version,
+      commit,
+      files: SOURCE_FILES
+    },
+    surfaces: {
+      wasm: finish(parseWasm(commit)),
+      python: finish(parsePython(commit)),
+      c: finish(parseC(commit))
+    }
   }
 }
 
@@ -451,11 +478,77 @@ function diffSurface(surface, ours, theirs) {
   return out
 }
 
+function validateSnapshot(doc) {
+  const problems = []
+  const familyIds = new Set(FAMILIES.map((family) => family.id))
+  const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/
+
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc))
+    return ['snapshot root must be an object.']
+
+  if (doc.version !== docsVersion)
+    problems.push(`snapshot version is ${doc.version}; facts.json docsVersion is ${docsVersion}.`)
+
+  const source = doc.source
+  if (!source || typeof source !== 'object' || Array.isArray(source)) {
+    problems.push('snapshot has no source provenance object.')
+  } else {
+    if (source.repository !== REPOSITORY) problems.push(`source repository must be ${REPOSITORY}.`)
+    if (typeof source.version !== 'string' || !versionPattern.test(source.version))
+      problems.push('source version must be a semantic version string.')
+    else if (source.version !== doc.version)
+      problems.push(
+        `source version ${source.version} does not match snapshot version ${doc.version}.`
+      )
+    if (!isCommit(source.commit))
+      problems.push('source commit must be a full 40-character git commit hash.')
+    if (JSON.stringify(source.files) !== JSON.stringify(SOURCE_FILES))
+      problems.push('source file provenance does not match the API parser inputs.')
+  }
+
+  if (!doc.surfaces || typeof doc.surfaces !== 'object' || Array.isArray(doc.surfaces)) {
+    problems.push('snapshot has no surfaces object.')
+    return problems
+  }
+  const surfaces = Object.keys(doc.surfaces)
+  for (const surface of REQUIRED_SURFACES) {
+    if (!Array.isArray(doc.surfaces[surface]))
+      problems.push(`snapshot surface "${surface}" is missing or is not an array.`)
+  }
+  for (const surface of surfaces) {
+    if (!REQUIRED_SURFACES.includes(surface)) {
+      problems.push(`snapshot has unknown surface "${surface}".`)
+      continue
+    }
+    if (!Array.isArray(doc.surfaces[surface])) continue
+    for (const entry of doc.surfaces[surface]) {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+        problems.push(`${surface} contains an invalid API entry.`)
+        continue
+      }
+      if (typeof entry.name !== 'string' || typeof entry.signature !== 'string')
+        problems.push(`${surface} contains an entry without a name or signature.`)
+      if (typeof entry.summary !== 'string')
+        problems.push(`${surface} ${entry.name ?? '(unnamed)'} has no summary string.`)
+      if (!familyIds.has(entry.family))
+        problems.push(
+          `${surface} ${entry.name ?? '(unnamed)'} has unknown family "${entry.family}".`
+        )
+    }
+  }
+  return problems
+}
+
 /** Each page must embed every non-empty family of its surface exactly once, and nothing else. */
 function checkPages(doc, surfaces) {
   const problems = []
   for (const surface of surfaces) {
-    const used = new Set(doc.surfaces[surface].map((e) => e.family))
+    if (!Array.isArray(doc.surfaces?.[surface])) continue
+    const used = new Set(
+      doc.surfaces[surface]
+        .filter((entry) => entry && typeof entry === 'object')
+        .map((entry) => entry.family)
+    )
     for (const page of PAGES[surface]) {
       const text = fs.readFileSync(path.join(root, page), 'utf-8')
       const tags = [
@@ -479,28 +572,61 @@ function checkPages(doc, surfaces) {
   return problems
 }
 
-const json = (doc) => `${JSON.stringify(doc, null, 2)}\n`
+const json = (doc) =>
+  `${JSON.stringify(doc, null, 2).replace(/\[\n\s+("(?:[^"\\]|\\.)*")\n\s+\]/g, '[$1]')}\n`
 
-if (process.argv.includes('--check')) {
+function parseArgs() {
+  const args = process.argv.slice(2)
+  let check = false
+  let ref
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--check' && !check) check = true
+    else if (args[i] === '--ref' && ref === undefined && args[i + 1]) ref = args[++i]
+    else throw new Error(`Unknown or repeated argument: ${args[i]}`)
+  }
+  if (check && ref) throw new Error('Use --ref when generating a snapshot, not with --check.')
+  if (ref !== undefined && !isCommit(ref))
+    throw new Error('--ref requires a full 40-character lowercase commit hash.')
+  return { check, ref }
+}
+
+function runCheck() {
   if (!fs.existsSync(OUT)) {
     console.error(`${path.relative(root, OUT)} is missing. Run \`yarn gen:api\`.`)
     process.exit(1)
   }
   const committed = JSON.parse(fs.readFileSync(OUT, 'utf-8'))
-  const fresh = generate(haveSource)
-  const problems = []
-  if (committed.version !== installedVersion) {
-    problems.push(
-      `version is ${committed.version} but @libraz/formulon ${installedVersion} is installed.`
+  const problems = validateSnapshot(committed)
+  const sourceCommit = committed.source?.commit
+  const haveSource = isCommit(sourceCommit) && commitExists(sourceCommit)
+  if (haveSource) {
+    try {
+      const fresh = generate(sourceCommit)
+      for (const surface of REQUIRED_SURFACES) {
+        problems.push(
+          ...diffSurface(
+            surface,
+            fresh.surfaces[surface],
+            Array.isArray(committed.surfaces?.[surface]) ? committed.surfaces[surface] : []
+          )
+        )
+      }
+      if (JSON.stringify(fresh.source) !== JSON.stringify(committed.source))
+        problems.push('source provenance differs from the recorded source commit.')
+    } catch (error) {
+      problems.push(`could not regenerate from ${sourceCommit}: ${error.message}`)
+    }
+  } else {
+    console.log(
+      `note: ${SRC} does not contain recorded source commit ${sourceCommit ?? '(missing)'}; source comparison skipped.`
     )
   }
-  for (const surface of Object.keys(fresh.surfaces)) {
-    problems.push(
-      ...diffSurface(surface, fresh.surfaces[surface], committed.surfaces?.[surface] ?? [])
+  problems.push(
+    ...checkPages(
+      committed,
+      REQUIRED_SURFACES.filter((surface) => Array.isArray(committed.surfaces?.[surface]))
     )
-  }
-  problems.push(...checkPages(committed, Object.keys(committed.surfaces)))
-  if (!haveSource) console.log(`note: ${SRC} at ${TAG} not found — Python and C surfaces not compared.`)
+  )
   if (problems.length) {
     const shown = problems.slice(0, 40)
     console.error(`\nAPI reference check failed (${problems.length} problem(s)):\n`)
@@ -510,17 +636,47 @@ if (process.argv.includes('--check')) {
     console.error('\nRun `yarn gen:api` and commit src/data/api-reference.json.\n')
     process.exit(1)
   }
-  const counts = Object.entries(fresh.surfaces).map(([s, e]) => `${s} ${e.length}`)
-  console.log(`API reference check passed (v${installedVersion}: ${counts.join(', ')}).`)
-} else {
-  if (!haveSource) {
+  const counts = REQUIRED_SURFACES.map(
+    (surface) => `${surface} ${committed.surfaces[surface].length}`
+  )
+  console.log(`API reference check passed (v${committed.version}: ${counts.join(', ')}).`)
+}
+
+function runGenerate(ref) {
+  let commit = ref
+  if (!commit) {
+    if (!fs.existsSync(OUT)) {
+      console.error(
+        `${path.relative(root, OUT)} has no source commit. Pass --ref <full commit> to generate it.`
+      )
+      process.exit(1)
+    }
+    const previous = JSON.parse(fs.readFileSync(OUT, 'utf-8'))
+    commit = previous.source?.commit
+    if (!isCommit(commit)) {
+      console.error(
+        'The current API snapshot has no valid source commit. Pass --ref <full commit> to generate it.'
+      )
+      process.exit(1)
+    }
+  }
+  if (!commitExists(commit)) {
     console.error(
-      `${SRC} at ${TAG} not found. Set FORMULON_SRC to a formulon checkout that has the ${TAG} tag.`
+      `${SRC} does not contain source commit ${commit}. Set FORMULON_SRC to the formulon checkout with that commit.`
     )
     process.exit(1)
   }
-  const doc = generate(true)
+  const doc = generate(commit)
   fs.writeFileSync(OUT, json(doc))
   const counts = Object.entries(doc.surfaces).map(([s, e]) => `${s} ${e.length}`)
-  console.log(`Wrote ${path.relative(root, OUT)} (v${installedVersion}: ${counts.join(', ')}).`)
+  console.log(`Wrote ${path.relative(root, OUT)} (v${doc.version}: ${counts.join(', ')}).`)
+}
+
+try {
+  const { check, ref } = parseArgs()
+  if (check) runCheck()
+  else runGenerate(ref)
+} catch (error) {
+  console.error(error.message)
+  process.exit(1)
 }
