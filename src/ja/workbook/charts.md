@@ -2,7 +2,7 @@
 
 グラフはシート上の描画オブジェクトです。Formulon は Excel が保存したワークブックからグラフを読み込み、セル範囲から新しいグラフを作成し、型付きのプロパティを編集し、現在のセル値に対して系列を解決できます。グラフの描画は行いません。ビューア、編集 UI、グラフが何をプロットしているかを知りたいスクリプトのために、データと構造を扱う API を提供します。
 
-Excel が保存した `.xlsx` と `.xlsb` のグラフを読み込めます。編集していないグラフは、パーツがバイト単位でそのまま保存されます。ワークブックを開いて保存しても、グラフが変わることはありません。
+Excel が保存した `.xlsx` と `.xlsb` のグラフは型付きで読み取れます。XLSX のグラフは編集にも対応します。ワークブックを保存すると、グラフ定義を編集していなくても、系列キャッシュはその時点で保持しているセル値から更新されます。
 
 `.xlsb` から読み込んだワークブックでは、グラフの読み取りはできますが編集はできません。`insertChart` と各編集メソッドは `kIoDrawingUnparseable` を返します。XLSB から保持された画像の描画と同じ扱いです。拡張グラフ形式（`isChartex`）のグラフは読み取り専用で、ピボットグラフで編集できるのは、タイトルや書式など系列の構成を変えない操作に限られます。
 
@@ -24,7 +24,7 @@ Excel が保存した `.xlsx` と `.xlsb` のグラフを読み込めます。�
 
 `chart` には、名前、説明、タイトル、凡例、`blanksAs`、`plotVisibleOnly`、`plots`、`axes`、非表示のカテゴリ、`source` が含まれます。`source` はすべての系列の元になった矩形で、系列が共通の範囲を持たない場合は `null` です。各プロットは種類、グループ化、系列ごとの参照、塗りつぶし、線、マーカー、データ要素、データラベルを持ちます。作成できる 7 種類以外のグラフ（レーダー、株価、サーフェスなど）も読み取れます。`ChartPlotType` はすべてのプロットグループを表し、`isChartex`、`isPivotChart`、`onChartsheet` で特殊な形式を判別できます。
 
-`data` は Excel の規則で各系列を数値に解決したものです。`domain` は `category` または `xy` です。`categories` にラベルが入り、`series` の `values` には要素ごとに `states`（`ChartPointState` の `Value`、`Gap`、`Connect`）が対応します。解決できなかった参照は `unresolved` に並びます。`previewChartData` は `source`、`direction`、`headerRow`、`headerColumn`、`blanksAs`、`plotVisibleOnly` を受け取るので、エディターは別のソース範囲を確定する前に、何がプロットされるかを表示できます。
+`data` は Excel の規則で各系列を数値に解決したものです。`domain` は `category` または `xy` です。`categories` にラベルが入り、`series` の `values` には要素ごとに `states`（`ChartPointState` の `Value`、`Gap`、`Connect`）が対応します。解決できなかった参照は `unresolved` に並びます。解決済み系列は x 値の数値書式 `xFormatCode`（Python は `x_format_code`）も持ちます。`previewChartData` は `source`、`direction`、`headerRow`、`headerColumn`、`blanksAs`、`plotVisibleOnly` を受け取るので、エディターは別のソース範囲を確定する前に、何がプロットされるかを表示できます。
 
 ## グラフの作成
 
@@ -49,8 +49,8 @@ Excel が保存した `.xlsx` と `.xlsb` のグラフを読み込めます。�
 
 | メソッド | 編集する内容 |
 | --- | --- |
-| `setChartType(sheet, objectId, plot, kind, grouping?)` | プロットグループの種類を置き換えます。各系列の参照、idx、順序、明示した色は保たれます。 |
-| `setChartTitle(sheet, objectId, title)` | タイトルの文字列を設定します。`null` で削除します。 |
+| `setChartType(sheet, objectId, plot, kind, grouping?)` | プロットグループの種類を置き換え、各系列の参照、idx、順序を保ちます。系列の色、線、データ要素の書式は Excel の種類変更規則に従います。 |
+| `setChartTitle(sheet, objectId, title)` | タイトル文字列、削除を表す `null`、またはタイトルオブジェクトを受け取ります。 |
 | `setChartLegend(sheet, objectId, position, overlay, hiddenSeries?)` | 位置（`None` で凡例を削除）、重なり、非表示にする凡例項目。 |
 | `setChartAxis(sheet, objectId, axisId, patch)` | 表示、タイトル、`min`、`max`、`majorUnit`、`numberFormat`、`majorGridlines`、`reversed`、`logBase`、`crosses` と `crossesAt`、`tickLabelPosition`。 |
 | `setChartDisplay(sheet, objectId, blanksAs, plotVisibleOnly)` | 空白セルの扱いと、非表示セルを除外するかどうか。 |
@@ -64,11 +64,13 @@ Excel が保存した `.xlsx` と `.xlsb` のグラフを読み込めます。�
 
 パッチでは、`undefined` のフィールドは変更なし、`null` は削除を表します。Python のパッチは `TypedDict` で、キーを省略すると変更なし、`None` は削除です。プロットの種類にないフィールドは拒否されます。`holeSize`（10 から 90）はドーナツのプロットにだけ指定できます。軸では、`logBase` を `null` にすると線形軸に戻り、`crosses: ChartAxisCrosses.At` のときに `crossesAt` が読まれます。`tickLabelPosition` は `nextTo`、`low`、`high`、`none` のいずれかで、`null` で既定に戻ります。色は ARGB の整数（`0xAARRGGBB`）です。
 
+`setChartTitle` は文字列、`null`、`{ kind, text?, formula? }`（Python は `ChartTitleInfo`）を受け取ります。`ChartTitleKind.Auto` を指定すると Excel の自動タイトルに戻ります。`setChartAxis` の `title` パッチにも同じタイトルオブジェクトを指定できます。マーカー記号には `x`、`star`、`plus`、`dot`、`dash` があります。`picture` マーカーは読み取れますが、マーカーパッチから設定できません。
+
 系列の `name`、`categories`、`x` に空文字列を渡すとその参照を削除します。`values`、`y`、`size` に空文字列を渡すと拒否されます。
 
 ## 保存と構造の変更
 
-保存時には、系列キャッシュが現在のセル値で更新されます。保存で再計算が行われることはないため、手動計算のブックには、その時点で保持している値が書き込まれます。
+保存時には、系列キャッシュがその時点で保持しているセル値から更新されます。保存で再計算が行われることはないため、手動計算のブックには、現在キャッシュしている値が書き込まれます。
 
 行や列の挿入・削除、シート名の変更、シートの削除では、数式と同様にグラフ内の参照も書き換えられます。
 

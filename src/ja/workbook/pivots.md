@@ -257,8 +257,10 @@ for cell in layout.cells:
 
 `subtotalTop` は Python、Node、WASM のバインディングで、Excel と同じく `true` が既定です。グループの小計はそのグループの見出し行に置かれます。`false` にすると、コンパクト形式とアウトライン形式ではグループをラベルだけの行で始め、ロケールに合わせた表記の「<アイテム> Total」行で閉じます。カスタム小計関数を持つフィールドでは、各小計行に UI ロケールの表記で関数名が付き（例: `East Max`）、行の順序は Excel の固定の関数順に従います。関数が 2 つ以上あるときは、`subtotalTop` の値にかかわらず小計はグループの下に置かれます。
 
-::: warning ラベルフィルターと値フィルターは保存されない
-`pivotFilterAdd()` で追加したフィルターが `pivotLayout()` と `GETPIVOTDATA` に効くのは、ワークブックのハンドルが生きている間だけです。`save()` はこのフィルターを書き出しません。Excel が書いた `<filters>` ブロックは保存時にそのまま残りますが、`pivotFilterCount()` には現れません。保存されるフィルター状態は、アイテムの表示・非表示です。
+`PivotDataFieldSpec.showAs` / `show_as` は `PercentOf`、`PercentOfRunningTotal`、`RankAscending`、`RankDescending` にも対応します。基準アイテムが必要なモードでは `showAsBaseField` / `show_as_base_field` と `showAsBaseItem` / `show_as_base_item` を指定します。読み込んだ x14 `pivotShowAs` の値と `subtotalHiddenItems` は保存時に保持されます。
+
+::: warning フィルターの設定と往復保存
+`pivotFilterAdd()` で追加したフィルターが `pivotLayout()` と `GETPIVOTDATA` に効くのは、ワークブックのハンドルが生きている間だけです。`save()` はこのフィルターを書き出しません。読み込んだ `<filters>` ブロックは、`valueEqual`、`valueNotEqual`、`valueGreaterThan`、`valueGreaterThanOrEqual`、`valueLessThan`、`valueLessThanOrEqual`、`valueBetween`、`valueNotBetween` の 8 種類すべてを保存時に保持しますが、`pivotFilterCount()` には現れません。API で設定したフィルター状態のうち保存されるのは、アイテムの表示・非表示です。
 :::
 
 ### 日付を明示した日数単位でグループ化する

@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # Python API
 
 Python パッケージは、`formulon_capi.wasm` にコンパイルされた Formulon C ABI を呼ぶ Python 向けラッパーです。公開 wheel は `py3-none-any` 形式で、pip が実行環境に合う `wasmtime` wheel をインストールします。
@@ -69,6 +73,10 @@ print(order, classes.class_ids, classes.class_count)
 ## 関数とメソッド {#functions-and-methods}
 
 パッケージの type stub（`formulon/__init__.pyi`）と formulon ソースの docstring から生成した一覧です。`formulon.` で始まる名前はモジュール関数、`Workbook.` で始まる名前はクラスメソッドまたは静的メソッドで、それ以外はすべて `Workbook` インスタンスのメソッドです。`is_valid` はプロパティです。`= ...` は stub と同じく既定値のある引数を表します。説明列は docstring の最初の 1 文で、API 自身の英語のテキストをそのまま載せています。`Workbook` はコンテキストマネージャーでもあり、`with` ブロックを抜けると `close()` が呼ばれます。
+
+::: info 参照元
+この一覧は、ドキュメント対象 {{ reference.version }} のコアソースから生成しています。<a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">取得元のコミット</a>を固定し、WASM・Python・C の宣言を同じリビジョンで照合しています。デモは公開済みパッケージを使い、実行バージョンを別に表示します。
+:::
 
 ### ライブラリ、診断、ログ {#library}
 

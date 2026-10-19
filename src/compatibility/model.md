@@ -35,14 +35,11 @@ See [Locale profiles](/compatibility/locale-profiles) for the public list and pi
 
 ## Divergences
 
-Some differences are inevitable:
+Reproducible differences in rounding, coercion, formula entry, and other results are engine work: capture Excel's answer and fix the implementation. Platform floating-point differences do not receive a blanket tolerance.
 
-- floating-point drift between platforms,
-- volatile snapshot mismatches,
-- undocumented Excel behavior whose contract is not stable across builds,
-- deliberate fixes for cases where reproducing Excel would make the engine less predictable (silent overflow, silent type coercion in specific corner cases).
+The divergence registry records deliberate differences, Excel cases without a reproducible value, capture-tool limitations, and unresolved engine gaps. Read each entry's `cause`, profile scope, reason, and last-verified Excel build. `mode: skip-oracle` means the comparison does not run; it does not establish agreement. A comparison with a tolerance establishes agreement only within that tolerance.
 
-Each accepted divergence carries a reason and a *last-verified Excel build* so future maintainers know whether the divergence is still intentional or whether Excel has since fixed the underlying behavior.
+For example, a cycle through several cells with iteration disabled returns `#REF!` because its Excel result depends on entry order that the saved file does not record. A cell whose only cycle member is itself holds 0 as in Excel. Array memory limits and external services impose other boundaries. See [How far compatibility goes](/compatibility/edge-cases) for examples and [Oracle testing](/compatibility/oracle-testing) for classifications and release criteria.
 
 ## Practical rule
 

@@ -1,34 +1,61 @@
 # How Far Compatibility Goes
 
-A formula engine can return a sensible answer for every input and still disagree with Excel on a large share of them. Excel's results depend on rounding rules, a calendar error kept since the 1980s, and text handling that changes with the locale and with the operating system. None of that is in a specification. A workbook built in Excel relies on it anyway, and when another engine recalculates that workbook, the totals shift by amounts too small to notice until a reconciliation fails.
+Formulon follows Excel's observed results down to rounding residues, text coercion, error precedence, and array shape. It also reproduces the stored formula text and workbook behavior that affect the next edit or save. The reference is a captured Excel result for a named profile and build.
 
-Formulon treats what Excel actually returns as the specification. Every case below was captured from a real Excel build. Each table then runs the same formulas through the engine in this page, so you see the comparison rather than take it on trust.
+This page shows selected examples and the regression evidence behind the wider implementation. It is not a complete inventory of Excel behavior. [Formula coverage](/compatibility/formula-coverage) describes which functions execute locally; [Oracle testing](/compatibility/oracle-testing) explains how results are compared.
+
+## What is checked
+
+| Surface | What has to agree with Excel |
+| --- | --- |
+| Calculated value | The underlying number, text, Boolean, error, or blank; a matching rounded display is insufficient. |
+| Evaluation rules | Which inputs are coerced or ignored, which error wins, and whether a result is scalar or an array. |
+| Stored formula and workbook state | Formula spelling, legacy array edits, inserted formats, pivot cells, and chart references or caches. |
 
 ::: tip How to read the tables
-- **Plausible answer** is what a straightforward implementation tends to return: IEEE 754 arithmetic as-is, a standard calendar library, plain Unicode string comparison. It is a reasonable answer, but not the one Excel gives, so a workbook built in Excel recalculates differently. A dash means the straightforward answer happens to be Excel's on that row.
+- **Plausible answer** is what a straightforward implementation tends to return: IEEE 754 arithmetic as-is, a standard calendar library, plain Unicode string comparison. It is a reasonable answer, but not the one Excel gives, so a workbook built in Excel recalculates differently. This column illustrates a possible implementation; it is not a benchmark of another product. A dash means no contrasting answer is shown.
 - **Excel** is the value captured from Excel. `mac-365-ja_JP` means Mac Excel 365 with the Japanese locale; see [Locale profiles](/compatibility/locale-profiles).
-- **Formulon** is computed live when the table scrolls into view. Seed cells, where a case needs them, are listed under the formula; the formula itself sits in `Z1`.
+- **Formulon** is computed live when the table scrolls into view. Seed cells, where a case needs them, are listed under the formula; the formula itself sits in `Z1`. Numeric results are compared as doubles with no tolerance, rather than as formatted cell text. The runtime version appears on each demo; during release preparation it can be an earlier published version than the documentation target.
 :::
 
 ## Floating-point arithmetic
 
-`0.5-0.4-0.1` is not exactly zero in binary floating point; the residue is about `-2.78E-17`. Excel hides that residue, but only in specific places. When the outermost `+` or `-` of a formula produces a result within 2<sup>-50</sup> of its larger operand, Excel reports exactly 0. Wrap the same expression in parentheses and it is no longer the outermost operation, so the residue shows. `SUM` applies the rule at each step; `SUMIF` does not. A comparison sees the raw value, which is why `=0.5-0.4-0.1=0` is `FALSE` even though the cell next to it displays 0.
+`0.5-0.4-0.1` leaves about `-2.78E-17` in binary floating point. Excel replaces that residue with 0 only in specific contexts. At the outermost `+` or `-` of a cell formula, it compares the result with a threshold of eight units in the last place (ULPs), scaled by the left operand's binary exponent. Parentheses around the expression prevent this outermost-operation rule, and a comparison sees the raw result: `=0.5-0.4-0.1=0` is `FALSE`.
 
-An engine that rounds every result looks right on the first row and wrong on the second and third. An engine that never rounds is wrong on the first.
+`SUM`, `AVERAGE`, `SUBTOTAL` and `AGGREGATE` apply the cancellation rule only to the final addition, scaled by the partial sum before it. `SUMIF` does not apply it. Snapping every intermediate addition changes the result of longer sums.
 
-The rest of the group follows the same pattern: Excel keeps 15 significant digits when it turns a number into text, `MROUND` works on the binary value rather than the decimal you typed, and a negative base with a fractional exponent is accepted only for odd roots such as `1/3`.
+The three expressions test different paths: a cell result, a parenthesized expression, and a Boolean comparison. Matching one path does not establish the others.
 
-On Windows profiles, `+ - * / ^ %`, `EXP`, and `LN` round the way Windows Excel does (x87 extended precision, then double), so results that land on a rounding tie match it to the last bit; aggregate functions and other builtins still compute in double. `^` and `POWER` also reproduce Excel's last bits: `8^(1/3)` is 1.9999999999999998, not 2, and `1.0001^1000` is 1.105165392603197.
+The table also checks that Excel keeps 15 significant digits when it turns a number into text, `MROUND` works on the binary value rather than the decimal you typed, and a negative base with a fractional exponent is accepted only for odd roots such as `1/3`.
+
+Windows profiles also apply the measured Windows rounding rules to the arithmetic paths that differ from Mac Excel. This is separate from the host math-library differences described below: selecting an Excel profile does not replace the native or WASM math library.
 
 <CompatCasesDemo group="float" />
+
+## Numeric precision beyond the displayed decimal
+
+Numeric parsing, calculation, and display have different rules. Text-to-number conversion keeps 15 significant digits by truncation; the `ROUND` family rounds from a 15-significant-digit decimal representation; multiplication and related operations flush subnormal results (below the normal double range) to zero. Number formatting has its own fraction, exponent, and placeholder rules. Applying one decimal-rounding rule everywhere would change these results.
+
+These committed Mac ja-JP goldens show why the last digits matter. Each listed case has effective absolute and relative tolerances of zero, either at suite level or through a case override. Each linked golden records the Excel build, capture time, inputs, and comparison settings. These are source regression examples, separate from the browser tables.
+
+| Formula | Captured numeric result | What it checks |
+| --- | --- | --- |
+| `=NUMBERVALUE("9999999999999999")` | `9999999999999990` | Text-to-number conversion truncates to Excel's significant-digit limit. [Golden: `integer_digits_truncated`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/numbervalue_rules.golden.json). |
+| `=ROUNDUP(2.675,2)` | `2.6799999999999997` | The result can display as `2.68` while differing in its underlying double. [Golden: `round_digit_string_roundup_cents`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/math.golden.json). |
+| `=ROUND(99.995,2)` | `100` | Decimal rounding carries into the integer part. [Golden: `round_digit_string_round_carry`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/math.golden.json). |
+| `=RATE(10,-100,1000)` | `-1.963351707292562E-10` | The solver preserves Excel's small nonzero residual instead of replacing it with a mathematically exact zero. [Golden: `rate_zero_outcome`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/financial.golden.json). |
+| `=NORM.DIST(17.947,-3.482,1.962,FALSE)` | `2.538700187017102E-27` | A small nonzero distribution tail must not disappear under a loose absolute tolerance. [Golden: `norm_dist_pdf_far_tail`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/distributions.golden.json). |
+| `=NORM.DIST(39,1,1,FALSE)` | `0` | A separate case checks the tail that Excel flushes to zero. [Golden: `norm_dist_pdf_flushed`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/distributions.golden.json). |
+
+Financial and statistical functions need more than a standard formula. `RATE`, `IRR`, `XIRR`, and `YIELD` follow Excel's solver behavior, including starting guesses and failure conditions. Distribution tails and inverses, variance under cancellation, and regression with dependent columns exercise different numerical paths. Inputs and comparison settings are recorded in the [RATE / IRR](https://github.com/libraz/formulon/blob/main/tests/oracle/cases/financial.yaml), [XIRR](https://github.com/libraz/formulon/blob/main/tests/oracle/cases/xirr_search.yaml), [YIELD](https://github.com/libraz/formulon/blob/main/tests/oracle/cases/financial_dcc.yaml), and [regression](https://github.com/libraz/formulon/blob/main/tests/oracle/cases/regression_advanced.yaml) suites. A simple payment or average does not exercise those boundary cases.
 
 ## Dates and times
 
 ::: info Date serials
-Excel stores a date as a number: the count of days since the start of 1900, so 1 is 1900-01-01 and 45658 is 2025-01-01. Every date function reads and writes these serials.
+Excel stores a date as a number: the count of days since the start of 1900, so 1 is 1900-01-01 and 45658 is 2025-01-01. Date calculations use these serials.
 :::
 
-Serial 60 is 1900-02-29, a day that never existed. Excel keeps it so old workbooks keep their dates, and `WORKDAY` will step onto it. A standard calendar library rejects the date, or shifts every serial before March 1900 by one day. Serial 0 formats as `1900/1/0`, not as the last day of 1899.
+Serial 60 is 1900-02-29, a day that never existed. Excel keeps it so old workbooks keep their dates, and `WORKDAY` will step onto it. A Gregorian calendar calculation needs an explicit serial-60 case to preserve that numbering. Serial 0 formats as `1900/1/0`, not as the last day of 1899.
 
 Japanese era dates have their own rules. `DATEVALUE` rejects the first-year form `令和元年` but accepts `平成32年`, a year after the Heisei era ended. `TEXT` with the `ggge` era code prints `令和1年`; the `元年` spelling appears only when the format carries the `[$-ja-JP-x-gannen]` tag. `TIMEVALUE("12:60")` rolls over to 13:00 instead of failing. On Windows ja-JP, `TEXT` accepts an array of formats, and `[$-LCID]` tags render Windows' own month and day names (`[$-411]mmm` is `1`, `[$-404]mmmm` is `一月`).
 
@@ -38,7 +65,7 @@ Workbooks saved with the 1904 date system are read with that system: serial 0 is
 
 ## Blank cells, empty text, and type coercion
 
-Excel distinguishes three kinds of "nothing": a cell that was never written, a cell holding a zero-length text constant, and a formula that returns `""`. Most functions treat them alike. `COUNTIF` does not: the criterion `""` matches all three, while `"="` matches only the truly blank cell.
+Excel distinguishes three kinds of "nothing": a cell that was never written, a cell holding a zero-length text constant, and a formula that returns `""`. `COUNTIF` distinguishes them: the criterion `""` matches all three, while `"="` matches only the truly blank cell.
 
 Text that looks like a logical value is just as uneven. `IF` accepts the text `"TRUE"` but not `"  TRUE  "`; `AND` trims the spaces and accepts it. `SUM` rejects `"TRUE"` typed as an argument. `TRUE=1` is `FALSE`, because a logical value and a number are never equal. Under the Japanese profile, `VALUE` accepts a leading `¥` but not a trailing `円`.
 
@@ -56,6 +83,12 @@ Two cases that do not depend on the platform: a `COUNTIF` wildcard matches text 
 
 <CompatCasesDemo group="text" />
 
+## Search paths and character positions
+
+For approximate lookups, Formulon follows measured Excel search behavior, including probes with mixed types and unsorted ranges. With `A1:A3` holding `30`, `10`, `20`, Excel returns `2` for `=MATCH(15,A1:A3,1)` ([golden: `match_unsorted_with_approx`](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/lookup.golden.json), zero tolerance). This pins one observed search path; it does not make unsorted input a valid substitute for the sorted input approximate lookup requires.
+
+Character positions are also profile-dependent. The Mac ja-JP [text goldens](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden/text.golden.json) record `=LEN("😀")` as `1` (`supp_len_emoji`) and `=FIND("b","a😀b𐐨c𠀀d")` as `3` (`supp_find_after_astral`). These cases cover supplementary characters as well as ordinary text. They are Mac captures; they are not direct measurements of every Windows locale. See [Text collation](/compatibility/text-collation) for comparison strength and [Locale profiles](/compatibility/locale-profiles) for measurement scope.
+
 ## Implicit intersection and spills
 
 ::: info Implicit intersection and spills
@@ -68,17 +101,53 @@ When a lookup is lifted over an array of keys, each element applies Excel's erro
 
 <CompatCasesDemo group="spill" />
 
-## Where Formulon deliberately differs
+## Accuracy after an edit or save
 
-Matching Excel is the default, not an absolute rule. Each case where Formulon differs is recorded in the core repository's [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml), together with the reason and the Excel build last checked. A difference without an entry fails the oracle tests.
+A matching formula value does not establish that the workbook will behave the same on the next edit. These checks cover observable workbook behavior as well:
 
-| Case | Excel | Formulon | Why |
+| Area | Behavior checked | Evidence |
+| --- | --- | --- |
+| Formula entry | `1.50` is stored as `1.5`, a touching unary `+5` as `5`; rejected whitespace fails before mutation. The same entry rules cover cells, names, conditional formats, and validation. | [Formula-entry regression tests](https://github.com/libraz/formulon/blob/main/tests/c_api/formulon_c_formula_entry_test.cpp); [Workbook operations](/workbook/operations). |
+| Legacy array formulas | Editing a non-anchor member is rejected without changing the block; every member answers `FORMULATEXT` and `ISFORMULA` from the block formula. | [Dynamic arrays](/workbook/dynamic-arrays). |
+| Validation | A self-referencing rule evaluates the proposed input, including reads through ranges or indirect references, while stored cells remain unchanged. | [Proposed-value regression tests](https://github.com/libraz/formulon/blob/main/tests/unit/validation_eval_test.cpp); [Filters and validation](/workbook/filters-validation). |
+| Structural edits | Inserted rows inherit formats and height from above; columns inherit formats and width from the left. Hosted sparklines are cloned; hidden state and outline level are not copied. | [Workbook operations](/workbook/operations). |
+| PivotTables | The Windows ja-JP `blank_row_item_label` capture checks the output grid, labels and totals: `(North,100)`, `(blank,50)`, `(South,200)`, `(blank,25)` produce a blank-label group of `75` and a grand total of `375`. | [Workbook golden](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/win-365-ja_JP/golden_wb/pivot_basic.golden.json); [PivotTables](/workbook/pivots). |
+| Charts | Cached series distinguish blanks, text, Booleans and errors; references follow structural edits and caches refresh from stored values on save. These checks concern data and structure, not chart rendering. | [Chart data golden](https://github.com/libraz/formulon/blob/main/tests/oracle/targets/mac-365-ja_JP/golden_chart/data.golden.json), [save regression tests](https://github.com/libraz/formulon/blob/main/tests/unit/chart/chart_save_test.cpp); [Charts](/workbook/charts). |
+
+The linked goldens are captured Excel observations. The linked regression tests also pin engine and API contracts; a regression test alone is not a fresh Excel measurement. The feature pages describe the supported read, edit, and save boundaries.
+
+## What a passing comparison establishes
+
+| Comparison | Meaning |
+| --- | --- |
+| Live tables on this page | Numeric values compare as doubles with no tolerance; text, errors, and Booleans compare in their shown form. |
+| Exact oracle case | Its effective absolute and relative tolerances are both zero. A suite tolerance can be overridden per case, as the `RATE` example above does. |
+| Tolerant or specialized oracle case | Agreement is established only under that case's effective tolerance or named comparison mode. |
+| `host_libm` cases | For marked host-math results, comparison is exact on macOS and allows at most 4 ULP elsewhere. The host math library can put a Linux or WASM result 1–2 ULP from Mac Excel; selecting a Mac profile does not eliminate that execution-host difference. |
+
+The [`host_libm` registry entries](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) and [comparison helper](https://github.com/libraz/formulon/blob/main/tests/support/host_libm_expect.h) make that exception explicit. It is not a blanket tolerance for all mathematical functions. Skipped cases establish no value agreement and are classified separately below.
+
+## Differences that remain
+
+The core repository's [`tests/divergence.yaml`](https://github.com/libraz/formulon/blob/main/tests/divergence.yaml) and per-target registries record the reason, profile scope, comparison policy, and last-verified Excel build for a tracked difference. These entries include intentional boundaries and cases that cannot be captured reliably; a skipped case is not evidence of a matching result.
+
+| Case | Excel | Formulon | Reason or boundary |
 | --- | --- | --- | --- |
-| Circular reference with iterative calculation off | Seeds one member with 0 and computes the rest: `A1=B1+1`, `B1=A1+1` gives 1 and 0 | `#REF!` in every cell of the cycle Excel's values depend on which member it seeds, so there is no single correct number. A host running without a UI gets no warning dialog, so an error value is the signal it can act on. |
-| `=WEEKNUM(DATE(2024,1,1),99)` | Mac: 1, Windows: `#NUM!` | `#NUM!` on both | `99` is not a valid return type; Formulon follows Windows and the documented contract. |
-| Page breaks at a print scale of 50% or less | Breaks stop following page geometry | Geometric pagination | Excel's break set at small scales does not follow from the page size and grows again at 25%. |
+| Multi-cell cycle, iteration off | `A1=B1+1`, `B1=A1+1` gives 1 and 0, or 0 and 1, depending on entry order | `#REF!` in every cycle member | The saved workbook does not record the entry order needed to reproduce Excel's result. A self-cycle such as `A1=A1+1` holds 0 in both engines. |
+| Cells downstream of a cycle, iteration off | Values also depend on whether the cells were entered before or after the cycle closed | Propagates a multi-cell cycle's `#REF!`; computes from 0 downstream of a self-cycle | Excel's historical entry order cannot be recovered from the workbook. |
+| `=WEEKNUM(DATE(2024,1,1),99)` on Mac | Alternates between 1 and `#NUM!` across cells and runs | `#NUM!` for unsupported return types on every host | Classified as `excel-no-value`: there is no reproducible Mac value to capture. |
+| Generated and derived arrays within Excel's size bound | Can evaluate up to 53,687,091 elements | Generated arrays are limited to 1,048,576 cells; derived arrays to 10,000,000 cells, with `#NUM!` or `#CALC!` when exceeded | Memory limits bound evaluation in WASM. Above Excel's bound the formula holds 0 in both engines; `ROWS` and `COLUMNS` can obtain shape without allocating the values. |
+| Ad-hoc scalar evaluation of `=A1+1` at an empty `A1` | A stored self-cycle holds 0 with automatic calculation | Returns 1 from the cached blank cell | Ad-hoc evaluation does not install a formula or join the dependency graph. See [Workbook operations](/workbook/operations#ad-hoc-formula-evaluation). |
+| Windows print-scale captures | Existing captures can read the previous pagination before Excel settles the layout after a scale change | Geometric pagination agrees with the measured Mac cases | Classified as `harness-cannot-capture`; Windows requires a settled-layout recapture. The old readback is not evidence of a universal Excel pagination rule. |
 
-Iterative financial functions (`RATE`, `IRR` and similar) are compared within a tolerance of 1E-9 absolute or 1E-6 relative, not bit for bit. `=RATE(10,-100,1000)` is `-1.96E-10` in Excel and 0 in Formulon. Both mean "zero" here, but they are not the same double.
+## How differences are closed
+
+1. Pin the same profile, date system, input cells, and calculation settings. Record the Excel build and reduce the workbook to a reproducible case.
+2. Capture Excel's result and stored formula text where relevant. Separate an engine difference from a capture limitation, a volatile input, or a profile/build change.
+3. Fix the engine against that evidence and add a regression case. Cover the boundaries too: rounding ties, blanks, error precedence, locale, and array shape can select different execution paths.
+4. Remove a resolved skip or tolerance entry, then verify the committed goldens and the divergence registry. Regenerate a golden only when a fresh Excel observation justifies changing it.
+
+[Oracle testing](/compatibility/oracle-testing) gives the verification commands and explains what the closure metadata and release gate establish. A passing captured case does not prove every input or every Excel build matches.
 
 ## How the captures are kept current
 

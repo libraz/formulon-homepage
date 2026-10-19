@@ -53,6 +53,8 @@ Formulon は認識する関数のほとんどをローカルで評価します�
 
 `functionMetadata` にロケール引数を渡さないでください。ローカライズはプロファイルを明示する操作です。現在のプロファイル一覧は [ロケールプロファイル](/ja/compatibility/locale-profiles) にあります。
 
+`FILTERXML` は Windows プロファイルではローカルで評価しますが、Mac 版 Excel には存在しないため、`mac-*` では `#NAME?` になります。`WEBSERVICE` も Mac では名前が認識されません。関数カタログに名前があることと、選択したホストで使えることは別です。
+
 ## 外部サービススタブ
 
 次の関数名は意図的に認識します。未知関数として処理するのではなく、予測可能な Excel 風のエラーに落とすためです。いずれも Formulon がローカル計算として扱う範囲の外にあります。
@@ -64,9 +66,9 @@ Formulon は認識する関数のほとんどをローカルで評価します�
 | `IMAGE` | 画像取得と描画を行うホスト機能が必要 | 固定の `#VALUE!` |
 | `RTD` | 外部の Real-Time-Data プロバイダーが必要 | 固定の `#N/A` |
 | `STOCKHISTORY` | Microsoft の市場データサービスまたはネットワーク I/O が必要 | 固定の `#VALUE!` |
-| `WEBSERVICE` | HTTP / ネットワーク I/O が必要 | 固定の `#VALUE!` |
+| `WEBSERVICE` | HTTP・ネットワーク I/O が必要 | Windows は `#VALUE!`、Mac は `#NAME?` |
 | `TRANSLATE`, `DETECTLANGUAGE` | クラウド翻訳 / 言語判定サービスが必要 | 固定の `#NAME?` |
-| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | ライブ OLAP キューブ接続が必要 | 固定の `#NAME?` |
+| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | ライブ OLAP キューブ接続が必要 | 固定の `#N/A` |
 
 ## 実務上の確認
 
@@ -78,7 +80,7 @@ Formulon は認識する関数のほとんどをローカルで評価します�
 formulon dump --formulas workbook.xlsx > formulas.txt
 ```
 
-Oracle の現在の検証とレポート用コマンドは、[検証の種類](/ja/compatibility/oracle-testing#検証の種類)を参照してください。
+Oracle の現在の検証とレポート用コマンドは、[検証の種類](/ja/compatibility/oracle-testing#verification-tracks)を参照してください。
 
 ## 一次情報源
 

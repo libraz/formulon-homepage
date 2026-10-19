@@ -2,7 +2,7 @@
 
 A chart is a drawing object on a sheet. Formulon reads charts from Excel-saved workbooks, creates new ones from a cell range, edits their typed properties, and resolves their series against the current cell values. It does not render charts; the data and structure API is meant for a viewer, an editor UI, or a script that needs to know what a chart plots.
 
-Charts in an Excel-saved `.xlsx` or `.xlsb` load. A chart you do not edit is saved byte-for-byte, so opening and saving a workbook never alters its charts.
+Charts saved by Excel in `.xlsx` and `.xlsb` files load for typed reads. XLSX charts also support edits. Saving a workbook refreshes chart caches from the current stored cell values, even when the chart definition is untouched.
 
 A workbook loaded from `.xlsb` keeps its charts readable but not editable: `insertChart` and the edit methods report `kIoDrawingUnparseable`, as retained XLSB drawings do for pictures. Charts of the extended chart family (`isChartex`) are read-only, and a PivotChart accepts only the edits that do not change its series, such as appearance and title.
 
@@ -24,7 +24,7 @@ Within a chart, a plot group is addressed by its index in `plots`, a series by i
 
 `chart` carries the name, description, title, legend, `blanksAs`, `plotVisibleOnly`, `plots`, `axes`, hidden categories, and `source`. `source` is the rectangle every series was split from, or `null` when the series do not share one. Each plot has its type, grouping, and per-series references, fill, line, marker, data points and data labels. A chart type outside the seven creatable kinds, such as radar, stock or surface, is still readable: `ChartPlotType` covers every plot group, and `isChartex`, `isPivotChart` and `onChartsheet` tell the special forms apart.
 
-`data` resolves each series into numbers by Excel's rules. `domain` is `category` or `xy`; `categories` holds the labels, `series` holds `values` with one `states` entry per point (`Value`, `Gap` or `Connect`, from `ChartPointState`), and `unresolved` lists references that did not resolve. `previewChartData` accepts `source`, `direction`, `headerRow`, `headerColumn`, `blanksAs` and `plotVisibleOnly`, so an editor can show what a different source range would plot before committing it.
+`data` resolves each series into numbers by Excel's rules. `domain` is `category` or `xy`; `categories` holds the labels, `series` holds `values` with one `states` entry per point (`Value`, `Gap` or `Connect`, from `ChartPointState`), and `unresolved` lists references that did not resolve. Each resolved series also carries `xFormatCode` (`x_format_code` in Python), the number format of its x values. `previewChartData` accepts `source`, `direction`, `headerRow`, `headerColumn`, `blanksAs` and `plotVisibleOnly`, so an editor can show what a different source range would plot before committing it.
 
 ## Creating a chart
 
@@ -49,8 +49,8 @@ Every edit returns a `Status`, except `addChartSeries`, which returns `{ status,
 
 | Method | Edits |
 | --- | --- |
-| `setChartType(sheet, objectId, plot, kind, grouping?)` | Replaces a plot group's type, keeping each series' references, idx, order and explicit colors. |
-| `setChartTitle(sheet, objectId, title)` | Sets the title text; `null` removes it. |
+| `setChartType(sheet, objectId, plot, kind, grouping?)` | Replaces a plot group's type while keeping each series' references, idx and order. Series colors, lines and point formatting follow Excel's type-change rules. |
+| `setChartTitle(sheet, objectId, title)` | Accepts title text, `null` to remove the title, or a title object. |
 | `setChartLegend(sheet, objectId, position, overlay, hiddenSeries?)` | Position (`None` removes the legend), overlay, and the hidden legend entries. |
 | `setChartAxis(sheet, objectId, axisId, patch)` | Visibility, title, `min`, `max`, `majorUnit`, `numberFormat`, `majorGridlines`, `reversed`, `logBase`, `crosses` with `crossesAt`, and `tickLabelPosition`. |
 | `setChartDisplay(sheet, objectId, blanksAs, plotVisibleOnly)` | How blanks plot and whether hidden cells are skipped. |
@@ -64,11 +64,13 @@ Every edit returns a `Status`, except `addChartSeries`, which returns `{ status,
 
 In a patch, an `undefined` field means keep and `null` means clear. In Python the patch is a `TypedDict`: an omitted key means keep and `None` means clear. A field the plot type does not have is rejected, and `holeSize` (10 to 90) applies to doughnut plots only. On an axis, a `null` `logBase` makes the axis linear, `crosses: ChartAxisCrosses.At` reads `crossesAt`, and `tickLabelPosition` is `nextTo`, `low`, `high` or `none`, with `null` restoring the default. Colors are ARGB integers (`0xAARRGGBB`).
 
+`setChartTitle` accepts text, `null`, or `{ kind, text?, formula? }` (`ChartTitleInfo` in Python). Use `ChartTitleKind.Auto` to return the chart to Excel's automatic title. The `title` patch on `setChartAxis` accepts the same title object. Marker symbols include `x`, `star`, `plus`, `dot` and `dash`; `picture` markers can be read but cannot be set with a marker patch.
+
 An empty string for a series' `name`, `categories` or `x` removes that reference; an empty `values`, `y` or `size` is rejected.
 
 ## Saving and structural edits
 
-On save, the series caches are refreshed from the current cell values. Saving never recalculates, so a workbook in manual calculation mode writes the values it currently stores.
+On save, the series caches are refreshed from the current stored cell values. Saving never recalculates, so a workbook in manual calculation mode writes the values it currently stores.
 
 Inserting or deleting rows and columns, renaming a sheet, and deleting a sheet all rewrite the references inside charts, the same way they rewrite formulas.
 

@@ -22,9 +22,11 @@ C の名前は `fm_sheet_get_auto_filter`、`fm_sheet_set_auto_filter`、`fm_she
 
 `getValidations` は保存済みの規則を読み取り、`addValidation` は規則を追加します。規則の値は OOXML の序数です。`type` の 1～7 は整数、10 進数、リスト、日付、時刻、文字列長、カスタムを表します。`op` の 0～7 は範囲内、範囲外、等しい、等しくない、大きい、小さい、以上、以下を表します。`ValidationErrorStyle` は `Stop`、`Warning`、`Information` です。規則の数式は先頭の `=` なしで保存され、読み戻しも同じ形です。`==` で始まる数式は `kParserUnexpectedToken` で拒否されます。
 
-`validateValue(sheet, row, col, value)` は、値を保存せずに指定セルへ適用される規則を検証します。結果には `hasRule`、`valid`、`ruleIndex`、`errorStyle` が含まれます。規則が重なる場合は、保存順で最初の規則が適用されます。`listInvalidCells` は、現在の値が規則に違反する入力済みセルを行優先順で返し、続きの取得に使う `nextCursor` を返します。値の設定は入力規則を自動で強制しません。カスタム式と規則の境界値は、入力候補ではなく保存済みワークブックを基準に評価します。
+`validateValue(sheet, row, col, value)` は、値を保存せずに指定セルへ適用される規則を検証します。結果には `hasRule`、`valid`、`ruleIndex`、`errorStyle` が含まれます。規則が重なる場合は、保存順で最初の規則が適用されます。`listInvalidCells` は、現在の値が規則に違反する入力済みセルを行優先順で返し、続きの取得に使う `nextCursor` を返します。値の設定は入力規則を自動で強制しません。カスタム式、リストの参照元、規則の境界値などの数式は、検証対象セルを読む箇所で入力候補の値に置き換えて評価します。範囲参照や間接参照から対象セルを読む場合も同じです。それ以外のセル値は保存済みのままで、検証によってワークブックが変更されることはありません。たとえば、A 列のセルに `5` を入力する検証では、`COUNTIF($A:$A,5)>0` は候補値の `5` を参照します。
 
 `"Open,Closed"` のようなインラインリストでは、Excel が表示する文字列の先頭・末尾から U+0020 の空白を削除して比較します。リストの解析時には各コンマの直後にある U+0020 も削除します。文字列の一致は大文字・小文字と幅を含めて完全一致です。数値として読める表示文字列とリスト項目は実行中のプロファイルで数値としても比較するため、`01`、全角の `１`、`1e0` は `1` に一致し、パーセント表示は `50%` に一致します。範囲を参照するリストの挙動（`MATCH(..., 0)`）は変わりません。
+
+組み込みの数値書式 ID `5`～`8` と `41`～`44` は、検証時に実行中のプロファイルのロケールに対応する書式コードへ解決されます。
 
 `removeValidationAt` と `clearValidations` は保存済み規則を編集します。C の呼び出しは `fm_sheet_validate_value`、`fm_sheet_list_invalid_cells`、`fm_sheet_get_validation_at`、`fm_sheet_add_validation`、`fm_sheet_remove_validation_at`、`fm_sheet_clear_validations` です。Python は状態オブジェクトを返す代わりに、ホスト側の失敗で `FormulonError` を送出します。
 

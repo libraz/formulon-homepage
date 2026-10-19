@@ -103,7 +103,7 @@ A formula entered while a referenced sheet is absent initially evaluates to `#RE
 
 ## Iterative calculation
 
-Workbooks with intentional cycles — interest accrual, goal-seek style fixed points — need iterative calculation. The engine evaluates the cyclic subgraph repeatedly until the change between iterations falls below the configured tolerance or the iteration cap is hit.
+Workbooks with intentional cycles — interest accrual, goal-seek style fixed points — need iterative calculation. The solver sweeps independent cyclic components together and applies a workbook-wide change test, stopping when the maximum change falls below the configured tolerance or the iteration cap is hit.
 
 ::: code-group
 
@@ -131,8 +131,10 @@ print(wb.get_iterative())
 
 `getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes `get_iterative()` as an `IterativeSettings` record with `enabled`, `max_iterations`, and `max_change`; failures raise `FormulonError`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
 
+`maxChange` must be finite and non-negative; otherwise the API returns `kInvalidArgument` (Python raises `FormulonError`). Both JavaScript bindings pass `maxIterations` as a signed 32-bit integer and reject fractional, non-finite, or out-of-range values with `RangeError`; accepted values are then clamped to `[1, 32767]`. Python raises `ValueError` for fractional, non-finite, or out-of-range `max_iterations`, and `TypeError` for non-numeric values such as numeric strings.
+
 ::: warning Cycles outside iteration need inspection
-If iterative calculation is **off**, an ordinary unresolved cycle produces `#REF!`. A cycle that closes through dynamic references such as `OFFSET` or `INDIRECT` may retain its prior cached values instead. Neither case is a host exception: `recalc()` still returns an OK status. Turn iteration on explicitly when cycles are intentional.
+If iterative calculation is **off**, a cycle containing a single formula cell (for example, `=A1+1` in `A1`) holds `0`; a cycle involving multiple cells produces `#REF!`. A cycle that closes through dynamic references such as `OFFSET` or `INDIRECT` may retain its prior cached values instead. These results are not host exceptions: `recalc()` still returns an OK status. Turn iteration on explicitly when cycles are intentional.
 :::
 
 The panel below solves a two-cell cycle with those same three arguments exposed. Tighten `maxChange` and the solve takes more sweeps to get under it; set an iteration cap below what the tolerance needs and the solve stops early, reporting the run as not converged with its last residual still above the guide line.

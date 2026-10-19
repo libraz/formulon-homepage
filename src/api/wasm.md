@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # WASM API
 
 The authoritative TypeScript declarations are shipped as `dist/formulon.d.ts`. This page summarizes the public shape.
@@ -184,7 +188,11 @@ try {
 
 ## Functions and methods {#main-workbook-methods}
 
-Generated from `dist/formulon.d.ts` in the installed `@libraz/formulon` package. Names starting with `Module.` are on the object `createFormulon()` resolves to, names starting with `Workbook.` are static factories, `createFormulon` and `mergeFunctionMetadata` are package exports, and every other name is a `Workbook` instance method. A summary is the first sentence of the declaration's doc comment and is blank where the declaration has none.
+Generated from `src/wasm/formulon.d.ts` at the reference source revision. Names starting with `Module.` are on the object `createFormulon()` resolves to, names starting with `Workbook.` are static factories, `createFormulon` and `mergeFunctionMetadata` are package exports, and every other name is a `Workbook` instance method. A summary is the first sentence of the declaration's doc comment and is blank where the declaration has none.
+
+::: info Reference source
+These tables are generated from the core source for documentation target {{ reference.version }}. The <a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">source commit</a> is pinned so WASM, Python, and C declarations describe the same revision. Demos use published packages and display their runtime version separately.
+:::
 
 ### Library, diagnostics and logging {#library}
 

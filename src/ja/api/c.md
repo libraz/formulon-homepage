@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # C API
 
 C11 ABI は、独自の言語バインディングやネイティブホストから使うための API です。内部構造を公開しない `fm_workbook_t` ハンドルを中心とするフラットな API で、配布中の Python、CLI、WASM も同じモデルを使います。公開レコードのレイアウトも契約の一部であり、クライアントのビルドに使ったヘッダーと一致させる必要があります。
@@ -120,6 +124,10 @@ fm_locale_facts("mac-365-de_DE", &facts);
 ## 関数群
 
 ポインターの寿命は `formulon_c.h` の各宣言の近くに記載しています。次の一覧は `src/c_api/formulon_c.h` のすべての `FM_API` 宣言から生成したものです。説明列は宣言に付いた Doxygen コメントの最初の 1 文で、API 自身の英語のテキストをそのまま載せています。1 つのコメントの下にまとめて宣言された関数は、その説明を共有します。
+
+::: info 参照元
+この一覧は、ドキュメント対象 {{ reference.version }} のコアソースから生成しています。<a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">取得元のコミット</a>を固定し、WASM・Python・C の宣言を同じリビジョンで照合しています。デモは公開済みパッケージを使い、実行バージョンを別に表示します。
+:::
 
 ### ライブラリ、診断、ログ {#library}
 

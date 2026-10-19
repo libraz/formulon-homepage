@@ -1,89 +1,74 @@
 # Oracle Contribution
 
-Oracle data is the main way to expand verified compatibility. Generation operates a real Excel installation; verification reads committed goldens and is safe for CI.
+Oracle generation captures results from a real Excel installation. Verification reads committed goldens and needs no Excel, so it runs in CI.
 
-::: info Glossary: oracle generation vs verification
-*Generation* runs the oracle capture tooling against a real Excel installation and writes golden JSON. It only happens on contributor machines that have Excel. *Verification* reads those committed goldens and compares them against Formulon output — no Excel required, safe for CI.
+::: info Generation and verification
+Generation drives Excel and writes golden data plus capture metadata. Verification recalculates the committed cases with Formulon and compares the results with those goldens. Only generation requires a contributor machine with Excel.
 :::
 
-::: warning Microsoft 365 only
-Oracle data must come from **Excel 365** (a Microsoft 365 subscription). Office 2019 and earlier are not supported: functions added after Office 2019 — `ARRAYTOTEXT`, `LAMBDA`, and the dynamic-array family (`SORT`, `FILTER`, `UNIQUE`, `XLOOKUP`, …) — silently return `#NAME?` on Office 2019 with no warning. That would record incorrect values in the golden. All three generators (`oracle-gen`, `oracle-gen-cf`, `oracle-gen-workbook`) run a startup sentinel that evaluates `=ARRAYTOTEXT(1)` and abort generation with a clear error if Excel does not recognize it.
+::: warning Microsoft 365 required
+Oracle captures must come from Microsoft 365 Excel. Each of the four capture generators—`oracle-gen`, `oracle-gen-cf`, `oracle-gen-chart`, and `oracle-gen-workbook`—runs a startup sentinel using `=ARRAYTOTEXT(1)` and stops if Excel does not recognize it. Office 2019 and earlier cannot capture the newer functions reliably.
 :::
-
-<DiagramLayers :layers="[
-  { title: 'Contributor machine', nodes: ['Real Excel 365 (locale-specific build)'] },
-  { title: 'Generate', nodes: ['make oracle-contribute / oracle-gen[-cf|-workbook]'] },
-  { title: 'Capture', nodes: ['Golden JSON + Excel build / OS / locale metadata'] },
-  { title: 'Review', nodes: ['Pull request'] },
-  { title: 'CI', nodes: [{ label: 'make oracle-verify', note: 'no Excel required' }] },
-  { title: 'Compare', nodes: ['Formulon engine vs captured golden'] },
-  { title: 'Outcome', nodes: ['Compatibility holds', 'Investigate per oracle-testing flow'] }
-]" />
 
 ## Contributor flow
 
-1. Install Excel 365 for the locale being contributed.
-2. Run `make oracle-contribute` from the repository root.
-3. Review the generated goldens and metadata.
-4. Open a pull request with the captured data.
+1. Run `make oracle-setup` to prepare the oracle environment.
+2. Run `make oracle-contribute`, or name a target with `TARGET=<target>`.
+3. Review the generated goldens and capture metadata.
+4. Submit the changes for review.
 
-`make oracle-contribute` needs Python 3.10 or newer. On first run it creates a virtual environment with `xlwings`. It then reads the installed Excel version and locale, maps them to a target in `tools/oracle/targets.yaml`, and generates the goldens; a full run takes 15 to 25 minutes. When the committed `ENVIRONMENT.md` for that target already records an Excel build at or above yours, it exits without generating anything.
+`make oracle-contribute` detects the installed Excel build and locale, then selects a matching target. If the committed capture already covers that Excel build, it reports that no refresh is needed. Target names use the form `<host>-365-<locale>`, such as `mac-365-ja_JP` or `win-365-ja_JP`.
 
-- On macOS, grant the terminal Automation access to Microsoft Excel when prompted.
-- From WSL2, export `FORMULON_WIN_PYTHON` as the path of the Windows-side `python.exe`, which needs `xlwings`, `pywin32`, and `pyyaml`.
-- The first goldens for a new target are accepted once a second contributor regenerates them independently and gets the same output.
+On macOS, allow the terminal to automate Microsoft Excel when prompted. If capturing a different Mac locale, first record the existing values of Excel’s `AppleLanguages` and `AppleLocale` preferences. Set the target locale, quit and relaunch Excel, then capture. Restore the values you recorded afterward; delete a preference key only if it was absent before the change.
 
-Each contribution should include the OS, Excel build, locale, and profile identity. When a golden later disagrees with Formulon, this metadata identifies the Excel build to capture again.
+From WSL2, `make oracle-setup` prints the Windows-side setup steps. Set `FORMULON_WIN_PYTHON` to the Windows `python.exe` path; that interpreter needs `xlwings`, `pywin32`, and `pyyaml`. Use the repository’s `tools/oracle/.venv/bin/python` for direct Python checks on the WSL side.
 
-## Targets
+## Targets and tracks
 
-Target names have the shape `<host>-<excel-major>-<locale>`, for example `mac-365-ja_JP` or `win-365-ja_JP`. The manifest lives at `tools/oracle/targets.yaml`.
+The formula manifest currently declares 14 Mac Excel 365 gates: the ja-JP primary plus en-US, de-DE, fr-FR, zh-CN, ko-KR, th-TH, es-ES, es-MX, pt-BR, ru-RU, zh-TW, it-IT, and nl-NL. The workbook track’s primary is Windows Excel 365 ja-JP. The other Windows locale profiles are estimates based on Mac captures and Windows host rules until real Windows captures replace them.
 
-The formula track has 14 Mac Excel gates: the primary `mac-365-ja_JP` plus 13 locale gates (`mac-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`). The workbook track also has the measured `win-365-ja_JP` target. The remaining 13 Windows profiles (`win-365-{en_US,de_DE,fr_FR,zh_CN,ko_KR,th_TH,es_ES,es_MX,pt_BR,ru_RU,zh_TW,it_IT,nl_NL}`) are estimated from the Mac measurements plus the Windows host rules until real Windows captures replace them. Together these are 28 profile ids across 14 locales.
+The chart and conditional-formatting tracks use Mac Excel 365 ja-JP. Chart cases live under `tests/oracle/cases_chart/` and their goldens under `tests/oracle/targets/mac-365-ja_JP/golden_chart/`. The chart capture reads both Excel-saved workbooks and, for applicable cases, Formulon-generated files reopened and saved by Excel. Its reader is the `chart_model_dump` binary.
 
-To capture a Mac locale, set `defaults write com.microsoft.Excel AppleLanguages -array <lang>` and `defaults write com.microsoft.Excel AppleLocale <locale>`, relaunch Excel, and run `make oracle-gen TARGET=<target>` (or `tools/oracle/oracle_gen.py --target <target> --incremental`). Afterwards run `defaults delete` on both keys to return to the system locale. Localized error names are resolved through `ERROR.TYPE`.
+A target’s directory does not make its goldens an active test. The target manifest and provenance marker decide whether CTest uses a capture. Other target combinations are research data until the manifest marks them active.
 
-::: tip Contribution scope
-A useful contribution does not have to cover every function. A complete golden run for one function family in one locale (text, dates, or lookup) expands the compatibility coverage that can be checked.
-:::
+## Capture commands
 
-## Commands
+Run these from the Formulon source root:
 
 ```sh
 make oracle-setup
 make oracle-contribute
 make oracle-contribute TARGET=win-365-de_DE
-make oracle-gen TARGET=win-365-ja_JP SUITE=count
-make oracle-gen-cf SUITE=<category>
-make oracle-gen-workbook TARGET=<name> SUITE=<category>
+make oracle-gen TARGET=mac-365-ja_JP SUITE=datetime
+make oracle-gen-cf SUITE=<suite>
+make build
+make oracle-gen-chart SUITE=<suite>
+make oracle-gen-workbook TARGET=win-365-ja_JP
 make oracle-verify
 ```
 
-`make oracle-verify` is what runs in CI; the others need Excel and run only on contributor machines. `oracle-gen` covers formula goldens; `oracle-gen-cf` covers the conditional-formatting track (macOS only); `oracle-gen-workbook` covers the pivot-table / print-area track, auto-detecting the target from the host OS unless `TARGET` is given.
+`oracle-gen-chart` builds `chart_model_dump` before capture, so run `make build` first to configure the build directory. The chart generator only runs on macOS with Microsoft 365 Excel.
+
+The formula, conditional-formatting, and chart generators accept a suite selector for a focused recapture. Omit it when generating a complete capture. In particular, a new workbook target must capture every required workbook suite before promotion.
 
 ### Promoting a workbook target
 
-New workbook targets are captured outside the repository until their provenance and goldens are reviewed. Run the generator, inspect the staged capture, and run a dry run of the promotion before writing it into the tree:
+A new Windows workbook target is staged outside the repository until its evidence and goldens are reviewed. Generate the full capture without a suite selector, inspect it, then dry-run promotion before writing it into the tree:
 
 ```sh
-make oracle-gen-workbook TARGET=<name> SUITE=<category>
+make oracle-gen-workbook TARGET=<name>
 make oracle-promote TRACK=workbook TARGET=<name> DRY_RUN=1
 make oracle-promote TRACK=workbook TARGET=<name>
 ```
 
-Use `oracle-promote` to land an approved capture. Copying JSON alone does not activate the tests.
+A successful promotion records the target provenance. Workbook CTest selects only `tracks.workbook.primary` in `tools/oracle/targets.yaml`, currently `win-365-ja_JP`. Promoting another Windows locale does not register its workbook tests; those captures remain research data until the test configuration selects them. Copying JSON files alone does not activate workbook tests.
 
-## What gets reviewed
+## Reviewing a contribution
 
-PRs adding oracle data are reviewed for:
-
-- correct target naming and manifest entry,
-- captured Excel build / OS / locale metadata,
-- goldens live under the right path so the verifier discovers them,
-- no accidental inclusion of personal data in screenshots or sample inputs.
+Check that the manifest target and locale match the Excel installation, that the capture records its build and operating system, and that the golden files landed under the correct track directory. Keep the generated provenance file with the capture. Review the case definitions and the diff for accidental personal data before submitting.
 
 ## Read next
 
-- [Compatibility model](/compatibility/model) — why this work matters.
-- [Oracle testing](/compatibility/oracle-testing) — how the data is used in tests.
-- [Locale profiles](/compatibility/locale-profiles) — the public profile catalog.
+- [Compatibility model](/compatibility/model) — the purpose of profile-specific measurements.
+- [Oracle testing](/compatibility/oracle-testing) — how verification and divergence records work.
+- [Locale profiles](/compatibility/locale-profiles) — which profiles are available.

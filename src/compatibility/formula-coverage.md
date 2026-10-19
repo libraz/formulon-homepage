@@ -53,6 +53,8 @@ The registry uses canonical English names. `functionMetadata(name)` remains the 
 
 Do not pass a locale argument to `functionMetadata`; localization is an explicit profile-aware operation. The current profile catalog is in [Locale profiles](/compatibility/locale-profiles).
 
+`FILTERXML` evaluates locally on Windows profiles, but returns `#NAME?` on `mac-*` profiles because Mac Excel does not provide it. `WEBSERVICE` is also an unknown name on Mac. A name in the catalog does not imply availability on every host.
+
 ## Unavailable service stubs
 
 These names are intentionally recognized so workbooks fail in a predictable, Excel-shaped way instead of producing `#NAME?` from an unknown parser path. They are outside Formulon's local calculation boundary.
@@ -64,9 +66,9 @@ These names are intentionally recognized so workbooks fail in a predictable, Exc
 | `IMAGE` | Requires image fetching and rendering host support | Fixed `#VALUE!` |
 | `RTD` | Requires an external Real-Time-Data provider | Fixed `#N/A` |
 | `STOCKHISTORY` | Requires Microsoft market-data service / network I/O | Fixed `#VALUE!` |
-| `WEBSERVICE` | Requires HTTP/network I/O | Fixed `#VALUE!` |
+| `WEBSERVICE` | Requires HTTP/network I/O | Windows: `#VALUE!`; Mac: `#NAME?` |
 | `TRANSLATE`, `DETECTLANGUAGE` | Require cloud translation / language services | Fixed `#NAME?` |
-| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | Require a live OLAP cube connection | Fixed `#NAME?` |
+| `CUBEKPIMEMBER`, `CUBEMEMBER`, `CUBEMEMBERPROPERTY`, `CUBERANKEDMEMBER`, `CUBESET`, `CUBESETCOUNT`, `CUBEVALUE` | Require a live OLAP cube connection | Fixed `#N/A` |
 
 ## Practical guidance
 

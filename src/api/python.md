@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # Python API
 
 The Python package exposes a Pythonic wrapper over the Formulon C ABI compiled to `formulon_capi.wasm`. The published wheel is `py3-none-any`; `pip` installs `wasmtime` as the platform runtime.
@@ -69,6 +73,10 @@ print(order, classes.class_ids, classes.class_count)
 ## Functions and methods
 
 Generated from the package type stubs (`formulon/__init__.pyi`) and the docstrings of the formulon source tree. Names starting with `formulon.` are module functions, names starting with `Workbook.` are class or static methods, and every other name is a `Workbook` instance method; `is_valid` is a property. `= ...` marks a parameter with a default, as in the stubs. A summary is the first sentence of the docstring. `Workbook` is also a context manager: leaving the `with` block calls `close()`.
+
+::: info Reference source
+These tables are generated from the core source for documentation target {{ reference.version }}. The <a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">source commit</a> is pinned so WASM, Python, and C declarations describe the same revision. Demos use published packages and display their runtime version separately.
+:::
 
 ### Library, diagnostics and logging {#library}
 

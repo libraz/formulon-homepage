@@ -257,8 +257,10 @@ Each setting is its own call on `(sheet, pivotIndex, …)`. Python uses the snak
 
 `subtotalTop` defaults to `true` in the Python, Node, and WASM bindings, as in Excel: a group's subtotal sits on its own heading row. With `false`, compact and outline layouts head the group with a label-only row and close it with an `"<item> Total"` row in the locale's wording. A field with custom subtotal functions labels each subtotal row with the function name in the UI locale's wording (for example `East Max`) in Excel's fixed function order, and two or more functions place the subtotals below the group whatever `subtotalTop` says.
 
-::: warning Label and value filters are not saved
-A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA` only while the workbook handle lives; `save()` does not write it. A `<filters>` block that Excel wrote is preserved on save but does not appear in `pivotFilterCount()`. Item visibility is the filter state that persists.
+`PivotDataFieldSpec.showAs` / `show_as` also supports `PercentOf`, `PercentOfRunningTotal`, `RankAscending`, and `RankDescending`. Set `showAsBaseField` / `show_as_base_field` and `showAsBaseItem` / `show_as_base_item` for modes that need a base item. Loaded x14 `pivotShowAs` values and `subtotalHiddenItems` are preserved on save.
+
+::: warning Filter authoring and round-tripping
+A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA` only while the workbook handle lives; `save()` does not write it. Loaded `<filters>` blocks are preserved on save, including `valueEqual`, `valueNotEqual`, `valueGreaterThan`, `valueGreaterThanOrEqual`, `valueLessThan`, `valueLessThanOrEqual`, `valueBetween`, and `valueNotBetween`; they do not appear in `pivotFilterCount()`. Item visibility is the filter state that persists when authored through the API.
 :::
 
 ### Group dates by an explicit day interval

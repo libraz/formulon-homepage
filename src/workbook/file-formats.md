@@ -99,7 +99,7 @@ All ZIP entries in saved XLSX and XLSB files use the fixed timestamp `1980-01-01
   { title: 'Read', nodes: ['Reader'] },
   { nodes: [
       { label: 'Modeled parts', note: 'cells · formulas · names · tables · CF subset · validations · typed AutoFilters · picture anchors · protection metadata' },
-      { label: 'Passthrough parts', note: 'charts · shapes · groups · form controls · VBA · opaque XLSB tails' }
+      { label: 'Passthrough parts', note: 'shapes · groups · form controls · VBA · opaque XLSB tails' }
     ] },
   { nodes: [
       { label: 'Engine recalc', note: 'formula values and supported CF predicates' },
@@ -125,7 +125,8 @@ All ZIP entries in saved XLSX and XLSB files use the fixed timestamp `1980-01-01
 | Pivot tables | layout / supported cache | `pivotLayout()` / `GETPIVOTDATA` can aggregate or read supported cached records; no worksheet-source cache refresh | XLSX yes; XLSB unchanged compatible retained parts pass through, missing counterparts are deferred and reported, and changed retained parts fail the save |
 | Pictures | XLSX picture bytes and anchors can be read and edited | no | XLSX yes; OOXML drawings omitted from XLSB and reported |
 | Threaded comments | XLSX modeled | no | XLSX yes; omitted from XLSB and reported |
-| Charts / shapes / groups | drawing objects can be listed; parts are preserved where supported | no rendering | parts are preserved where supported; no rendering |
+| Charts | typed structure and data can be read; XLSX charts can be created and edited; XLSB charts are read-only | resolves series against cell values; no rendering | XLSX caches refreshed; XLSB follows drawing preservation/omission rules |
+| Shapes / groups | drawing objects can be listed; parts are preserved where supported | no rendering | parts are preserved where supported; no rendering |
 | Form controls | passthrough | no | yes |
 | VBA project | passthrough | never | yes |
 

@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # C API
 
 The C11 ABI is the integration surface for a custom language binding or a native host. It is a flat API over an opaque `fm_workbook_t` handle; the shipped Python, CLI, and WASM surfaces use the same model. Public record layouts are part of the contract and must match the header used to build the client.
@@ -120,6 +124,10 @@ Row and column styles (`fm_sheet_set_column_style()`, `fm_sheet_set_row_style()`
 ## Function families
 
 Every declaration in `formulon_c.h` states its pointer lifetime beside it. The tables below are generated from every `FM_API` declaration in `src/c_api/formulon_c.h`. A summary is the first sentence of the declaration's Doxygen comment; declarations grouped under one comment share its summary.
+
+::: info Reference source
+These tables are generated from the core source for documentation target {{ reference.version }}. The <a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">source commit</a> is pinned so WASM, Python, and C declarations describe the same revision. Demos use published packages and display their runtime version separately.
+:::
 
 ### Library, diagnostics and logging {#library}
 

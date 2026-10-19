@@ -11,6 +11,7 @@ A core release whose WASM, Native Node, Python wheel, and CLI binaries are built
 - [ ] Run core tests (`make test-all`).
 - [ ] Run primary Oracle verification (`make oracle-verify`). If a supported variant changed, also configure `FORMULON_ORACLE_VARIANTS=ON`, build `formulon_oracle_variant_tests` and `formulon_workbook_oracle_variant_tests`, and run `ctest -L VARIANT`.
 - [ ] Check the divergence registry (`tools/oracle/.venv/bin/python tools/oracle/divergence_check.py --strict` must exit 0). The release bar is zero oracle failures; read the per-cause skip tally it prints before quoting a pass rate.
+- [ ] Require active workbook captures (`tools/oracle/.venv/bin/python tools/oracle/workbook_closure_check.py --require-active`). The ordinary closure check allows pending captures, so it is not the release gate.
 - [ ] Verify WASM size budgets (`make size-check`).
 - [ ] Build JavaScript, Python, CLI, and native artifacts from the same revision.
 - [ ] Smoke-test each package surface.
@@ -19,6 +20,7 @@ A core release whose WASM, Native Node, Python wheel, and CLI binaries are built
 - [ ] Run `RegistryCatalog.CoverageReport` (`ctest -R RegistryCatalog.CoverageReport -V` from the build directory — diagnostic-only, always passes, reads the coverage percentage from stdout) and update [Formula coverage](/compatibility/formula-coverage) if it changed.
 - [ ] Check [Compatibility](/compatibility/) for stale status claims.
 - [ ] Update changelog and docs version.
+- [ ] After updating `docsVersion`, regenerate API tables from that core commit with `yarn gen:api --ref <core-commit>` and run `yarn check:api`. Keep package dependencies on published versions during preparation.
 
 ## Why each step
 
@@ -41,13 +43,13 @@ Run the parity check and binding smoke tests before release. They cover agreemen
 
 ## Publish and verify
 
-- [ ] Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`). The tag triggers `release.yml`, which publishes npm and PyPI through trusted publishing and creates the GitHub Release and CLI assets with GitHub workflow credentials.
+- [ ] After develop CI passes, fast-forward main and wait for main CI to pass. Create an annotated tag (`git tag -a vX.Y.Z -m "Release vX.Y.Z"`), then push it with `git push origin vX.Y.Z`. The tag triggers `release.yml`, which publishes npm and PyPI through trusted publishing and creates the GitHub Release and CLI assets with GitHub workflow credentials.
 - [ ] Check the separate `prebuild.yml` workflow on the same tag. Its `release-bundle` job collects the prebuilt addons into a `formulon-native-bundle` artifact; publishing `@libraz/formulon-native` to npm is a manual step.
 - [ ] Once the tag exists, rebase the released C ABI baseline onto it (`python3 tools/dev/gen_c_abi_baseline.py vX.Y.Z`). Later ABI changes are then checked against this release.
 - [ ] Update the homepage's `docsVersion` to the documented source version. Verify unreleased features with the ignored local snapshots (`yarn test:local` and `yarn build:local`). After the core, `formulon-cell`, and `formulon-cell-vue` packages are published, update the registry dependency pins, regenerate the lockfile, and rerun tests and the build without local aliases. Confirm the displayed runtime versions and the language-switching demo against the published packages before deploying.
 - [ ] Watch for incoming compatibility issues and route them to the right oracle / profile.
 
-<DiagramFlow steps="Work on develop → Open PR to main → CI passes → Merge → Push vX.Y.Z tag → release.yml + prebuild.yml → Verify artifacts" />
+<DiagramFlow steps="Work on develop → Develop CI passes → Fast-forward main → Main CI passes → Push annotated tag → release.yml + prebuild.yml → Verify artifacts" />
 
 <DiagramLayers :layers="[
   { title: 'release.yml (tag-triggered)', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },

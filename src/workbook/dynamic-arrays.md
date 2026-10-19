@@ -10,6 +10,10 @@ The rectangle of cells produced when a dynamic-array formula returns more than o
 The cell that owns the dynamic-array formula. Editing or clearing the anchor changes the whole spill. A host API can write to a non-anchor cell: the existing spill projection is invalidated and the anchor becomes dirty. After recalculation, a blank non-anchor cell lets the spill regenerate; a non-blank cell blocks it with `#SPILL!`.
 :::
 
+## Legacy CSE array formulas
+
+A legacy Ctrl+Shift+Enter (CSE) array formula is stored as one formula over a fixed block. Writing a value, text, formula or blank to any non-anchor cell fails with `kPreconditionFailed` and leaves the block unchanged; writing to the anchor replaces the whole block. Every block member reports the block formula: `FORMULATEXT` returns it in braces (`{=...}`), and `ISFORMULA` returns `TRUE`.
+
 ## What to expect
 
 - Spill ranges are computed from the formula's result shape (scalar, row, column, or 2-D array).

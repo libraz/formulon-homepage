@@ -1,3 +1,7 @@
+<script setup>
+import reference from '@/data/api-reference.json'
+</script>
+
 # WASM API
 
 正式な TypeScript 宣言はパッケージ同梱の `dist/formulon.d.ts` です。このページは主要 API の要約です。
@@ -187,7 +191,11 @@ try {
 
 ## 関数とメソッド {#main-workbook-methods}
 
-インストール済みの `@libraz/formulon` に含まれる `dist/formulon.d.ts` から生成した一覧です。`Module.` で始まる名前は `createFormulon()` が返すオブジェクトのメンバー、`Workbook.` で始まる名前は静的ファクトリ、`createFormulon` と `mergeFunctionMetadata` はパッケージのエクスポートで、それ以外はすべて `Workbook` インスタンスのメソッドです。説明列は宣言に付いたドキュメントコメントの最初の 1 文で、API 自身の英語のテキストをそのまま載せています。コメントのない宣言では空欄です。
+参照元リビジョンの `src/wasm/formulon.d.ts` から生成した一覧です。`Module.` で始まる名前は `createFormulon()` が返すオブジェクトのメンバー、`Workbook.` で始まる名前は静的ファクトリ、`createFormulon` と `mergeFunctionMetadata` はパッケージのエクスポートで、それ以外はすべて `Workbook` インスタンスのメソッドです。説明列は宣言に付いたドキュメントコメントの最初の 1 文で、API 自身の英語のテキストをそのまま載せています。コメントのない宣言では空欄です。
+
+::: info 参照元
+この一覧は、ドキュメント対象 {{ reference.version }} のコアソースから生成しています。<a :href="`https://github.com/libraz/formulon/commit/${reference.source.commit}`">取得元のコミット</a>を固定し、WASM・Python・C の宣言を同じリビジョンで照合しています。デモは公開済みパッケージを使い、実行バージョンを別に表示します。
+:::
 
 ### ライブラリ、診断、ログ {#library}
 
