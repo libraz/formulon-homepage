@@ -116,7 +116,7 @@ The renderer does not apply conditional formatting or render headers, footers, o
 
 Open a session first and provide an existing PNG, JPEG, GIF, or BMP file, at most 20 MiB. `formulon_image_operation` inserts it at an unqualified cell anchor on the selected sheet. Sizes and offsets (`width`, `height`, `offsetX`, `offsetY`) use `{size,unit?}`, where `unit` is `pt` by default or `px` / `mm`. Specifying one dimension preserves aspect ratio; omitting both uses the image's pixel size at 96 DPI. `anchorKind` is `oneCell` or `twoCell`, which stretches with row/column sizing; insert uses `oneCell` when it is omitted.
 
-The insert result reports `objectId`, source dimensions, and placement. List includes pictures, charts, shapes, and other drawing kinds; get, move, reorder, and remove operate on pictures. Replace `2` below with the returned picture id. Get returns image content when the format is known, followed by JSON metadata; it can also write the bytes to `outputPath`.
+The insert result reports `objectId`, source dimensions, and placement. List includes pictures, charts, shapes, and other drawing kinds; get returns picture bytes, and move, reorder, and remove operate on pictures and charts. Replace `2` below with the returned picture id. Get returns image content when the format is known, followed by JSON metadata; it can also write the bytes to `outputPath`.
 
 #### `formulon_image_operation`: insert
 
@@ -151,7 +151,7 @@ The insert result reports `objectId`, source dimensions, and placement. List inc
 { "sessionId": "form-layout", "operation": "remove", "objectId": 2 }
 ```
 
-`move` changes only what it states among `anchor`, `offsetX`, `offsetY`, `width`, `height`, and `anchorKind`. Omitted fields keep their current values, a lone width or height keeps the picture's aspect ratio, and the picture keeps its id, name, alt text, crop, and rotation. The result is `{session,sheet,objectId,placed}`.
+`move` changes only what it states among `anchor`, `offsetX`, `offsetY`, `width`, `height`, and `anchorKind`. Omitted fields keep their current values, a lone width or height keeps the object's aspect ratio, and the object keeps its id, name, and alt text. A picture also keeps its crop and rotation. The result is `{session,sheet,objectId,placed}`.
 
 #### `formulon_image_operation`: move
 

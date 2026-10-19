@@ -1,6 +1,6 @@
 # Advanced Workbook API
 
-The dedicated MCP tools cover common workbook work. The server declares `@libraz/formulon` with the `^0.15.2` dependency range; confirm the installed engine version in each catalog response. `formulon_workbook_api` and `formulon_workbook_call` expose a controlled route to additional methods in the installed Formulon `Workbook` class. The API catalog is read from the package that the server actually loaded, including its signatures, documentation, access mode, and referenced TypeScript declarations. Discover the method first, then call the exact installed signature.
+The dedicated MCP tools cover common workbook work. The server declares `@libraz/formulon` with the `^0.16.0` dependency range; confirm the installed engine version in each catalog response. `formulon_workbook_api` and `formulon_workbook_call` expose a controlled route to additional methods in the installed Formulon `Workbook` class. The API catalog is read from the package that the server actually loaded, including its signatures, documentation, access mode, and referenced TypeScript declarations. Discover the method first, then call the exact installed signature.
 
 ## Function lookup and Excel profiles
 
@@ -93,10 +93,11 @@ The server allowlist is explicit. It currently covers these method groups:
 - sheet views, protection, gridline and display flags;
 - fonts, fills, borders, number formats, cell styles, differential formats, cell XF records, and range XF assignments, including row and column styles (`setColumnStyle`, `clearColumnStyle`, `setRowStyle`, `clearRowStyle`), attribute-only range formatting (`rangeStyleBases`, `remapRangeStyle`), `clearCellXfIndex`, and `clearColumnWidth`;
 - theme script fonts and reset (`setThemeScriptFont`, `resetTheme`), and picture and chart placement and stacking (`setDrawingAnchor`, `setDrawingZOrder`);
+- [charts](/workbook/charts): the read-only `getChart`, `getChartData`, and `previewChartData`, and the authoring calls `insertChart`, `setChartType`, `setChartTitle`, `setChartLegend`, `setChartAxis`, `setChartDisplay`, `setChartSeries`, `setChartPoint`, `setChartPlot`, `setChartFilter`, `addChartSeries`, `removeChartSeries`, and `setChartSource`;
 - locale and collation reads (`localizeFormula`, `canonicalizeFormula`, `localeFacts`, `compareText`, `collationClasses`), which are read-only and leave the session clean. Collation class ids come back as a plain JSON array;
 - merges, comments, hyperlinks, data validation, conditional formatting, phonetic runs, and external links.
 
-The allowlist also includes sparse cell and merge reads (`getCellsInRange`, `getMergesInRange`), A1/R1C1 formula reads, display text and value formatting, geometry and width-model queries, theme colors and fonts, effective styles, typed sheet/table AutoFilters, validation checks, threaded comments and persons, and drawing/image reads and removal. Discover the exact method and record fields before calling them. Applying a filter changes row visibility and marks dependent formulas dirty; call `formulon_recalc_session` before reading updated `SUBTOTAL` or `AGGREGATE` values.
+The allowlist also includes sparse cell and merge reads (`getCellsInRange`, `getMergesInRange`), A1/R1C1 formula reads, display text and value formatting, geometry and width-model queries, theme colors and fonts, effective styles, typed sheet/table AutoFilters, validation checks, threaded comments and persons, and drawing/image reads and removal (`removeDrawing`). Discover the exact method and record fields before calling them. Applying a filter changes row visibility and marks dependent formulas dirty; call `formulon_recalc_session` before reading updated `SUBTOTAL` or `AGGREGATE` values.
 
 `probeImage` and `insertImage` take binary input and are excluded from low-level JSON dispatch. Use [image operations](/mcp/layout-preview#images) to insert a file or retrieve picture bytes through `formulon_image_operation`. `snapshotDrawing` / `restoreDrawing` and `snapshotRangeStyle` / `restoreRangeStyle` are withheld too: they round-trip opaque bytes that a JSON result reduces to a length and a JSON argument cannot carry.
 

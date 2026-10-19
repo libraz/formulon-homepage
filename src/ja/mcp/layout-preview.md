@@ -114,7 +114,7 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 
 先にセッションを開き、20 MiB 以下の既存の PNG、JPEG、GIF、BMP ファイルを用意します。`formulon_image_operation` は選択したシートの、シート名を付けないセル参照へ画像を挿入します。寸法とオフセット（`width`、`height`、`offsetX`、`offsetY`）は `{size,unit?}` で指定し、単位は既定 `pt`、または `px`、`mm` です。片方の寸法だけを指定すると縦横比を保ち、両方省略すると画像のピクセル寸法を 96 DPI で使います。`anchorKind` は `oneCell` または `twoCell` で、`twoCell` は行・列のサイズ変更に追従して伸縮します。挿入では省略すると `oneCell` になります。
 
-挿入結果には `objectId`、元画像の寸法、配置が入ります。一覧は画像、グラフ、図形などを含みますが、取得、移動、並べ替え、削除は画像が対象です。下の `2` は、応答で返された画像 ID に置き換えてください。取得は既知の形式なら画像コンテンツ、続いて JSON メタデータを返します。`outputPath` を指定すると、画像のバイト列をそのファイルにも書き出します。
+挿入結果には `objectId`、元画像の寸法、配置が入ります。一覧は画像、グラフ、図形などを含みます。取得は画像のバイト列を返し、移動、並べ替え、削除は画像とグラフが対象です。下の `2` は、応答で返された画像 ID に置き換えてください。取得は既知の形式なら画像コンテンツ、続いて JSON メタデータを返します。`outputPath` を指定すると、画像のバイト列をそのファイルにも書き出します。
 
 #### `formulon_image_operation`: insert
 
@@ -149,7 +149,7 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 { "sessionId": "form-layout", "operation": "remove", "objectId": 2 }
 ```
 
-`move` は、指定した `anchor`、`offsetX`、`offsetY`、`width`、`height`、`anchorKind` だけを変更します。省略した項目は現在の値を保ち、幅か高さの片方だけを指定したときは画像の縦横比を保ちます。画像の ID、名前、代替テキスト、トリミング、回転も変わりません。結果は `{session,sheet,objectId,placed}` です。
+`move` は、指定した `anchor`、`offsetX`、`offsetY`、`width`、`height`、`anchorKind` だけを変更します。省略した項目は現在の値を保ち、幅か高さの片方だけを指定したときはオブジェクトの縦横比を保ちます。オブジェクトの ID、名前、代替テキストは変わらず、画像ではトリミングと回転も変わりません。結果は `{session,sheet,objectId,placed}` です。
 
 #### `formulon_image_operation`: move
 

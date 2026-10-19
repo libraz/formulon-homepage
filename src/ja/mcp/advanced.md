@@ -1,6 +1,6 @@
 # 高度な Workbook API
 
-専用の MCP ツールで一般的なワークブック操作を行えます。サーバーは `@libraz/formulon` に `^0.15.2` の依存範囲を指定しています。実際に読み込まれたエンジンのバージョンは、各カタログ応答で確認してください。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
+専用の MCP ツールで一般的なワークブック操作を行えます。サーバーは `@libraz/formulon` に `^0.16.0` の依存範囲を指定しています。実際に読み込まれたエンジンのバージョンは、各カタログ応答で確認してください。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
 
 ## 関数検索と Excel プロファイル
 
@@ -93,10 +93,11 @@
 - シート表示、保護、グリッド線、表示フラグ
 - フォント、塗りつぶし、罫線、表示形式、セルスタイル、差分書式、セル XF、範囲 XF。行・列スタイル（`setColumnStyle`、`clearColumnStyle`、`setRowStyle`、`clearRowStyle`）、属性だけの範囲書式（`rangeStyleBases`、`remapRangeStyle`）、`clearCellXfIndex`、`clearColumnWidth` を含みます
 - テーマのスクリプトフォントとリセット（`setThemeScriptFont`、`resetTheme`）、画像とグラフの配置と重なり順（`setDrawingAnchor`、`setDrawingZOrder`）
+- [グラフ](/ja/workbook/charts)：読み取り専用の `getChart`、`getChartData`、`previewChartData` と、作成・編集用の `insertChart`、`setChartType`、`setChartTitle`、`setChartLegend`、`setChartAxis`、`setChartDisplay`、`setChartSeries`、`setChartPoint`、`setChartPlot`、`setChartFilter`、`addChartSeries`、`removeChartSeries`、`setChartSource`
 - ロケールと照合順序の取得（`localizeFormula`、`canonicalizeFormula`、`localeFacts`、`compareText`、`collationClasses`）。読み取り専用で、セッションを変更ありにしません。照合クラス ID は単純な JSON 配列で返ります
 - 結合、コメント、ハイパーリンク、入力規則、条件付き書式、ふりがな、外部リンク
 
-疎なセル・結合範囲の取得（`getCellsInRange`、`getMergesInRange`）、A1 / R1C1 数式の取得、表示テキストと値の書式変換、ジオメトリと列幅モデル、テーマの色・フォント、有効なスタイル、シート・テーブルの型付き AutoFilter、入力規則の検査、スレッドコメントと人物、描画・画像の取得と削除も許可されています。呼び出す前に、正確なメソッドとレコードの項目を確認してください。フィルターの適用は行の表示状態を変え、依存する数式を再計算待ちにします。更新後の `SUBTOTAL` や `AGGREGATE` の値を読む前に `formulon_recalc_session` を呼んでください。
+疎なセル・結合範囲の取得（`getCellsInRange`、`getMergesInRange`）、A1 / R1C1 数式の取得、表示テキストと値の書式変換、ジオメトリと列幅モデル、テーマの色・フォント、有効なスタイル、シート・テーブルの型付き AutoFilter、入力規則の検査、スレッドコメントと人物、描画・画像の取得と削除（`removeDrawing`）も許可されています。呼び出す前に、正確なメソッドとレコードの項目を確認してください。フィルターの適用は行の表示状態を変え、依存する数式を再計算待ちにします。更新後の `SUBTOTAL` や `AGGREGATE` の値を読む前に `formulon_recalc_session` を呼んでください。
 
 `probeImage` と `insertImage` はバイナリ入力を取るため、低レベルの JSON 呼び出しでは使えません。ファイルの挿入や画像バイトの取得には、[画像操作](/ja/mcp/layout-preview#images) の `formulon_image_operation` を使います。`snapshotDrawing` / `restoreDrawing` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。不透明なバイト列を往復させるため、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないからです。
 
