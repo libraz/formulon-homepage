@@ -5,7 +5,7 @@
 ## Install and first call
 
 ```sh
-yarn add @libraz/formulon@0.16.0
+yarn add @libraz/formulon@0.18.0
 ```
 
 ```ts

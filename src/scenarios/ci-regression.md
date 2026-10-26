@@ -52,12 +52,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download v0.16.0 --repo libraz/formulon \
-            --pattern 'formulon-0.16.0-linux-x64.tar.gz*' --dir "$RUNNER_TEMP"
+          gh release download v0.18.0 --repo libraz/formulon \
+            --pattern 'formulon-0.18.0-linux-x64.tar.gz*' --dir "$RUNNER_TEMP"
           cd "$RUNNER_TEMP"
-          sha256sum -c formulon-0.16.0-linux-x64.tar.gz.sha256
-          tar -xzf formulon-0.16.0-linux-x64.tar.gz
-          echo "$RUNNER_TEMP/formulon-0.16.0-linux-x64" >> "$GITHUB_PATH"
+          sha256sum -c formulon-0.18.0-linux-x64.tar.gz.sha256
+          tar -xzf formulon-0.18.0-linux-x64.tar.gz
+          echo "$RUNNER_TEMP/formulon-0.18.0-linux-x64" >> "$GITHUB_PATH"
       - name: Snapshot formulas
         run: |
           formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --formulas model.xlsx > testdata/model.formulas.txt

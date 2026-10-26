@@ -5,7 +5,7 @@
 ## インストールと最初の呼び出し
 
 ```sh
-python -m pip install formulon==0.16.0
+python -m pip install formulon==0.18.0
 ```
 
 ```python

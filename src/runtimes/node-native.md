@@ -13,7 +13,7 @@ The addon is not published to npm. Build and stage it from a source checkout (a 
 ```sh
 git clone https://github.com/libraz/formulon.git
 cd formulon
-git checkout v0.16.0
+git checkout v0.18.0
 make NODE_NATIVE_BUILD_DIR=build-node-native node-package
 ```
 

@@ -5,9 +5,9 @@
 ## インストールと最初の実行
 
 ```sh
-curl -LO https://github.com/libraz/formulon/releases/download/v0.16.0/formulon-0.16.0-linux-x64.tar.gz
-tar -xzf formulon-0.16.0-linux-x64.tar.gz
-./formulon-0.16.0-linux-x64/formulon eval '=SUM(1,2,3)'   # 6
+curl -LO https://github.com/libraz/formulon/releases/download/v0.18.0/formulon-0.18.0-linux-x64.tar.gz
+tar -xzf formulon-0.18.0-linux-x64.tar.gz
+./formulon-0.18.0-linux-x64/formulon eval '=SUM(1,2,3)'   # 6
 ```
 
 アーカイブは `linux-x64`、`linux-arm64`、`darwin-arm64` 向けがあり、それぞれ `.sha256` ファイルが付いています。以下のコマンドをそのまま使うには、`formulon` バイナリを `PATH` の通った場所に置いてください。
