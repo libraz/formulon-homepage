@@ -1,6 +1,10 @@
 # Packages `ncu -u` must not raise, and why. Drop an entry once its blocker is
-# gone so the next run picks the package up again. Nothing is held currently.
-reject: []
+# gone so the next run picks the package up again.
+reject:
+  # @libraz/formulon: @libraz/formulon-cell 0.10.0 depends on exactly 0.16.0,
+  # and `resolutions` forces one engine for the demos. Raise it together with
+  # the formulon-cell release that moves its own dependency.
+  - "@libraz/formulon"
 
 # Yarn refuses to install versions younger than npmMinimalAgeGate (24h by default),
 # so proposing them here would only produce an uninstallable package.json.
