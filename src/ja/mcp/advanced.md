@@ -1,6 +1,6 @@
 # 高度な Workbook API
 
-専用の MCP ツールで一般的なワークブック操作を行えます。サーバーは `@libraz/formulon` に `^0.16.0` の依存範囲を指定しています。実際に読み込まれたエンジンのバージョンは、各カタログ応答で確認してください。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
+専用の MCP ツールで一般的なワークブック操作を行えます。サーバーは `@libraz/formulon` に `^0.18.0` の依存範囲を指定しています。実際に読み込まれたエンジンのバージョンは、各カタログ応答で確認してください。インストール済み Formulon の `Workbook` クラスに専用ツールがない機能は、`formulon_workbook_api` と `formulon_workbook_call` で扱えます。API カタログはサーバーが実際に読み込んだパッケージから作られ、シグネチャ、ドキュメント、読み書き区分、参照する TypeScript 宣言を含みます。先にメソッドを調べ、インストール済みのシグネチャに合わせて呼び出してください。
 
 ## 関数検索と Excel プロファイル
 
@@ -95,11 +95,17 @@
 - テーマのスクリプトフォントとリセット（`setThemeScriptFont`、`resetTheme`）、画像とグラフの配置と重なり順（`setDrawingAnchor`、`setDrawingZOrder`）
 - [グラフ](/ja/workbook/charts)：読み取り専用の `getChart`、`getChartData`、`previewChartData` と、作成・編集用の `insertChart`、`setChartType`、`setChartTitle`、`setChartLegend`、`setChartAxis`、`setChartDisplay`、`setChartSeries`、`setChartPoint`、`setChartPlot`、`setChartFilter`、`addChartSeries`、`removeChartSeries`、`setChartSource`
 - ロケールと照合順序の取得（`localizeFormula`、`canonicalizeFormula`、`localeFacts`、`compareText`、`collationClasses`）。読み取り専用で、セッションを変更ありにしません。照合クラス ID は単純な JSON 配列で返ります
-- 結合、コメント、ハイパーリンク、入力規則、条件付き書式、ふりがな、外部リンク
+- 結合、コメント（`setCommentVisible` を含む）、ハイパーリンク、入力規則、条件付き書式、ふりがな、外部リンク
+- 描画の図形（`listShapes`、`insertShape`、`updateShape`、`removeShape`）、スライサー（`listSlicers`、`addSlicer`、`updateSlicer`、`removeSlicer`）、What-If データテーブル（`getDataTable`、`addDataTable`、`removeDataTable`、`recalcDataTables`）、スパークライングループ（`listSparklineGroups`、`addSparklineGroup`、`updateSparklineGroup`、`setSparklineGroupSparklines`、`removeSparklineGroup`）
+- ブックの保護と保護された範囲（`getWorkbookProtection`、`setWorkbookProtection`、`getProtectedRanges`、`addProtectedRange`、`updateProtectedRange`、`removeProtectedRange`）
+- テーブルスタイル（`tableStyleCount`、`getTableStyle`、`getTableStyleDefaults`、`setTableStyle`、`removeTableStyle`、`setTableStyleDefaults`、`setTableColumnTotals`）とピボットテーブルの読み戻し（`pivotCacheId`、`pivotName`、`pivotGetGrandTotals`、`pivotGetStyleInfo`、`pivotFieldAt`、`pivotFieldItemCount`、`pivotFieldItemAt`、`pivotDataFieldAt`、`pivotRowFieldOrder`、`pivotColFieldOrder`、`pivotSetStyleInfo`）
+- 計算設定（`fullPrecision`、`calcOnSave`、`refMode`、`date1904` とそれぞれの setter）、シート選択・分割・左上セル・アクティブシート（`getSheetSelection`、`setSheetSelection`、`setSheetSplit`、`setSheetTopLeft`、`setSheetPaneTopLeft`、`activeSheet`、`setActiveSheet`）、アウトラインの折りたたみ（`setRowCollapsed`、`setColumnCollapsed`）、定義名の属性（`setDefinedNameAttrs`）
 
 疎なセル・結合範囲の取得（`getCellsInRange`、`getMergesInRange`）、A1 / R1C1 数式の取得、表示テキストと値の書式変換、ジオメトリと列幅モデル、テーマの色・フォント、有効なスタイル、シート・テーブルの型付き AutoFilter、入力規則の検査、スレッドコメントと人物、描画・画像の取得と削除（`removeDrawing`）も許可されています。呼び出す前に、正確なメソッドとレコードの項目を確認してください。フィルターの適用は行の表示状態を変え、依存する数式を再計算待ちにします。更新後の `SUBTOTAL` や `AGGREGATE` の値を読む前に `formulon_recalc_session` を呼んでください。
 
 `probeImage` と `insertImage` はバイナリ入力を取るため、低レベルの JSON 呼び出しでは使えません。ファイルの挿入や画像バイトの取得には、[画像操作](/ja/mcp/layout-preview#images) の `formulon_image_operation` を使います。`snapshotDrawing` / `restoreDrawing` と `snapshotRangeStyle` / `restoreRangeStyle` も許可されません。不透明なバイト列を往復させるため、JSON の結果では長さだけになり、JSON の引数ではバイト列を渡せないからです。
+
+これらのうち取得系（`listShapes`、`getDataTable`、`date1904`、`pivotGetStyleInfo` など）は読み取り専用に分類され、セッションを変更ありにしません。専用ツールがある操作はそちらを使ってください。`formulon_shape_operation`、`formulon_sparkline_operation`、`formulon_data_table_operation` は入力を検証し、A1 アドレスを解決しますが、生のメソッドは行いません。
 
 `save`、`saveAs`、`saveWithDiagnostics` はセッション管理を迂回するため許可されません。保存は `outputPath` を明示した `formulon_save_session` を使います。`delete`、`isValid`、JavaScript コールバックを受け取る `setIterativeProgress` も JSON 呼び出しには適さないため許可されません。
 

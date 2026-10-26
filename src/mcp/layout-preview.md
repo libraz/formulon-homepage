@@ -30,9 +30,9 @@ The five operation shapes are:
 | `style` | A1 `range` (a bounded range, whole columns such as `C:C`, or whole rows such as `1:1`), a `style` object, and optional `base` (`existing` or `default`). Whole columns and rows are styled as columns and rows without creating cells. |
 | `print` | A non-empty `settings` object accepted by `formulon_print_settings`. |
 
-Column sizes default to Excel character units. Row sizes default to points. `px` and `mm` convert through the 96-DPI display calibration and are stored in Excel's native character or point units. The result reports both stored values and `displayGeometry` with `points`, `pixels`, and `mm`.
+Column sizes default to Excel's stored character width, padding included, as `<col width>` holds it; a default Calibri 11 column is `9.140625`, not `8.43`. Row sizes default to points. `px` and `mm` convert through the 96-DPI display calibration and are stored in Excel's native character or point units. The result reports both stored values and `displayGeometry` with `points`, `pixels`, and `mm`.
 
-Column conversions use the engine's per-sheet display width model and Normal-font calibration. A positive width in points must exceed that model's visible-column padding; zero is allowed. Row and column geometry comes from the engine, including sheet defaults and hidden dimensions.
+Column conversions use the engine's per-sheet display width model and Normal-font calibration. Row and column geometry comes from the engine, including sheet defaults and hidden dimensions.
 
 The `style` object has `font` (`name`, `size`, `bold`, `italic`, `strike`, `underline`, `vertAlign`, `color`), `fill` (`color`, `bgColor`, `pattern`), `border` (`all`, `outline`, `left`, `right`, `top`, `bottom`), `numberFormat`, and `align` (`horizontal`, `vertical`, `wrapText`, `indent`, `textRotation`, `shrinkToFit`). Colors use `#RRGGBB` or `#AARRGGBB`. `border.all` rules every cell; `border.outline` draws only the outer edge.
 
@@ -47,7 +47,7 @@ The layout limits are part of the input contract:
 | Limit | Value |
 | --- | ---: |
 | Operations in one batch | 200 |
-| Stored column width | 255 Excel character units |
+| Stored column width | 255 characters (padding included) |
 | Stored row height | 409 points |
 | Expanded row writes across row operations | 10,000 rows |
 | Cells covered by style operations in one batch | 100,000 cells (whole columns or rows count as none) |
@@ -55,6 +55,29 @@ The layout limits are part of the input contract:
 | Row index | 0 through 1,048,575 (Excel row 1,048,576) |
 
 Preflight validates ranges, units, dimensions, print areas, print-title spans, and these caps before applying anything. It is not a transaction after preflight. If the engine fails while applying a valid operation, earlier operations can remain in the workbook and the session remains dirty. Read the session after such a failure and reopen the source in a new session when the partial result should be discarded.
+
+## Set the sheet view {#sheet-view}
+
+`formulon_set_sheet_view` changes how a sheet opens in Excel, separately from its cells. Each stated setting returns its own engine status.
+
+| Field | Meaning |
+| --- | --- |
+| `zoom` | 10 to 400. |
+| `freezeRows`, `freezeCols` | Frozen panes. Pass both; an omitted count becomes `0`. |
+| `splitX`, `splitY` | Unfrozen split position in points from the left or top edge; `0` removes the split on that axis. A view is frozen or split, not both. |
+| `topLeft` | First visible cell of the scrolled view, such as `A100`. It takes no sheet name. |
+| `showFormulas` | Show formula text instead of results. |
+| `showOutlineSymbols` | Show the outline gutter's expand and collapse symbols. |
+| `hidden`, `visibility` | Tab visibility. Excel refuses to hide the last visible sheet, and hiding the active sheet activates the next visible one. |
+| `active` | `true` makes this the sheet Excel opens on; it must be visible. |
+
+#### `formulon_set_sheet_view`
+
+```json
+{ "sessionId": "form-layout", "sheet": "Sheet1", "freezeRows": 1, "freezeCols": 0, "showOutlineSymbols": true, "topLeft": "A1", "active": true }
+```
+
+Outline groups use `formulon_dimension_operation`. `outline` sets the level, `hidden` hides the detail rows or columns, and `collapsed` marks the summary row or column of the group. Excel stores both flags, so a collapsed group needs both calls.
 
 ## Preview a range
 
@@ -116,7 +139,7 @@ The renderer does not apply conditional formatting or render headers, footers, o
 
 Open a session first and provide an existing PNG, JPEG, GIF, or BMP file, at most 20 MiB. `formulon_image_operation` inserts it at an unqualified cell anchor on the selected sheet. Sizes and offsets (`width`, `height`, `offsetX`, `offsetY`) use `{size,unit?}`, where `unit` is `pt` by default or `px` / `mm`. Specifying one dimension preserves aspect ratio; omitting both uses the image's pixel size at 96 DPI. `anchorKind` is `oneCell` or `twoCell`, which stretches with row/column sizing; insert uses `oneCell` when it is omitted.
 
-The insert result reports `objectId`, source dimensions, and placement. List includes pictures, charts, shapes, and other drawing kinds; get returns picture bytes, and move, reorder, and remove operate on pictures and charts. Replace `2` below with the returned picture id. Get returns image content when the format is known, followed by JSON metadata; it can also write the bytes to `outputPath`.
+The insert result reports `objectId`, source dimensions, and placement. List includes pictures, charts, shapes, and other drawing kinds; get returns picture bytes, and move, reorder, and remove operate on pictures and charts. Shapes have their own tool, described [below](#shapes). Replace `2` below with the returned picture id. Get returns image content when the format is known, followed by JSON metadata; it can also write the bytes to `outputPath`.
 
 #### `formulon_image_operation`: insert
 
@@ -174,6 +197,37 @@ The insert result reports `objectId`, source dimensions, and placement. List inc
 ```
 
 Insertion, movement, reordering, and removal mark the session dirty and preserve other drawing objects. Preview the affected range to check placement, then save explicitly as XLSX. OOXML drawings are omitted on XLSB save and reported in losses; see [File formats](/workbook/file-formats#xlsb). Preview itself does not insert or remove pictures.
+
+## Draw shapes, text boxes, and connectors {#shapes}
+
+`formulon_shape_operation` lists, inserts, updates, and removes shapes, text boxes, and connectors such as lines and arrows. Insert needs an unqualified cell `anchor`. With `width` and `height` the shape is a one-cell shape that keeps its size; with `to` (the bottom-right cell) it is a two-cell shape that stretches with rows and columns. `geometry` is a DrawingML preset (`rect` by default, or `roundRect`, `ellipse`, `rightArrow`, `line`, `straightConnector1`). Line and connector geometries hold no text. `fill` and `line` take an opaque `#RRGGBB` or `none`.
+
+#### `formulon_shape_operation`: insert
+
+```json
+{
+  "sessionId": "form-layout",
+  "sheet": "Sheet1",
+  "operation": "insert",
+  "anchor": "F2",
+  "width": { "size": 160, "unit": "px" },
+  "height": { "size": 48, "unit": "px" },
+  "geometry": "roundRect",
+  "text": "Approved",
+  "fill": "#DDEEDD",
+  "line": "#336633"
+}
+```
+
+The response carries the new `objectId` and the resolved `placed` anchor. An update changes only the fields it states and keeps the anchor kind; a placement field moves or resizes the shape.
+
+#### `formulon_shape_operation`: update
+
+```json
+{ "sessionId": "form-layout", "sheet": "Sheet1", "operation": "update", "objectId": 3, "text": "Rejected", "fill": "#EEDDDD" }
+```
+
+Shapes have no stacking-order control. Pictures and charts keep using `formulon_image_operation` for ordering. Shape edits mark the session dirty, and OOXML drawings are omitted on XLSB save, as for pictures.
 
 ## End-to-end example: reproduce a form from a screenshot {#reproduce-a-form}
 

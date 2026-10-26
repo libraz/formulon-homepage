@@ -20,6 +20,8 @@ The create input requires `sessionId`, `operation: "create"`, a `range` (or its 
 | `columns` | One unique, non-empty name per range column. Omit it to derive names from the first row when `headerRow` is true. |
 | `headerRow` | Whether the first range row is a header. It defaults to `true` on create. If it is `false`, `columns` is required. |
 | `totalsRow` | Whether the table has a totals row. It defaults to `false` on create. |
+| `totals` | Totals-row cells to write, one entry per column; see [Totals row and style toggles](#totals-and-toggles). |
+| `showFirstColumn`, `showLastColumn`, `showRowStripes`, `showColumnStripes` | Style toggles. A styled table starts with row stripes on. |
 | `style` / `styleName` | Excel TableStyle name. The aliases are equivalent; `styleName` takes precedence when both are supplied. |
 
 When headers are derived, every first-row cell must be non-empty text, and the resulting names must be unique case-insensitively. Explicit `columns` are validated against the range width with the same uniqueness rule.
@@ -58,7 +60,7 @@ The list result contains `count` and `tables`. An empty list is a successful res
 
 Update and remove require the global `index`.
 
-An update must state at least one of `range`/`ref`, `style`/`styleName`, `headerRow`, or `totalsRow`. A new range must stay on the existing table's sheet and keep the same number of columns. An empty style string clears the TableStyle. Update and remove return the changed or removed table in the same table representation.
+An update must state at least one of `range`/`ref`, `name`, `style`/`styleName`, a style toggle, `headerRow`, `totalsRow`, or `totals`. A new range must stay on the existing table's sheet and keep the same number of columns. An empty style string clears the TableStyle. Update and remove return the changed or removed table in the same table representation.
 
 #### `formulon_table_operation`
 
@@ -71,6 +73,14 @@ An update must state at least one of `range`/`ref`, `style`/`styleName`, `header
   "totalsRow": true
 }
 ```
+
+#### `formulon_table_operation`: rename
+
+```json
+{ "sessionId": "sales-report", "operation": "update", "index": 0, "name": "SalesData" }
+```
+
+A rename on update rewrites the structured references that point to the table, so a formula such as `=SUM(Sales[Amount])` reads `=SUM(SalesData[Amount])` afterwards.
 
 #### `formulon_table_operation`
 
@@ -304,7 +314,7 @@ Save authored Table and PivotTable metadata as XLSX:
 }
 ```
 
-Inspect `format`, `bytes`, and optional `losses` before distributing the workbook. XLSB output can defer or drop Tables, PivotTables, print settings, comments, and other features. A lossy save keeps the session dirty because the in-memory workbook is not fully represented by the artifact. Close after checking the save result:
+Inspect `format`, `bytes`, and optional `losses` before distributing the workbook. XLSB output can defer or drop PivotTables, print settings, comments, and other features. A lossy save keeps the session dirty because the in-memory workbook is not fully represented by the artifact. Close after checking the save result:
 
 #### `formulon_close_workbook`
 
@@ -314,6 +324,30 @@ Inspect `format`, `bytes`, and optional `losses` before distributing the workboo
 }
 ```
 
+## Totals row and style toggles {#totals-and-toggles}
+
+With the totals row enabled, `totals` writes each column's totals cell instead of a hand-written formula. Each entry names a `column` (a name or a zero-based index within the table) and gives one of a `function`, a text `label`, or a `formula` for the `custom` function. The functions are `none`, `sum`, `min`, `max`, `average`, `count`, `countNums`, `stdDev`, `var`, and `custom`; Excel writes `SUBTOTAL` over the column. `totals` fails when the table has no totals row, so pass `totalsRow: true` in the same call or enable it first.
+
+#### `formulon_table_operation`
+
+```json
+{
+  "sessionId": "sales-report",
+  "operation": "update",
+  "index": 0,
+  "ref": "Data!A1:C7",
+  "totalsRow": true,
+  "totals": [
+    { "column": "Region", "label": "Total" },
+    { "column": "Amount", "function": "sum" }
+  ],
+  "showRowStripes": true,
+  "showFirstColumn": true
+}
+```
+
+The range already includes the totals row, as in the example above. The toggles apply to the table's TableStyle: first or last column emphasis, and row or column banding.
+
 ## Choosing between the two table surfaces
 
-Use the document `table` block for a receipt or invoice whose visual rows, formulas, widths, and print area are part of one layout operation. Use `formulon_table_operation` for a native Table that should carry a name, filter metadata, a TableStyle, a header flag, or a totals-row flag. Use `formulon_create_pivot` when the workbook needs a report object backed by the source range, with named axes and aggregations. Save both native features as XLSX and check the writer losses before treating the file as complete.
+Use the document `table` block for a receipt or invoice whose visual rows, formulas, widths, and print area are part of one layout operation. Use `formulon_table_operation` for a native Table that should carry a name, filter metadata, a TableStyle, a header flag, or a totals row. Use `formulon_create_pivot` when the workbook needs a report object backed by the source range, with named axes and aggregations. Save both native features as XLSX and check the writer losses before treating the file as complete.

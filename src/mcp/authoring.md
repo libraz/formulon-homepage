@@ -61,7 +61,7 @@ Table columns have the following options:
 | `header` | Displayed header text. It also becomes the default formula key. |
 | `key` | Formula and row-object key. If omitted, the header is used. |
 | `formula` | A per-row formula. Braced names such as `{qty}` bind to the current row's column cells. The formula is written when that row has no value for the column. |
-| `width` | Column width in Excel character units. |
+| `width` | Column width in Excel's stored character units, padding included. |
 | `format` | Number-format alias or Excel format code. |
 | `align` | `left`, `center`, or `right`. |
 
@@ -98,7 +98,7 @@ The default names are convenient for one block of each kind. Give blocks and ite
 | `decimal` | `#,##0.00` |
 | `percent` | `0.0%` |
 
-An ISO date string such as `2026-08-22` under a date format is converted to an Excel date serial. It remains a date value, rather than text that happens to look like a date. Use a literal format code for currency, for example `"¥"#,##0`.
+An ISO date string such as `2026-08-22` under a date format is converted to an Excel date serial in the workbook's date system (1900 or 1904). It remains a date value, rather than text that happens to look like a date. Use a literal format code for currency, for example `"¥"#,##0`.
 
 The available `print` presets are `a4-portrait`, `a4-portrait-fit`, `a4-landscape`, `a4-landscape-fit`, `letter-portrait`, `letter-portrait-fit`, `letter-landscape`, and `letter-landscape-fit`. The `-fit` variants fit to one page wide and leave the height unbounded. A long line-item table flows to later pages, and the first table header repeats unless `repeatTableHeader` is `false`. The response includes `pageCount` when a print preset is used.
 

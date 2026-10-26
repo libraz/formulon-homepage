@@ -20,6 +20,8 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 | `columns` | 範囲の各列に 1 つずつ、空でない一意な名前を指定します。`headerRow` が `true` の場合は省略して先頭行から生成できます。 |
 | `headerRow` | 範囲の先頭行を見出しにするかどうかです。作成時の既定値は `true` です。`false` の場合は `columns` が必須です。 |
 | `totalsRow` | 合計行を持つかどうかです。作成時の既定値は `false` です。 |
+| `totals` | 書き込む合計行のセルです。列ごとに 1 件指定します。[合計行とスタイルのトグル](#totals-and-toggles)を参照してください。 |
+| `showFirstColumn`、`showLastColumn`、`showRowStripes`、`showColumnStripes` | スタイルのトグルです。スタイル付きのテーブルは縞模様の行が有効な状態で始まります。 |
 | `style` / `styleName` | Excel の TableStyle 名です。2 つは同じ意味で、両方を指定した場合は `styleName` を優先します。 |
 
 見出しを生成する場合、先頭行の全セルが空でない文字列でなければなりません。生成された名前は、大文字小文字を区別せず一意でなければなりません。`columns` を明示した場合も、範囲の列数と一致し、同じ規則を満たす必要があります。
@@ -58,7 +60,7 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 
 更新と削除にはワークブック全体で通し番号の `index`が必要です。
 
-更新では `range` または `ref`、`style` または `styleName`、`headerRow`、`totalsRow` のいずれかを指定します。新しい範囲は既存テーブルと同じシートにあり、列数を変えないでください。空文字列のスタイルは `TableStyle` を消します。更新と削除では、変更または削除されたテーブルが作成時と同じ表現で返ります。
+更新では `range` または `ref`、`name`、`style` または `styleName`、スタイルのトグル、`headerRow`、`totalsRow`、`totals` のいずれかを指定します。新しい範囲は既存テーブルと同じシートにあり、列数を変えないでください。空文字列のスタイルは `TableStyle` を消します。更新と削除では、変更または削除されたテーブルが作成時と同じ表現で返ります。
 
 #### `formulon_table_operation`
 
@@ -71,6 +73,14 @@ description: ネイティブの Excel テーブルとピボットテーブルを
   "totalsRow": true
 }
 ```
+
+#### `formulon_table_operation`: rename
+
+```json
+{ "sessionId": "sales-report", "operation": "update", "index": 0, "name": "SalesData" }
+```
+
+更新で名前を変更すると、そのテーブルを指す構造化参照も書き換わります。たとえば `=SUM(Sales[Amount])` は、変更後に `=SUM(SalesData[Amount])` になります。
 
 #### `formulon_table_operation`
 
@@ -304,7 +314,7 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 }
 ```
 
-配布前に `format`、`bytes`、省略可能な `losses` を確認します。XLSB 出力ではテーブル、ピボットテーブル、印刷設定、コメントなどが延期または失われることがあります。情報を失った保存では、メモリ上のワークブックが成果物に完全には表現されないため、セッションは変更あり（dirty）のままです。保存結果を確認してから終了します。
+配布前に `format`、`bytes`、省略可能な `losses` を確認します。XLSB 出力ではピボットテーブル、印刷設定、コメントなどが延期または失われることがあります。情報を失った保存では、メモリ上のワークブックが成果物に完全には表現されないため、セッションは変更あり（dirty）のままです。保存結果を確認してから終了します。
 
 #### `formulon_close_workbook`
 
@@ -314,6 +324,30 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 }
 ```
 
+## 合計行とスタイルのトグル {#totals-and-toggles}
+
+合計行が有効なとき、`totals` は手書きの数式の代わりに各列の合計セルを書き込みます。各要素は `column`（テーブル内の列名または 0 始まりの列番号）と、`function`、文字列の `label`、`custom` 関数用の `formula` のいずれかを指定します。関数は `none`、`sum`、`min`、`max`、`average`、`count`、`countNums`、`stdDev`、`var`、`custom` で、Excel は列に対する `SUBTOTAL` を書き込みます。テーブルに合計行がないと `totals` はエラーになるため、同じ呼び出しで `totalsRow: true` を指定するか、先に有効にしてください。
+
+#### `formulon_table_operation`
+
+```json
+{
+  "sessionId": "sales-report",
+  "operation": "update",
+  "index": 0,
+  "ref": "Data!A1:C7",
+  "totalsRow": true,
+  "totals": [
+    { "column": "Region", "label": "Total" },
+    { "column": "Amount", "function": "sum" }
+  ],
+  "showRowStripes": true,
+  "showFirstColumn": true
+}
+```
+
+範囲には、上の例と同じく合計行を含めます。トグルはテーブルの TableStyle に作用し、先頭列・最終列の強調と、行・列の縞模様を切り替えます。
+
 ## 2 つの表の使い分け
 
-行、数式、列幅、印刷範囲を 1 つのレイアウトとして作る領収書や請求書には文書の `table` ブロックを使います。名前、フィルター情報、TableStyle、見出しフラグ、合計行フラグが必要なネイティブテーブルには `formulon_table_operation` を使います。入力範囲を元にしたレポートオブジェクトと軸・集計が必要なら `formulon_create_pivot` を使います。どちらのネイティブ機能も XLSX へ保存し、ファイルを完成品として扱う前に書き込み時の `losses` を確認します。
+行、数式、列幅、印刷範囲を 1 つのレイアウトとして作る領収書や請求書には文書の `table` ブロックを使います。名前、フィルター情報、TableStyle、見出しフラグ、合計行が必要なネイティブテーブルには `formulon_table_operation` を使います。入力範囲を元にしたレポートオブジェクトと軸・集計が必要なら `formulon_create_pivot` を使います。どちらのネイティブ機能も XLSX へ保存し、ファイルを完成品として扱う前に書き込み時の `losses` を確認します。

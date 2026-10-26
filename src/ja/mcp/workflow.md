@@ -102,7 +102,7 @@
 
 `values` は数値、真偽値、文字列、`{"f":"=..."}`、`{"blank":true}`、セルを飛ばす `null` を受け取ります。応答には開始と終了の参照、`cellsWritten`、`errorCells` が入ります。セル変更は最初の書き込み前にアドレスを検証しますが、ネイティブエンジンが途中で失敗すると先に完了した書き込みが残り、セッションは変更あり（dirty）のままです。成功応答では適用結果を確認し、MCP ツールエラーの後は再試行前に対象範囲を読み取ってください。
 
-`formulon_sheet_operation` は `add`、`remove`、`rename`、`move` を処理します。対応するフィールドは `name`、`index`、`newName`、`fromIndex`、`toIndex` です。`formulon_set_defined_name` は `sheet` を省略するとワークブックスコープ、指定するとシートローカルスコープになり、空の `formula` で名前を削除します。保存された名前の式は先頭の `=` なしで読み返されます。`_xlnm.Print_Area` と `_xlnm.Print_Titles` はシートローカルで指定します。`formulon_edit_structure` は行や列を挿入・削除し、`formulon_set_sheet_view` はズーム、固定行・列、`hidden` または `visibility` を設定します。固定行・列を変更するときは `freezeRows` と `freezeCols` の両方を指定してください。片方を省略すると、その固定数は以前の値ではなく `0` になります。
+`formulon_sheet_operation` は `add`、`remove`、`rename`、`move` を処理します。対応するフィールドは `name`、`index`、`newName`、`fromIndex`、`toIndex` です。`formulon_set_defined_name` は `sheet` を省略するとワークブックスコープ、指定するとシートローカルスコープになり、空の `formula` で名前を削除します。保存された名前の式は先頭の `=` なしで読み返されます。`comment` と `hidden` は名前のメモと名前の管理での表示を設定し、式を置換しても指定しない限り保持されます。`_xlnm.Print_Area` と `_xlnm.Print_Titles` はシートローカルで指定します。`formulon_edit_structure` は行や列を挿入・削除し、`formulon_set_sheet_view` はズーム、固定行・列、分割位置、スクロールの起点、数式とアウトライン記号の表示、アクティブシート、`hidden` または `visibility` を設定します。固定行・列を変更するときは `freezeRows` と `freezeCols` の両方を指定してください。片方を省略すると、その固定数は以前の値ではなく `0` になります。エンジンは最後の表示シートを隠せません。各フィールドは[レイアウトとプレビュー](/ja/mcp/layout-preview#sheet-view)を参照してください。
 
 ## コメント、リンク、入力規則、結合 {#sheet-objects}
 
@@ -110,13 +110,42 @@
 
 | ツール | 操作 | 位置の指定 |
 | --- | --- | --- |
-| `formulon_comment_operation` | `list`、`get`、`set`、`remove` | `row`、`col`。`set` は `author` と `text` を受け取ります |
+| `formulon_comment_operation` | `list`、`get`、`set`、`remove`、`visibility` | `row`、`col`。`set` は `author` と `text`、`visibility` は `visible`（`true` でコメントをシート上に表示したままにする）を受け取ります |
 | `formulon_hyperlink_operation` | `list`、`add`、`remove`、`removeAt`、`clear` | `row`、`col`、任意の `lastRow` / `lastCol`。`target` は URL です。ブック内リンクにするには `target` を空にして `location`（`Sheet2!A1` など）を指定します |
 | `formulon_validation_operation` | `list`、`add`、`removeAt`、`clear` | `validation.ranges` に `{firstRow, firstCol, lastRow, lastCol}` |
 | `formulon_conditional_format_operation` | `list`、`add`、`removeAt`、`clear`、`evaluate` | `rule.sqref` の範囲。`evaluate` は `firstRow`、`firstCol`、`lastRow`、`lastCol` |
 | `formulon_merge_operation` | `list`、`add`、`remove`、`removeAt`、`clear` | `range` に `{firstRow, firstCol, lastRow, lastCol}` |
 
 `removeAt` には、対応する `list` の結果にある `index` を渡します。応答はいずれも `{session, method, result}` で、`result` にエンジンの結果が入ります。入力規則と条件付き書式のルールの種類、スタイル、評価、作業例は[条件付き書式と入力規則](/ja/mcp/conditional-formats-validation)にまとめています。フィールドの一覧は[ツールリファレンス](/ja/mcp/tools#rich-workbook-objects)を参照してください。
+
+図形、スパークライン、What-If データテーブルには、さらに 3 つのツールがあります。これらは 0 始まりの番号ではなく、選択したシート上の A1 セル参照を使い、変更したオブジェクトを返します。図形は[レイアウトとプレビュー](/ja/mcp/layout-preview#shapes)で扱います。スパークライングループは、スパークラインごとに 1 つのデータ範囲を 1 つのセルへ描画します。データテーブルは、入力セルへ値を代入して結果範囲を埋めます。
+
+#### `formulon_sparkline_operation`
+
+```json
+{
+  "sessionId": "review",
+  "operation": "add",
+  "sparklines": [
+    { "data": "B2:M2", "location": "N2" },
+    { "data": "B3:M3", "location": "N3" }
+  ],
+  "type": "line",
+  "high": true,
+  "low": true,
+  "colors": { "series": "#336699", "high": "#CC3333" }
+}
+```
+
+応答は `{session, sheet, group}` で、グループの `index` を含みます。この `index` を `update` や `remove` に渡します。グループを削除すると、後続の番号は前に詰まります。
+
+#### `formulon_data_table_operation`
+
+```json
+{ "sessionId": "review", "operation": "add", "range": "C3:E8", "rowInput": "H1", "colInput": "H2" }
+```
+
+これは `C3:E8` に対する 2 変数のテーブルです。数式は左上の角のセル `B2` に置き、`H1` に代入する値を `C2:E2`、`H2` に代入する値を `B3:B8` に置きます。入力が片方だけのときは、数式を範囲の上の行（`colInput`）または左の列（`rowInput`）に置きます。結果セルはテーブルを削除するまで書き込みを拒否します。`add` は再計算するので、結果をすぐ読めます。`recalc` は、自動（テーブルを除く）の計算モードでも、すべてのデータテーブルを再計算します。
 
 ## 意図的に再計算する
 

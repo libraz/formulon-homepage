@@ -15,7 +15,7 @@ MCP (Model Context Protocol) is the protocol an AI client such as Claude Code us
 | [Install](/mcp/install) | Registering the server with Claude Code, Codex CLI, Claude Desktop, or another MCP client |
 | [Workflow](/mcp/workflow) | The open, inspect, mutate, recalculate, preview, save, and close loop; comments, links, and validation; session state; dirty flags; losses; and errors |
 | [Authoring](/mcp/authoring) | Creating an invoice, form, report, or other workbook from blocks and then refining named ranges |
-| [Layout and preview](/mcp/layout-preview) | Matching a reference layout, inserting pictures, setting dimensions and print settings, and checking a PNG or SVG preview |
+| [Layout and preview](/mcp/layout-preview) | Matching a reference layout, inserting pictures and shapes, setting dimensions, sheet view, and print settings, and checking a PNG or SVG preview |
 | [Formula audit](/mcp/formula-audit) | Finding missing formulas, constants, outliers, and formula errors in a repeated calculation region |
 | [Tables and pivots](/mcp/tables-pivots) | Creating native worksheet Tables and PivotTables from a bounded source range |
 | [Conditional formats and validation](/mcp/conditional-formats-validation) | Highlighting cells by value or formula, adding dropdowns and input limits, and checking which cells match |
@@ -53,7 +53,7 @@ The same server also supports these concrete tasks:
 
 ## What the server operates on
 
-The server loads `.xlsx` and `.xlsb` paths, or creates a workbook when no input path is supplied. New workbook defaults, including the sheet name, follow the selected [Excel profile](/mcp/workflow#excel-profile); the default profile creates `Sheet1`. It delegates workbook calculation and file parsing to `@libraz/formulon`, which is loaded as WASM by the MCP server. These pages cover server `0.9.0`; check the installed server and engine versions through `formulon_version`.
+The server loads `.xlsx` and `.xlsb` paths, or creates a workbook when no input path is supplied. New workbook defaults, including the sheet name, follow the selected [Excel profile](/mcp/workflow#excel-profile); the default profile creates `Sheet1`. It delegates workbook calculation and file parsing to `@libraz/formulon`, which is loaded as WASM by the MCP server. These pages cover server `0.11.0`; check the installed server and engine versions through `formulon_version`.
 
 Sheet references accept a zero-based sheet index or an exact sheet name. Cell and range coordinates are zero-based when sent as numeric `row` and `col` values. A1 addresses such as `Summary!B2` are easier to read and are accepted by the high-level cell tools. Range readers and preview tools require a bounded rectangular range on one sheet; whole-column, whole-row, and 3-D references are rejected by the MCP A1 parser, except that styling (`formulon_style_range` and the `style` operation of `formulon_apply_layout`) takes whole columns and rows.
 

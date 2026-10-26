@@ -8,18 +8,18 @@ The npm package `@libraz/formulon-mcp` runs as a stdio MCP server. Use a Node.js
 
 ## Interactive setup
 
-The current published server is `0.10.0`, with `@libraz/formulon` declared as `^0.16.0`. The command below selects this release's initializer. Omit `@0.10.0` to run the latest published initializer.
+The current published server is `0.11.0`, with `@libraz/formulon` declared as `^0.18.0`. The command below selects this release's initializer. Omit `@0.11.0` to run the latest published initializer.
 
 Run the bundled installer in a terminal:
 
 ```sh
-npx -y @libraz/formulon-mcp@0.10.0 init
+npx -y @libraz/formulon-mcp@0.11.0 init
 ```
 
 The command above pins only the initializer. `init` writes `@libraz/formulon-mcp` without a version into client configuration. To pin the runtime, edit each generated entry to use these arguments:
 
 ```json
-{ "args": ["-y", "@libraz/formulon-mcp@0.10.0"] }
+{ "args": ["-y", "@libraz/formulon-mcp@0.11.0"] }
 ```
 
 Re-running `init` rewrites the entry with the unpinned package name, so apply the runtime pin again afterward.
@@ -41,13 +41,13 @@ After the targets, the installer asks for the default [Excel profile](/mcp/workf
 Choice `0` skips the host question and writes no profile. The preview shows the chosen profile before confirmation. Pass `--profile <id>` (or `--profile=<id>`) to skip both menus; an unknown id stops with an error.
 
 ```sh
-npx -y @libraz/formulon-mcp@0.10.0 init --profile win-365-ja_JP
+npx -y @libraz/formulon-mcp@0.11.0 init --profile win-365-ja_JP
 ```
 
 `--profile` skips only the profile menus. The target choice and the final confirmation are still read from standard input, one answer per line, so a scripted run pipes them in:
 
 ```sh
-printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.10.0 init --profile win-365-ja_JP
+printf '1\ny\n' | npx -y @libraz/formulon-mcp@0.11.0 init --profile win-365-ja_JP
 ```
 
 The profile is written as `FORMULON_MCP_PROFILE` in the server entry's environment. Re-running `init` rewrites the entry, so running it without a profile removes a previously written one.
@@ -57,7 +57,7 @@ The installer previews whether each file will be created, merged, or have its ex
 To remove registration, run:
 
 ```sh
-npx -y @libraz/formulon-mcp@0.10.0 uninstall
+npx -y @libraz/formulon-mcp@0.11.0 uninstall
 ```
 
 The removal menu defaults to all four client targets. It removes the `formulon` entry from selected configuration files; it does not uninstall Node.js or other MCP servers.
@@ -71,7 +71,7 @@ For clients using JSON configuration, add this server entry inside the existing 
   "mcpServers": {
     "formulon": {
       "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp@0.10.0"]
+      "args": ["-y", "@libraz/formulon-mcp@0.11.0"]
     }
   }
 }
@@ -82,7 +82,7 @@ For Codex CLI, add this pinned TOML section:
 ```toml
 [mcp_servers.formulon]
 command = "npx"
-args = ["-y", "@libraz/formulon-mcp@0.10.0"]
+args = ["-y", "@libraz/formulon-mcp@0.11.0"]
 ```
 
 To set a default Excel profile, add an `env` object to the entry:
@@ -92,7 +92,7 @@ To set a default Excel profile, add an `env` object to the entry:
   "mcpServers": {
     "formulon": {
       "command": "npx",
-      "args": ["-y", "@libraz/formulon-mcp@0.10.0"],
+      "args": ["-y", "@libraz/formulon-mcp@0.11.0"],
       "env": { "FORMULON_MCP_PROFILE": "win-365-ja_JP" }
     }
   }
@@ -102,7 +102,7 @@ To set a default Excel profile, add an `env` object to the entry:
 ```toml
 [mcp_servers.formulon]
 command = "npx"
-args = ["-y", "@libraz/formulon-mcp@0.10.0"]
+args = ["-y", "@libraz/formulon-mcp@0.11.0"]
 env = { FORMULON_MCP_PROFILE = "win-365-ja_JP" }
 ```
 

@@ -30,9 +30,9 @@ description: 画面の見本から編集可能なセル配置を作り、上限�
 | `style` | A1 `range`（限定した範囲、`C:C` のような列全体、`1:1` のような行全体）、`style` オブジェクト、省略可能な `base`（`existing` または `default`）です。列全体・行全体はセルを作らず、列・行のスタイルとして適用します。 |
 | `print` | `formulon_print_settings` が受け付ける空でない `settings` オブジェクトです。 |
 
-列幅の既定単位は Excel の文字単位です。行高の既定単位はポイントです。`px` と `mm` は 96 DPI の表示基準で変換し、Excel の文字単位またはポイントで保存します。結果には保存値と、`points`、`pixels`、`mm` を持つ `displayGeometry` が含まれます。
+列幅の既定単位は、パディングを含む Excel の保存幅（`<col width>` の値）で、既定の Calibri 11 の列は `8.43` ではなく `9.140625` です。行高の既定単位はポイントです。`px` と `mm` は 96 DPI の表示基準で変換し、Excel の文字単位またはポイントで保存します。結果には保存値と、`points`、`pixels`、`mm` を持つ `displayGeometry` が含まれます。
 
-列幅の変換は、エンジンのシートごとの表示用列幅モデルと Normal フォントの校正を使います。ポイントで正の列幅を指定する場合は、モデルの表示用余白を超える必要があります。ゼロは指定できます。行・列の寸法もエンジンから取得し、シートの既定値と非表示状態を反映します。
+列幅の変換は、エンジンのシートごとの表示用列幅モデルと Normal フォントの校正を使います。行・列の寸法もエンジンから取得し、シートの既定値と非表示状態を反映します。
 
 `style` オブジェクトには `font`（`name`、`size`、`bold`、`italic`、`strike`、`underline`、`vertAlign`、`color`）、`fill`（`color`、`bgColor`、`pattern`）、`border`（`all`、`outline`、`left`、`right`、`top`、`bottom`）、`numberFormat`、`align`（`horizontal`、`vertical`、`wrapText`、`indent`、`textRotation`、`shrinkToFit`）を指定できます。色は `#RRGGBB` または `#AARRGGBB` です。`border.all` は各セルを囲み、`border.outline` は外周だけを描きます。
 
@@ -47,7 +47,7 @@ description: 画面の見本から編集可能なセル配置を作り、上限�
 | 上限 | 値 |
 | --- | ---: |
 | 1 バッチの操作数 | 200 |
-| 保存する列幅 | Excel の文字単位で 255 |
+| 保存する列幅 | 255 文字（パディングを含む） |
 | 保存する行高 | 409 ポイント |
 | 行操作で展開される行数 | 10,000 行 |
 | 1 バッチのスタイル対象セル数 | 100,000 セル（列全体・行全体は数えません） |
@@ -55,6 +55,29 @@ description: 画面の見本から編集可能なセル配置を作り、上限�
 | 行番号 | 0 から 1,048,575（Excel の行 1,048,576） |
 
 事前検証では、範囲、単位、寸法、印刷範囲、印刷タイトル、上限をすべて確認してから変更を始めます。事前検証後の適用はトランザクションではありません。検証を通った操作でも、エンジンが途中で失敗すると先行する操作がワークブックに残り、セッションは変更あり（dirty）のままになる場合があります。その場合はセッションを読み取り、部分結果を破棄するなら新しいセッションで入力元を開き直します。
+
+## シートビューを設定する {#sheet-view}
+
+`formulon_set_sheet_view` は、セルとは別に、シートを Excel で開いたときの見え方を変えます。指定した設定ごとにエンジンの `status` が返ります。
+
+| フィールド | 意味 |
+| --- | --- |
+| `zoom` | 10 から 400。 |
+| `freezeRows`、`freezeCols` | ウィンドウ枠の固定。両方を指定します。省略した数は `0` になります。 |
+| `splitX`、`splitY` | 左端・上端からの非固定の分割位置（pt）。`0` でその軸の分割を解除します。ビューは固定か分割のどちらかで、両方にはできません。 |
+| `topLeft` | スクロール後の表示の左上セル（`A100` など）。シート名は付けません。 |
+| `showFormulas` | 結果の代わりに数式を表示します。 |
+| `showOutlineSymbols` | アウトライン領域の展開・折りたたみ記号を表示します。 |
+| `hidden`、`visibility` | タブの表示状態。Excel は最後の表示シートを隠せず、アクティブなシートを隠すと次の表示シートがアクティブになります。 |
+| `active` | `true` でこのシートを Excel が開くシートにします。表示状態でなければなりません。 |
+
+#### `formulon_set_sheet_view`
+
+```json
+{ "sessionId": "form-layout", "sheet": "Sheet1", "freezeRows": 1, "freezeCols": 0, "showOutlineSymbols": true, "topLeft": "A1", "active": true }
+```
+
+アウトラインのグループは `formulon_dimension_operation` で扱います。`outline` でレベルを設定し、`hidden` で詳細行・列を隠し、`collapsed` でグループの集計行・列に印を付けます。Excel は両方のフラグを保存するため、折りたたんだグループには 2 回の呼び出しが必要です。
 
 ## 範囲をプレビューする
 
@@ -114,7 +137,7 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 
 先にセッションを開き、20 MiB 以下の既存の PNG、JPEG、GIF、BMP ファイルを用意します。`formulon_image_operation` は選択したシートの、シート名を付けないセル参照へ画像を挿入します。寸法とオフセット（`width`、`height`、`offsetX`、`offsetY`）は `{size,unit?}` で指定し、単位は既定 `pt`、または `px`、`mm` です。片方の寸法だけを指定すると縦横比を保ち、両方省略すると画像のピクセル寸法を 96 DPI で使います。`anchorKind` は `oneCell` または `twoCell` で、`twoCell` は行・列のサイズ変更に追従して伸縮します。挿入では省略すると `oneCell` になります。
 
-挿入結果には `objectId`、元画像の寸法、配置が入ります。一覧は画像、グラフ、図形などを含みます。取得は画像のバイト列を返し、移動、並べ替え、削除は画像とグラフが対象です。下の `2` は、応答で返された画像 ID に置き換えてください。取得は既知の形式なら画像コンテンツ、続いて JSON メタデータを返します。`outputPath` を指定すると、画像のバイト列をそのファイルにも書き出します。
+挿入結果には `objectId`、元画像の寸法、配置が入ります。一覧は画像、グラフ、図形などを含みます。取得は画像のバイト列を返し、移動、並べ替え、削除は画像とグラフが対象です。図形には専用のツールがあり、[後述](#shapes)します。下の `2` は、応答で返された画像 ID に置き換えてください。取得は既知の形式なら画像コンテンツ、続いて JSON メタデータを返します。`outputPath` を指定すると、画像のバイト列をそのファイルにも書き出します。
 
 #### `formulon_image_operation`: insert
 
@@ -172,6 +195,37 @@ MCP 応答の最初のコンテンツは MIME が `image/png` の PNG 画像で�
 ```
 
 挿入、移動、並べ替え、削除はセッションを変更ありにし、他の描画オブジェクトは保持します。対象範囲のプレビューで配置を確認し、XLSX を明示して保存してください。XLSB 保存では OOXML の描画を省略し、損失として報告します。詳しくは [ファイル形式](/ja/workbook/file-formats#xlsb) を参照してください。プレビュー自体は画像を挿入・削除しません。
+
+## 図形・テキストボックス・コネクタを描く {#shapes}
+
+`formulon_shape_operation` は、図形、テキストボックス、線や矢印などのコネクタを一覧、挿入、更新、削除します。挿入にはシート名を付けないセル参照 `anchor` が必要です。`width` と `height` を指定するとサイズを保つ 1 セルアンカーの図形に、`to`（右下のセル）を指定すると行・列に追従して伸縮する 2 セルアンカーの図形になります。`geometry` は DrawingML のプリセットで、既定は `rect`、ほかに `roundRect`、`ellipse`、`rightArrow`、`line`、`straightConnector1` などがあります。線とコネクタのジオメトリはテキストを持てません。`fill` と `line` には不透明な `#RRGGBB` または `none` を指定します。
+
+#### `formulon_shape_operation`: insert
+
+```json
+{
+  "sessionId": "form-layout",
+  "sheet": "Sheet1",
+  "operation": "insert",
+  "anchor": "F2",
+  "width": { "size": 160, "unit": "px" },
+  "height": { "size": 48, "unit": "px" },
+  "geometry": "roundRect",
+  "text": "Approved",
+  "fill": "#DDEEDD",
+  "line": "#336633"
+}
+```
+
+応答には新しい `objectId` と、解決済みの配置 `placed` が入ります。更新は指定したフィールドだけを変更してアンカーの種類を保ち、配置のフィールドを指定すると図形を移動またはリサイズします。
+
+#### `formulon_shape_operation`: update
+
+```json
+{ "sessionId": "form-layout", "sheet": "Sheet1", "operation": "update", "objectId": 3, "text": "Rejected", "fill": "#EEDDDD" }
+```
+
+図形には重なり順の操作がありません。画像とグラフの順序は引き続き `formulon_image_operation` を使います。図形の編集はセッションを変更ありにし、XLSB 保存では画像と同様に OOXML の描画が省略されます。
 
 ## エンドツーエンド例: スクリーンショットからフォームを再現する {#reproduce-a-form}
 

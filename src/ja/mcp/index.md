@@ -15,7 +15,7 @@ MCP（Model Context Protocol）は、Claude Code などの AI クライアント
 | [インストール](/ja/mcp/install) | Claude Code、Codex CLI、Claude Desktop などの MCP クライアントにサーバーを登録する |
 | [ワークフロー](/ja/mcp/workflow) | 開く、調べる、変更する、再計算する、プレビューする、保存する、閉じるまでの流れ。コメント、リンク、入力規則。セッション状態、変更あり（dirty）フラグ、損失情報、エラー |
 | [作成](/ja/mcp/authoring) | ブロックから請求書、フォーム、レポートなどを作り、名前付き範囲を調整する |
-| [レイアウトとプレビュー](/ja/mcp/layout-preview) | 参照レイアウトの再現、画像の挿入、寸法と印刷設定、PNG または SVG プレビューの確認 |
+| [レイアウトとプレビュー](/ja/mcp/layout-preview) | 参照レイアウトの再現、画像と図形の挿入、寸法・シートビュー・印刷設定、PNG または SVG プレビューの確認 |
 | [数式監査](/ja/mcp/formula-audit) | 繰り返し計算範囲の数式抜け、定数、外れ値、数式エラーの確認 |
 | [テーブルとピボット](/ja/mcp/tables-pivots) | 範囲からネイティブのワークシートテーブル（Table）とピボットテーブル（PivotTable）を作る |
 | [条件付き書式と入力規則](/ja/mcp/conditional-formats-validation) | 値や数式でセルを強調し、ドロップダウンや入力制限を付け、一致するセルを確かめる |
@@ -53,7 +53,7 @@ MCP（Model Context Protocol）は、Claude Code などの AI クライアント
 
 ## 対象となるファイルと処理
 
-`.xlsx` と `.xlsb` を読み込めます。入力パスを指定しない場合はワークブックを作ります。シート名を含む新規ワークブックの既定値は、選んだ [Excel プロファイル](/ja/mcp/workflow#excel-profile)に従います。既定のプロファイルでは `Sheet1` を作ります。計算とファイル解析は `@libraz/formulon` に委譲し、MCP サーバーはそのパッケージを WASM として読み込みます。このドキュメントはサーバー `0.9.0` を対象としています。インストール済みのサーバーとエンジンのバージョンは `formulon_version` で確認してください。
+`.xlsx` と `.xlsb` を読み込めます。入力パスを指定しない場合はワークブックを作ります。シート名を含む新規ワークブックの既定値は、選んだ [Excel プロファイル](/ja/mcp/workflow#excel-profile)に従います。既定のプロファイルでは `Sheet1` を作ります。計算とファイル解析は `@libraz/formulon` に委譲し、MCP サーバーはそのパッケージを WASM として読み込みます。このドキュメントはサーバー `0.11.0` を対象としています。インストール済みのサーバーとエンジンのバージョンは `formulon_version` で確認してください。
 
 シートは 0 始まりの番号または完全一致するシート名で指定します。数値の `row` と `col` は 0 始まりです。`Summary!B2` のような A1 参照は高レベルのセルツールで使えます。範囲読み取りとプレビューの A1 参照は、1 シート内の矩形範囲に限定されます。列全体、行全体、3-D 範囲は MCP の A1 パーサーで拒否されます。ただしスタイル適用（`formulon_style_range` と `formulon_apply_layout` の `style` 操作）は列全体と行全体を受け付けます。
 
