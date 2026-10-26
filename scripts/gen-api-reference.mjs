@@ -59,14 +59,17 @@ const FAMILIES = [
   },
   {
     id: 'sheets',
-    match: /^(add|remove|rename|move)_sheet$|^sheet_(count|name)$|^(insert|delete)_(rows|cols)$/
+    match: /^(add|remove|rename|move)_sheet$|^sheet_(count|name)$|^(insert|delete)_(rows|cols)$|active_sheet$/
   },
   {
     id: 'cells',
     match:
       /^(set|get)_(number|bool|error|text|blank|formula|value)|formula_r1_?c1|^get_formula$|cell_count|cell_at|^iter_cells$|lambda_text|phonetic|cells_in_range|^cell_range_/
   },
-  { id: 'calculation', match: /recalc|iterative|calc_mode|pinned_now/ },
+  {
+    id: 'calculation',
+    match: /recalc|iterative|calc_mode|pinned_now|data_table|full_precision|calc_on_save|ref_mode|date1904/
+  },
   {
     id: 'evaluation',
     match: /^eval_formula$|^evaluate_(formula|conditional_formula|cf_formula)/
@@ -77,14 +80,15 @@ const FAMILIES = [
       /excel_profile_id|locali[sz]e|canonicali[sz]e|locale_|compare_text|text_compare|collation|^function_|function_metadata|function_names/
   },
   { id: 'names', match: /defined_name/ },
-  { id: 'tables', match: /^(iter_)?tables?(_|$)|_table$/ },
+  { id: 'tables', match: /^(iter_)?tables?(_|$)|_table$|table_style/ },
   {
     id: 'dependencies',
     match: /precedents|dependents|cell_nodes|spill_info|external_link/
   },
   {
     id: 'view',
-    match: /view|zoom|freeze|tab_hidden|tab_selected|visibility|show_|right_to_left|protection/
+    match:
+      /view|zoom|freeze|tab_hidden|tab_selected|visibility|show_|right_to_left|protection|protected_range|top_left|_split$|_selection$/
   },
   {
     id: 'rows-columns',
@@ -109,7 +113,7 @@ const FAMILIES = [
     id: 'conditional-formats',
     match: /conditional_format|^cf_|_cf_range$|^evaluate_cf_range$/
   },
-  { id: 'images', match: /image|drawing/ },
+  { id: 'images', match: /image|drawing|shape|slicer|sparkline/ },
   { id: 'charts', match: /chart/ },
   {
     id: 'print',
