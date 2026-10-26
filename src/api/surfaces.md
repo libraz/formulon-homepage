@@ -49,7 +49,7 @@ The three library bindings share the workbook model, geometry, themes and styles
 
 | Capability | WASM | Native Node | Python |
 | --- | --- | --- | --- |
-| Release a workbook | `delete()` | `dispose()` (GC finalizer as fallback) | `close()` or a `with` block |
+| Release a workbook | `delete()`; throws `TypeError` during an active method call | `dispose()` (GC finalizer as fallback); throws `TypeError` during an active method call | `close()` or a `with` block |
 | Memory estimate | — | `memoryUsage()` | `memory_usage()` |
 | Parallel recalc | `recalcParallel()`; workers only on `@libraz/formulon/threads` | `recalcParallel()` | — |
 | Scalar read-only evaluation | `evaluateFormulaText()` | `evaluateFormulaText()` | — (use `evaluate_formula_array()`) |
@@ -59,6 +59,8 @@ The three library bindings share the workbook model, geometry, themes and styles
 | Worksheet AutoFilter XML | `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` | — | `get_auto_filter_xml()` / `set_auto_filter_xml()` |
 | Named-style XF records | `addCellStyleXf()` | — | `add_cell_style_xf()` |
 | Bulk style registration, enable-only iterative toggle | — | — | `add_batch()`, `set_iterative_enabled()` |
+
+Argument contracts are the same across the bindings. Both JS packages check every positional argument before any engine call: a missing argument, a wrong type, or a primitive or `null` where an object is declared throws `TypeError`, and neither package substitutes defaults. A malformed argument that a method reports through its status returns `kInvalidArgument` (2) on both. The `@libraz/formulon-native` TypeScript declarations use the same enum types as `@libraz/formulon` (`PivotAxis`, `PivotAggregation`, `PivotSortOrder`, and the rest), so code written against one package's types compiles against the other's. Python validates `Value` payloads (`ValueError` or `TypeError`) and range-checks integer arguments (`ValueError`). The C ABI rejects ill-formed UTF-8 with `kBindingUtf8EncodingError` (7002) and range-checks index, count, and outline-level arguments; every binding surfaces those statuses. Public C records have fixed layouts, so a native client must be recompiled against the header it links.
 
 The CLI exposes a fixed subset: `--threads` for parallel recalc, `--iterative`, and the four subcommands.
 

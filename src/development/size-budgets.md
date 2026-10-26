@@ -28,9 +28,9 @@ Treat size-limit failures as product failures. Before adding an engine dependenc
 
 When the WASM build approaches the ceiling, look in order at:
 
-1. **Linker-retained code** — measure what the linker keeps. Formula families referenced by the dispatch table remain in the binary even when a workbook does not use them.
+1. **Linker-retained code** — measure what the linker keeps. Formula families referenced by the dispatch table remain in the binary even when a workbook does not use them. The cold evaluator families (special functions, financial, `FORECAST.ETS`, format parsing, `GROUPBY` / `PIVOTBY`, regex, database, regression) and PCRE2 are compiled for size with bit-identical results.
 2. **Dependency review** — remove unused dependencies and consolidate duplicated implementations. Prefer in-tree implementations for the small set of spreadsheet-specific helpers.
-3. **Build flag tuning** — Emscripten optimization passes, link-time optimization, dead-code elimination.
+3. **Build flag tuning** — Emscripten optimization passes, link-time optimization, dead-code elimination. The binding glue is compiled for size while the engine stays at `-O3`.
 4. **Public surface** — every exported symbol forces the engine to keep its dependencies; consider whether an API can be internal.
 
 ## Reading the build output

@@ -251,13 +251,32 @@ Each setting is its own call on `(sheet, pivotIndex, …)`. Python uses the snak
 | Label and value filters | `pivotFilterAdd`, `pivotFilterAt`, `pivotFilterRemoveAt`, `pivotFilterClear` |
 | Date grouping | `pivotFieldSetDateGroup`, `pivotFieldClearDateGroup` |
 
+### Read a definition back
+
+A pivot's definition can be read back whether it was built in the session or loaded from a file. Each getter takes `(sheet, pivotIdx)`; Python uses snake_case with `pivot_index`.
+
+| Read | WASM / Native Node | Python |
+| --- | --- | --- |
+| Count on a sheet, name, cache id | `pivotCount`, `pivotName`, `pivotCacheId` | `pivot_count`, `pivot_name`, `pivot_cache_id` |
+| Grand totals | `pivotGetGrandTotals` (`rows`, `cols`) | `pivot_grand_totals` (tuple) |
+| Table style | `pivotGetStyleInfo` | `pivot_style_info` |
+| Axis order | `pivotRowFieldOrder`, `pivotColFieldOrder` | `pivot_row_field_order`, `pivot_col_field_order` |
+| Fields and items | `pivotFieldCount`, `pivotFieldAt`, `pivotFieldItemCount`, `pivotFieldItemAt` | `pivot_field_count`, `pivot_field_at`, `pivot_field_item_count`, `pivot_field_item_at` |
+| Data fields | `pivotDataFieldCount`, `pivotDataFieldAt` | `pivot_data_field_count`, `pivot_data_field_at` |
+
+`pivotFieldAt()` reports the field's axis (`-1` when it sits on none), sort, number format, date grouping and subtotals. `defaultSubtotal` / `default_subtotal` says whether the automatic subtotal shows and is `false` whenever custom functions are set; `subtotalFns` / `subtotal_fns` lists those functions in ascending `PivotAggregation` order. `pivotDataFieldAt()` returns the same members as `PivotDataFieldSpec`, with `showAsBaseField` / `showAsBaseItem` at `-1` when unset.
+
+`pivotSetStyleInfo()` / `pivot_set_style_info()` set the table style name and the row-header, column-header, row-stripe, column-stripe and last-column toggles; omitted flags are `false`. A new pivot starts as `PivotStyleLight16` with row headers, column headers and the last column on. `pivotGetStyleInfo()` reports `present: false` when the definition has no style element.
+
+A data field added or replaced with no name is named from the profile's pivot wording, such as `Sum of Sales` under an English profile and `合計 / Sales` under `ja_JP`.
+
 `pivotFieldSetSort()` / `pivot_field_set_sort()` / `fm_workbook_pivot_field_set_sort` take a `PivotSortOrder`: `Descending` (`0`), `Ascending` (`1`), or `Manual` (`2`) — `PivotSortOrder.DESCENDING` / `ASCENDING` / `MANUAL` in Python and `FM_PIVOT_SORT_DESCENDING` / `_ASCENDING` / `_MANUAL` in C; any other value is rejected. `Manual` keeps the field's items in the order they were added with `pivotFieldAddItem()` and takes no by-field key; it is saved as `sortType="manual"`. For the other orders an empty by-field key sorts by label. An item added by label binds to the cache's shared item of that label, so its saved `<item x>` matches the cache.
 
 `pivotFieldAdd()` and `pivotFieldSetAxis()` keep the row and column field orders in step with the field's axis, so a field added on the row or column axis appears without a separate order call. `pivotSetRowFieldOrder()` / `pivotSetColFieldOrder()` set the axis's whole membership: fields left out of the list leave the axis, and a duplicate index is rejected. `pivotFieldClear()` empties both orders.
 
 `subtotalTop` defaults to `true` in the Python, Node, and WASM bindings, as in Excel: a group's subtotal sits on its own heading row. With `false`, compact and outline layouts head the group with a label-only row and close it with an `"<item> Total"` row in the locale's wording. A field with custom subtotal functions labels each subtotal row with the function name in the UI locale's wording (for example `East Max`) in Excel's fixed function order, and two or more functions place the subtotals below the group whatever `subtotalTop` says.
 
-`PivotDataFieldSpec.showAs` / `show_as` also supports `PercentOf`, `PercentOfRunningTotal`, `RankAscending`, and `RankDescending`. Set `showAsBaseField` / `show_as_base_field` and `showAsBaseItem` / `show_as_base_item` for modes that need a base item. Loaded x14 `pivotShowAs` values and `subtotalHiddenItems` are preserved on save.
+`PivotDataFieldSpec.showAs` / `show_as` also supports `PercentOf`, `PercentOfRunningTotal`, `RankAscending`, and `RankDescending`. Set `showAsBaseField` / `show_as_base_field` and `showAsBaseItem` / `show_as_base_item` for modes that need a base item. Percent of Grand Total and Index divide by the whole-table aggregate when the grand totals are hidden. Loaded x14 `pivotShowAs` values and `subtotalHiddenItems` are preserved on save.
 
 ::: warning Filter authoring and round-tripping
 A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA` only while the workbook handle lives; `save()` does not write it. Loaded `<filters>` blocks are preserved on save, including `valueEqual`, `valueNotEqual`, `valueGreaterThan`, `valueGreaterThanOrEqual`, `valueLessThan`, `valueLessThanOrEqual`, `valueBetween`, and `valueNotBetween`; they do not appear in `pivotFilterCount()`. Item visibility is the filter state that persists when authored through the API.
@@ -265,7 +284,7 @@ A filter added with `pivotFilterAdd()` affects `pivotLayout()` and `GETPIVOTDATA
 
 ### Group dates by an explicit day interval
 
-`PivotDateGrouping.Days` / `PivotDateGrouping.DAYS` is Excel's interval-based date grouping. The snippets below assume a separate pivot whose cache includes an `OrderDate` field; `dateField` is the index returned when that field is added. There is no separate week granularity: use `intervalDays: 7` / `interval_days=7` for a seven-day bucket. The date-grouping call takes `startYear` and `endYear` (use `-1` except for a year-truncation bound), then the day interval and the optional Start/End window as Excel serials. Passing `-1` for either serial lets the engine use the field's data minimum as Start and the data maximum plus one day as End. Labels use the bucket's date range; values below or above an explicit window are labelled `<start` or `>end`. A zero interval or a Start after End is rejected.
+`PivotDateGrouping.Days` / `PivotDateGrouping.DAYS` is Excel's interval-based date grouping. The snippets below assume a separate pivot whose cache includes an `OrderDate` field; `dateField` is the index returned when that field is added. There is no separate week granularity: use `intervalDays: 7` / `interval_days=7` for a seven-day bucket. The date-grouping call takes `startYear` and `endYear` (use `-1` except for a year-truncation bound), then the day interval and the optional Start/End window as Excel serials. The last three arguments are optional on both JavaScript packages and in Python: `intervalDays` defaults to `1`, and `startSerial` / `endSerial` to `-1`. Passing `-1` for either serial lets the engine use the field's data minimum as Start and the data maximum plus one day as End. Labels use the bucket's date range; values below or above an explicit window are labelled `<start` or `>end`. A zero interval or a Start after End is rejected.
 
 The date field index is the `index` / returned integer from `pivotFieldAdd()` / `pivot_field_add()`:
 

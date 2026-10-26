@@ -251,13 +251,32 @@ for cell in layout.cells:
 | ラベルフィルターと値フィルター | `pivotFilterAdd`、`pivotFilterAt`、`pivotFilterRemoveAt`、`pivotFilterClear` |
 | 日付のグループ化 | `pivotFieldSetDateGroup`、`pivotFieldClearDateGroup` |
 
+### 定義を読み戻す
+
+ピボットの定義は、セッション内で作ったものでもファイルから読み込んだものでも読み戻せます。ゲッターはいずれも `(sheet, pivotIdx)` を受け取り、Python は snake_case で `pivot_index` を使います。
+
+| 読み取る内容 | WASM / Native Node | Python |
+| --- | --- | --- |
+| シート上の数、名前、キャッシュ ID | `pivotCount`、`pivotName`、`pivotCacheId` | `pivot_count`、`pivot_name`、`pivot_cache_id` |
+| 総計 | `pivotGetGrandTotals`（`rows`、`cols`） | `pivot_grand_totals`（タプル） |
+| テーブルスタイル | `pivotGetStyleInfo` | `pivot_style_info` |
+| 軸の順序 | `pivotRowFieldOrder`、`pivotColFieldOrder` | `pivot_row_field_order`、`pivot_col_field_order` |
+| フィールドとアイテム | `pivotFieldCount`、`pivotFieldAt`、`pivotFieldItemCount`、`pivotFieldItemAt` | `pivot_field_count`、`pivot_field_at`、`pivot_field_item_count`、`pivot_field_item_at` |
+| データフィールド | `pivotDataFieldCount`、`pivotDataFieldAt` | `pivot_data_field_count`、`pivot_data_field_at` |
+
+`pivotFieldAt()` は、フィールドの軸（どの軸にも置かれていなければ `-1`）、並べ替え、表示形式、日付グループ、小計を返します。`defaultSubtotal` / `default_subtotal` は自動小計を表示するかどうかで、カスタムの集計関数があるときは常に `false` です。`subtotalFns` / `subtotal_fns` はそれらの関数を `PivotAggregation` の昇順で並べたものです。`pivotDataFieldAt()` は `PivotDataFieldSpec` と同じメンバーを返し、未設定の `showAsBaseField` / `showAsBaseItem` は `-1` です。
+
+`pivotSetStyleInfo()` / `pivot_set_style_info()` は、テーブルスタイル名と、行見出し・列見出し・縞模様（行）・縞模様（列）・最後の列の各トグルを設定します。省略したフラグは `false` です。新しいピボットは、行見出し・列見出し・最後の列をオンにした `PivotStyleLight16` で始まります。定義にスタイル要素がない場合、`pivotGetStyleInfo()` は `present: false` を返します。
+
+名前を指定せずに追加または置換したデータフィールドには、プロファイルのピボット用語から名前が付きます。英語のプロファイルでは `Sum of Sales`、`ja_JP` では `合計 / Sales` です。
+
 `pivotFieldSetSort()` / `pivot_field_set_sort()` / `fm_workbook_pivot_field_set_sort` は `PivotSortOrder` を受け取ります。`Descending`（`0`）、`Ascending`（`1`）、`Manual`（`2`）のいずれかで、Python では `PivotSortOrder.DESCENDING` / `ASCENDING` / `MANUAL`、C では `FM_PIVOT_SORT_DESCENDING` / `_ASCENDING` / `_MANUAL` です。それ以外の値は拒否されます。`Manual` はフィールドのアイテムを `pivotFieldAddItem()` で追加した順に保ち、by-field キーは取りません。保存時は `sortType="manual"` になります。それ以外の順序では、by-field キーが空ならラベルで並べ替えます。ラベルで追加したアイテムはキャッシュの共有アイテムのうち同じラベルのものに結び付くため、保存される `<item x>` はキャッシュと一致します。
 
 `pivotFieldAdd()` と `pivotFieldSetAxis()` は、行フィールドと列フィールドの順序をフィールドの配置先に合わせて保ちます。行軸や列軸に追加したフィールドは、順序を別に設定しなくても表示されます。`pivotSetRowFieldOrder()` / `pivotSetColFieldOrder()` は軸のメンバー全体を設定し、リストに含めなかったフィールドは軸から外れ、重複するインデックスは拒否されます。`pivotFieldClear()` は両方の順序を空にします。
 
 `subtotalTop` は Python、Node、WASM のバインディングで、Excel と同じく `true` が既定です。グループの小計はそのグループの見出し行に置かれます。`false` にすると、コンパクト形式とアウトライン形式ではグループをラベルだけの行で始め、ロケールに合わせた表記の「<アイテム> Total」行で閉じます。カスタム小計関数を持つフィールドでは、各小計行に UI ロケールの表記で関数名が付き（例: `East Max`）、行の順序は Excel の固定の関数順に従います。関数が 2 つ以上あるときは、`subtotalTop` の値にかかわらず小計はグループの下に置かれます。
 
-`PivotDataFieldSpec.showAs` / `show_as` は `PercentOf`、`PercentOfRunningTotal`、`RankAscending`、`RankDescending` にも対応します。基準アイテムが必要なモードでは `showAsBaseField` / `show_as_base_field` と `showAsBaseItem` / `show_as_base_item` を指定します。読み込んだ x14 `pivotShowAs` の値と `subtotalHiddenItems` は保存時に保持されます。
+`PivotDataFieldSpec.showAs` / `show_as` は `PercentOf`、`PercentOfRunningTotal`、`RankAscending`、`RankDescending` にも対応します。基準アイテムが必要なモードでは `showAsBaseField` / `show_as_base_field` と `showAsBaseItem` / `show_as_base_item` を指定します。総計を非表示にしている場合、「総計に対する比率」と「インデックス」はテーブル全体の集計値で割ります。読み込んだ x14 `pivotShowAs` の値と `subtotalHiddenItems` は保存時に保持されます。
 
 ::: warning フィルターの設定と往復保存
 `pivotFilterAdd()` で追加したフィルターが `pivotLayout()` と `GETPIVOTDATA` に効くのは、ワークブックのハンドルが生きている間だけです。`save()` はこのフィルターを書き出しません。読み込んだ `<filters>` ブロックは、`valueEqual`、`valueNotEqual`、`valueGreaterThan`、`valueGreaterThanOrEqual`、`valueLessThan`、`valueLessThanOrEqual`、`valueBetween`、`valueNotBetween` の 8 種類すべてを保存時に保持しますが、`pivotFilterCount()` には現れません。API で設定したフィルター状態のうち保存されるのは、アイテムの表示・非表示です。
@@ -265,7 +284,7 @@ for cell in layout.cells:
 
 ### 日付を明示した日数単位でグループ化する
 
-`PivotDateGrouping.Days` / `PivotDateGrouping.DAYS` は Excel の日数間隔による日付グループ化です。以下のコードは、`OrderDate` フィールドを持つ別のピボットを前提にしています。`dateField` には、そのフィールドを追加したときに返されたインデックスを渡します。週専用の粒度はないため、7 日単位なら `intervalDays: 7` / `interval_days=7` を使います。日付グループの呼び出しには `startYear` と `endYear`（年を切り詰める場合以外は `-1`）、日数単位、Excel シリアル値による任意の開始 / 終了範囲を渡します。シリアル値のどちらかを `-1` にすると、フィールドのデータ最小値を開始値、データ最大値に 1 日を加えた値を終了値として自動設定します。ラベルは単位区間の日付範囲になり、明示した範囲より前後の値は `<start` / `>end` と表示されます。単位が 0、または開始値が終了値より後の場合は拒否されます。
+`PivotDateGrouping.Days` / `PivotDateGrouping.DAYS` は Excel の日数間隔による日付グループ化です。以下のコードは、`OrderDate` フィールドを持つ別のピボットを前提にしています。`dateField` には、そのフィールドを追加したときに返されたインデックスを渡します。週専用の粒度はないため、7 日単位なら `intervalDays: 7` / `interval_days=7` を使います。日付グループの呼び出しには `startYear` と `endYear`（年を切り詰める場合以外は `-1`）、日数単位、Excel シリアル値による任意の開始 / 終了範囲を渡します。後ろの 3 つの引数（`intervalDays`、`startSerial`、`endSerial`）は両方の JavaScript パッケージと Python で省略でき、`intervalDays` は `1`、`startSerial` / `endSerial` は `-1` が既定です。シリアル値のどちらかを `-1` にすると、フィールドのデータ最小値を開始値、データ最大値に 1 日を加えた値を終了値として自動設定します。ラベルは単位区間の日付範囲になり、明示した範囲より前後の値は `<start` / `>end` と表示されます。単位が 0、または開始値が終了値より後の場合は拒否されます。
 
 日付フィールドのインデックスには `pivotFieldAdd()` / `pivot_field_add()` の `index` / 戻り値を使います。
 

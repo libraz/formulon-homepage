@@ -19,6 +19,8 @@ A legacy Ctrl+Shift+Enter (CSE) array formula is stored as one formula over a fi
 - Spill ranges are computed from the formula's result shape (scalar, row, column, or 2-D array).
 - A formula that changes shape dirties dependent cells and recomputes their spill anchors.
 - Collisions — when a spill would overwrite a non-empty cell — return `#SPILL!` rather than silently overwriting data.
+- Spill winners and legacy array blocks resolve in a fixed recalc order, so the same workbook gives the same result on every run.
+- A scalar error broadcasts against an array: the error appears in every element rather than being dropped.
 - Dimension mismatches (e.g. mixing a 3-row argument with a 5-row argument under implicit broadcasting) follow Excel's error rules per function family.
 - Bare ranges, arithmetic and comparison operators, and `IF` spill to the shape of their arguments. Blank cells in a bare-range spill become `0`.
 - Scalar functions evaluate range arguments element-wise. Range-returning built-ins use the common spill allocator, so their results follow the same collision and out-of-grid checks.
@@ -31,6 +33,10 @@ A legacy Ctrl+Shift+Enter (CSE) array formula is stored as one formula over a fi
   { label: 'Spill rectangle empty?', note: 'yes → write spill range, store shape on anchor; no → #SPILL! at anchor, no values written' },
   { label: 'Shape changed vs last eval?', note: 'yes → mark dependents dirty in old ∪ new rectangle; no → spill stable' }
 ]" label="Spill evaluation: anchor evaluates, shape computed, collision checked, dependents invalidated on shape change" />
+
+## Array size limit
+
+An array a formula evaluates is capped at 107,374,182 elements, whatever its shape or origin. This is the bound measured on Mac Excel 365: `A:CX+0` (106,954,752 elements) evaluates, while `A:CY+0` and `SEQUENCE(1048576,103)` (108,003,328) give the number `0` as the formula's whole result. The bound is the same under every profile, although Windows Excel abandons smaller arrays. `SUM`, `AVERAGE`, `MIN`, `MAX`, `PRODUCT` and `COUNTA` fold the result of an operation over whole rows or columns without building it, so a large whole-axis aggregate stays within the budget.
 
 ## Functions that spill
 

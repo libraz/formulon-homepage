@@ -49,7 +49,7 @@ Excel セルエラーは `ValueKind.Error`。Status の失敗とは区別され�
 
 リスト取得 API は `ListResult<T>` を返します。これは `status` プロパティを持つ配列そのものです。要素は `result[0]` のように読み取り、`items` や `value` の戻り値で包まれた形式は使いません。`spillInfo()` は `SpillInfo` を返すため、領域フィールドを読む前に `status` を確認してください。
 
-JavaScript バインディングは、C ABI を呼び出す前に引数の型と整数への変換を検証します。プリミティブ型の誤り、`Symbol`、`BigInt`、有限でない値や小数の整数引数、安全な整数でないカーソル、形の違う入れ子レコードは、結果を返さずに `TypeError` または `RangeError` を送出することがあります。型が正しい引数をエンジンが拒否した場合は `Status.ok === false` を返し、ワークブックは変更しません。
+`@libraz/formulon` と `@libraz/formulon-native` は、どちらもすべての位置引数をエンジン呼び出しの前に同じ規則で検査します。必須引数の欠落、型の誤り、オブジェクトが宣言された位置へのプリミティブまたは `null` は `TypeError`、有限でない値、小数、範囲外の整数は `RangeError` を送出します。どちらのパッケージも、欠落した引数を `0`、`""`、`false`、空オブジェクトで補いません。したがって `setNumber(0, 0, 0)`、`setIterative(true)`、`addFont(null)` は例外になります。長さの違う配列や関数でないコールバックなど、メソッドがステータスで報告する不正な引数は、どちらのパッケージでも `kInvalidArgument`（2）を返します。型が正しい呼び出しをエンジンが拒否した場合は `Status.ok === false` を返します。引数の検査でワークブックが変更されることはありません。孤立した UTF-16 サロゲートを含む文字列フィールドは、その位置に U+FFFD を格納して渡すため、エンジンに不正な UTF-8 は届きません。
 
 ## 値の種類
 
@@ -105,7 +105,7 @@ try {
 }
 ```
 
-`delete()` は必ず呼んでください。
+`delete()` は必ず呼んでください。同じワークブックのメソッドが実行中（たとえば spec の getter やコールバックの中）に呼ぶと `TypeError` を送出し、ハンドルは有効なままです。ネイティブパッケージの `dispose()` も同じ規則に従います。
 
 ## コンテナ形式 {#container-format}
 
@@ -311,7 +311,31 @@ try {
 
 `setIterative(enabled, maxIterations, maxChange)` で反復計算の設定を保存し、`getIterative()` で `{ status, enabled, maxIterations, maxChange }` として読み戻します。`maxIterations` は `32767` を上限とし、getter は上限適用後の値を返します。
 
+`setIterativeProgress(callback)` と `setLogSink(sink)` は関数または `null` を受け取ります。それ以外の値は `kInvalidArgument`（2）を返し、登録済みのコールバックは変わりません。反復計算の進捗コールバックの中から `Workbook` のメソッドを呼ぶと、`kGraphRecalcReentrant`（4005）を名指しした `TypeError` を送出し、何も変更しません。
+
+`setCalcMode(mode)` は `CalcMode` を受け取ります。`AutoNoTable` では、`recalcDataTables()` を呼ぶまで `recalc()` はデータテーブルの結果を計算しません。`fullPrecision()`、`calcOnSave()`、`refMode()`、`date1904()` は対応する `<calcPr>` と `<workbookPr>` の設定を読み、それぞれに setter があります。`<calcPr>` のその他の属性は再保存しても保持されます。
+
+`activeSheet()` / `setActiveSheet(sheet)` はアクティブタブを読み書きします。設定すると `tabSelected` も移り、非表示シートは拒否されます。アクティブなシートを非表示にするか削除すると、右隣の次の表示シート、なければ左側で最も近い表示シートがアクティブになります。`setSheetTopLeft()` と `setSheetPaneTopLeft()` はビューと右下ペインのスクロール原点を設定し、`getSheetSelection()` / `setSheetSelection()` は各ペインの選択範囲を扱います。`setSheetSplit(sheet, xTwips, yTwips)` は、固定せずに twips 単位の位置でビューを分割します。分割は固定を置き換え、固定も分割を置き換え、`0, 0` で分割を解除します。ビューに存在しないペインの選択は保存時に捨てられ、選択範囲のどれにも入らないアクティブセルは最初の範囲の左上へ移ります。`getSheetView()` は `showFormulas` と `showOutlineSymbols` を返し、`setSheetShowFormulas()` と `setSheetShowOutlineSymbols()` で設定できます。
+
+`setRowCollapsed()` と `setColumnCollapsed()` は、行・列の上書き設定の getter が返すアウトラインの `collapsed` フラグを設定します。`outlineLevelRow` と `outlineLevelCol` は、保存のたびに最も深いレベルから導出します。7 を超えるアウトラインレベルは `kInvalidArgument` で失敗します。
+
+`addDataTable(sheet, spec)`、`getDataTable(sheet, row, col)`、`removeDataTable(sheet, row, col)` は What-If データテーブル（`<f t="dataTable">`）を扱います。`recalc()` は、入力セルに値を順に代入し、それを読むセルを再計算して入力を元に戻すことで、1 変数（列入力または行入力）と 2 変数のテーブルを埋めます。結果セルへの書き込みは `kPreconditionFailed` で失敗し、テーブルまたはその見出し行・列を横切る行・列の挿入と削除も同様です。結果セルは数式 getter で `=TABLE(row_input,col_input)` を返し、`FORMULATEXT` は `{=TABLE(...)}`、`ISFORMULA` は TRUE を返します。入力セルが指定されていない、入力が結果範囲の内側にある、範囲が別のテーブルと重なる場合、`addDataTable` は `kDataTableInvalid`（8005）を返します。
+
+`listShapes()`、`insertShape()`、`updateShape()`、`removeShape()` は、シートの描画に含まれる `xdr:sp` の図形とテキストボックス、`xdr:cxnSp` のコネクタ、`xdr:grpSp` のグループを扱います。更新は指定したフィールドだけを書き換え、図形の残りの XML は保持します。レコードで表現できない図形は `ShapePaint.Other` または空のフィールドで列挙され、保存してもそのまま通過します。図形は画像と同様に行・列の編集に追従します。
+
+`listSparklineGroups()`、`addSparklineGroup()`、`updateSparklineGroup()`、`setSparklineGroupSparklines()`、`removeSparklineGroup()` は、シートの `x14:sparklineGroups` を扱います。更新しても、`rightToLeft`、`uid`、未知の拡張といったレコード外の属性と子要素は保持されます。
+
+`listSlicers()`、`addSlicer(sheet, table, column, spec)`、`updateSlicer()`、`removeSlicer()` はテーブルスライサーを扱います。追加するとスライサーパーツ、キャッシュ、拡張エントリ、定義名、描画フレームが作られます。スライサーを削除すると、ほかに使うスライサーがなくなった時点でそのキャッシュも削除されます。テーブルやシートの削除、スライサーのフレーム下の行・列の削除では、それに結び付いたスライサーも削除されます。ピボットキャッシュ上のスライサーはそのまま通過し、列挙されません。テーブルスライサーの選択状態はテーブルの AutoFilter が保持します。
+
+`getWorkbookProtection()` / `setWorkbookProtection()` は `<workbookProtection>` を読み書きし、`getProtectedRanges()`、`addProtectedRange()`、`updateProtectedRange()`、`removeProtectedRange()` はシートの `<protectedRange>` を扱います。保護範囲は行・列の編集に追従します。パスワードハッシュはホストが計算した値をそのまま保存し、レコードにない属性は保持します。どちらの保護もセル編集では強制されません。
+
+`tableAt(idx)` は、テーブルのスタイル名とストライプの切り替え、見出し行と集計行の数、各列の集計関数を返します。`setTableColumnTotals(idx, column, totals)` は 1 列の集計関数とラベルを設定し、集計行が表示されている間はそのセルも合わせて書き込みます。`getTableStyle()`、`setTableStyle()`、`removeTableStyle()`、`getTableStyleDefaults()`、`setTableStyleDefaults()` は、カスタムの `<tableStyles>` と既定のテーブル・ピボットテーブルのスタイル名を扱います。`pivotGetStyleInfo()` / `pivotSetStyleInfo()` はピボットテーブルのスタイルを読み書きします。`setDefinedNameAttrs(name, localSheetId, { comment, hidden })` は名前のコメントと非表示フラグを設定します。省略したキーの属性は変わらず、名前の数式を置き換えても両方とも保持されます。
+
+`getCommentVisible()` / `setCommentVisible()` は、従来のメモが表示状態かどうかを読み書きします。メモのボックス、表示状態、コメントパーツの作成者テーブルは再保存しても保持され、ボックスは行・列の編集でメモに追従します。`getCellShowPhonetic()` / `setCellShowPhonetic()` は、セルごとの「ふりがなを表示」フラグを読み書きします。保存ファイルでこのフラグを持つのは定数と空白セルだけで、数式セルには付きません。
+
 `SheetVisibility` は `Visible = 0`、`Hidden = 1`、`VeryHidden = 2` の 3 状態です。`setSheetVisibility(sheet, visibility)` はシートの表示状態全体を設定し、`getSheetView(sheet).view.visibility` で hidden と very-hidden を区別できます。従来の `tabHidden` はどちらの非表示状態でも `1` です。very-hidden を hidden へ降格する場合は `setSheetVisibility()` を使います。`setSheetTabHidden(true)` だけでは降格しません。
+
+`addSheet()` と `renameSheet()` は、空の名前、UTF-16 で 31 単位を超える名前、`: \ / ? * [ ]` を含む名前、アポストロフィで始まるまたは終わる名前、大文字小文字を同一視すると別のシート名と重なる名前を `kInvalidSheetName` で拒否します。`win-*` プロファイル（既定を含む）では、大文字小文字を問わず `History` も拒否し、`mac-*` プロファイルは受け付けます。表示中の唯一のシートを非表示にするか削除すると `kInvalidArgument` で失敗します。`insertRows()`、`deleteRows()`、`insertCols()`、`deleteCols()` は、データテーブル、従来の配列ブロック、ピボットテーブルを横切る場合、またはそれらやテーブルをグリッドの端より先へ押し出す場合に `kPreconditionFailed` で失敗します。
 
 ワークシートの印刷設定は `setSheetPageSetup()`、`setSheetPageMargins()`、`setSheetPrintOptions()`、`setSheetHeaderFooter()`、`setSheetPrintArea()`、`setSheetPrintTitles()`、`addSheetRowBreak()`、`addSheetColBreak()` で作成できます。モデル化していない断片には生の XML を設定するメソッドを使えますが、保存前に入力を検証します。ヘッダー / フッターはデコード済みの Excel セクション文字列を受け取り、文字どおりのアンパサンドは `&&` と書きます。
 

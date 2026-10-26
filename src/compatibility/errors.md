@@ -61,9 +61,23 @@ The panel below reads that set out of the running engine and runs both channels 
 
 ## Binding argument validation
 
-The WASM and Native Node JavaScript bindings validate the arguments that have a strict reader before calling the C ABI. For those entry points, a wrong primitive type or nested field type raises `TypeError`; a non-finite, fractional, or out-of-range integer raises `RangeError`. The checks cover both positional arguments and nested records, and run before a workbook mutation. Positional 64-bit cursor and offset arguments are limited to `Number.MAX_SAFE_INTEGER`; omitted or nullish optional fields keep their declared defaults.
+The WASM and Native Node JavaScript bindings check every positional argument before any engine call, identically on both packages. A missing required argument, a value of the wrong type, and a primitive or `null` where an object is declared raise `TypeError`; a non-finite, fractional, or out-of-range integer raises `RangeError`. Neither package substitutes `0`, `""`, `false`, or an empty object for a missing argument. The checks cover nested records as well and run before a workbook mutation. Positional 64-bit cursor and offset arguments are limited to `Number.MAX_SAFE_INTEGER`; omitted or nullish optional fields keep their declared defaults. A string field holding a lone UTF-16 surrogate is stored with U+FFFD in its place.
+
+A malformed argument that a method reports through its status, such as an array of the wrong length or a callback that is not a function, returns `kInvalidArgument` (2) on both packages. Python raises `ValueError` for an integer that is fractional or out of range, and `Value` raises `ValueError` or `TypeError` when its payload does not match its kind.
 
 Byte inputs such as `loadBytes` and image APIs require a `Uint8Array`. A Node `Buffer` qualifies because it is a `Uint8Array`; a string does not. Nested string fields accept a JavaScript string or a one-byte buffer, including a `Buffer` on Native Node. These binding-input results are separate from the `Status` envelopes and from Excel cell-error values. When an entry point reports a binding-rejected shape through its documented status result, inspect that status before reading the result fields.
+
+## Statuses returned by argument and structure checks
+
+| Status | Returned when |
+| --- | --- |
+| `kInvalidArgument` (2) | An index, count, or outline level (above 7) is out of range, an `xf_index` lies outside the cell-XF table, the only visible sheet would be hidden or removed, or a callback is not a function. |
+| `kPreconditionFailed` (9) | A row or column insert or delete cuts through a data table, a legacy array block, or a PivotTable, or would push one of them or a table past the grid edge; a cell write targets a data table's result range. |
+| `kInvalidSheetName` (5051) | A sheet name is empty, too long, contains a forbidden character, begins or ends with an apostrophe, or collides with another name under case folding; under `win-*` profiles, `History` in any case. |
+| `kIoSheetCorrupt` (5012) | A loaded `.xlsx` or `.xlsb` carries a sheet name that begins or ends with an apostrophe. |
+| `kIoFileTooLarge` (5002) | A size read from a file exceeds its load bound, such as a pivot cache above 2^25 record slots. |
+| `kGraphRecalcReentrant` (4005) | A `Workbook` method is called from its own iterative progress callback; the JS packages surface it as a `TypeError` naming the code. |
+| `kBindingUtf8EncodingError` (7002) | A C ABI text argument is not well-formed UTF-8. |
 
 ## Formula text entry paths
 
@@ -74,6 +88,8 @@ Malformed formula text has different outcomes depending on where it enters the e
 | `setFormula()` / `set_formula()` | Host status `kParserUnexpectedToken` | The existing cell formula and cached value remain unchanged. |
 | Imported workbook containing malformed stored formula text | The stored text is retained; after `recalc()`, the cell evaluates to `#NAME?` | Loading preserves the workbook record so it can be inspected or rewritten. |
 | `evaluateFormulaText()` / `evalFormula()` / `eval_formula()` | A successful evaluation envelope whose value is `#NAME?` | Read-only; no cell or dependency graph is changed. |
+
+A formula that nests more than 65 function calls is refused with the parse diagnostic `NestedFormulaTooDeep`, as Excel refuses it, and the cell keeps its previous formula. Up to 256 grouping parentheses and 1024 unary signs parse and evaluate.
 
 For example, `=SUM(` is rejected by a strict formula setter with `kParserUnexpectedToken`. The same malformed text can be retained when it arrives in an imported file, and an ad-hoc evaluation reports the cell error `#NAME?`; neither case should be converted into a generic host exception. The setter status is a host-side failure because the requested mutation did not happen, while `#NAME?` is a cell value returned by the imported or ad-hoc evaluation path.
 

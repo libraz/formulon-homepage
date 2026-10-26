@@ -71,6 +71,10 @@ Number-format validation follows Excel's section rules: there are at most four s
 
 After truncation, `TIME` limits each hour, minute, and second component to 32767 before day wrapping; a larger component returns `#NUM!`. Non-finite or out-of-range date/time inputs also return `#NUM!`.
 
+### Nesting limits
+
+Formula text follows Excel's entry limits: grouping parentheses nest up to 256 deep (a call's own parentheses do not count), a run of unary signs such as `---1` up to 1024, and function calls up to 65 deep, the outermost call plus 64 nested ones, whatever operators or parentheses sit between them. A formula past any limit is refused whole with `NestedFormulaTooDeep`, as Excel refuses it, rather than being truncated.
+
 ### Qualified built-in calls
 
 Formula entry rejects sheet- or workbook-qualified calls to built-in functions, such as `Sheet1!SUM(...)` or `[0]!LET(...)`. The rejection applies at every entry point, including cells, conditional formats, defined names, and validation formulas. Qualified calls to user-defined functions remain allowed.

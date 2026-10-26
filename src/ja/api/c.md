@@ -73,6 +73,8 @@ int main(void) {
 
 `#DIV/0!` のようなセルレベルの Excel エラーは `FM_VAL_ERROR` という値であり、ステータスの失敗ではありません。非 0 の `fm_status_t` は、不正な入力、無効なハンドル、I/O エラーなどのホスト側の失敗を表します。`fm_last_error_message()` と `fm_last_error_context()` は同じスレッドの次の API 呼び出しで上書きされるため、その前に読み取ってください。
 
+テキスト引数と構造体のテキストフィールドは、整形式の UTF-8 でなければなりません。サロゲートのコードポイント、冗長なエンコード、途中で切れたシーケンスは `kBindingUtf8EncodingError`（7002）を返し、ワークブックは変更されません。UTF-16 のテキストを持つバインディングは、孤立したサロゲートを呼び出しの前に U+FFFD へ置き換えます。インデックス、個数、アウトラインレベルの引数は、何かを変更する前に範囲を検査します。7 を超えるアウトラインレベル、セル XF テーブルの外にある `xf_index`、表示中の唯一のシートの非表示と削除は `kInvalidArgument` を返します。どのバインディングも同じステータスを報告します。データテーブル、従来の配列ブロック、ピボットテーブルを横切る行・列の挿入と削除、またはそれらやテーブルをグリッドの端より先へ押し出す挿入と削除は、データテーブルの結果範囲へのセル書き込みと同様に `kPreconditionFailed` を返します。
+
 1 つのワークブックハンドルは、同時には 1 つの外部呼び出しスレッドから使います。同じハンドルを並行して読み取り、変更、再計算してはいけません。`fm_workbook_recalc_parallel()` は 1 回の呼び出しの内部でワーカースレッドを作る場合がありますが、別々の API 呼び出しを安全にはしません。別々のハンドルは並行して使えます。
 
 ## 主な契約
@@ -87,9 +89,9 @@ int main(void) {
 
 `fm_workbook_paginate()` は、呼び出し側が所有する `fm_pagination_t` のスナップショットを返します。ページ数、宣言された印刷範囲、横方向 / 縦方向の改ページ位置に加えて、用紙サイズと向き、余白、印刷可能な矩形、倍率、ページ順、繰り返す印刷タイトル、物理ページごとのレイアウト、各改ページが手動かどうかを getter で取得できます。宣言された印刷範囲がない場合は範囲を空のまま返し、ページ分割は使用範囲へフォールバックします。結果は `fm_pagination_destroy()` で破棄してください。
 
-公開レコードは固定レイアウトです。現在のヘッダーで `fm_cell_xf` は 128 バイト、`fm_row_layout_t` は 40 バイトです。`fm_locale_facts_t` の末尾には `collation_measured` があり、ほかのロケール情報とは別にテキスト照合の実測値を示します。このフィールドもレコードレイアウトの一部です。公開ヘッダー `formulon_c.h` を正とし、ヘッダーが変わるたびに C クライアントを再ビルドして FFI のレイアウト定義を再生成してください。フィールド順とパディングは ABI の一部です。
+公開レコードは固定レイアウトで、以前のヘッダーに対してコンパイルしたクライアントは再コンパイルが必要です。64 bit ターゲットでは、`fm_sheet_view_t` は 88 バイト、`fm_font_record` は 120、`fm_fill_record` は 128、`fm_cell_xf` は 128、`fm_sheet_format_defaults` は 56、`fm_column_layout_t` と `fm_row_layout_t` はそれぞれ 40 バイトです。`fm_dxf_record` はフォントとフィルのレコードを内包するため、それに合わせて大きくなります。`fm_cf_rule_t` の末尾には `icon_set_icons` / `icon_set_icon_count`、`fm_pivot_field_info_t` の末尾には `default_subtotal` / `subtotal_fns` があります。`fm_locale_facts_t` の末尾には `collation_measured` があり、ほかのロケール情報とは別にテキスト照合の実測値を示します。このフィールドもレコードレイアウトの一部です。公開ヘッダー `formulon_c.h` を正とし、ヘッダーが変わるたびに C クライアントを再ビルドして FFI のレイアウト定義を再生成してください。フィールド順とパディングは ABI の一部です。
 
-`fm_sheet_format_defaults` は 48 バイトの公開レコードで、`default_col_width`、`default_row_height`、`base_col_width`、`has_default_col_width`、`has_default_row_height`、`effective_default_col_width`、`effective_default_row_height` を持ちます。幅は文字単位、高さはポイント単位です。`fm_sheet_get_format_defaults()` は保存された既定値、または組み込みのフォールバック（8.43 文字、`102/7` ポイント）から effective フィールドを埋めます。`fm_sheet_set_format_defaults()` は effective フィールドを無視し、負数・NaN・無限大の既定値を拒否します。
+`fm_sheet_format_defaults` は `default_col_width`、`default_row_height`、`base_col_width`、`has_default_col_width`、`has_default_row_height`、`custom_height`、`zero_height` に続けて `effective_default_col_width` と `effective_default_row_height` を持ちます。列幅は、`<col width>` が持つのと同じ、列のパディングを含む保存幅で、高さはポイント単位です。`fm_sheet_get_format_defaults()` は、保存された既定値、または `base_col_width` と標準フォントから導出した値から effective フィールドを埋めます（Calibri 11・基準幅 8 の保存幅は `9.140625` で、表示は 8.43、行の高さは `102/7` ポイントです）。`fm_sheet_set_format_defaults()` は effective フィールドを無視し、負数・NaN・無限大の既定値を拒否します。
 
 関数メタデータは構造情報で、ロケールに依存しません。Excel の表示名を必要とするホストは、プロファイル単位の関数を使います。
 

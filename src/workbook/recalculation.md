@@ -26,7 +26,8 @@ The recalculation engine keeps state across edits:
 | Workbook clock | An optional local civil-time reading shared by `NOW`, `TODAY`, and pivot relative-period filters |
 | Iterative settings | Iteration enabled / disabled, max iterations, max change for cyclic models |
 | Dynamic-array spill shapes | Per-anchor result shapes so dependents can be re-shaped or invalidated correctly |
-| Calc mode | Excel's automatic / manual setting, kept for round-trip; the engine recalculates only when the host calls `recalc()` or `partialRecalc()`, whatever the mode |
+| Calc mode | Excel's automatic / manual / automatic-except-tables setting, kept for round-trip; the engine recalculates only when the host calls `recalc()` or `partialRecalc()`, whatever the mode. Only `AutoNoTable` changes what `recalc()` computes: it skips [data tables](#what-if-data-tables) |
+| Data tables | What-If `TABLE()` ranges, recomputed by `recalc()` after a pass that had work to do |
 
 <DiagramLayers :layers="[
   { title: 'Edit', nodes: [{ label: 'Edit / set_cell' }, { label: 'Volatile functions', note: 'NOW · RAND · INDIRECT · …' }] },
@@ -42,7 +43,7 @@ That graph can also be read back. `precedents(sheet, row, col, depth)` (the same
 
 ## Full vs partial recalculation
 
-`recalc()` walks every dirty cell in topological order. `partialRecalc()` — available on WASM, Native Node, and Python — recomputes dirty formula cells needed to make the requested viewport current, including their transitive precedents. Dirty cells outside that dependency closure, including dependents of cells just recomputed, remain dirty and keep their previous cached values. A later full recalc or a partial recalc whose closure includes them refreshes them. Pass the output cells you want to display; use `recalc()` to update the whole workbook.
+`recalc()` walks every dirty cell in topological order, and visits cells in a deterministic order, so spill winners and legacy array blocks resolve the same way on every run. `partialRecalc()` — available on WASM, Native Node, and Python — recomputes dirty formula cells needed to make the requested viewport current, including their transitive precedents. Dirty cells outside that dependency closure, including dependents of cells just recomputed, remain dirty and keep their previous cached values. A later full recalc or a partial recalc whose closure includes them refreshes them. Pass the output cells you want to display; use `recalc()` to update the whole workbook.
 
 The viewport bounds are inclusive. For example, if `B1` refers to `A1` and `C1` refers to `B1`, pass `B1:C1` after changing `A1` so both displayed results become current:
 
@@ -91,7 +92,65 @@ Changing iterative-calculation options, the Excel compatibility profile, or the 
 
 ## Calculation settings and file persistence
 
-Calc mode (`calcMode()` / `setCalcMode()`, with `CalcMode.Auto`, `Manual`, or `AutoNoTable`; `calc_mode()` / `set_calc_mode()` in Python) and iterative settings are workbook state while the workbook is open. A host UI can show the mode, but the engine does not act on it. XLSX stores both in `<calcPr>`, but the XLSB writer does not emit calculation settings. Saving an XLSB with manual calculation or iterative calculation enabled adds one `deferredFeatureCount` entry per setting; reopening uses automatic calculation with iteration disabled. See [File formats](/workbook/file-formats) for the other XLSB omissions and passthrough rules.
+Calc mode (`calcMode()` / `setCalcMode()`, with `CalcMode.Auto`, `Manual`, or `AutoNoTable`; `calc_mode()` / `set_calc_mode()` in Python) and iterative settings are workbook state while the workbook is open. A host UI can show the mode, but apart from `AutoNoTable` the engine does not act on it.
+
+The other `<calcPr>` settings have typed accessors too, and every attribute of the element is kept across a resave:
+
+| Setting | WASM / Native Node | Python |
+| --- | --- | --- |
+| Set precision as displayed (`fullPrecision`; metadata only) | `fullPrecision()` / `setFullPrecision(value)` | `full_precision()` / `set_full_precision(value)` |
+| Recalculate before saving (`calcOnSave`, default on) | `calcOnSave()` / `setCalcOnSave(value)` | `calc_on_save()` / `set_calc_on_save(value)` |
+| Reference notation (`refMode`) | `refMode()` / `setRefMode(RefMode.A1 \| RefMode.R1C1)` | `ref_mode()` / `set_ref_mode(mode)` |
+| 1904 date system (`<workbookPr date1904>`) | `date1904()` / `setDate1904(value)` | `date1904()` / `set_date1904(value)` |
+
+The JavaScript getters return `{ status, value }` with `0` / `1` for the flags; Python returns `bool` and `RefMode`. `setDate1904()` switches the date system without converting stored serials, so every date shifts by 1462 days.
+
+XLSX stores these in `<calcPr>` and `<workbookPr>`. The XLSB writer emits them as `BrtCalcProp` and `BrtWbProp`, so manual calculation and iteration settings survive a binary save. See [File formats](/workbook/file-formats) for what XLSB leaves out.
+
+## What-If data tables
+
+A What-If data table (`<f t="dataTable">`) is modelled, not frozen into values. The sheet keeps each table's result range, its orientation and its input cells, and a save writes the formula back on the anchor cell. Substitution values sit in the row above the result range and the column to its left. A one-variable table has a row or a column input cell; a two-variable table has both.
+
+A full `recalc()` fills the result cells by substituting each value into the input cell(s), recalculating the cells that read them, and restoring the inputs. Under `CalcMode.AutoNoTable` it leaves them alone until `recalcDataTables()` (`recalc_data_tables()`), which computes every table on demand whatever the mode. `partialRecalc()` never computes data tables.
+
+::: code-group
+
+```ts [WASM / Native Node]
+const checkStatus = (status: { ok: boolean; message: string }) => {
+  if (!status.ok) throw new Error(status.message)
+}
+// Column input B1 receives the values in A3:A5; B3:B5 holds =B1*2 results.
+checkStatus(wb.setNumber(0, 0, 1, 10)) // B1
+checkStatus(wb.setFormula(0, 1, 1, '=B1*2')) // B2, the formula row
+for (const [i, v] of [1, 2, 3].entries()) checkStatus(wb.setNumber(0, 2 + i, 0, v))
+checkStatus(wb.addDataTable(0, {
+  firstRow: 2, lastRow: 4, firstCol: 1, lastCol: 1,
+  colInput: { row: 0, col: 1 },
+}))
+checkStatus(wb.recalc())
+const found = wb.getDataTable(0, 3, 1)
+console.log(found.dataTable?.twoDimensional) // false
+```
+
+```python [Python]
+wb.set_number(0, 0, 1, 10)  # B1, the column input cell
+wb.set_formula(0, 1, 1, "=B1*2")  # B2, the formula row
+for i, v in enumerate([1, 2, 3]):
+    wb.set_number(0, 2 + i, 0, v)
+wb.add_data_table(0, 2, 1, 4, 1, col_input=(0, 1))  # first_row, first_col, last_row, last_col
+wb.recalc()
+print(wb.get_data_table(0, 3, 1).two_dimensional)  # False
+```
+
+:::
+
+- `addDataTable(sheet, spec)` / `add_data_table(...)` creates a table over the result range; the range needs a row above and a column to its left, and the inputs must lie outside it. Otherwise it fails with `kDataTableInvalid` (8005), as it does for a range that overlaps another table. The result cells read `0` until the next recalc.
+- `getDataTable(sheet, row, col)` / `get_data_table(...)` reads the table whose result range contains the cell (`dataTable` is `null`, Python returns `None`, when none does). `removeDataTable(...)` removes it and blanks its result cells.
+- The result range refuses cell writes with `kPreconditionFailed` ("cannot change part of a data table"). Row and column inserts and deletes that cut into a table, either its result range or the header row and column, are refused with the same status; deleting the whole block removes the table. Edits outside shift the range and its input cells.
+- Deleting an input cell marks that input `deleted`, and the table evaluates to `#REF!`.
+- Result cells report `=TABLE(row_input,col_input)` through the formula getters. `FORMULATEXT` returns `{=TABLE(...)}` as it does for an array formula, and `ISFORMULA` is `TRUE`.
+
+XLSX and XLSB both round-trip data tables; XLSB writes them as `BrtTable`.
 
 ## Recovering a missing-sheet reference
 
@@ -127,7 +186,7 @@ print(wb.get_iterative())
 
 :::
 
-`setIterativeProgress()` registers a callback that fires after every sweep over the cyclic cells; the limits themselves are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only. Python's `set_iterative()` takes the same three arguments, and `set_iterative_enabled(enabled)` toggles iteration while keeping the stored limits.
+`setIterativeProgress()` registers a callback that fires after every sweep over the cyclic cells; the limits themselves are the second and third arguments to `setIterative()`. The callback is WASM- and Native-Node-only. It runs while the solver holds the workbook mid-sweep, so it must not call any method on that workbook: such a call, a read included, throws `TypeError` naming `kGraphRecalcReentrant` (4005) and changes nothing. Python's `set_iterative()` takes the same three arguments, and `set_iterative_enabled(enabled)` toggles iteration while keeping the stored limits.
 
 `getIterative()` is available on WASM and Native Node and returns `{ status, enabled, maxIterations, maxChange }`. Python exposes `get_iterative()` as an `IterativeSettings` record with `enabled`, `max_iterations`, and `max_change`; failures raise `FormulonError`. `maxIterations` is capped at `32767` when it is set, and the getter reports the capped value; the cap also applies when a loaded workbook declares a larger `iterateCount`. Read the settings after a write when a host UI must show the value the engine will use.
 

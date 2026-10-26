@@ -101,6 +101,8 @@ For a fill, use `pattern: 1` (solid) and give `bgArgb` the colour as well as `fg
 
 The `cellIs` operator `op` counts `0` less than, `1` less than or equal, `2` equal, `3` not equal, `4` greater than or equal, `5` greater than, `6` between, `7` not between. This order differs from the data-validation `op`. A between rule accepts its bounds in either order.
 
+A `cellIs` rule compares with worksheet semantics: a blank cell is `0` against a number and `""` against text, and values order as numbers, then text, then booleans. Error cells match a does-not-contain text rule and do not match a no-blanks rule.
+
 `timePeriod` counts `0` today, `1` yesterday, `2` tomorrow, `3` last 7 days, `4` this week, `5` last week, `6` next week, `7` this month, `8` last month, `9` next month.
 
 Formula text is stored without a leading `=`, and `formula1` / `formula2` and formula-typed thresholds read back in that form (`$B1>100`, not `=$B1>100`). A formula that starts with `==` is rejected. An expression is written for the top-left cell of the bounding box of all the rule's ranges and shifts for the others, so `formula1: '$B1>100'` over `A1:C10` tests column B of each row. A non-empty formula, or a formula-typed threshold, that does not parse is rejected with `kParserUnexpectedToken` (1000). Text, blanks, errors, and time-period rules added without a formula get the formula Excel stores for them, anchored at the same cell, and `formula1` reads it back. A contains rule matches like `SEARCH`, wildcards included, and begins-with and ends-with rules compare under the active profile's [collation](/compatibility/text-collation). To check what a predicate returns at one cell without adding a rule, use `evaluateConditionalFormula()` (see [Ad-hoc formula evaluation](/workbook/operations#ad-hoc-formula-evaluation)).
@@ -232,6 +234,8 @@ A **data bar** takes `min`, `max`, and `fill` (Python: `minimum`, `maximum`, `fi
 
 An **icon set** takes `name`, the icon set ordinal, and exactly N−1 `thresholds` between the buckets of an N-icon set; `Three_Arrows` (`0`) takes two. Adding a rule with any other count is rejected with `kInvalidArgument`, and evaluation ignores thresholds past N−1 in a loaded rule. The ordinals follow the OOXML names: `0` 3Arrows, `1` 3ArrowsGray, `2` 3Flags, `3` 3TrafficLights1, `4` 3TrafficLights2, `5` 3Signs, `6` 3Symbols, `7` 3Symbols2, `8` 4Arrows, `9` 4ArrowsGray, `10` 4RedToBlack, `11` 4Rating, `12` 4TrafficLights, `13` 5Arrows, `14` 5ArrowsGray, `15` 5Rating, `16` 5Quarters. `floor` is the lower bound of the lowest bucket and defaults to `percent 0`; a value below it gets no icon and no match. `iconIndex` counts from `0` for the lowest bucket, and `reverse` flips it. The `percent` flag is kept for round-trip only; each threshold's own `type` decides how it is read.
 
+A set can draw its own icons instead of the ones its `name` implies. Give `icons`, one entry per level (the set's icon count), each naming the set the icon comes from by its OOXML spelling (`"3Arrows"`, `"3Triangles"`, `"5Boxes"`, or `"NoIcons"` for a level that draws nothing) and its zero-based `iconId` within that set: `{ iconSet: '3Triangles', iconId: 0 }` in JavaScript, `CfIcon("3Triangles", 0)` in Python. Omit `icons` for the set's own icons. Evaluation still buckets against `name`, so `iconIndex` selects the level and the host looks up that level's entry. Custom icons are saved in the rule's `x14` extension, and a rule Excel stores only there loads as one rule.
+
 ## Read back and remove rules
 
 `getConditionalFormats(sheet)` / `get_conditional_formats(sheet)` returns every rule on the sheet in one flattened list, in priority order. Python also has `cf_count()` and `get_conditional_format_at()`. `addConditionalFormat()` returns the new rule's position in that list. `removeConditionalFormatAt(sheet, index)` removes one rule, and `clearConditionalFormats(sheet)` removes all of them. Adding or removing a rule renumbers the list, so read it again before using an index.
@@ -240,7 +244,7 @@ In JavaScript, a rule read back can be passed to `addConditionalFormat()` unchan
 
 ## Saving and loading
 
-Rules are saved in both `.xlsx` and `.xlsb`, with the differential formats they use, data-bar `x14` settings, icon-set floors, and the theme or indexed colours of a loaded rule. A rule edited after load is written from the model. Inserting or deleting rows and columns moves rule ranges and formulas.
+Rules are saved in both `.xlsx` and `.xlsb`, with the differential formats they use, data-bar `x14` settings, icon-set floors and custom icons, and the theme or indexed colours of a loaded rule. A rule edited after load is written from the model. Inserting or deleting rows and columns moves rule ranges and formulas.
 
 ::: code-group
 

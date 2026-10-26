@@ -33,6 +33,12 @@ with Workbook.create_default() as wb:
 
 :::
 
+`addSheet` と `renameSheet` は、空の名前、31 UTF-16 単位を超える名前、`: \ / ? * [ ]` のいずれかを含む名前、先頭または末尾がアポストロフィの名前、他のシートと大文字小文字を区別せず重複する名前を拒否し、いずれも `kInvalidSheetName` を返します。既定を含む `win-*` の Excel プロファイルでは、大文字小文字を問わず `History` も拒否します。Mac プロファイルは Mac 版 Excel と同じく受け付けます。先頭または末尾にアポストロフィがある名前を持つ `.xlsx` / `.xlsb` ファイルは、Excel が開けないため `kIoSheetCorrupt` で読み込みに失敗します。
+
+`activeSheet()` はワークブックが開くシートを `{ status, index }` で返し、`setActiveSheet(sheet)` で変更します。Python では `active_sheet()` と `set_active_sheet(index)` です。この番号はシートの挿入、削除、移動に追随し、設定すると `tabSelected` もそのシートへ移ります。非表示または完全非表示のシートは `kInvalidArgument` で拒否されます。アクティブなシートを非表示にするか削除すると、右隣の表示中のシートが、なければ左側で最も近い表示中のシートがアクティブになります。表示中の唯一のシートを非表示にするか削除する操作は `kInvalidArgument` で失敗し、ワークブックは変更されません。
+
+Excel プロファイルから作成したワークブックに追加したシートは、最初のシートの行メトリクス、ページ余白、`phoneticPr` を引き継ぎます。これらは作成時点で固定されるため、後からプロファイルを変更（`setExcelProfileId()` / `set_excel_profile_id()`）しても、追加するシートが受け取る内容は変わりません。プレーンなワークブックと読み込んだワークブックは、何も引き継がないシートを追加します。
+
 ## セル
 
 種類ごとに値を設定し、再計算のステータスを確認してからキャッシュ済みの結果を読み出します。各例は、そのコードブロック内でワークブックのライフサイクルを完結させています。
@@ -133,6 +139,8 @@ wb.delete_cols(0, 3, 1)  # sheet, start column, count
 
 挿入 / 削除範囲とともに移動する参照は、`$` で固定した参照を含めてシフトされます。これは数式をコピーするときの相対参照の動きとは異なる、構造編集による書き換えです。残る範囲は必要に応じて縮小・拡張されます。削除された領域に入ってしまった参照はシフト先がないため、繰り上がってきた別のセルを指すのではなく `#REF!` になります。挿入した行や列がセル単位の書式を引き継ぐと、書式だけを持つセルが作られるため、`cellCount` が増えることがあります。
 
+データテーブル、レガシー配列ブロック、ピボットテーブルを分断する行・列の挿入 / 削除、またはそれらやテーブルをグリッドの端より先へ押し出す挿入 / 削除は、Excel と同じく `kPreconditionFailed` で拒否され、ワークブックは変更されません。ブロック全体を削除する場合は、ブロックごと削除されます。
+
 下のパネルでは、これらの呼び出しを実際のシートに対して実行できます。セルを選ぶと対象の行 / 列がそれに追随し、数式の一覧は操作の前後にワークブックから読み直しています。書き換えられた数式も、壊れた数式も、エンジンが保持しているテキストそのものです。
 
 <StructureDemo />
@@ -180,9 +188,11 @@ print(wb.get_value(0, 0, 1).to_python())  # 66.0
 :::
 
 - `setDefinedNameScoped()` の第 3 引数は、ワークブック全体なら `-1`、シートローカルなら 0 始まりのシート番号です。名前の数式は先頭の `=` なしで保存され、読み戻しも同じ形です。`==` で始まる数式は `kParserUnexpectedToken` で拒否されます。数式に空文字列を渡すと名前を削除します。`definedNameCount()` / `definedNameAt(i)` は名前を `localSheetId` 付きで列挙します。Python では `iter_defined_names()` を使います。
+- `setDefinedNameAttrs(name, localSheetId, { comment, hidden })` は名前のコメントと非表示フラグを設定します。省略したキーは変更されず、存在しない名前は `kInvalidArgument` で失敗します。Python では `set_defined_name_attrs(name, local_sheet_id, comment=..., hidden=...)` です。名前の数式を置き換えても、どちらの属性も保持されます。
 - `getMerges()` はシート上の結合をすべて返します。`removeMerge(range)` は範囲と重なる結合をすべて削除し、`removeMergeAt(i)` は番号で 1 つ、`clearMerges()` はすべてを削除します。
 - ハイパーリンクは、外部リンクなら `target` に URL を渡し、ブック内のリンクなら `target` を空にして `location` に A1 形式の移動先を渡します。`getHyperlinks()` で読み出し、`removeHyperlink(sheet, row, col)`、`removeHyperlinkAt()`、`clearHyperlinks()` で削除します。
-- `setRowHidden()` / `setColumnHidden()` と `setRowOutline()` / `setColumnOutline()`（レベルは 0〜255 に丸めます）が変えるのはレイアウトだけです。通常の数式は上の `SUM` のように非表示行も読みます。非表示行を除くのは `SUBTOTAL` の 101〜111 です。
+- `setRowHidden()` / `setColumnHidden()` と `setRowOutline()` / `setColumnOutline()` が変えるのはレイアウトだけです。アウトラインレベルは Excel が保存できる最大の 7 までの 0〜7 で、それより大きい値は `kInvalidArgument` で失敗します。通常の数式は上の `SUM` のように非表示行も読みます。非表示行を除くのは `SUBTOTAL` の 101〜111 です。
+- `setRowCollapsed()` / `setColumnCollapsed()`（Python は `set_row_collapsed()` / `set_column_collapsed()`）は、アウトライングループを要約する行または列に `collapsed` フラグを設定し、行・列の上書きを返すゲッターもこの値を報告します。`<sheetFormatPr outlineLevelRow outlineLevelCol>` は保存のたびに（XLSX も XLSB も）最も深い行・列のレベルから導出されるため、Excel ではアウトラインの記号が表示されます。
 - `getSheetProtection()` / `setSheetProtection()` は `<sheetProtection>` のフラグをまとめて読み書きします。`enabled: 0` を設定すると、保存時に保護を外します。エンジンはフラグを保持するだけで、ロックは強制しません。
 
 Python では各メソッドの snake_case 名を使います。
@@ -201,9 +211,23 @@ WASM と Native Node の `setCellStyle(record)` は `name`、`xfId`、`builtinId
 
 ふりがなは `getCellPhoneticRuns()` / `setCellPhoneticRuns()` で UTF-16 のテキスト範囲として順序付きで取得・設定できます。`getCellPhoneticProperties()` / `setCellPhoneticProperties()` は、ルビのフォント、かなの形式、配置を読みと表示内容から独立して扱います。セルの値を書き換えると、読みとプロパティの両方が消えます。
 
+### ワークブックの設定と保護
+
+`<calcPr>` の設定には型付きのアクセサがあります。`fullPrecision()` / `setFullPrecision()`（false は「表示桁数で計算」）、`calcOnSave()` / `setCalcOnSave()`、`refMode()` / `setRefMode()`（`RefMode.A1` または `RefMode.R1C1`）です。これらはワークブックの状態を記録するだけで、評価は変わりません。その他の `<calcPr>` 属性は再保存でも保持されます。`date1904()` / `setDate1904()` は日付システムを読み取り、切り替えます。切り替えても保存済みのシリアル値は変換されないため、すべての日付が 1462 日ずれます。Python では `full_precision()`、`calc_on_save()`、`ref_mode()`、`date1904()` と、対応する `set_` メソッドを使います。
+
+`getWorkbookProtection()` / `setWorkbookProtection(protection)` は `<workbookProtection>` を読み取り、置き換えます。対象は `lockStructure`、`lockWindows`、`lockRevision`、従来形式のパスワードハッシュ、`workbook*` と `revisions*` のアルゴリズム・ハッシュ・ソルト・スピン回数です。ハッシュはホストが計算した値のまま保存され、エンジンはロックを強制せず、レコードがモデル化していない属性は保持されます。すべて空のレコードを渡すと要素を削除します。Python では `WorkbookProtection` を使う `get_workbook_protection()` / `set_workbook_protection()` です。
+
+シートの `<protectedRange>` は `getProtectedRanges(sheet)` で列挙し、`addProtectedRange`、`updateProtectedRange(sheet, index, range)`、`removeProtectedRange(sheet, index)` で管理します。各エントリは `name`（空でなく、シート内で一意）、`"B2:C3 E5"` のような A1 形式の `sqref` リスト、パスワードハッシュ、アルゴリズム、ソルト、スピン回数、セキュリティ記述子のフィールドを持ちます。範囲は行・列の編集に追随して移動します。Python では `get_protected_ranges()`、`add_protected_range()`、`update_protected_range()`、`remove_protected_range()` です。
+
 ### テーブルと AutoFilter
 
-WASM と Python はワークシートテーブルを作成できます。WASM は `createTable()` / `updateTable()` / `removeTable()`、Python は `table_create()` / `table_update()` / `table_remove()` を使います。テーブルの `columns` は `ref` の列幅と一致させ、`headerRow` を有効にする場合も呼び出し側が見出しセルを書き込みます。部分更新では省略したメタデータが保持され、既存テーブルの AutoFilter は `ref` だけを書き換えて追従します。Native Node はテーブルの列挙には対応しますが、テーブルの作成・更新・削除は公開していません。
+WASM、Native Node、Python はワークシートテーブルを作成できます。JavaScript は `createTable()` / `updateTable()` / `removeTable()`、Python は `table_create()` / `table_update()` / `table_remove()` を使います。テーブルの `columns` は `ref` の列幅と一致させ、`headerRow` を有効にする場合も呼び出し側が見出しセルを書き込みます。部分更新では省略したメタデータが保持され、既存テーブルの AutoFilter は `ref` だけを書き換えて追従します。
+
+`tableAt(idx)` は、テーブルの `<tableStyleInfo>`（`styleName`、`showFirstColumn`、`showLastColumn`、`showRowStripes`、`showColumnStripes`。要素がない場合は `hasStyleInfo` が false）、見出し行と集計行の数、各列の集計行の関数・ラベル・数式を読み取ります。Python の `iter_tables()` も同じフィールドを返します。`updateTable()` はスタイルと切り替え（`styleName` を空にするとスタイルを削除）、および `headerRow` / `totalsRow` フラグを変更します。Python には `table_set_style_info()` もあります。`setTableColumnTotals(idx, column, { function, label, formula })`（Python は `table_set_column_totals()`）は 1 列の集計行の関数を設定し、`'custom'` では `formula` が必須です。集計行が表示されている間は、その列の集計セルが設定に追随します。組み込み関数なら `SUBTOTAL(109,Table[Column])` などの 1xx コード、カスタムなら指定した数式、それ以外ならラベルのテキストです。`totalsRow` を有効にすると、全列の集計セルを書き込みます。
+
+`updateTable()` に `name` を渡すと（Python は `table_rename()`、C は `fm_workbook_table_rename`）、テーブルの名前と表示名を変更し、旧名を使う構造化参照を、セルの数式、定義名、条件付き書式、入力規則、計算列と集計行の数式、グラフ系列の中で書き換えます。そのテーブルを元にしたピボットキャッシュも追随します。参照としてテーブル名だけを書いた式は書き換えず、更新は全か無かで適用されます。
+
+ユーザー定義のテーブルスタイルとピボットテーブルスタイルは、`tableStyleCount()` / `getTableStyle(index)` で列挙し、`setTableStyle(style)` で名前を指定して追加または置換し、`removeTableStyle(name)` で削除します。Python は `table_style_count()`、`get_table_style()`、`set_table_style()`、`remove_table_style()` です。スタイルは、名前、使用できる対象を示す `table` / `pivot` フラグ、書式を付けた領域ごとの要素（`wholeTable`、`headerRow`、`firstRowStripe` など）で構成され、各要素は `dxfId` で差分書式を指します。名前は組み込みスタイル名にできず、同じ種類の要素は 1 つまでです。`getTableStyleDefaults()` / `setTableStyleDefaults({ tableStyle, pivotStyle })` はワークブックの既定のテーブルスタイル名とピボットテーブルスタイル名を読み書きし、空文字列を渡すとその指定を削除します。
 
 ワークシート単位の AutoFilter XML は、完全な `<autoFilter>` 要素を不透明な値として扱えます。WASM は `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()`、Python は `get_auto_filter_xml()` / `set_auto_filter_xml()` を公開します。フィルター条件、並べ替え状態、拡張ペイロードはそのまま保持されます。空の値を渡すと AutoFilter を削除し、空でない値は完全な `<autoFilter>` 要素である必要があります。
 

@@ -192,6 +192,28 @@ Python にはスカラーの `evaluate_formula_text()` がありません。`eva
 
 `get_iterative()` は `IterativeSettings(enabled, max_iterations, max_change)` を返します。エンジンは `max_iterations` を `32767` までに制限し、制限後の値を返します。`set_iterative_enabled(enabled)` は保存済みの上限と閾値を保ったまま反復計算を切り替え、`add_batch()` はフォント、塗りつぶし、罫線、表示形式、XF を 1 回の呼び出しで登録します。
 
+`set_calc_mode(mode)` は `CalcMode` を受け取ります。`AUTO_NO_TABLE` では、`recalc_data_tables()` を呼ぶまで `recalc()` はデータテーブルの結果を計算しません。`full_precision()`、`calc_on_save()`、`ref_mode()`、`date1904()` は対応する `<calcPr>` と `<workbookPr>` の設定を読み、それぞれに `set_` 版があります。`<calcPr>` のその他の属性は再保存しても保持されます。
+
+`active_sheet()` / `set_active_sheet(sheet)` はアクティブタブを読み書きします。設定すると `tabSelected` も移り、非表示シートは拒否されます。アクティブなシートを非表示にするか削除すると、右隣の次の表示シート、なければ左側で最も近い表示シートがアクティブになります。`set_sheet_top_left()` と `set_sheet_pane_top_left()` はビューと右下ペインのスクロール原点を設定し、`get_sheet_selection()` / `set_sheet_selection()` は各ペインの選択範囲を扱います。`set_sheet_split(sheet, x_twips, y_twips)` は、固定せずに twips 単位の位置でビューを分割します。分割は固定を置き換え、固定も分割を置き換え、`0, 0` で分割を解除します。ビューに存在しないペインの選択は保存時に捨てられ、選択範囲のどれにも入らないアクティブセルは最初の範囲の左上へ移ります。`get_sheet_view()` は `show_formulas` と `show_outline_symbols` を返し、`set_sheet_show_formulas()` と `set_sheet_show_outline_symbols()` で設定できます。
+
+`set_row_collapsed()` と `set_column_collapsed()` は、行・列の上書き設定の getter が返すアウトラインの `collapsed` フラグを設定します。`outlineLevelRow` と `outlineLevelCol` は、保存のたびに最も深いレベルから導出します。7 を超えるアウトラインレベルは `FormulonError` を送出します。
+
+`add_data_table()`、`get_data_table(sheet, row, col)`、`remove_data_table(sheet, row, col)` は What-If データテーブル（`<f t="dataTable">`）を扱います。`recalc()` は、入力セルに値を順に代入し、それを読むセルを再計算して入力を元に戻すことで、1 変数（列入力または行入力）と 2 変数のテーブルを埋めます。結果セルへの書き込みは `kPreconditionFailed` の `FormulonError` になり、テーブルまたはその見出し行・列を横切る行・列の挿入と削除も同様です。結果セルは数式 getter で `=TABLE(row_input,col_input)` を返し、`FORMULATEXT` は `{=TABLE(...)}`、`ISFORMULA` は TRUE を返します。
+
+`list_shapes()`、`insert_shape()`、`update_shape()`、`remove_shape()` は、シートの描画に含まれる `xdr:sp` の図形とテキストボックス、`xdr:cxnSp` のコネクタ、`xdr:grpSp` のグループを扱います。更新は指定したフィールドだけを書き換え、図形の残りの XML は保持します。レコードで表現できない図形は `ShapePaint.OTHER` または空のフィールドで列挙され、保存してもそのまま通過します。図形は画像と同様に行・列の編集に追従します。
+
+`list_sparkline_groups()`、`add_sparkline_group()`、`update_sparkline_group()`、`set_sparkline_group_sparklines()`、`remove_sparkline_group()` は、シートの `x14:sparklineGroups` を扱います。更新しても、`rightToLeft`、`uid`、未知の拡張といったレコード外の属性と子要素は保持されます。
+
+`list_slicers()`、`add_slicer()`、`update_slicer()`、`remove_slicer()` はテーブルスライサーを扱います。追加するとスライサーパーツ、キャッシュ、拡張エントリ、定義名、描画フレームが作られます。スライサーを削除すると、ほかに使うスライサーがなくなった時点でそのキャッシュも削除されます。テーブルやシートの削除、スライサーのフレーム下の行・列の削除では、それに結び付いたスライサーも削除されます。ピボットキャッシュ上のスライサーはそのまま通過し、列挙されません。テーブルスライサーの選択状態はテーブルの AutoFilter が保持します。
+
+`get_workbook_protection()` / `set_workbook_protection()` は `<workbookProtection>` を読み書きし、`get_protected_ranges()`、`add_protected_range()`、`update_protected_range()`、`remove_protected_range()` はシートの `<protectedRange>` を扱います。保護範囲は行・列の編集に追従します。パスワードハッシュはホストが計算した値をそのまま保存し、レコードにない属性は保持します。どちらの保護もセル編集では強制されません。
+
+`table_rename(index, name, display_name=None)` はテーブルの名前を変更し、セル、定義名、条件付き書式、入力規則、計算列と集計行の数式、グラフ系列にある構造化参照を書き換えます。そのテーブルを元にしたピボットキャッシュも追従します。`table_set_style_info()` はスタイル名と、最初の列・最後の列・行ストライプ・列ストライプの切り替えを設定し、`table_set_column_totals()` は 1 列の集計関数、ラベル、数式を設定します。集計行をオンにすると、各列の集計セルが書き込まれます。`get_table_style()`、`set_table_style()`、`remove_table_style()`、`table_style_defaults()`、`set_table_style_defaults()` は、カスタムの `<tableStyles>` と既定のテーブル・ピボットテーブルのスタイル名を扱い、`pivot_style_info()` / `pivot_set_style_info()` はピボットテーブルのスタイルを読み書きします。`set_defined_name_attrs(name, local_sheet_id, ...)` は名前のコメントと非表示フラグを設定し、名前の数式を置き換えても両方とも保持されます。
+
+`get_comment_visible()` / `set_comment_visible()` は、従来のメモが表示状態かどうかを読み書きします。メモのボックス、表示状態、コメントパーツの作成者テーブルは再保存しても保持され、ボックスは行・列の編集でメモに追従します。`get_show_phonetic()` / `set_show_phonetic()` は、セルごとの「ふりがなを表示」フラグを読み書きします。保存ファイルでこのフラグを持つのは定数と空白セルだけで、数式セルには付きません。
+
+`add_sheet()` と `rename_sheet()` は、空の名前、UTF-16 で 31 単位を超える名前、`: \ / ? * [ ]` を含む名前、アポストロフィで始まるまたは終わる名前、大文字小文字を同一視すると別のシート名と重なる名前を `kInvalidSheetName` の `FormulonError` で拒否します。`win-*` プロファイル（既定を含む）では、大文字小文字を問わず `History` も拒否し、`mac-*` プロファイルは受け付けます。表示中の唯一のシートを非表示にするか削除すると `FormulonError` を送出し、データテーブル、従来の配列ブロック、ピボットテーブルを横切る行・列の挿入と削除、またはそれらやテーブルをグリッドの端より先へ押し出す挿入も同様です。
+
 `set_sheet_visibility()` は `SheetVisibility.VISIBLE`、`HIDDEN`、`VERY_HIDDEN` を受け取り、`get_sheet_view()` は `tab_hidden` に加えて解決済みの 3 状態を返します。`set_range_xf_index()` はセル書式（XF）インデックスを両端を含む矩形へ適用し、存在しないセルを書式付きの空セルとして作成します。
 
 `table_create()` の `column_names` は `ref` の列数と一致させます。見出しセルは呼び出し側が書き込みます。`table_update()` は `None` を渡した項目を変更せず、既存テーブルの AutoFilter は範囲を変えても条件と拡張を保ちます。`get_auto_filter_xml()` / `set_auto_filter_xml()` はシートの AutoFilter を `<autoFilter>` の XML 断片のまま読み書きし、空文字列を渡すと削除します。行や列を挿入・削除すると、AutoFilter の `ref` と、モデル化した条件・並べ替えのオフセットもセルと一緒に移動します。解析しないワークシート XML はバイト列のまま保持します。
@@ -276,11 +298,13 @@ elif value.kind is ValueKind.ERROR:
     print(formulon.error_display_name(value.error_code))
 ```
 
+`Value` は構築時にペイロードを検証します。`kind` は `ValueKind` に変換され、その種類が取らないペイロードや欠けたペイロードは `ValueError`、型の違うペイロードは `TypeError` になります。そのため `Value(ValueKind.NUMBER)` や `Value(ValueKind.BLANK, text="a")` は失敗し、`bool` は数値として受け付けません。
+
 Python の `Value` が持つのは `error_code` だけで、`error_text` というフィールドはありません。`formulon.error_display_name(value.error_code)` で `#DIV/0!` や `#VALUE!` の表示文字列を得られます。
 
 ## エラー処理 {#error-handling}
 
-`FormulonError` はホスト側の失敗を表します。不正なバイト列、範囲外のインデックス、`set_formula()` に渡した不正なテキスト、`close()` 後の呼び出し、エンジン内部の失敗が該当します。例外は `status`（数値の `fm_status_t`）、`status_name`（`kParserUnexpectedToken` など）、`message`、`context` を持ちます。負のシート番号のように C ABI の整数の幅に収まらない引数は、エンジンを呼ぶ前に `ValueError` を送出します。Excel のセルエラーは例外ではなく値です。
+`FormulonError` はホスト側の失敗を表します。不正なバイト列、範囲外のインデックス、`set_formula()` に渡した不正なテキスト、`close()` 後の呼び出し、エンジン内部の失敗が該当します。例外は `status`（数値の `fm_status_t`）、`status_name`（`kParserUnexpectedToken` など）、`message`、`context` を持ちます。小数であったり、負のシート番号のように C ABI の整数の幅に収まらなかったりする整数引数は、エンジンを呼ぶ前に `ValueError` を送出します。パックされた整数引数も同じ方法で範囲を検査します。Excel のセルエラーは例外ではなく値です。
 
 ```python
 import formulon

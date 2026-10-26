@@ -33,6 +33,12 @@ with Workbook.create_default() as wb:
 
 :::
 
+`addSheet` and `renameSheet` refuse a name that is empty, longer than 31 UTF-16 units, contains one of `: \ / ? * [ ]`, begins or ends with an apostrophe, or collides case-insensitively with another sheet; all report `kInvalidSheetName`. The `win-*` Excel profiles, including the default, also refuse `History` in any case; the Mac profiles accept it, as Mac Excel does. An `.xlsx` or `.xlsb` file that carries a name with a leading or trailing apostrophe fails to load with `kIoSheetCorrupt`, because Excel refuses to open it.
+
+`activeSheet()` returns `{ status, index }` for the sheet the workbook opens on, and `setActiveSheet(sheet)` changes it; Python uses `active_sheet()` and `set_active_sheet(index)`. The index follows sheet inserts, removals, and moves, and setting it also moves `tabSelected` to that sheet. A hidden or very hidden sheet is rejected with `kInvalidArgument`. Hiding or removing the active sheet activates the next visible sheet to the right, else the nearest visible one on the left. Hiding or removing the only visible sheet fails with `kInvalidArgument` and leaves the workbook unchanged.
+
+A sheet added to a workbook created from an Excel profile takes the first sheet's row metrics, page margins, and `phoneticPr`. They are fixed at creation, so a later profile change (`setExcelProfileId()` / `set_excel_profile_id()`) does not change what added sheets receive. Plain and loaded workbooks add bare sheets.
+
 ## Cells
 
 Set values by kind, recalculate, and check the status before reading the
@@ -134,6 +140,8 @@ wb.delete_cols(0, 3, 1)  # sheet, start column, count
 
 References that move with the inserted or deleted range are shifted, including `$`-anchored references; this structural rewrite differs from copying a formula. Surviving ranges shrink or expand as appropriate. A reference that ends up inside deleted space cannot be shifted anywhere, and collapses to `#REF!` rather than quietly pointing at whatever moved up into its place. Per-cell formats inherited by inserted rows or columns can materialize style-only cells, so an insert can increase `cellCount`.
 
+An insert or delete that cuts through a data table, a legacy array block, or a PivotTable, or that would push one of them or a table past the grid edge, fails with `kPreconditionFailed` and leaves the workbook unchanged, as Excel refuses it. Deleting the whole block removes it instead.
+
 The panel below runs these calls against a live sheet. Selecting a cell moves the target row or column with it, and both formula lists are read back out of the workbook either side of the call — so what you see is the formula text the engine holds, including the ones it rewrote and the ones it broke.
 
 <StructureDemo />
@@ -181,9 +189,11 @@ print(wb.get_value(0, 0, 1).to_python())  # 66.0
 :::
 
 - `setDefinedNameScoped()` takes `-1` for workbook scope or a zero-based sheet index. A defined-name formula is stored without a leading `=` and read back in that form; a formula that starts with `==` is rejected with `kParserUnexpectedToken`. An empty formula removes the name. `definedNameCount()` / `definedNameAt(i)` enumerate names with their `localSheetId`; Python uses `iter_defined_names()`.
+- `setDefinedNameAttrs(name, localSheetId, { comment, hidden })` sets a name's comment and hidden flag; an omitted key is left as it is, and a name that does not exist fails with `kInvalidArgument`. Python uses `set_defined_name_attrs(name, local_sheet_id, comment=..., hidden=...)`. Replacing a name's formula keeps both attributes.
 - `getMerges()` lists every merge on a sheet. `removeMerge(range)` removes each merge that overlaps the range, `removeMergeAt(i)` removes one by index, and `clearMerges()` removes all of them.
 - A hyperlink takes a URL as `target`, or an empty `target` and an A1 `location` for a destination inside the workbook. `getHyperlinks()` reads them back; `removeHyperlink(sheet, row, col)`, `removeHyperlinkAt()`, and `clearHyperlinks()` remove them.
-- `setRowHidden()` / `setColumnHidden()` and `setRowOutline()` / `setColumnOutline()` (level clamped to 0–255) change layout only. Ordinary formulas still read hidden rows, as `SUM` does above; `SUBTOTAL` 101–111 skips them.
+- `setRowHidden()` / `setColumnHidden()` and `setRowOutline()` / `setColumnOutline()` change layout only. The outline level runs from 0 to 7, the deepest Excel stores; a higher level fails with `kInvalidArgument`. Ordinary formulas still read hidden rows, as `SUM` does above; `SUBTOTAL` 101–111 skips them.
+- `setRowCollapsed()` / `setColumnCollapsed()` (Python: `set_row_collapsed()` / `set_column_collapsed()`) set the `collapsed` flag on the row or column that summarises an outline group, and the row and column override getters report it. `<sheetFormatPr outlineLevelRow outlineLevelCol>` is derived from the deepest row and column levels on every save, XLSX and XLSB, so Excel shows the outline gutter's symbols.
 - `getSheetProtection()` / `setSheetProtection()` read and replace the `<sheetProtection>` flags as a whole; `enabled: 0` removes protection on save. The engine stores the flags and does not enforce locks.
 
 Python uses the snake_case form of each name.
@@ -202,9 +212,23 @@ Python uses the snake_case form of each name.
 
 Phonetic guides can be read and written as an ordered set of UTF-16 text spans with `getCellPhoneticRuns()` / `setCellPhoneticRuns()`. `getCellPhoneticProperties()` / `setCellPhoneticProperties()` separately control the ruby font, kana form, and alignment. Writing a cell value clears both its readings and its properties.
 
+### Workbook settings and protection
+
+`<calcPr>` settings have typed accessors: `fullPrecision()` / `setFullPrecision()` (false means "set precision as displayed"), `calcOnSave()` / `setCalcOnSave()`, and `refMode()` / `setRefMode()` with `RefMode.A1` or `RefMode.R1C1`. They record the workbook's state and do not change evaluation. The other `<calcPr>` attributes are kept across a resave. `date1904()` / `setDate1904()` read and switch the date system. Switching does not convert stored serials, so every date shifts by 1462 days. Python uses `full_precision()`, `calc_on_save()`, `ref_mode()`, and `date1904()` with matching `set_` methods.
+
+`getWorkbookProtection()` / `setWorkbookProtection(protection)` read and replace `<workbookProtection>`: `lockStructure`, `lockWindows`, `lockRevision`, the legacy password hashes, and the `workbook*` and `revisions*` algorithm, hash, salt, and spin-count fields. Hashes are stored as the host computes them, the engine does not enforce the locks, and attributes the record does not model are kept. An all-empty record removes the element. Python uses `get_workbook_protection()` / `set_workbook_protection()` with a `WorkbookProtection`.
+
+A sheet's `<protectedRange>` entries are listed with `getProtectedRanges(sheet)` and managed with `addProtectedRange`, `updateProtectedRange(sheet, index, range)`, and `removeProtectedRange(sheet, index)`. Each entry has a `name` (non-empty and unique on the sheet), an A1 `sqref` list such as `"B2:C3 E5"`, and the password hash, algorithm, salt, spin count, and security descriptor fields. The ranges move with row and column edits. Python uses `get_protected_ranges()`, `add_protected_range()`, `update_protected_range()`, and `remove_protected_range()`.
+
 ### Tables and AutoFilter
 
-WASM and Python can author worksheet tables. WASM uses `createTable()` / `updateTable()` / `removeTable()`; Python uses `table_create()` / `table_update()` / `table_remove()`. The table's `columns` list must have exactly one name per column in `ref`; when `headerRow` is enabled, the caller still writes those header cells. Partial updates preserve omitted metadata, and an existing table AutoFilter is retargeted by changing only its `ref`. Native Node exposes table enumeration but not table authoring.
+WASM, Native Node, and Python can author worksheet tables. JavaScript uses `createTable()` / `updateTable()` / `removeTable()`; Python uses `table_create()` / `table_update()` / `table_remove()`. The table's `columns` list must have exactly one name per column in `ref`; when `headerRow` is enabled, the caller still writes those header cells. Partial updates preserve omitted metadata, and an existing table AutoFilter is retargeted by changing only its `ref`.
+
+`tableAt(idx)` reads the table's `<tableStyleInfo>` (`styleName`, `showFirstColumn`, `showLastColumn`, `showRowStripes`, `showColumnStripes`, with `hasStyleInfo` false when the element is absent), the header and totals row counts, and each column's totals-row function, label, and formula. Python's `iter_tables()` yields the same fields. `updateTable()` changes the style and toggles (an empty `styleName` removes the style) and the `headerRow` / `totalsRow` flags; Python also has `table_set_style_info()`. `setTableColumnTotals(idx, column, { function, label, formula })` (Python: `table_set_column_totals()`) sets one column's totals-row function, with `formula` required for `'custom'`. While the totals row is shown, the column's totals cell follows: `SUBTOTAL(109,Table[Column])` and the other 1xx codes for a built-in function, the formula for a custom one, else the label as text. Turning `totalsRow` on writes every column's totals cell.
+
+Passing `name` to `updateTable()` (Python: `table_rename()`; C: `fm_workbook_table_rename`) renames the table and rewrites structured references to the old name in cell formulas, defined names, conditional formats, data validations, calculated-column and totals-row formulas, and chart series. A pivot cache sourced from the table follows. A bare table name used as a reference is not rewritten, and the update is all-or-nothing.
+
+Custom table and PivotTable styles are listed with `tableStyleCount()` / `getTableStyle(index)`, added or replaced by name with `setTableStyle(style)`, and removed with `removeTableStyle(name)`. Python uses `table_style_count()`, `get_table_style()`, `set_table_style()`, and `remove_table_style()`. A style is a name, `table` and `pivot` flags saying which objects may use it, and one element per formatted region (`wholeTable`, `headerRow`, `firstRowStripe`, and so on) that points at a differential format by `dxfId`. The name must not be a built-in style name, and each element type may appear once. `getTableStyleDefaults()` / `setTableStyleDefaults({ tableStyle, pivotStyle })` read and write the workbook's default table and PivotTable style names; an empty string removes one.
 
 Worksheet-level AutoFilter XML is available as an opaque, complete `<autoFilter>` fragment. WASM exposes `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` and Python exposes `get_auto_filter_xml()` / `set_auto_filter_xml()`. Filter criteria, sort state, and extension payloads are preserved verbatim. An empty fragment clears the AutoFilter; a non-empty replacement must be a complete `<autoFilter>` element.
 

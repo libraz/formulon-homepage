@@ -24,7 +24,8 @@
 | ワークブックの時計 | `NOW`、`TODAY`、ピボットの相対期間フィルターで共有する任意の現地時刻 |
 | 反復計算の設定 | 循環参照を許容するための反復計算の有効化・最大回数・収束しきい値 |
 | 動的配列のスピル形状 | 起点セルごとの結果形状。依存セルの再形状・無効化に使います |
-| 計算モード | Excel の自動 / 手動の設定。往復保存のために保持するだけで、モードに関係なく、エンジンはホストが `recalc()` か `partialRecalc()` を呼んだときだけ再計算します |
+| 計算モード | Excel の自動 / 手動 / 自動（データテーブル以外）の設定。往復保存のために保持するだけで、モードに関係なく、エンジンはホストが `recalc()` か `partialRecalc()` を呼んだときだけ再計算します。`recalc()` の計算内容を変えるのは `AutoNoTable` だけで、[データテーブル](#what-if-data-tables)を飛ばします |
+| データテーブル | What-If の `TABLE()` の範囲。処理対象があった `recalc()` の後で再計算されます |
 
 <DiagramLayers :layers="[
   { title: '編集', nodes: [{ label: '編集 / set_cell' }, { label: '揮発性関数', note: 'NOW・RAND・INDIRECT・…' }] },
@@ -40,7 +41,7 @@
 
 ## 全体再計算と部分再計算
 
-`recalc()` はすべての再計算待ちセルをトポロジカル順で再評価します。`partialRecalc()` は WASM・Native Node・Python のいずれでも使え、指定した表示範囲を最新にするために必要な数式セルと、その数式が参照する先行セルを再計算します。依存関係の外にある再計算待ちセル（直前に再計算したセルを参照する依存セルを含む）は、古いキャッシュ値を保持したまま再計算待ちとして残ります。後で全体再計算を行うか、そのセルを含む依存関係の範囲を部分再計算すると更新されます。表示したい出力セルを viewport に指定し、ワークブック全体を更新するときは `recalc()` を使ってください。
+`recalc()` はすべての再計算待ちセルをトポロジカル順で再評価します。セルは決まった順序で訪問されるため、スピルの勝者や従来の配列ブロックは実行のたびに同じ結果になります。`partialRecalc()` は WASM・Native Node・Python のいずれでも使え、指定した表示範囲を最新にするために必要な数式セルと、その数式が参照する先行セルを再計算します。依存関係の外にある再計算待ちセル（直前に再計算したセルを参照する依存セルを含む）は、古いキャッシュ値を保持したまま再計算待ちとして残ります。後で全体再計算を行うか、そのセルを含む依存関係の範囲を部分再計算すると更新されます。表示したい出力セルを viewport に指定し、ワークブック全体を更新するときは `recalc()` を使ってください。
 
 範囲の境界は両端を含みます。たとえば `B1` が `A1` を、`C1` が `B1` を参照している場合、`A1` の編集後に `B1:C1` を指定すると、表示する 2 セルとその先行セルが更新されます。
 
@@ -89,7 +90,65 @@ checkStatus(wb.clearPinnedNow())
 
 ## 計算設定の保存
 
-計算モード（`calcMode()` / `setCalcMode()`。値は `CalcMode.Auto`、`Manual`、`AutoNoTable`。Python では `calc_mode()` / `set_calc_mode()`）と反復計算の設定は、ワークブックを開いている間の状態です。ホストの UI にモードを表示することはできますが、エンジンはモードに従って動作を変えません。XLSX は `<calcPr>` にこれらを保存しますが、XLSB ライターは計算設定を出力しません。手動計算または反復計算を有効にしたまま XLSB を保存すると、設定ごとに `deferredFeatureCount` が 1 件増えます。再度開くと自動計算になり、反復計算は無効です。その他の XLSB の省略とパススルーの規則は [ファイル形式](/ja/workbook/file-formats) を参照してください。
+計算モード（`calcMode()` / `setCalcMode()`。値は `CalcMode.Auto`、`Manual`、`AutoNoTable`。Python では `calc_mode()` / `set_calc_mode()`）と反復計算の設定は、ワークブックを開いている間の状態です。ホストの UI にモードを表示することはできますが、`AutoNoTable` 以外ではエンジンはモードに従って動作を変えません。
+
+`<calcPr>` のほかの設定にも型付きのアクセサーがあり、要素の属性はすべて再保存後も保持されます。
+
+| 設定 | WASM / Native Node | Python |
+| --- | --- | --- |
+| 表示桁数で計算（`fullPrecision`。メタデータのみ） | `fullPrecision()` / `setFullPrecision(value)` | `full_precision()` / `set_full_precision(value)` |
+| 保存前に再計算（`calcOnSave`。既定はオン） | `calcOnSave()` / `setCalcOnSave(value)` | `calc_on_save()` / `set_calc_on_save(value)` |
+| 参照形式（`refMode`） | `refMode()` / `setRefMode(RefMode.A1 \| RefMode.R1C1)` | `ref_mode()` / `set_ref_mode(mode)` |
+| 1904 日付システム（`<workbookPr date1904>`） | `date1904()` / `setDate1904(value)` | `date1904()` / `set_date1904(value)` |
+
+JavaScript のゲッターはフラグを `0` / `1` にした `{ status, value }` を返し、Python は `bool` と `RefMode` を返します。`setDate1904()` は保存済みのシリアル値を変換せずに日付システムを切り替えるため、すべての日付が 1462 日ずれます。
+
+XLSX はこれらを `<calcPr>` と `<workbookPr>` に保存します。XLSB ライターは `BrtCalcProp` と `BrtWbProp` として出力するので、手動計算や反復計算の設定はバイナリ保存でも残ります。XLSB が省略するものは [ファイル形式](/ja/workbook/file-formats) を参照してください。
+
+## What-If データテーブル {#what-if-data-tables}
+
+What-If データテーブル（`<f t="dataTable">`）は、値に固定されずモデルとして保持されます。シートは各テーブルの結果範囲・向き・入力セルを保持し、保存時には起点セルに数式を書き戻します。代入する値は結果範囲の上の行と左の列に置きます。1 変数テーブルは行入力セルか列入力セルのどちらかを持ち、2 変数テーブルは両方を持ちます。
+
+`recalc()` は、各値を入力セルに代入し、それを参照するセルを再計算して入力を元に戻す手順で結果セルを埋めます。`CalcMode.AutoNoTable` のときは `recalcDataTables()`（`recalc_data_tables()`）を呼ぶまで結果セルに触れません。この呼び出しはモードに関係なく、すべてのテーブルをその場で計算します。`partialRecalc()` はデータテーブルを計算しません。
+
+::: code-group
+
+```ts [WASM / Native Node]
+const checkStatus = (status: { ok: boolean; message: string }) => {
+  if (!status.ok) throw new Error(status.message)
+}
+// 列入力セル B1 に A3:A5 の値を代入し、B3:B5 に =B1*2 の結果を入れる
+checkStatus(wb.setNumber(0, 0, 1, 10)) // B1
+checkStatus(wb.setFormula(0, 1, 1, '=B1*2')) // B2（数式の行）
+for (const [i, v] of [1, 2, 3].entries()) checkStatus(wb.setNumber(0, 2 + i, 0, v))
+checkStatus(wb.addDataTable(0, {
+  firstRow: 2, lastRow: 4, firstCol: 1, lastCol: 1,
+  colInput: { row: 0, col: 1 },
+}))
+checkStatus(wb.recalc())
+const found = wb.getDataTable(0, 3, 1)
+console.log(found.dataTable?.twoDimensional) // false
+```
+
+```python [Python]
+wb.set_number(0, 0, 1, 10)  # B1（列入力セル）
+wb.set_formula(0, 1, 1, "=B1*2")  # B2（数式の行）
+for i, v in enumerate([1, 2, 3]):
+    wb.set_number(0, 2 + i, 0, v)
+wb.add_data_table(0, 2, 1, 4, 1, col_input=(0, 1))  # first_row, first_col, last_row, last_col
+wb.recalc()
+print(wb.get_data_table(0, 3, 1).two_dimensional)  # False
+```
+
+:::
+
+- `addDataTable(sheet, spec)` / `add_data_table(...)` は結果範囲にテーブルを作ります。範囲の上に行、左に列が必要で、入力セルは範囲の外になければなりません。満たさない場合や、別のテーブルと重なる場合は `kDataTableInvalid`（8005）で失敗します。結果セルは次の再計算まで `0` を返します。
+- `getDataTable(sheet, row, col)` / `get_data_table(...)` は、結果範囲にそのセルを含むテーブルを読み取ります（該当がなければ `dataTable` は `null`、Python は `None`）。`removeDataTable(...)` はテーブルを削除し、結果セルを空にします。
+- 結果範囲へのセル書き込みは `kPreconditionFailed`（「cannot change part of a data table」）で拒否されます。結果範囲、または見出しの行・列に食い込む行・列の挿入と削除も同じステータスで拒否されます。ブロック全体を削除するとテーブルも削除されます。外側の編集では範囲と入力セルが移動します。
+- 入力セルを削除すると、その入力は `deleted` になり、テーブルは `#REF!` に評価されます。
+- 結果セルは、数式ゲッターでは `=TABLE(row_input,col_input)` と報告されます。`FORMULATEXT` は配列数式と同様に `{=TABLE(...)}` を返し、`ISFORMULA` は `TRUE` です。
+
+データテーブルは XLSX と XLSB の両方で往復保存でき、XLSB では `BrtTable` として書き出されます。
 
 ## 存在しないシートへの参照を回復する
 
@@ -125,7 +184,7 @@ print(wb.get_iterative())
 
 :::
 
-`setIterativeProgress()` は、循環しているセルを 1 回走査するたびに呼ばれるコールバックを登録します。上限そのものは `setIterative()` の第 2・第 3 引数で指定します。このコールバックは WASM と Native Node でのみ使えます。Python の `set_iterative()` は同じ 3 引数を受け取り、`set_iterative_enabled(enabled)` は保存済みの上限を保ったまま反復計算だけを切り替えます。
+`setIterativeProgress()` は、循環しているセルを 1 回走査するたびに呼ばれるコールバックを登録します。上限そのものは `setIterative()` の第 2・第 3 引数で指定します。このコールバックは WASM と Native Node でのみ使えます。コールバックはソルバーがワークブックを走査途中で保持している間に実行されるため、そのワークブックのメソッドを呼んではいけません。読み取りを含め、呼び出すと `kGraphRecalcReentrant`（4005）を示す `TypeError` が投げられ、何も変更されません。Python の `set_iterative()` は同じ 3 引数を受け取り、`set_iterative_enabled(enabled)` は保存済みの上限を保ったまま反復計算だけを切り替えます。
 
 WASM と Native Node の `getIterative()` は `{ status, enabled, maxIterations, maxChange }` を返します。Python の `get_iterative()` は `enabled`、`max_iterations`、`max_change` を持つ `IterativeSettings` レコードを直接返し、失敗時は `FormulonError` になります。`maxIterations` を設定すると値は `32767` までに制限され、getter は制限後の値を返します。読み込んだワークブックの `iterateCount` がそれを超えている場合も同じ上限が適用されます。ホスト UI に実際に使われる値を表示するときは、設定後に読み戻してください。
 

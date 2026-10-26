@@ -35,7 +35,11 @@ The OOXML reader/writer handles:
 
 Print settings have typed setters (see [Workbook operations](/workbook/operations#author-worksheet-print-settings)), with raw XML setters for fields the model does not cover; a malformed fragment is rejected before it is stored. External references entered in formulas create or reuse an external-link record, and both writers keep the link table and the formula through a save and reload. The values still come only from the cache in the file. Typed AutoFilters, data-validation checks, and picture editing are covered in [Filters and validation](/workbook/filters-validation) and [Comments and images](/workbook/comments-images).
 
-Phonetic runs and rendering properties round-trip through XLSX and XLSB. Font theme `scheme` values also round-trip, so a theme-linked Normal font remains linked after save.
+Phonetic runs and rendering properties round-trip through XLSX and XLSB. The per-cell Show Phonetic flag is read and written with `getCellShowPhonetic(sheet, row, col)` / `setCellShowPhonetic(sheet, row, col, show)` (`get_show_phonetic` / `set_show_phonetic` in Python). It lives on constants and blanks only: Excel does not keep it on formula cells, so a formula cell's flag is neither saved nor read from a file. Font theme `scheme` values also round-trip, so a theme-linked Normal font remains linked after save.
+
+Attributes and children the model does not interpret on comments, conditional formats, styles, pivot caches and tables are kept across a resave. Sizes read from a file are bounded on load, recalculation and save; a pivot cache above 2^25 record slots fails the load with `kIoFileTooLarge`. A sheet name that begins or ends with an apostrophe makes the file fail to load with `kIoSheetCorrupt`, since Excel refuses such a name too.
+
+`getNumFmt(numFmtId)` (`get_num_fmt` in Python) also resolves built-in ids that have no ECMA-376 format code, such as the East Asian date ids 31 and 55–58, the Thai-digit ids 59–81 and the currency ids 5–8. It returns the code the workbook's Excel profile renders them with, so a cell saved by a Japanese, Chinese or Korean desktop spreadsheet reports its date format. Ids with an ECMA-376 code return that code.
 
 ::: tip Caching behavior
 On load, formula cells keep both the formula text and the cached value found in the file. After `recalc()`, the cached values are replaced with the engine's computed values; on save, the file contains coherent formula / value pairs.
@@ -66,21 +70,29 @@ print(out.deferred_feature_count, out.downgraded_formula_count)
 | --- | --- |
 | Styles (`BrtFmt` / `BrtXF`) and differential formats (`BrtDXF`) | modeled and emitted; loading decodes `BrtDXF`, so conditional-format rules keep a resolvable `dxfId` and converting `.xlsb` to `.xlsx` keeps their formatting. An unedited styles table is written byte for byte, and after a style edit such as `addDxf()` the styles part is regenerated from the model |
 | Row/column layout, merges | modeled and emitted |
-| `date1904`, view/zoom/frozen panes | modeled and emitted |
+| Workbook properties (`BrtWbProp`, including `date1904`) and calculation settings (`BrtCalcProp`) | modeled and emitted, so manual calculation and iteration survive a save; `workbookPr dateCompatibility` / `allowRefreshQuery` are not written and are reported |
+| Sheet views, zoom, frozen and split panes, selections | modeled and emitted: panes as `BrtPane` with the column split first, one `BrtSel` selection per pane, every workbook window (`BrtBookView`) and the sheet views of extra windows |
+| Gradient fills, dxf font outline / shadow / condense / extend | modeled and emitted (`BrtFill`, `BrtDXF`) |
 | Dynamic-array metadata and supported tokenized formulas | modeled and emitted |
-| Pivot cache and PivotTable parts | evaluated when the record encoding is supported; unmeasured encodings are skipped |
-| Conditional formatting | modeled and emitted; supported predicates are evaluated and visual payloads, including x14 data bars, are retained |
+| Pivot cache and PivotTable parts | evaluated when the record encoding is supported; unmeasured encodings are skipped. Pivot filters and style info are read. Pivot tables from an XLSX source are not written and are reported |
+| Conditional formatting | modeled and emitted; supported predicates are evaluated and visual payloads, including x14 data bars and custom icon sets (`BrtCFIcon`), are retained. The legacy copy Excel adds beside an x14 rule loads as one rule |
 | Data validation | modeled and emitted; explicit proposed-value and stored-cell checks are available, without automatic mutation or enforcement |
-| Sheet/workbook protection | modeled and emitted as metadata; the engine does not enforce cell locks |
+| Sheet/workbook protection | modeled and emitted as metadata, including `lockWindows`, `lockRevision` and the revisions password (`BrtBookProtection`, `BrtBookProtectionIso`) and protected ranges (`BrtRangeProtection`); the engine does not enforce cell locks. A protected range's security descriptor is not written and is reported |
 | AutoFilter | XLSB-loaded definitions remain opaque and are not visible to the typed API; typed edits are deferred and reported |
 | Hyperlinks | modeled and emitted from the workbook model |
 | Print settings/breaks, drawing/table references, and relationships | preserved verbatim when unmodeled; modeled edits are deferred and reported; compatible retained tails may pass through |
 | Classic notes / threaded comments | omitted and reported by `deferredFeatureCount` |
 | OOXML drawings, including loaded and inserted pictures | omitted and reported once per sheet drawing target; compatible retained XLSB drawing parts may pass through |
-| Modeled page setup, margins, print options, header/footer, manual breaks / tables | changes are not emitted and are reported; compatible retained XLSB tails may pass through |
-| Nonautomatic calculation / enabled iterative calculation | not saved; reopen as automatic with iteration disabled; each setting is reported |
-| Unrepresentable sheet defaults / workbook protection fields | reported when omitted, including `lockWindows`, `lockRevision`, and the revisions password |
+| Modeled page setup, margins, print options, header/footer, manual breaks | changes are not emitted and are reported; compatible retained XLSB tails may pass through |
+| Tables and structured references | modeled and emitted (`BrtBeginList` with style, flags, totals, calculated columns, AutoFilter and sort state; `PtgList`); a table setting the records cannot hold is reported |
+| What-If data tables | emitted as `BrtTable` ahead of the anchor cell's value record, with the always-calculate flag |
+| Sparkline groups | read, listed and edited the same way as from XLSX, and written; a group whose references cannot be encoded is not written and is reported |
+| Table slicers | kept across an XLSB resave; those from an XLSX source are not written and are reported |
+| Custom table and PivotTable styles | not written; reported |
+| Unrepresentable sheet defaults | reported when omitted |
 | Unsupported formulas | may downgrade to cached literals; downgrade count is reported |
+
+A nonzero `deferredFeatureCount` after a save means the XLSB differs from the model. Both containers keep the source file's sheet ids instead of renumbering them by position.
 
 Print area and print titles are defined names and are emitted to XLSB; they are separate from the deferred page/print fields above. Do not infer comment or pivot preservation from the tail-preservation rule. Keep a source workbook and verify the emitted package when those features matter.
 
@@ -114,7 +126,7 @@ All ZIP entries in saved XLSX and XLSB files use the fixed timestamp `1980-01-01
 | Formulas in cells | yes | yes | yes |
 | Styles / number formats | yes | n/a | yes |
 | Defined names | yes | yes (resolved as references) | yes |
-| Tables | yes | yes (resolved as references) | XLSX yes; XLSB modeled edits are deferred and reported; compatible retained parts may pass through |
+| Tables | yes | yes (resolved as references) | yes in both containers; a table setting XLSB cannot hold is reported |
 | Conditional formatting | yes | partial (evaluate subset) | yes |
 | Data validation | yes | explicit `validateValue()` / `listInvalidCells()` checks; no automatic mutation or enforcement | yes |
 | Sheet/workbook protection | yes | no (metadata only; locks are not enforced) | yes |

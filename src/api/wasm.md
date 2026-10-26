@@ -49,7 +49,7 @@ Numeric accessors such as `sheetCount()`, every `*Count()` method, and `calcMode
 
 List getters return `ListResult<T>`, which is the result array itself with a `.status` property. Read items as `result[0]`; there is no `items` or `value` envelope. `spillInfo()` returns a `SpillInfo` object whose `status` must be checked before its region fields are used.
 
-The JavaScript binding validates argument types and integer narrowing before calling the C ABI. Wrong primitive types, symbols, `BigInt` values, non-finite or fractional integers, unsafe cursors, and malformed nested records can raise `TypeError` or `RangeError` before a result is returned. Validly shaped calls that the engine rejects return `Status.ok === false`; argument checks leave the workbook unchanged.
+Every positional argument is checked before any engine call, identically on `@libraz/formulon` and `@libraz/formulon-native`. A missing required argument, a value of the wrong type, and a primitive or `null` where an object is declared throw `TypeError`; a non-finite, fractional, or out-of-range integer throws `RangeError`. Neither package substitutes `0`, `""`, `false`, or an empty object for a missing argument, so `setNumber(0, 0, 0)`, `setIterative(true)`, and `addFont(null)` throw. A malformed argument that a method reports through its status, such as an array of the wrong length or a callback that is not a function, returns `kInvalidArgument` (2) on both packages. A validly shaped call that the engine rejects returns `Status.ok === false`; argument checks leave the workbook unchanged. A string field that holds a lone UTF-16 surrogate is stored with U+FFFD in its place, so the engine never receives ill-formed UTF-8.
 
 ## Value kinds
 
@@ -101,7 +101,7 @@ try {
 }
 ```
 
-Always call `delete()`.
+Always call `delete()`. It throws `TypeError` when it is called while a method of the same workbook is running, for example from a spec getter or a callback, and the handle stays valid. The native package's `dispose()` follows the same rule.
 
 ## Container format
 
@@ -308,7 +308,31 @@ These tables are generated from the core source for documentation target {{ refe
 
 `setIterative(enabled, maxIterations, maxChange)` stores iterative-calculation settings. `getIterative()` reads them back as `{ status, enabled, maxIterations, maxChange }`; `maxIterations` is capped at `32767`, and the getter reports that capped value.
 
+`setIterativeProgress(callback)` and `setLogSink(sink)` accept a function or `null`; any other value returns `kInvalidArgument` (2) and keeps the installed callback. A `Workbook` method called from the iterative progress callback throws `TypeError` naming `kGraphRecalcReentrant` (4005) and changes nothing.
+
+`setCalcMode(mode)` takes a `CalcMode`; with `AutoNoTable`, `recalc()` skips data-table results until `recalcDataTables()` runs. `fullPrecision()`, `calcOnSave()`, `refMode()`, and `date1904()` read the corresponding `<calcPr>` and `<workbookPr>` settings, and each has a setter. Other `<calcPr>` attributes are kept across a resave.
+
+`activeSheet()` / `setActiveSheet(sheet)` read and write the active tab; setting it moves `tabSelected` and rejects a hidden sheet. Hiding or removing the active sheet activates the next visible sheet to the right, otherwise the nearest visible one on the left. `setSheetTopLeft()` and `setSheetPaneTopLeft()` set the scroll origin of the view and of the lower-right pane, and `getSheetSelection()` / `setSheetSelection()` address the selection of each pane. `setSheetSplit(sheet, xTwips, yTwips)` splits the view at a twips offset on either axis without freezing it; a split replaces a freeze and the other way round, and `0, 0` removes it. A selection in a pane the view lacks is dropped on save, and an active cell outside every selected range moves to the top-left of the first range. `getSheetView()` reports `showFormulas` and `showOutlineSymbols`, which have the setters `setSheetShowFormulas()` and `setSheetShowOutlineSymbols()`.
+
+`setRowCollapsed()` and `setColumnCollapsed()` set the outline `collapsed` flag that the row and column override getters report. `outlineLevelRow` and `outlineLevelCol` are derived from the deepest levels on every save. An outline level above 7 fails with `kInvalidArgument`.
+
+`addDataTable(sheet, spec)`, `getDataTable(sheet, row, col)`, and `removeDataTable(sheet, row, col)` manage What-If data tables (`<f t="dataTable">`). `recalc()` fills one-variable (column or row input) and two-variable tables by substituting each value into the input cells, recalculating the cells that read them, and restoring the inputs. Writing into a result cell fails with `kPreconditionFailed`, as does a row or column insert or delete that cuts through the table or its header row and column. Result cells report `=TABLE(row_input,col_input)` through the formula getters, `FORMULATEXT` returns `{=TABLE(...)}`, and `ISFORMULA` is TRUE. `addDataTable` returns `kDataTableInvalid` (8005) when no input cell is given, an input lies inside the result range, or the range overlaps another table.
+
+`listShapes()`, `insertShape()`, `updateShape()`, and `removeShape()` cover the `xdr:sp` shapes and text boxes, `xdr:cxnSp` connectors, and `xdr:grpSp` groups of a sheet's drawing. An update rewrites only the fields it names and keeps the rest of the shape's XML. A shape the record cannot express is listed with `ShapePaint.Other` or empty fields and passes through a save unchanged. Shapes follow row and column edits like pictures do.
+
+`listSparklineGroups()`, `addSparklineGroup()`, `updateSparklineGroup()`, `setSparklineGroupSparklines()`, and `removeSparklineGroup()` manage the `x14:sparklineGroups` of a sheet. An update keeps attributes and children outside the record, such as `rightToLeft`, `uid`, and unknown extensions.
+
+`listSlicers()`, `addSlicer(sheet, table, column, spec)`, `updateSlicer()`, and `removeSlicer()` manage table slicers. Adding one creates the slicer part, its cache, the extension entries, the defined name, and the drawing frame. Removing a slicer also removes its cache once no other slicer uses it. Removing a table or a sheet, or deleting the rows or columns under a slicer's frame, removes the slicers bound to it. Slicers over a pivot cache pass through untouched and are not listed; the selection of a table slicer lives in the table's AutoFilter.
+
+`getWorkbookProtection()` / `setWorkbookProtection()` read and write `<workbookProtection>`, and `getProtectedRanges()`, `addProtectedRange()`, `updateProtectedRange()`, and `removeProtectedRange()` manage a sheet's `<protectedRange>` entries; the ranges move with row and column edits. Password hashes are stored as the host computes them, and attributes the record does not model are kept. Neither protection is enforced on cell edits.
+
+`tableAt(idx)` returns the table's style name and stripe toggles, its header and totals row counts, and each column's totals function. `setTableColumnTotals(idx, column, totals)` sets one column's totals function and label; while the totals row is shown, its cell is written to match. `getTableStyle()`, `setTableStyle()`, `removeTableStyle()`, `getTableStyleDefaults()`, and `setTableStyleDefaults()` manage custom `<tableStyles>` and the default table and PivotTable style names; `pivotGetStyleInfo()` / `pivotSetStyleInfo()` read and write a PivotTable's style. `setDefinedNameAttrs(name, localSheetId, { comment, hidden })` sets a name's comment and hidden flag; an omitted key leaves that attribute unchanged, and replacing the name's formula keeps both.
+
+`getCommentVisible()` / `setCommentVisible()` read and write whether a legacy note is shown. A note's box, its visibility, and the authors table of its comments part are kept across a resave, and a box follows its note through row and column edits. `getCellShowPhonetic()` / `setCellShowPhonetic()` read and write the per-cell Show Phonetic flag; saved files carry it on constants and blanks only, not on formula cells.
+
 `SheetVisibility` has `Visible = 0`, `Hidden = 1`, and `VeryHidden = 2`. `setSheetVisibility(sheet, visibility)` writes the whole tab state, while `getSheetView(sheet).view.visibility` distinguishes the two hidden states. The legacy `tabHidden` flag remains `1` for both hidden states. `setSheetTabHidden(true)` does not demote a very-hidden sheet; use `setSheetVisibility()` for that transition.
+
+`addSheet()` and `renameSheet()` fail with `kInvalidSheetName` for an empty name, a name over 31 UTF-16 units, one with `: \ / ? * [ ]`, one that begins or ends with an apostrophe, and one that matches another sheet's name under case folding. Under the `win-*` profiles, the default included, `History` in any case is refused as well; `mac-*` profiles accept it. Hiding or removing the only visible sheet fails with `kInvalidArgument`. `insertRows()`, `deleteRows()`, `insertCols()`, and `deleteCols()` fail with `kPreconditionFailed` when they cut through a data table, a legacy array block, or a PivotTable, or would push one of them or a table past the grid edge.
 
 Worksheet print settings are authored with `setSheetPageSetup()`, `setSheetPageMargins()`, `setSheetPrintOptions()`, `setSheetHeaderFooter()`, `setSheetPrintArea()`, `setSheetPrintTitles()`, `addSheetRowBreak()`, and `addSheetColBreak()`; raw XML setters are available for unmodeled fragments and validate input before storing it. Header/footer inputs use decoded Excel section strings, so a literal ampersand is written as `&&`.
 

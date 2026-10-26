@@ -49,7 +49,7 @@
 
 | 機能 | WASM | Native Node | Python |
 | --- | --- | --- | --- |
-| ワークブックの解放 | `delete()` | `dispose()`（GC による最終化は予備） | `close()` または `with` ブロック |
+| ワークブックの解放 | `delete()`。メソッド実行中は `TypeError` | `dispose()`（GC による最終化は予備）。メソッド実行中は `TypeError` | `close()` または `with` ブロック |
 | メモリ使用量の推定 | — | `memoryUsage()` | `memory_usage()` |
 | 並列再計算 | `recalcParallel()`。ワーカーを使うのは `@libraz/formulon/threads` だけ | `recalcParallel()` | — |
 | スカラーの読み取り専用評価 | `evaluateFormulaText()` | `evaluateFormulaText()` | —（`evaluate_formula_array()` を使う） |
@@ -59,6 +59,8 @@
 | シートの AutoFilter XML | `getSheetAutoFilterXml()` / `setSheetAutoFilterXml()` | — | `get_auto_filter_xml()` / `set_auto_filter_xml()` |
 | 名前付きスタイルの XF レコード | `addCellStyleXf()` | — | `add_cell_style_xf()` |
 | スタイルの一括登録、有効化だけの反復切り替え | — | — | `add_batch()`、`set_iterative_enabled()` |
+
+引数の契約はバインディング間で共通です。2 つの JS パッケージは、エンジン呼び出しの前にすべての位置引数を検査します。引数の欠落、型の誤り、オブジェクトが宣言された位置へのプリミティブまたは `null` は `TypeError` で、どちらのパッケージも既定値で補いません。メソッドがステータスで報告する不正な引数は、どちらも `kInvalidArgument`（2）を返します。`@libraz/formulon-native` の TypeScript 宣言は `@libraz/formulon` と同じ列挙型（`PivotAxis`、`PivotAggregation`、`PivotSortOrder` など）を使うため、一方のパッケージの型で書いたコードは他方でもコンパイルできます。Python は `Value` のペイロードを検証し（`ValueError` または `TypeError`）、整数引数の範囲を検査します（`ValueError`）。C ABI は不正な UTF-8 を `kBindingUtf8EncodingError`（7002）で拒否し、インデックス、個数、アウトラインレベルの引数の範囲を検査します。どのバインディングもこれらのステータスを返します。C の公開レコードは固定レイアウトなので、ネイティブのクライアントはリンクするヘッダーに合わせて再コンパイルする必要があります。
 
 CLI が公開するのは一部だけです。並列再計算の `--threads`、`--iterative`、4 つのサブコマンドがあります。
 

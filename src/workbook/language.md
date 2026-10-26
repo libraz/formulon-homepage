@@ -93,6 +93,12 @@ Calling `setExcelProfileId()` changes the profile and marks formulas dirty. Call
 
 The UI library uses names such as `mac-de_DE` and `windows-de_DE` for its `SpreadsheetProfileId`, while the engine uses `mac-365-de_DE` and `win-365-de_DE` for `ExcelProfileId`. Keep each id at its own API boundary.
 
+## Sheet-name quoting and formula text
+
+Stored formulas quote a sheet name by English rules: names that start with a digit or `.`, `TRUE` / `FALSE`, names shaped like a cell address or an R1C1 reference, and names with characters outside letters, digits, `.`, `_` and non-ASCII text (U+3000 included). `ADDRESS` instead quotes by the active profile, because it produces display text: the profile's own R1C1 letters (`Z` and `S` in de_DE) and boolean names count, and U+3000 forces quotes only in double-byte locales. `CELL("address")` on a cell of another sheet qualifies the name by the cross-workbook rule instead of appending it bare.
+
+Formula text that shows `SINGLE` / `ANCHORARRAY` as `@` / `#`, or places an implied `@`, is written correctly when the formula also holds non-ASCII text, such as a Japanese sheet name or a string literal. `ANCHORARRAY` of a cell that is not a spill anchor keeps its call spelling rather than an unparsable `x#`.
+
 ## Try dynamic language switching
 
 This demo uses the real Cell UI and engine. Change the language on the mounted sheet and compare its active profile, displayed formula and stored formula. Edits remain in the same workbook. See [the language switching guide](/cell/language-switching) for host controls, persistence and failed-switch handling.

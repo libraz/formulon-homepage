@@ -85,7 +85,8 @@ The profile-controlled areas include:
 - `FORMULATEXT()` function names and separators, including localized aliases where Excel has them;
 - DBCS code pages and the single-byte `CHAR()` / `CODE()` pages;
 - `GROUPBY()` / `PIVOTBY()` labels;
-- environment-sensitive `INFO()` values; and
+- environment-sensitive `INFO()` values;
+- sheet-name rules: `History` in any case is refused on add and rename under `win-*` profiles and accepted under `mac-*`; and
 - PivotTable labels and layout defaults.
 
 Formulas are stored with English function names and invariant separators. The profile changes how formula text is interpreted and how results are rendered; it does not change the stored formula syntax. `functionMetadata(name)` is locale-invariant and returns structural metadata. Use the profile-aware localization methods when the user-facing function name or formula text must change. The [workbook language guide](/workbook/language) covers that boundary and the [cell language-switching guide](/cell/language-switching) covers editor behavior.
