@@ -26,6 +26,7 @@ const IterativeDemo = defineAsyncComponent(() => import('@/components/demos/Iter
 const StructureDemo = defineAsyncComponent(() => import('@/components/demos/StructureDemo.vue'))
 const FormatDemo = defineAsyncComponent(() => import('@/components/demos/FormatDemo.vue'))
 const ErrorsDemo = defineAsyncComponent(() => import('@/components/demos/ErrorsDemo.vue'))
+const ValidationDemo = defineAsyncComponent(() => import('@/components/demos/ValidationDemo.vue'))
 const CellEmbedDemo = defineAsyncComponent(() => import('@/components/demos/CellEmbedDemo.vue'))
 const LocaleSwitchDemo = defineAsyncComponent(
   () => import('@/components/demos/LocaleSwitchDemo.vue')
@@ -59,6 +60,7 @@ export default {
     app.component('StructureDemo', StructureDemo)
     app.component('FormatDemo', FormatDemo)
     app.component('ErrorsDemo', ErrorsDemo)
+    app.component('ValidationDemo', ValidationDemo)
     app.component('CellEmbedDemo', CellEmbedDemo)
     app.component('LocaleSwitchDemo', LocaleSwitchDemo)
     app.component('CompatCasesDemo', CompatCasesDemo)
