@@ -19,7 +19,7 @@ description: 表示 UI、編集セル、ナビゲーション範囲、メニュ�
 | `excel365` | 下記のオプトイン機能を除くすべての機能です。`ui.profile` を省略した場合もこの構成になります。 |
 | `full` | `excel365` と同じ機能構成です。 |
 
-`ui.platform` は `ui.profile` とは独立して解決されます。既定の UI には `default`、Mac の UI を明示的に選ぶ場合は `mac`、ブラウザーから判定する場合は `auto` を使います。iPad と iPhone のユーザーエージェント、およびタッチ対応の `MacIntel` は `default` に解決されます。Mac リボンと制限は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
+`ui.platform` は `ui.profile` とは独立して解決されます。既定の UI には `default`、Mac の UI を明示的に選ぶ場合は `mac`、ブラウザーから判定する場合は `auto` を使います。iPad と iPhone のユーザーエージェント、およびタッチ対応の `MacIntel` は `default` に解決されます。プラットフォームはグリッドの画面スケールと、マウントが作成するワークブックの既定値も決めます。Mac リボン、シートのジオメトリ、制限は [プラットフォームと Mac UI](/ja/cell/platform) を参照してください。
 
 ```ts
 const instance = await Spreadsheet.mount(host, {
@@ -66,7 +66,7 @@ const instance = await Spreadsheet.mount(host, {
 リボンが表示されるのは、`toolbar` に `true` かオプションオブジェクトを渡した場合と、リボンを含むプロファイルの `ui` を渡した場合だけです。`ui` も `toolbar` も指定しないマウントでは、機能構成が `excel365` になってもリボンは表示されません。機能フラグは組み込み機能を選ぶだけで、リボンをマウントしません。
 :::
 
-`setUi()` は現在のワークブックを保ったまま、プロファイル、プラットフォーム、テーマを再解決します。省略した項目は既定値に戻るため、UI 設定はすべて渡してください。初回マウント時のトップレベルの `features`、`theme`、`toolbar` も再適用されます。プラットフォームを変更すると、開いている Mac の数式パレットを閉じ、保留中の下書きを破棄します。これらの値を個別に変更する場合は `setFeatures()`、`setTheme()`、`setToolbar()` を使います。
+`setUi()` は現在のワークブックを保ったまま、プロファイル、プラットフォーム、テーマを再解決します。省略した項目は既定値に戻るため、UI 設定はすべて渡してください。初回マウント時のトップレベルの `features`、`theme`、`toolbar` も再適用されます。プラットフォームを変更すると、開いている Mac の数式パレットを閉じ、保留中の下書きを破棄し、行の高さと列幅を読み直し、Undo 履歴を消去します。これらの値を個別に変更する場合は `setFeatures()`、`setTheme()`、`setToolbar()` を使います。
 
 <CellEmbedDemo scenario="profiles" />
 

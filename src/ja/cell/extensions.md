@@ -54,7 +54,7 @@ const instance = await Spreadsheet.mount(host, {
 
 - 移動とレビュー: `contextMenu`、`findReplace`、`goToSpecialDialog`、`quickAnalysis`、`watchWindow`、`viewToolbar`
 - 編集と書式: `clipboard`、`pasteSpecial`、`formatDialog`、`formatPainter`、`borderDraw`、`validationList`
-- ワークブック作成: `conditionalDialog`、`namedRangeDialog`、`hyperlinkDialog`、`commentDialog`、`hoverComment`、`iterativeDialog`、`pageSetupDialog`
+- ワークブック作成: `conditionalDialog`、`namedRangeDialog`、`hyperlinkDialog`、`commentDialog`、`hoverComment`、`iterativeDialog`（計算方法の設定）、`pageSetupDialog`
 - オブジェクトと集計: `charts`、`illustrations`、`pivotTableDialog`、`slicer`、`workbookObjects`
 - ホスト側のコントロール: `statusBar`、`wheel`
 
@@ -112,7 +112,7 @@ await Spreadsheet.mount(host, {
 
 メニュー項目だけを変更する場合は `contextMenu` マウントオプションを使います。既存のダイアログの配置は [モーダルとオーバーレイ](/ja/cell/modals) の `overlays` で調整します。
 
-`openFindReplace()` など多くの起動メソッドは組み込み機能を対象にしており、組み込み機能を無効にすると何もしません。置き換えた拡張は、そのハンドル `instance.features[id]` から開いてください。例外は 3 つです。`openQuickAnalysis()`、`openWorkbookObjects()`（`openPivotFieldList()` も同様）、`openPivotTableDialog()` は、ID が `quickAnalysis`、`workbookObjects`、`pivotTableDialog` の拡張が登録されていれば、その `open()`（または `openPivotFieldList()`）を先に呼びます。
+`openFindReplace()` など多くの起動メソッドは組み込み機能を対象にしており、組み込み機能を無効にすると何もしません。置き換えた拡張は、そのハンドル `instance.features[id]` から開いてください。例外は 4 つです。`openQuickAnalysis()`、`openWorkbookObjects()`（`openPivotFieldList()` も同様）、`openPivotTableDialog()` は、ID が `quickAnalysis`、`workbookObjects`、`pivotTableDialog` の拡張が登録されていれば、その `open()`（または `openPivotFieldList()`）を先に呼びます。`openChartSettings()` は、ID が `charts` の拡張が登録されていれば、その `openSettings(tab)` を先に呼びます。
 
 ## マウント後に更新・削除する
 

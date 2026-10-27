@@ -252,7 +252,7 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 
 ## タブと表示モード {#tabs-and-display}
 
-`RibbonTab` は `file`、`home`、`insert`、`draw`、`pageLayout`、`formulas`、`data`、`review`、`view`、`help`、`automate`、`acrobat` のいずれかです。パッケージは次のタブ構成をエクスポートしています。
+`RibbonTab` は `file`、`home`、`insert`、`draw`、`pageLayout`、`formulas`、`data`、`review`、`view`、`help`、`automate`、`acrobat` と、コンテキストタブの `chartDesign`、`chartFormat`、`shapeFormat`、`pictureFormat`、`tableDesign` のいずれかです。パッケージは次のタブ構成をエクスポートしています。
 
 | 定数 | タブ |
 | --- | --- |
@@ -260,10 +260,15 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 | `OPTIONAL_RIBBON_TABS` | 描画、自動化、Acrobat。 |
 | `RIBBON_TABS` | 標準のタブに続けて任意のタブを並べたもの。 |
 | `EXCEL365_MAC_RIBBON_TABS` | ホーム、挿入、描画、ページレイアウト、数式、データ、校閲、表示、自動化。 |
+| `CHART_CONTEXTUAL_RIBBON_TABS` | グラフのデザイン、書式。 |
+| `SHAPE_CONTEXTUAL_RIBBON_TABS` | 図形の書式。 |
+| `PICTURE_CONTEXTUAL_RIBBON_TABS` | 図の書式。 |
+| `TABLE_CONTEXTUAL_RIBBON_TABS` | テーブル デザイン。 |
+| `CONTEXTUAL_RIBBON_TABS` | 上のコンテキストタブすべて。 |
 
 `ribbonTabs` を省略すると、既定のプラットフォームでは `EXCEL365_STANDARD_RIBBON_TABS`、Mac では `EXCEL365_MAC_RIBBON_TABS` を表示します。React と Vue のコンポーネントも同じ既定値です。描画、自動化、Acrobat のタブを使うには、`RIBBON_TABS` または `[...EXCEL365_STANDARD_RIBBON_TABS, ...OPTIONAL_RIBBON_TABS]` を明示的に渡します。これらはホスト側で必要な処理を接続した場合だけ追加してください。`ribbonTabs` を明示すると Mac のタブ構成も置き換わります。タブは配列の順に並び、非表示や無効のタブはキーボード操作で飛ばされます。
 
-`buildRibbonModel(lang, { tabs, profile })` は、リボンが描画するものと同じモデルを返します。タブは `id` と `label`、グループは `title`、コマンドは `id`、`label`、`title` と、任意の `disabledReason` を持ちます。`profile` は `RibbonProfile` で、`default` か `excel365Mac` です。ホスト側のコマンドパレットを作るときや、`applyCommand()` に渡すコマンド ID を調べるときに使います。
+`buildRibbonModel(lang, { tabs, profile, contextualTabs })` は、リボンが描画するものと同じモデルを返します。タブは `id` と `label`、グループは `title`、コマンドは `id`、`label`、`title` と、任意の `disabledReason` を持ちます。`profile` は `RibbonProfile` で、`default` か `excel365Mac` です。`contextualTabs` には `CHART_CONTEXTUAL_RIBBON_TABS` のようなコンテキストタブのリスト（[コンテキストタブ](#contextual-tabs) を参照）を渡し、モデルの末尾に追加します。ホスト側のコマンドパレットを作るときや、`applyCommand()` に渡すコマンド ID を調べるときに使います。
 
 ```ts
 import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
@@ -273,6 +278,19 @@ const commands = buildRibbonModel('ja', { profile }).flatMap((tab) =>
   tab.groups.flatMap((group) => group.commands.map((command) => command.id)),
 )
 ```
+
+### コンテキストタブ {#contextual-tabs}
+
+オブジェクトを選択している間、リボンは通常のタブの後ろにタブを追加します。どちらのプラットフォームでも、`ribbonTabs` の内容にかかわらず追加されます。オブジェクトを選択するとセルの選択が置き換わるため、タブは選択に追従します。
+
+| 選択 | タブ | コマンド |
+| --- | --- | --- |
+| グラフ | グラフのデザイン、書式 | デザイン: グラフ要素を追加、色の変更、行/列の切り替え、データの選択、グラフの種類の変更。書式: 選択対象の書式設定と配置。 |
+| 図形 | 図形の書式 | 図形の塗りつぶし、図形の枠線（色、太さ、実線/点線）、配置。 |
+| 図 | 図の書式 | 配置。 |
+| テーブル内のセル | テーブル デザイン | テーブル名、見出し行、集計行、縞模様（行）、最初の列、最後の列、縞模様（列）。 |
+
+配置は、グラフ、図形、図のタブで共有する 1 つのグループです。前面へ移動、背面へ移動、オブジェクトの選択と表示は、選択中のオブジェクトに作用します。オブジェクトを挿入または貼り付けると、そのオブジェクトが選択されて最初のタブが開き、選択を外すと直前のタブへ戻ります。色のメニューにはワークブックテーマの色が表示されます。選択中のグラフの設定は、ホストから `instance.openChartSettings(tab?)` で開けます。`tab` は `'elements'`（既定）、`'styles'`、`'filters'` で、グラフが選択されていなければ `false` を返します。
 
 ## ドロップダウンの処理 {#dropdown-handlers}
 
@@ -308,7 +326,7 @@ const toolbar = Spreadsheet.mountToolbar(toolbarHost, instance, {
 
 ## プラットフォームによる違い {#platform-differences}
 
-Mac のプラットフォームでは `EXCEL365_MAC_RIBBON_TABS` を使います。ファイルタブとヘルプタブがなく、描画と自動化のタブがあります。Mac のコマンド ID は `mac.` で始まります。たとえば `mac.data.goalSeek`、`mac.insert.sparkline`、`mac.review.stats`、`mac.formulas.insertFunction` です。`applyCommand()` はほかの ID と同じように実行し、その多くは既定のプラットフォームの対応するコマンドを内部で使います。
+Mac のプラットフォームでは `EXCEL365_MAC_RIBBON_TABS` を使います。ファイルタブとヘルプタブがなく、描画と自動化のタブがあります。ホームタブはデスクトップの Mac 版と同じ配置で、切り取り、コピー、書式のコピー/貼り付けはアイコンとテキストの行、挿入、削除、書式は大きなタイルです。どちらのホームタブも、フォントグループに「ふりがなの設定」があります。Mac のコマンド ID は `mac.` で始まります。たとえば `mac.data.goalSeek`、`mac.insert.sparkline`、`mac.review.stats`、`mac.formulas.insertFunction` です。`applyCommand()` はほかの ID と同じように実行し、その多くは既定のプラットフォームの対応するコマンドを内部で使います。
 
 ```ts
 instance.toolbar?.applyCommand('mac.data.goalSeek')

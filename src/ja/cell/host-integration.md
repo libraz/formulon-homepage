@@ -26,6 +26,62 @@ function downloadWorkbook() {
 
 新しいワークブックでは `workbook` を省略して `Spreadsheet.mount()` に作成させるか、先にデータを投入するために `WorkbookHandle.createDefault()` を明示的に呼びます。`setWorkbook(nextWorkbook)` を使うと、ホスト要素を作り直さずにワークブックを差し替えられます。インスタンスがどのハンドルを破棄するかは [インストール](/ja/cell/install#host-sizing) を参照してください。
 
+## 保存したファイルに残るもの {#saved-state}
+
+cell 層は保存時にワークブックのオブジェクトをエンジン経由で書き込むため、ファイルは最後の状態のまま開き直せます。
+
+- テーブル: スタイル、見出し行と集計行、縞模様（行・列）、最初と最後の列のフラグ、列ごとの集計、テーブル自身のオートフィルター。ユーザー設定のテーブルスタイルとピボットテーブルスタイルも保存されます。
+- ピボットテーブル（保存された定義からの編集を含む）。
+- 図形、スパークライン、テーブルのスライサー。
+- シートの保護、ブック構造の保護、編集を許可する範囲。パスワードはソルト付きハッシュで保存されます。
+- シートごとのビュー: アクティブなシート、選択範囲、スクロール位置、ウィンドウ枠の固定と分割、ズーム、表示モード、数式の表示、アウトライン記号、折りたたんだグループ。
+- 計算方法の設定: 計算モード、保存前の再計算、R1C1 参照形式、表示桁数で計算、1904 年から計算。
+- メモとその表示状態、ハイパーリンク、入力規則の参照元、フィルターの色と並べ替え、セルのスタイル、シートの見出し色。
+
+インストールされているエンジンが対応する API を持たない場合、そのオブジェクトはセッション内だけに残ります。どのオブジェクトが書き込み可能、読み取り専用、セッション限定、未対応なのかは `summarizeSpreadsheetCompatibility(workbook)` で確認できます。描画タブのインクは保存されません。入力された保護パスワードは非同期でハッシュ化されるため、`save()` の前に `await whenSheetPasswordsHashed()` を呼ぶと、ソルト付きハッシュがファイルに入ります。
+
+手動計算モードでは、ワークブックが保存前の再計算を無効にしていない限り、`save()` は先に再計算します。内部用のコピーでこの手順を省くには `{ snapshot: true }` を渡します。
+
+## 読み込みと保存の損失レポート {#file-loss-reports}
+
+エンジンは、読み込めなかったものと書き込めなかったものを数えます。`workbook.loadDiagnostics()` は `loadBytes()` 時のカウンター（デコードできなかった数式、定義名、パーツ、スキップした機能、未知のコンテンツタイプ）を、`workbook.lastSaveDiagnostics()` は直近の保存のカウンター（ダウングレードした数式、保留した機能、破棄したパーツと関係、番号を振り直したパーツ）を返します。`saveWithDiagnostics(format)` は保存して `{ bytes, diagnostics }` を返します。診断に対応しないエンジンでは、すべてのカウンターが 0 です。
+
+```ts
+import { fileLossEntries, hasLoadLosses } from '@libraz/formulon-cell'
+
+const load = workbook.loadDiagnostics()
+if (hasLoadLosses(load)) {
+  for (const { id, phase, count } of fileLossEntries(load, workbook.lastSaveDiagnostics())) {
+    console.warn(`${phase}: ${id} x${count}`)
+  }
+}
+```
+
+カウンターは 1 つずつ別の行になり、合算されません。破棄したパーツと破棄した関係は重なるためです。`buildFileLossReport(workbook, instance.i18n.strings.workbookObjects)` は同じ行をローカライズした警告として返し、`buildSpreadsheetCompatibilityReport()` にも含まれます。
+
+## `.xlsb` で保存する {#save-as-xlsb}
+
+`writeWorkbook(workbook, format)` は `'xlsx'` または `'xlsb'` でファイルを書き出し（ユーザーには渡さず）、`{ format, bytes, losses }` を返します。バイナリ形式のライターは、メモ、スレッド形式のコメント、オートフィルターを書き込まず、描画オブジェクト、ピボットテーブル、スライサー、テーブル、スパークライン、保護された範囲、その他の設定も書き込まない場合があります。各 loss には `certain` フラグがあり、分かる場合は件数も持ちます。`WORKBOOK_SAVE_FORMATS` は各形式の拡張子と MIME タイプを返します。バイナリ保存に対応しないエンジンで `.xlsb` を保存すると例外になります。`workbook.capabilities.xlsbSave` を確認するか、`workbookSaveFormats(workbook)` でエンジンが書き出せる形式を調べてください。
+
+組み込みのプロンプトは、ホスト側の「名前を付けて保存」で使えるようにエクスポートされています。
+
+```ts
+import {
+  chooseWorkbookSaveFormat,
+  saveWorkbookWithPrompts,
+  WORKBOOK_SAVE_FORMATS,
+} from '@libraz/formulon-cell'
+
+const strings = instance.i18n.strings
+const format = await chooseWorkbookSaveFormat(instance.workbook, strings, instance.host)
+if (format) {
+  const saved = await saveWorkbookWithPrompts({ wb: instance.workbook, strings, format, host: instance.host })
+  if (saved) download(saved.bytes, `workbook${WORKBOOK_SAVE_FORMATS[saved.format].extension}`)
+}
+```
+
+`saveWorkbookWithPrompts()` はファイルを書き出し、内容が欠ける場合は先にユーザーへ確認します。ユーザーが取り消すと `null` で解決します。
+
 ## Watch Window のワークブック名を更新する
 
 Watch Window にホスト側のファイル名を表示する場合は `getWorkbookName` を渡します。コールバックはパネルの描画時に読み取るため、スプレッドシートを再マウントせずに名前を変更できます。

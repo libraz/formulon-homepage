@@ -6,7 +6,7 @@
 Formulon は 1.0 より前の段階で、API とパッケージ構成はリリースごとに変わる可能性があります。実験や社内ツールでも `latest` に追従せず、正確なバージョンを指定してインストールしてください。
 :::
 
-以下のインストール例は、ここで説明する API を含む Formulon 0.18.0 と formulon-cell 0.10.0 を固定しています。同じリリースを自分でビルドする場合は、[ソースからビルドする](/ja/development/build-from-source)を参照してください。cell パッケージは別のリリース周期です。実行時のロケールと計算プロファイルの操作は [言語切り替え](/ja/cell/language-switching)にまとめています。
+以下のインストール例は、ここで説明する API を含む Formulon 0.18.0 と formulon-cell 0.11.0 を固定しています。同じリリースを自分でビルドする場合は、[ソースからビルドする](/ja/development/build-from-source)を参照してください。cell パッケージは別のリリース周期です。実行時のロケールと計算プロファイルの操作は [言語切り替え](/ja/cell/language-switching)にまとめています。
 
 ## JavaScript / WebAssembly
 
@@ -50,7 +50,7 @@ formulon recalc input.xlsx -o output.xlsx
 ## formulon-cell
 
 ```sh
-yarn add @libraz/formulon-cell@0.10.0 @libraz/formulon-cell-vue@0.10.0
+yarn add @libraz/formulon-cell@0.11.0 @libraz/formulon-cell-vue@0.11.0
 ```
 
 `@libraz/formulon-cell` はフレームワークに依存しないコアです。使うフレームワークに合わせて `@libraz/formulon-cell-vue` または `@libraz/formulon-cell-react` を追加してください。詳しくは [formulon-cell のインストール](/ja/cell/install) を参照してください。

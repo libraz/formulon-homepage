@@ -173,6 +173,7 @@ namesButton.addEventListener('click', () => {
 | `openIterativeDialog()` | `iterative` |
 | `openFunctionArguments(name?, { category? })` | `fxDialog` |
 | `openQuickAnalysis()` | `quickAnalysis` |
+| `openChartSettings(tab?)` | `charts`. Returns `false` when no chart is selected. |
 | `openWorkbookObjects()`, `openPivotFieldList()`, `openActivePivotFieldList()` | `workbookObjects` |
 | `openPivotTableDialog({ placement? })` | `pivotTableDialog` (`ui.features.pivotTable`) |
 | `openInsertCopiedCells()` | None. |
@@ -198,3 +199,15 @@ const instance = await Spreadsheet.mount(host, {
 Host-owned dialogs can use the same overlay root. Open them from a context-menu action, a toolbar callback, or an application command, and dispose the spreadsheet instance when the surrounding view closes.
 
 When a dialog is replaced through `extensions`, most openers keep targeting the built-in; [Extensions](/cell/extensions#replace-a-built-in-surface) lists the exceptions and how to open a replacement.
+
+## Dialog behavior {#dialog-behavior}
+
+Behavior of the built-in dialogs that affect workbook data:
+
+- **Name Manager** (`openNamedRangeDialog()`): names may contain Japanese and other non-ASCII text, and full-width ASCII is folded before the cell-reference, `TRUE`/`FALSE`, and punctuation checks. New Name refuses a name that already exists in its scope and words invalid and duplicate names differently. Renaming in Edit is one undo step, and the scope is read-only while editing. New Name pre-fills the selection as an absolute sheet reference. `openDefineNameDialog()` opens New Name alone. The Name Box accepts sheet-qualified and multi-area references, and formula autocomplete offers defined and table names next to functions.
+- **Go To** (`openGoTo()`): lists range names and the last four jumps, and accepts names, sheet-qualified references, and multi-area references. Its Special button opens Go To Special.
+- **Go To Special** (`openGoToSpecial()`): offers the desktop options, including current region, current array, row and column differences, precedents and dependents, last cell, visible cells, and the All/Same choices for conditional formats and data validation. A single selected cell searches the used range; a multi-cell selection searches only inside it. Matches merge into rectangles. No match, or more than 100,000 cells, raises an alert and leaves the selection unchanged. The ribbon's quick actions use the same search.
+- **Phonetic Settings**: in the Home font group of both ribbons. The guide's kana form (hiragana, full-width katakana, or half-width katakana) and alignment (left, centered, or distributed) are stored per cell in the workbook; a cell with none uses full-width katakana aligned left. A guide is drawn, and row height reserved for it, only on cells whose Show Phonetic flag is on.
+- **PivotTable**: the dialog edits an existing report from its stored definition (fields, order, data fields, number formats, item visibility, grand totals) and deletes a whole report as one undo step. Captions such as Row Labels and Grand Total follow the UI language, and typing, pasting, clearing, or deleting over a report is refused. A right click on a report cell opens the pivot menu. Creating a report on a new worksheet is one undo step.
+- **Allow Edit Ranges** (Review → Protect): lists ranges that stay editable on a protected sheet; the manager is unavailable while the sheet is protected, and `addAllowedEditRange()` returns `null` in that case. A range with a password asks for it once per session, on every edit path that can write into it: paste, fill, Clear, sort, Find/Replace, format commands, merge, comments, and the formula bar, among others. An edit that also touches locked cells outside every allowed range is refused before any prompt.
+- **Calculation options** (`openIterativeDialog()`, feature `iterative`): calculation mode, iteration, R1C1 reference style, precision as displayed, the 1904 date system, and recalculation before saving. These settings are stored in the workbook.

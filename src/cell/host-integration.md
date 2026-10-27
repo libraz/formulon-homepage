@@ -26,6 +26,62 @@ function downloadWorkbook() {
 
 For a new workbook, omit `workbook` and let `Spreadsheet.mount()` create one, or create it explicitly with `WorkbookHandle.createDefault()` when the host needs to seed data first. `setWorkbook(nextWorkbook)` replaces the active workbook without rebuilding the host element. [Install](/cell/install#host-sizing) explains which handles the instance disposes.
 
+## What a saved file keeps {#saved-state}
+
+The cell layer writes its workbook objects through the engine when the file is saved, so a file reopens as it was left:
+
+- Tables with their style, header and total rows, banded rows and columns, first and last column flags, per-column totals, and their own AutoFilter; custom table and PivotTable styles.
+- PivotTables, including edits made from the stored definition.
+- Shapes, sparklines, and table slicers.
+- Sheet protection, workbook structure protection, and allowed edit ranges, with salted password hashes.
+- Each sheet's view: the active sheet, selection, scroll position, frozen and split panes, zoom, view mode, Show Formulas, outline symbols and collapsed groups.
+- Calculation options: mode, recalculate before saving, R1C1 reference style, precision as displayed, and the 1904 date system.
+- Notes with their shown state, hyperlinks, validation sources, filter colors and sorts, named styles, and tab colors.
+
+When the installed engine lacks the matching API, that object stays in the session only. `summarizeSpreadsheetCompatibility(workbook)` reports which objects are writable, read-only, session-only, or unsupported. Draw ink is never saved. Typed protection passwords are hashed asynchronously; `await whenSheetPasswordsHashed()` before `save()` so the file carries the salted hash.
+
+In Manual calculation mode, `save()` recalculates first unless the workbook turns off recalculate-before-save. Pass `{ snapshot: true }` for an internal copy that skips that step.
+
+## Load and save loss reports {#file-loss-reports}
+
+The engine counts what it could not read or write. `workbook.loadDiagnostics()` returns the counters from `loadBytes()` (undecoded formulas, defined names, and parts; skipped features; unknown content types), and `workbook.lastSaveDiagnostics()` returns those of the latest save (downgraded formulas, deferred features, dropped parts and relationships, renumbered parts). `saveWithDiagnostics(format)` saves and returns `{ bytes, diagnostics }`. All counters are zero on an engine without diagnostics.
+
+```ts
+import { fileLossEntries, hasLoadLosses } from '@libraz/formulon-cell'
+
+const load = workbook.loadDiagnostics()
+if (hasLoadLosses(load)) {
+  for (const { id, phase, count } of fileLossEntries(load, workbook.lastSaveDiagnostics())) {
+    console.warn(`${phase}: ${id} x${count}`)
+  }
+}
+```
+
+Each counter is its own row and rows are never summed, because dropped parts and dropped relationships overlap. `buildFileLossReport(workbook, instance.i18n.strings.workbookObjects)` returns the same rows as localized warnings, and `buildSpreadsheetCompatibilityReport()` includes them.
+
+## Save as `.xlsb` {#save-as-xlsb}
+
+`writeWorkbook(workbook, format)` writes `'xlsx'` or `'xlsb'` without delivering the file and returns `{ format, bytes, losses }`. The binary writer drops notes, threaded comments, and AutoFilters, and may drop drawings, PivotTables, slicers, tables, sparklines, protected ranges, and other settings; each loss has a `certain` flag and, where known, a count. `WORKBOOK_SAVE_FORMATS` gives each format's extension and MIME type. Saving `.xlsb` on an engine without binary support throws; check `workbook.capabilities.xlsbSave`, or use `workbookSaveFormats(workbook)` for the formats the engine can write.
+
+The built-in prompts are exported for a host-owned Save As flow:
+
+```ts
+import {
+  chooseWorkbookSaveFormat,
+  saveWorkbookWithPrompts,
+  WORKBOOK_SAVE_FORMATS,
+} from '@libraz/formulon-cell'
+
+const strings = instance.i18n.strings
+const format = await chooseWorkbookSaveFormat(instance.workbook, strings, instance.host)
+if (format) {
+  const saved = await saveWorkbookWithPrompts({ wb: instance.workbook, strings, format, host: instance.host })
+  if (saved) download(saved.bytes, `workbook${WORKBOOK_SAVE_FORMATS[saved.format].extension}`)
+}
+```
+
+`saveWorkbookWithPrompts()` writes the file and, when it leaves content out, asks the user to confirm first. It resolves `null` when the user cancels.
+
 ## Live workbook name in Watch Window
 
 Pass `getWorkbookName` when the Watch Window should show a host-owned filename. The callback is read when the panel renders, so the host can change the name without remounting the spreadsheet:

@@ -252,7 +252,7 @@ Users can also change the display mode by double-clicking the active tab or pres
 
 ## Tabs and display {#tabs-and-display}
 
-`RibbonTab` is one of `file`, `home`, `insert`, `draw`, `pageLayout`, `formulas`, `data`, `review`, `view`, `help`, `automate`, and `acrobat`. The package exports these tab sets:
+`RibbonTab` is one of `file`, `home`, `insert`, `draw`, `pageLayout`, `formulas`, `data`, `review`, `view`, `help`, `automate`, and `acrobat`, plus the contextual tabs `chartDesign`, `chartFormat`, `shapeFormat`, `pictureFormat`, and `tableDesign`. The package exports these tab sets:
 
 | Constant | Tabs |
 | --- | --- |
@@ -260,10 +260,15 @@ Users can also change the display mode by double-clicking the active tab or pres
 | `OPTIONAL_RIBBON_TABS` | Draw, Automate, Acrobat. |
 | `RIBBON_TABS` | The standard set followed by the optional tabs. |
 | `EXCEL365_MAC_RIBBON_TABS` | Home, Insert, Draw, Page Layout, Formulas, Data, Review, View, Automate. |
+| `CHART_CONTEXTUAL_RIBBON_TABS` | Chart Design, Format. |
+| `SHAPE_CONTEXTUAL_RIBBON_TABS` | Shape Format. |
+| `PICTURE_CONTEXTUAL_RIBBON_TABS` | Picture Format. |
+| `TABLE_CONTEXTUAL_RIBBON_TABS` | Table Design. |
+| `CONTEXTUAL_RIBBON_TABS` | All of the contextual tabs above. |
 
 When `ribbonTabs` is omitted, the default platform renders `EXCEL365_STANDARD_RIBBON_TABS` and the Mac platform renders `EXCEL365_MAC_RIBBON_TABS`; the React and Vue components share this default. The Draw, Automate, and Acrobat tabs need an explicit `RIBBON_TABS` or `[...EXCEL365_STANDARD_RIBBON_TABS, ...OPTIONAL_RIBBON_TABS]`, and should be added only when the host has wired what they need. An explicit `ribbonTabs` also replaces the Mac tab set. Tabs render in the order of the array, and keyboard navigation skips tabs that are hidden or disabled.
 
-`buildRibbonModel(lang, { tabs, profile })` returns the same model the ribbon renders: tabs with an `id` and `label`, groups with a `title`, and commands with an `id`, `label`, `title`, and optional `disabledReason`. `profile` is a `RibbonProfile`, either `default` or `excel365Mac`. Use it to build a host-owned command palette or to look up the command IDs to pass to `applyCommand()`:
+`buildRibbonModel(lang, { tabs, profile, contextualTabs })` returns the same model the ribbon renders: tabs with an `id` and `label`, groups with a `title`, and commands with an `id`, `label`, `title`, and optional `disabledReason`. `profile` is a `RibbonProfile`, either `default` or `excel365Mac`. `contextualTabs` takes a list of contextual tabs, such as `CHART_CONTEXTUAL_RIBBON_TABS` (see [Contextual tabs](#contextual-tabs)), and appends them to the model. Use it to build a host-owned command palette or to look up the command IDs to pass to `applyCommand()`:
 
 ```ts
 import { buildRibbonModel, type RibbonProfile } from '@libraz/formulon-cell'
@@ -273,6 +278,19 @@ const commands = buildRibbonModel('en', { profile }).flatMap((tab) =>
   tab.groups.flatMap((group) => group.commands.map((command) => command.id)),
 )
 ```
+
+### Contextual tabs {#contextual-tabs}
+
+The ribbon adds tabs after the regular ones while an object is selected, on both platforms and whatever `ribbonTabs` is. Selecting an object replaces the cell selection, so the tabs follow the selection:
+
+| Selection | Tabs | Commands |
+| --- | --- | --- |
+| Chart | Chart Design, Format | Chart Design: Add Chart Element, Change Colors, Switch Row/Column, Select Data, Change Chart Type. Format: Format Selection and Arrange. |
+| Shape | Shape Format | Shape Fill, Shape Outline (color, Weight, Dashes), and Arrange. |
+| Picture | Picture Format | Arrange. |
+| Cell inside a table | Table Design | Table Name, Header Row, Total Row, Banded Rows, First Column, Last Column, Banded Columns. |
+
+Arrange is one group shared by the chart, shape, and picture tabs: Bring Forward, Send Backward, and Selection Pane act on the selected object. Inserting or pasting an object selects it and opens its first tab; deselecting it returns to the tab that was active before. Color menus show the workbook theme's colors. A host can open the selected chart's settings with `instance.openChartSettings(tab?)`, which takes `'elements'` (default), `'styles'`, or `'filters'` and returns `false` when no chart is selected.
 
 ## Dropdown handlers {#dropdown-handlers}
 
@@ -308,7 +326,7 @@ A provided prop replaces the matching core hook. When a prop is omitted, Spellin
 
 ## Platform differences {#platform-differences}
 
-On the Mac platform the ribbon uses `EXCEL365_MAC_RIBBON_TABS`, which has no File or Help tab and includes Draw and Automate. Mac commands use IDs in the `mac.` namespace, such as `mac.data.goalSeek`, `mac.insert.sparkline`, `mac.review.stats`, and `mac.formulas.insertFunction`. `applyCommand()` dispatches them like any other ID, and many of them reuse the default command behind them.
+On the Mac platform the ribbon uses `EXCEL365_MAC_RIBBON_TABS`, which has no File or Help tab and includes Draw and Automate. Its Home tab is laid out like the desktop Mac ribbon, with icon-and-text Cut, Copy, and Format Painter rows and large Insert, Delete, and Format tiles. Both Home ribbons put Phonetic Settings in the font group. Mac commands use IDs in the `mac.` namespace, such as `mac.data.goalSeek`, `mac.insert.sparkline`, `mac.review.stats`, and `mac.formulas.insertFunction`. `applyCommand()` dispatches them like any other ID, and many of them reuse the default command behind them.
 
 ```ts
 instance.toolbar?.applyCommand('mac.data.goalSeek')

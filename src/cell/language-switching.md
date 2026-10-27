@@ -35,7 +35,7 @@ console.log(instance.locale) // 'de-DE'
 console.log(instance.workbook.spreadsheetProfileId()) // 'windows-de_DE'
 ```
 
-The built-in dictionaries are `en`, `ja`, `de`, `fr`, `zh`, `ko`, and `th`. Their matching profile suffixes are `en_US`, `ja_JP`, `de_DE`, `fr_FR`, `zh_CN`, `ko_KR`, and `th_TH`. A `default` UI platform uses `windows-*` public profile ids; `mac` uses `mac-*`. The engine ids behind those public values use `win-365-*` and `mac-365-*`.
+The built-in dictionaries are `en`, `ja`, `de`, `fr`, `zh`, `ko`, and `th`. Their matching profile suffixes are `en_US`, `ja_JP`, `de_DE`, `fr_FR`, `zh_CN`, `ko_KR`, and `th_TH`; Traditional Chinese region tags add `zh_TW`. A `default` UI platform uses `windows-*` public profile ids; `mac` uses `mac-*`. The engine ids behind those public values use `win-365-*` and `mac-365-*`.
 
 | UI locale | Dictionary | Default platform | Mac platform |
 | --- | --- | --- | --- |
@@ -44,10 +44,13 @@ The built-in dictionaries are `en`, `ja`, `de`, `fr`, `zh`, `ko`, and `th`. Thei
 | `de` or `de-DE` | Deutsch | `windows-de_DE` | `mac-de_DE` |
 | `fr` or `fr-FR` | Français | `windows-fr_FR` | `mac-fr_FR` |
 | `zh` or `zh-CN` | 中文 | `windows-zh_CN` | `mac-zh_CN` |
+| `zh-TW`, `zh-HK`, or `zh-MO` | 中文 (the `zh` dictionary) | `windows-zh_TW` | `mac-zh_TW` |
 | `ko` or `ko-KR` | 한국어 | `windows-ko_KR` | `mac-ko_KR` |
 | `th` or `th-TH` | ไทย | `windows-th_TH` | `mac-th_TH` |
 
 Any valid region tag with one of these built-in language bases maps to the same profile suffix: for example, `en-GB` uses the English `windows-en_US` or `mac-en_US` profile. The tag remains the committed `instance.locale`; the built-in selector represents it with the short `en` option. Script, variant, and private-use tags stay custom and do not select a profile.
+
+The one region exception is Chinese: `zh-TW`, `zh-HK`, and `zh-MO` select the Traditional Chinese profile (`zh_TW`, with its own Mac default font) instead of `zh_CN`. The UI labels still come from the `zh` dictionary, which is Simplified Chinese. For Traditional labels, register a dictionary under the same tag with `instance.i18n.register('zh-TW', dictionary)`; a registered id is used before the built-in fallback, and the profile follows the tag. `WorkbookHandle.createDefault({ locale })` also reads the `Hant` script, so `zh-Hant` creates a workbook with Traditional Chinese defaults, and a locale outside the built-in languages falls back to `en_US` defaults.
 
 `localeSwitcher` is off by default in every profile. Enable it with `ui.features.localeSwitcher: true`, or after mount with `setFeatures()`. An active interaction `policy` hides the selector, so a policy-bound application needs its own language control that calls `instance.setLocale()`.
 

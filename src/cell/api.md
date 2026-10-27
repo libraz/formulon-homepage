@@ -45,7 +45,7 @@ function closeView() {
 }
 ```
 
-Use `createDefault()` for a new workbook and `loadBytes()` for `.xlsx` bytes obtained from a file or an API. Pass the handle to `Spreadsheet.mount()` when the host must prepare or load data first. `save()` returns `.xlsx` bytes for the host to download or upload. Wrap a multi-cell write in `workbook.withBatchedRecalc(() => { … })` to recalculate once at the end instead of after every cell. [Install](/cell/install#host-sizing) explains which handles the instance disposes.
+Use `createDefault()` for a new workbook and `loadBytes()` for `.xlsx` bytes obtained from a file or an API. Pass the handle to `Spreadsheet.mount()` when the host must prepare or load data first. `save()` returns `.xlsx` bytes for the host to download or upload; [Host integration](/cell/host-integration#saved-state) lists what the file keeps and how to read load and save loss reports or write `.xlsb`. `createDefault({ locale, platform })` creates a workbook with the defaults of the `default` or `mac` platform; see [Platform and Mac UI](/cell/platform#sheet-geometry). Wrap a multi-cell write in `workbook.withBatchedRecalc(() => { … })` to recalculate once at the end instead of after every cell. [Install](/cell/install#host-sizing) explains which handles the instance disposes.
 
 ## Mounting and the live instance
 
@@ -80,6 +80,8 @@ The returned `SpreadsheetInstance` is the main host API:
 | `setPolicy()`, `setViewportOptions()`, `setContextMenu()`, `setOverlayOptions()`, `setUi()`, `setFeatures()`, `setExtensions()`, `setToolbar()`, `setTheme()` | Change mount options after mount; see [Options](/cell/options#runtime-changes). |
 | `locale`, `setLocale()`, `i18n` | Read or change the UI locale and calculation profile; register and extend dictionaries. `setLocale()` returns `false` when the change is rolled back. |
 | `open…Dialog()`, `openFindReplace()`, `openFormatDialog()`, `openPageSetup()`, … | Open a built-in dialog from host UI; see [Modals and dialogs](/cell/modals#open-a-built-in-dialog-from-host-ui). |
+| `openChartSettings(tab?)` | Open the settings of the selected chart; returns `false` when no chart is selected. |
+| `followActiveHyperlink()` | Follow the hyperlink on the active cell as Ctrl/Cmd+click does; returns `false` when there is none. |
 | `openWatchWindow()`, `closeWatchWindow()`, `toggleWatchWindow()` | Show the Watch Window panel. |
 | `tracePrecedents()`, `traceDependents()`, `clearTraces()` | Draw or clear formula trace arrows from the active cell. The trace methods return the count of arrows added. |
 | `setSheetProtected()`, `toggleSheetProtection()`, `isSheetProtected()` | Protect the active sheet, optionally with a password and permission set. |
@@ -127,7 +129,7 @@ For save flows and trusted updates, see [Host integration](/cell/host-integratio
 
 ## Command helpers
 
-The root package exports focused helpers for applications that provide their own buttons or dialogs. Common groups include formatting, clipboard and CSV/TSV, find and replace, comments, hyperlinks, validation, filters, tables, sheet views, page setup, charts, slicers, and protection. Each helper works with the instance store or workbook state described by its type signature.
+The root package exports focused helpers for applications that provide their own buttons or dialogs. Common groups include formatting, clipboard and CSV/TSV, find and replace, comments, hyperlinks, validation, filters, tables (including Table Design: `renameActiveTable()`, `toggleTableOption()`, `setTableColumnFunction()`), sheet views, page setup, charts (including Chart Design and chart copy, paste, and duplicate), shapes and pictures (including shape fill and outline), slicers, phonetic settings, Go To Special, and protection (including allowed edit ranges and password checks). Each helper works with the instance store or workbook state described by its type signature.
 
 Use an instance method when the action opens one of the built-in dialogs, for example `openFormatDialog()` or `openPageSetup()`. Use a command helper when the host owns the surrounding control and wants to supply its own UI. On Mac, `openFunctionArguments(seedName?, { category })` opens the nonmodal picker; `category` is ignored when a seed function name is supplied.
 
@@ -174,7 +176,7 @@ autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, opti
 
 ## Units for cell and sheet layout
 
-`CellFormat.fontSize`, `WorkbookHandle.setRowHeight()`, `WorkbookHandle.setColumnWidth()`, and AutoFit results use CSS pixels. Native `FontRecord.size` values and ribbon font-size controls use typographic points. The conversion is `px = pt * 96 / 72`. Formulon stores row heights in points and column widths in characters; the cell layer converts those values at the engine boundary.
+`CellFormat.fontSize`, `WorkbookHandle.setRowHeight()`, `WorkbookHandle.setColumnWidth()`, and AutoFit results use CSS pixels. Native `FontRecord.size` values and ribbon font-size controls use typographic points. The conversion is `px = pt * 96 / 72`. Formulon stores row heights in points and column widths in characters; the cell layer converts those values at the engine boundary, using the workbook's `geometryPlatform` column-width model (`default` or `mac`). Pixels here are canonical sheet pixels. On screen they are multiplied by the sheet zoom (10% to 400%) and the platform's screen scale; see [Platform and Mac UI](/cell/platform#sheet-geometry). The ribbon's Row Height and Column Width commands take points and characters.
 
 ## CSV import and export
 

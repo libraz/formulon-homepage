@@ -19,7 +19,7 @@ description: Choose the visible UI, editable cells, navigation bounds, menus, an
 | `excel365` | Every feature except the opt-in ones listed below. This is the profile used when `ui.profile` is omitted. |
 | `full` | Same feature set as `excel365`. |
 
-`ui.platform` is resolved independently from `ui.profile`. Use `default` for the default surface, `mac` for an explicit Mac surface, or `auto` for browser detection; iPad and iPhone user agents, including touch-enabled `MacIntel`, resolve to `default`. See [Platform and Mac UI](/cell/platform) for the Mac ribbon and its limits.
+`ui.platform` is resolved independently from `ui.profile`. Use `default` for the default surface, `mac` for an explicit Mac surface, or `auto` for browser detection; iPad and iPhone user agents, including touch-enabled `MacIntel`, resolve to `default`. The platform also sets the grid's screen scale and the defaults of a workbook the mount creates. See [Platform and Mac UI](/cell/platform) for the Mac ribbon, sheet geometry, and limits.
 
 ```ts
 const instance = await Spreadsheet.mount(host, {
@@ -66,7 +66,7 @@ The top-level `theme` takes precedence over `ui.theme` (default `paper`; the bui
 Only when `toolbar` is `true` or an options object, or when you pass a `ui` whose profile has the ribbon on. A mount with no `ui` and no `toolbar` has no ribbon, even though its features resolve to the `excel365` set. Feature flags choose built-in features; they do not mount the ribbon.
 :::
 
-`setUi()` keeps the current workbook while re-resolving the profile, platform, and theme. Pass the complete UI configuration: omitted fields return to their defaults. It also reapplies the original top-level `features`, `theme`, and `toolbar` overrides. A platform change closes an open Mac formula palette and discards its suspended draft. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change one of those values directly.
+`setUi()` keeps the current workbook while re-resolving the profile, platform, and theme. Pass the complete UI configuration: omitted fields return to their defaults. It also reapplies the original top-level `features`, `theme`, and `toolbar` overrides. A platform change closes an open Mac formula palette and discards its suspended draft, re-reads row heights and column widths, and clears the undo history. Use `setFeatures()`, `setTheme()`, or `setToolbar()` to change one of those values directly.
 
 <CellEmbedDemo scenario="profiles" />
 

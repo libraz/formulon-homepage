@@ -56,7 +56,7 @@ const instance = await Spreadsheet.mount(host, {
 
 `overlayPortal` は同じ `.report-editor` ラッパー内に置きます。グリッドの外側にあるメニューやダイアログにも上書きを適用しながら、このスプレッドシートの範囲に限定できます。
 
-## 公開グリッドトークン
+## 公開グリッドトークン {#public-grid-tokens}
 
 サポート対象の名前は `styles/tokens.css` に定義されています。よく使うグループは次のとおりです。
 
@@ -65,9 +65,10 @@ const instance = await Spreadsheet.mount(host, {
 | 背景 | `--fc-bg`、`--fc-bg-elev`、`--fc-bg-rail`、`--fc-bg-header`、`--fc-bg-hover` | グリッドと周辺 UI の背景です。 |
 | 文字 | `--fc-fg`、`--fc-fg-strong`、`--fc-fg-mute`、`--fc-fg-faint` | セルと補助テキストです。 |
 | 罫線 | `--fc-rule`、`--fc-rule-strong`、`--fc-rule-soft` | グリッド線と区切り線です。 |
+| 見出し | `--fc-header-bg`、`--fc-header-rule` | 行見出しと列見出しの塗りつぶしと、見出しセル間の罫線です。既定値は `--fc-bg-rail` と `--fc-rule` で、Mac プラットフォームは独自の値を設定します。 |
 | 選択 | `--fc-accent`、`--fc-accent-strong`、`--fc-accent-soft`、`--fc-selection-fill` | フォーカスと選択範囲です。 |
 | セルの値 | `--fc-cell-error-fg`、`--fc-cell-formula-fg`、`--fc-cell-bool-fg`、`--fc-cell-num-fg` | 値の種類ごとの文字色です。 |
-| 文字組み | `--fc-font-ui`、`--fc-font-mono`、`--fc-text-cell`、`--fc-text-header` | フォントとセルのサイズです。 |
+| 文字組み | `--fc-font-ui`、`--fc-font-mono`、`--fc-text-cell`、`--fc-cell-text-size`、`--fc-text-header` | フォントとセルのサイズです。`--fc-cell-text-size` はグリッドとセル内エディターが実際に使うサイズで、既定値は `--fc-text-cell` です。Mac プラットフォームは 16px（12 pt）を設定するため、Mac ではこちらを上書きしてください。 |
 | ダイアログ | `--fc-radius-md`、`--fc-shadow-8`、`--fc-shadow-16` | 浮動 UI とダイアログです。 |
 
 トークンは `.fc-host` に直接指定します。ホスト要素の外に置かれるメニューやダイアログにも適用する場合は、対応する `.fc-overlay-portal` に同じ値を指定してください。ポータルが引き継ぐのはテーマ名で、ホストに限定した CSS 変数の上書きは自動では引き継ぎません。祖先セレクターで範囲を限定できますが、祖先要素だけに変数を設定しても、ホストに定義されたパッケージの値は上書きできません。パッケージの CSS カスケードレイヤーの外側に書いたホスト CSS で、既定の値を上書きできます。

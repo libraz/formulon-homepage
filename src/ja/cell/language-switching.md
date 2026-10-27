@@ -35,7 +35,7 @@ console.log(instance.locale) // 'de-DE'
 console.log(instance.workbook.spreadsheetProfileId()) // 'windows-de_DE'
 ```
 
-組み込み辞書は `en`、`ja`、`de`、`fr`、`zh`、`ko`、`th` の 7 つです。対応するプロファイルの接尾辞は `en_US`、`ja_JP`、`de_DE`、`fr_FR`、`zh_CN`、`ko_KR`、`th_TH` です。`default` プラットフォームでは公開プロファイル ID が `windows-*`、`mac` では `mac-*` になります。エンジン内部の ID は `win-365-*` と `mac-365-*` です。
+組み込み辞書は `en`、`ja`、`de`、`fr`、`zh`、`ko`、`th` の 7 つです。対応するプロファイルの接尾辞は `en_US`、`ja_JP`、`de_DE`、`fr_FR`、`zh_CN`、`ko_KR`、`th_TH` で、繁体字中国語の地域タグでは `zh_TW` が加わります。`default` プラットフォームでは公開プロファイル ID が `windows-*`、`mac` では `mac-*` になります。エンジン内部の ID は `win-365-*` と `mac-365-*` です。
 
 | UI ロケール | 辞書 | default プラットフォーム | Mac プラットフォーム |
 | --- | --- | --- | --- |
@@ -44,10 +44,13 @@ console.log(instance.workbook.spreadsheetProfileId()) // 'windows-de_DE'
 | `de` または `de-DE` | Deutsch | `windows-de_DE` | `mac-de_DE` |
 | `fr` または `fr-FR` | Français | `windows-fr_FR` | `mac-fr_FR` |
 | `zh` または `zh-CN` | 中文 | `windows-zh_CN` | `mac-zh_CN` |
+| `zh-TW`、`zh-HK`、`zh-MO` | 中文（`zh` 辞書） | `windows-zh_TW` | `mac-zh_TW` |
 | `ko` または `ko-KR` | 한국어 | `windows-ko_KR` | `mac-ko_KR` |
 | `th` または `th-TH` | ไทย | `windows-th_TH` | `mac-th_TH` |
 
 組み込み言語を基底に持つ正しい地域タグは、同じプロファイル接尾辞へマッピングされます。たとえば `en-GB` は英語の `windows-en_US` または `mac-en_US` プロファイルを使います。`instance.locale` には指定したタグが確定値として残り、組み込みセレクターでは短い `en` の選択肢として表示されます。script、variant、private-use タグはカスタム ID のままで、プロファイルを選びません。
+
+地域タグの例外は中国語だけです。`zh-TW`、`zh-HK`、`zh-MO` は `zh_CN` ではなく繁体字中国語のプロファイル（`zh_TW`。Mac の既定フォントも専用です）を選びます。UI のラベルは引き続き `zh` 辞書（簡体字）です。繁体字のラベルが必要な場合は、同じタグで `instance.i18n.register('zh-TW', dictionary)` と辞書を登録してください。登録した ID は組み込み辞書へのフォールバックより先に使われ、プロファイルはタグに従います。`WorkbookHandle.createDefault({ locale })` は `Hant` script も読むため、`zh-Hant` では繁体字中国語の既定値でワークブックが作られ、組み込み言語にないロケールは `en_US` の既定値になります。
 
 `localeSwitcher` はどのプロファイルでも初期状態では無効です。`ui.features.localeSwitcher: true` で有効にするか、マウント後に `setFeatures()` で有効にします。操作 `policy` が有効な間はセレクターが表示されないため、ポリシーを使うアプリケーションでは `instance.setLocale()` を呼ぶ言語コントロールを自分で用意してください。
 

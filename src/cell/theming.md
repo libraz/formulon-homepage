@@ -65,9 +65,10 @@ The supported token names are declared in `styles/tokens.css`. Common groups are
 | Surfaces | `--fc-bg`, `--fc-bg-elev`, `--fc-bg-rail`, `--fc-bg-header`, `--fc-bg-hover` | Grid and surrounding control backgrounds. |
 | Text | `--fc-fg`, `--fc-fg-strong`, `--fc-fg-mute`, `--fc-fg-faint` | Cell and supporting text. |
 | Lines | `--fc-rule`, `--fc-rule-strong`, `--fc-rule-soft` | Gridlines and separators. |
+| Headers | `--fc-header-bg`, `--fc-header-rule` | Row and column header fill and the rule between header cells. They default to `--fc-bg-rail` and `--fc-rule`; the Mac platform sets its own values. |
 | Selection | `--fc-accent`, `--fc-accent-strong`, `--fc-accent-soft`, `--fc-selection-fill` | Focus and selected ranges. |
 | Cell values | `--fc-cell-error-fg`, `--fc-cell-formula-fg`, `--fc-cell-bool-fg`, `--fc-cell-num-fg` | Value-specific text colors. |
-| Typography | `--fc-font-ui`, `--fc-font-mono`, `--fc-text-cell`, `--fc-text-header` | Fonts and cell sizing. |
+| Typography | `--fc-font-ui`, `--fc-font-mono`, `--fc-text-cell`, `--fc-cell-text-size`, `--fc-text-header` | Fonts and cell sizing. `--fc-cell-text-size` is the size the grid and the in-cell editor actually use and defaults to `--fc-text-cell`; the Mac platform sets it to 16px (12 pt), so override it there. |
 | Dialog surfaces | `--fc-radius-md`, `--fc-shadow-8`, `--fc-shadow-16` | Floating controls and dialogs. |
 
 Override tokens directly on `.fc-host`. Apply the same overrides to its `.fc-overlay-portal` when controls are outside the host subtree; the portal copies the theme name, not host-scoped CSS variable overrides. An ancestor selector can scope those rules, but setting only ancestor variables does not override the bundled host declarations. Host CSS outside the package's cascade layers can override the default values.

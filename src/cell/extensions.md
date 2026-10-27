@@ -54,7 +54,7 @@ Most factories share their name with the feature flag they replace. The public f
 
 - Navigation and review: `contextMenu`, `findReplace`, `goToSpecialDialog`, `quickAnalysis`, `watchWindow`, `viewToolbar`.
 - Editing and formatting: `clipboard`, `pasteSpecial`, `formatDialog`, `formatPainter`, `borderDraw`, `validationList`.
-- Workbook authoring: `conditionalDialog`, `namedRangeDialog`, `hyperlinkDialog`, `commentDialog`, `hoverComment`, `iterativeDialog`, `pageSetupDialog`.
+- Workbook authoring: `conditionalDialog`, `namedRangeDialog`, `hyperlinkDialog`, `commentDialog`, `hoverComment`, `iterativeDialog` (calculation options), `pageSetupDialog`.
 - Visual objects and summaries: `charts`, `illustrations`, `pivotTableDialog`, `slicer`, `workbookObjects`.
 - Host-facing controls: `statusBar`, `wheel`.
 
@@ -112,7 +112,7 @@ await Spreadsheet.mount(host, {
 
 Keep custom extensions focused on the host's UI. Use `contextMenu` mount options when only menu items need to change, and use [Modal and overlay options](/cell/modals) when an existing dialog should own the placement.
 
-Most instance openers, such as `openFindReplace()`, target the built-in feature and do nothing once it is disabled; open a replacement through its own handle, `instance.features[id]`. Three openers look for a replacement first: `openQuickAnalysis()`, `openWorkbookObjects()` (also `openPivotFieldList()`), and `openPivotTableDialog()` call the `open()` (or `openPivotFieldList()`) method of an extension registered with id `quickAnalysis`, `workbookObjects`, or `pivotTableDialog`.
+Most instance openers, such as `openFindReplace()`, target the built-in feature and do nothing once it is disabled; open a replacement through its own handle, `instance.features[id]`. Four openers look for a replacement first: `openQuickAnalysis()`, `openWorkbookObjects()` (also `openPivotFieldList()`), and `openPivotTableDialog()` call the `open()` (or `openPivotFieldList()`) method of an extension registered with id `quickAnalysis`, `workbookObjects`, or `pivotTableDialog`, and `openChartSettings()` calls the `openSettings(tab)` method of one registered with id `charts`.
 
 ## Update and remove extensions
 

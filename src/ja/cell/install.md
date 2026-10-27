@@ -5,19 +5,19 @@ description: formulon-cell の表計算 UI キットをインストールして�
 
 # インストール
 
-cell の各パッケージは `@libraz/formulon@0.16.0` を使い、Node.js 22 以降が必要です。
+cell の各パッケージは `@libraz/formulon@0.18.0` を使い、Node.js 22 以降が必要です。
 
 コアパッケージと、そのピア依存関係である `zustand` をインストールします。
 
 ```sh
-npm install @libraz/formulon-cell@0.10.0 zustand
+npm install @libraz/formulon-cell@0.11.0 zustand
 ```
 
 フレームワークを使う場合は、対応するアダプターもインストールします。
 
 ```sh
-npm install @libraz/formulon-cell-react@0.10.0 react react-dom
-npm install @libraz/formulon-cell-vue@0.10.0 vue
+npm install @libraz/formulon-cell-react@0.11.0 react react-dom
+npm install @libraz/formulon-cell-vue@0.11.0 vue
 ```
 
 ブラウザのエントリーポイントでコアのスタイルシートを 1 回読み込みます。`@libraz/formulon-cell/styles.css` には、グリッド、ダイアログ、オーバーレイ、リボン、3 つの組み込みテーマがすべて含まれます。`@libraz/formulon-cell/styles/` 以下の個別ファイル（`tokens.css`、`paper.css`、`ink.css`、`contrast.css`、`toolbar.css`）は、スタイルシートを自分で組み立てる場合に使います。

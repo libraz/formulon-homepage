@@ -45,7 +45,7 @@ function closeView() {
 }
 ```
 
-新しいワークブックには `createDefault()`、ファイルや API から受け取った `.xlsx` のバイト列には `loadBytes()` を使います。先にデータを準備する場合は `Spreadsheet.mount()` にハンドルを渡します。`save()` は、ホストがダウンロードまたはアップロードできる `.xlsx` のバイト列を返します。複数のセルにまとめて書き込む場合は `workbook.withBatchedRecalc(() => { … })` で囲むと、セルごとではなく最後に 1 回だけ再計算します。インスタンスがどのハンドルを破棄するかは [インストール](/ja/cell/install#host-sizing) を参照してください。
+新しいワークブックには `createDefault()`、ファイルや API から受け取った `.xlsx` のバイト列には `loadBytes()` を使います。先にデータを準備する場合は `Spreadsheet.mount()` にハンドルを渡します。`save()` は、ホストがダウンロードまたはアップロードできる `.xlsx` のバイト列を返します。ファイルに残るもの、読み込みと保存の損失レポートの読み方、`.xlsb` の書き出しは [ホスト統合](/ja/cell/host-integration#saved-state) を参照してください。`createDefault({ locale, platform })` は、`default` または `mac` プラットフォームの既定値でワークブックを作成します。[プラットフォームと Mac UI](/ja/cell/platform#sheet-geometry) を参照してください。複数のセルにまとめて書き込む場合は `workbook.withBatchedRecalc(() => { … })` で囲むと、セルごとではなく最後に 1 回だけ再計算します。インスタンスがどのハンドルを破棄するかは [インストール](/ja/cell/install#host-sizing) を参照してください。
 
 ## マウントと実行中のインスタンス
 
@@ -80,6 +80,8 @@ instance.dispose()
 | `setPolicy()`、`setViewportOptions()`、`setContextMenu()`、`setOverlayOptions()`、`setUi()`、`setFeatures()`、`setExtensions()`、`setToolbar()`、`setTheme()` | マウント後にオプションを変更します。[オプション](/ja/cell/options#runtime-changes) を参照してください。 |
 | `locale`、`setLocale()`、`i18n` | UI のロケールと計算プロファイルの取得・変更、辞書の登録と上書き。`setLocale()` は切り戻したときに `false` を返します。 |
 | `open…Dialog()`、`openFindReplace()`、`openFormatDialog()`、`openPageSetup()` など | ホスト UI から組み込みダイアログを開きます。[モーダルとダイアログ](/ja/cell/modals#open-a-built-in-dialog-from-host-ui) を参照してください。 |
+| `openChartSettings(tab?)` | 選択中のグラフの設定を開きます。グラフが選択されていなければ `false` を返します。 |
+| `followActiveHyperlink()` | Ctrl / Cmd+クリックと同じように、アクティブセルのハイパーリンクを開きます。リンクがなければ `false` を返します。 |
 | `openWatchWindow()`、`closeWatchWindow()`、`toggleWatchWindow()` | ウォッチ ウィンドウのパネルを表示します。 |
 | `tracePrecedents()`、`traceDependents()`、`clearTraces()` | アクティブセルから参照元・参照先のトレース矢印を描画または消去します。トレース系のメソッドは追加した矢印の数を返します。 |
 | `setSheetProtected()`、`toggleSheetProtection()`、`isSheetProtected()` | アクティブシートを保護します。パスワードと許可する操作も指定できます。 |
@@ -127,7 +129,7 @@ unsubscribe()
 
 ## コマンドヘルパー
 
-パッケージ直下からは、独自のボタンやダイアログを作るアプリケーション向けに、機能ごとのヘルパーを利用できます。書式、クリップボードと CSV / TSV、検索と置換、コメント、ハイパーリンク、入力規則、フィルター、テーブル、シートビュー、ページ設定、グラフ、スライサー、保護などが含まれます。各ヘルパーの引数は、インスタンスのストアまたはワークブックの状態に対応しています。
+パッケージ直下からは、独自のボタンやダイアログを作るアプリケーション向けに、機能ごとのヘルパーを利用できます。書式、クリップボードと CSV / TSV、検索と置換、コメント、ハイパーリンク、入力規則、フィルター、テーブル（テーブル デザインの `renameActiveTable()`、`toggleTableOption()`、`setTableColumnFunction()` を含む）、シートビュー、ページ設定、グラフ（グラフのデザイン、グラフのコピー、貼り付け、複製を含む）、図形と図（図形の塗りつぶしと枠線を含む）、スライサー、ふりがなの設定、選択オプション、保護（編集を許可する範囲とパスワード確認を含む）などが含まれます。各ヘルパーの引数は、インスタンスのストアまたはワークブックの状態に対応しています。
 
 組み込みダイアログを開く場合は `openFormatDialog()` や `openPageSetup()` などのインスタンスメソッドを使います。周囲の UI をホストが所有する場合はコマンドヘルパーを使います。Mac では `openFunctionArguments(seedName?, { category })` でモーダルではないピッカーを開けます。関数名を指定した場合、`category` は無視されます。
 
@@ -174,7 +176,7 @@ autofitColsWidth(instance.store, instance.history, 1, 3, instance.workbook, opti
 
 ## セルとシートのレイアウト単位
 
-`CellFormat.fontSize`、`WorkbookHandle.setRowHeight()`、`WorkbookHandle.setColumnWidth()`、オートフィットの結果は CSS ピクセルを使います。ネイティブの `FontRecord.size` とリボンのフォントサイズは組版上のポイントを使います。変換式は `px = pt * 96 / 72` です。Formulon は行の高さをポイント、列の幅を文字数で保存し、cell 層がエンジンとの境界で変換します。
+`CellFormat.fontSize`、`WorkbookHandle.setRowHeight()`、`WorkbookHandle.setColumnWidth()`、オートフィットの結果は CSS ピクセルを使います。ネイティブの `FontRecord.size` とリボンのフォントサイズは組版上のポイントを使います。変換式は `px = pt * 96 / 72` です。Formulon は行の高さをポイント、列の幅を文字数で保存し、cell 層がエンジンとの境界で、ワークブックの `geometryPlatform`（`default` または `mac`）の列幅モデルを使って変換します。ここでのピクセルは、シート上の基準ピクセルです。画面上ではシートのズーム（10% から 400%）とプラットフォームの画面スケールが掛かります。[プラットフォームと Mac UI](/ja/cell/platform#sheet-geometry) を参照してください。リボンの「行の高さ」と「列の幅」はポイントと文字数で指定します。
 
 ## CSV のインポートとエクスポート
 
