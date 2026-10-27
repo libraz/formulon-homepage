@@ -14,9 +14,9 @@ const copy = computed(() =>
         masthead: 'Formulon',
         eyebrow: 'Headless Spreadsheet Engine',
         claim: 'アプリや自動化、AI\u00a0エージェントから Excel ワークブックを計算するエンジン',
-        sub: 'Formulon は同じ C++17 計算エンジンを WebAssembly、Python、Native Node、CLI、MCP から使えます。Excel や Microsoft のランタイム、COM 自動化なしで .xlsx / .xlsb を読み込み、数式を評価・再計算して保存できます。',
+        sub: 'Formulon は同じ C++17 計算エンジンを WebAssembly、Python、Native Node、CLI、MCP から使えます。Excel や Microsoft のランタイム、COM 自動化なしで .xlsx / .xlsb を読み込み、数式を評価・再計算して保存できます。ブラウザ向けの表計算 UI は formulon-cell が同じエンジンの上で提供します。',
         primary: { text: 'クイックスタート', link: '/ja/start/install' },
-        secondary: { text: 'MCP で使う', link: '/ja/mcp/' },
+        secondary: { text: 'Formulon を選ぶ理由', link: '/ja/why' },
         tertiary: { text: '利用シナリオを見る', link: '/ja/scenarios/' },
         demo: { text: 'デモを試す', link: '/ja/demos' },
         stats: [
@@ -43,9 +43,9 @@ const copy = computed(() =>
         masthead: 'Formulon',
         eyebrow: 'Headless Spreadsheet Engine',
         claim: 'A workbook calculation platform for apps, automation, and AI agents.',
-        sub: 'Formulon ships one C++17 calculation core across WASM, Python, Native Node, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation.',
+        sub: 'Formulon ships one C++17 calculation core across WASM, Python, Native Node, CLI, and MCP so applications can read, evaluate, recalculate, and write .xlsx / .xlsb files without Excel, Microsoft runtimes, or COM automation. For a spreadsheet UI in the browser, formulon-cell builds on the same engine.',
         primary: { text: 'Quick Start', link: '/start/install' },
-        secondary: { text: 'Use from MCP', link: '/mcp/' },
+        secondary: { text: 'Why Formulon', link: '/why' },
         tertiary: { text: 'Browse scenarios', link: '/scenarios/' },
         demo: { text: 'Try the live demos', link: '/demos' },
         stats: [

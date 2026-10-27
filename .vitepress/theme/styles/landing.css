@@ -1034,7 +1034,7 @@ a.fln-stack-chip:hover {
 
 .fln-path-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -1179,6 +1179,110 @@ a.fln-stack-chip:hover {
   letter-spacing: -0.01em;
   color: var(--biz-ink);
   transition: color 0.18s ease;
+}
+
+/* ---------- Why Formulon ---------- */
+
+.fln-why {
+  padding: 96px 32px 72px;
+  background: var(--biz-bg);
+  border-bottom: 1px solid var(--biz-line);
+}
+
+.fln-why-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.fln-why .fln-start-header h2 {
+  max-width: 20ch;
+}
+
+.fln-why-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--biz-line);
+  border-radius: 8px;
+  background: var(--biz-line);
+  overflow: hidden;
+}
+
+.fln-why-grid a {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 26px 28px 28px;
+  background: var(--biz-panel);
+  color: var(--biz-ink);
+  text-decoration: none;
+  transition: background 0.18s ease;
+}
+
+.fln-why-grid a:hover {
+  background: color-mix(in srgb, var(--biz-accent) 6%, var(--biz-panel));
+}
+
+.fln-why-grid span {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--biz-accent-deep);
+}
+
+.fln-why-grid strong {
+  font-family: var(--biz-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  word-break: auto-phrase;
+  text-wrap: balance;
+}
+
+.fln-why-grid p {
+  margin: 0;
+  color: var(--biz-muted);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.62;
+}
+
+.fln-why-more {
+  display: inline-flex;
+  gap: 8px;
+  margin-top: 28px;
+  color: var(--biz-accent-deep);
+  font-family: var(--biz-display);
+  font-size: 0.98rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.fln-why-more:hover span {
+  transform: translateX(4px);
+}
+
+.fln-why-more span {
+  transition: transform 0.18s ease;
+}
+
+@media (max-width: 960px) {
+  .fln-why {
+    padding: 64px 20px 48px;
+  }
+
+  .fln-why-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .fln-why-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- Section III — Live Figures (demo) ---------- */
@@ -1675,14 +1779,16 @@ a.fln-stack-chip:hover {
   --biz-success: #2dd4bf;
 }
 
+/* Sections alternate surfaces in page order: hero, start, why, demo, mcp, stack. */
 .fln-hero,
-.fln-mcp,
-.fln-stack,
-.fln-demo {
+.fln-why,
+.fln-mcp {
   background: var(--biz-bg);
 }
 
-.fln-start {
+.fln-start,
+.fln-demo,
+.fln-stack {
   background: var(--biz-bg-soft);
 }
 

@@ -222,7 +222,7 @@ watch(isJa, async (ja) => {
   <section class="fln-demo" aria-labelledby="fln-demo-title">
     <div class="fln-demo-inner">
       <div class="fln-demo-copy">
-        <span class="fln-section-mark" data-volume="04">{{ copy.section }}</span>
+        <span class="fln-section-mark" data-volume="03">{{ copy.section }}</span>
         <h2 id="fln-demo-title">{{ copy.heading }}</h2>
         <p>{{ copy.body }}</p>
         <div class="fln-demo-links">

@@ -183,7 +183,7 @@ const copy = computed(() =>
   <section class="fln-stack" aria-labelledby="fln-stack-title">
     <div class="fln-stack-inner">
       <header class="fln-stack-header">
-        <span class="fln-section-mark" data-volume="02">{{ copy.section }}</span>
+        <span class="fln-section-mark" data-volume="05">{{ copy.section }}</span>
         <h2 id="fln-stack-title">{{ copy.heading }}</h2>
         <p>{{ copy.body }}</p>
       </header>

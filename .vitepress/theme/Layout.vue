@@ -5,6 +5,7 @@ import HomeHero from './components/HomeHero.vue'
 import HomeMcp from './components/HomeMcp.vue'
 import HomeSpec from './components/HomeSpec.vue'
 import HomeStack from './components/HomeStack.vue'
+import HomeWhy from './components/HomeWhy.vue'
 
 const { Layout } = DefaultTheme
 </script>
@@ -15,10 +16,11 @@ const { Layout } = DefaultTheme
       <HomeHero />
     </template>
     <template #home-features-before>
+      <HomeSpec />
+      <HomeWhy />
+      <HomeCellDemo />
       <HomeMcp />
       <HomeStack />
-      <HomeSpec />
-      <HomeCellDemo />
     </template>
   </Layout>
 </template>

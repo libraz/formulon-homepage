@@ -54,7 +54,7 @@ const copy = computed(() =>
   <section class="fln-mcp" aria-labelledby="fln-mcp-title">
     <div class="fln-mcp-inner">
       <div class="fln-mcp-copy">
-        <span class="fln-section-mark" data-volume="01">{{ copy.section }}</span>
+        <span class="fln-section-mark" data-volume="04">{{ copy.section }}</span>
         <h2 id="fln-mcp-title">{{ copy.heading }}</h2>
         <p>{{ copy.body }}</p>
         <div class="fln-mcp-actions">

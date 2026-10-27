@@ -52,6 +52,13 @@ const paths = computed<Path[]>(() =>
           description:
             'MCP ツールで .xlsx / .xlsb を開き、セル、シート、定義名、レイアウトを操作して再計算します。',
           link: '/ja/mcp/'
+        },
+        {
+          key: 'UI',
+          title: 'Web アプリに表計算 UI を埋め込む',
+          description:
+            'formulon-cell で、数式バーやリボンのあるシートをページに置けます。React / Vue 用アダプターあり（ベータ版）。',
+          link: '/ja/cell/'
         }
       ]
     : [
@@ -89,6 +96,13 @@ const paths = computed<Path[]>(() =>
           description:
             'Use MCP tools to open .xlsx or .xlsb files, mutate cells, sheets, names, and layout, then recalculate.',
           link: '/mcp/'
+        },
+        {
+          key: 'UI',
+          title: 'Embed a spreadsheet UI in a web app',
+          description:
+            'Put a grid with formula bar and ribbon in your page through formulon-cell, with React and Vue adapters. Beta.',
+          link: '/cell/'
         }
       ]
 )
@@ -156,7 +170,7 @@ const capabilities = computed<Capability[]>(() =>
   <section class="fln-start" :aria-label="heading">
     <div class="fln-start-inner">
       <header class="fln-start-header">
-        <span class="fln-section-mark" data-volume="03">{{ sectionLabel }}</span>
+        <span class="fln-section-mark" data-volume="01">{{ sectionLabel }}</span>
         <h2>{{ heading }}</h2>
         <p>{{ subheading }}</p>
       </header>
