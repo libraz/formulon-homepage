@@ -1,21 +1,20 @@
 <script setup lang="ts">
 /**
- * Draws one laid-out diagram scene: lane backgrounds, boxes with their wrapped
- * label and note lines, row captions, and the connectors between them.
+ * Draws one laid-out diagram scene: group panels, boxes with their sequence
+ * number, wrapped name and note lines, row captions, and the connectors.
  *
- * The component takes finished geometry — DiagramFlow and DiagramLayers own all
- * the maths — so the two diagram types share one visual vocabulary: `.fx-lane`
- * for a grouping band, `.fx-block` for a box, `.fx-note--strong` for a label,
- * `.fx-tick` for a note, `.fx-axis-label` for a row caption, and a series-1
- * `.fx-curve` shaft with a solid `.fx-cell` head for every connector.
- *
- * Type sizes come from those classes; the matching constants in
- * diagramGeometry.ts only exist so the boxes can be sized before the browser
- * lays the text out.
+ * The component takes finished geometry — flowLayout.ts and layersLayout.ts
+ * own the maths — so both diagram types share the figure vocabulary from
+ * styles/figures.css: `.fx-grp` panel, `.fx-card` / `.fx-alt` box, `.fx-hb`
+ * name, `.fx-s` note, `.fx-lbl` caption and number, `.fx-ln` / `.fx-ah`
+ * connector. Type sizes come from those classes; the matching constants in
+ * diagramGeometry.ts exist so boxes can be sized before the text is laid out.
  */
 import { computed } from 'vue'
 import {
+  CAPTION_SIZE,
   type DiagramScene,
+  INDEX_BAND,
   LABEL_LEADING,
   LABEL_SIZE,
   NOTE_GAP,
@@ -32,12 +31,13 @@ const props = defineProps<{
 /** Boxes with their text baselines resolved, vertically centred in the box. */
 const boxes = computed(() =>
   props.scene.boxes.map((box) => {
-    const top = box.y + (box.h - box.contentH) / 2
-    const cx = box.x + box.w / 2
+    const band = box.index ? INDEX_BAND : 0
+    const top = box.y + band + (box.h - band - box.contentH) / 2
     const noteTop = top + box.labelLines.length * LABEL_LEADING + NOTE_GAP
     return {
       box,
-      cx,
+      cx: box.x + box.w / 2,
+      indexY: box.y + 6 + CAPTION_SIZE * 0.8,
       labels: box.labelLines.map((text, i) => ({
         text,
         y: top + i * LABEL_LEADING + LABEL_LEADING / 2 + LABEL_SIZE * 0.35
@@ -62,25 +62,25 @@ const boxes = computed(() =>
       orient="auto"
       markerUnits="userSpaceOnUse"
     >
-      <path class="fx-cell" d="M 0 0 L 7 3.5 L 0 7 Z" />
+      <path class="fx-ah" d="M 0 0 L 7 3.5 L 0 7 Z" />
     </marker>
   </defs>
 
   <rect
     v-for="(lane, i) in props.scene.lanes"
     :key="`lane-${i}`"
-    class="fx-lane"
+    class="fx-grp"
     :x="lane.x"
     :y="lane.y"
     :width="lane.w"
     :height="lane.h"
-    rx="5"
+    rx="7"
   />
 
   <text
     v-for="(caption, i) in props.scene.captions"
     :key="`cap-${i}`"
-    class="fx-axis-label"
+    class="fx-lbl"
     :x="caption.x"
     :y="caption.y"
   >
@@ -89,17 +89,20 @@ const boxes = computed(() =>
 
   <g v-for="(entry, i) in boxes" :key="`box-${i}`">
     <rect
-      class="fx-block"
+      :class="entry.box.tone === 'alt' ? 'fx-alt' : 'fx-card'"
       :x="entry.box.x"
       :y="entry.box.y"
       :width="entry.box.w"
       :height="entry.box.h"
       rx="4"
     />
+    <text v-if="entry.box.index" class="fx-lbl" :x="entry.box.x + 7" :y="entry.indexY">
+      {{ entry.box.index }}
+    </text>
     <text
       v-for="(line, j) in entry.labels"
       :key="`bl-${j}`"
-      class="fx-note fx-note--strong"
+      class="fx-hb"
       :x="entry.cx"
       :y="line.y"
       text-anchor="middle"
@@ -109,7 +112,7 @@ const boxes = computed(() =>
     <text
       v-for="(line, j) in entry.notes"
       :key="`bn-${j}`"
-      class="fx-tick"
+      class="fx-s"
       :x="entry.cx"
       :y="line.y"
       text-anchor="middle"
@@ -121,7 +124,7 @@ const boxes = computed(() =>
   <path
     v-for="(d, i) in props.scene.arrows"
     :key="`arrow-${i}`"
-    class="fx-curve fx-curve--thin"
+    class="fx-ln"
     :d="d"
     :marker-end="`url(#${props.markerId})`"
   />

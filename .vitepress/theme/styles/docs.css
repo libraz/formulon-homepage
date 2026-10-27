@@ -729,6 +729,7 @@ html[lang="ja"] .vp-doc th {
 
 .doc-diagram-wrap .doc-diagram-caption {
   margin: 0.75rem 0 0;
+  text-align: center;
   font-family: var(--font-reading);
   font-size: 0.75rem;
   line-height: 1.55;

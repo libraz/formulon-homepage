@@ -270,6 +270,64 @@
   stroke-width: 1;
 }
 
+/* --- Box diagrams (DiagramFlow, DiagramLayers) ------------------------
+   The figure vocabulary from the docs conventions, namespaced under fx-:
+   surfaces stay neutral and the accent lives in the stroke — primary
+   (--fx-1) on `card`, secondary (--fx-2) on `alt`. */
+
+.fx-grp {
+  fill: color-mix(in srgb, var(--color-text-primary) 3.5%, transparent);
+  stroke: none;
+}
+
+.fx-card,
+.fx-alt {
+  fill: var(--vp-c-bg);
+  stroke-width: 1;
+}
+
+.fx-card {
+  stroke: color-mix(in srgb, var(--fx-1) 70%, transparent);
+}
+
+.fx-alt {
+  stroke: color-mix(in srgb, var(--fx-2) 75%, transparent);
+}
+
+.fx-ln {
+  fill: none;
+  stroke: var(--fx-1);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.fx-ah {
+  stroke: none;
+  fill: var(--fx-1);
+}
+
+.fx-hb {
+  font-family: var(--font-reading);
+  font-size: 9.5px;
+  font-weight: 600;
+  fill: var(--fx-ink);
+}
+
+.fx-s {
+  font-family: var(--font-reading);
+  font-size: 8.5px;
+  fill: var(--fx-ink-dim);
+}
+
+/* Row captions and sequence numbers: mono small caps, literal casing. */
+.fx-lbl {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  fill: var(--fx-ink-faint);
+}
+
 /* --- Legend ---------------------------------------------------------- */
 
 .doc-diagram-wrap .fx-legend {

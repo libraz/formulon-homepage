@@ -98,7 +98,8 @@ const BREAK_BEFORE = new Set([...'([{'])
  * Japanese has no inter-word spaces, so any character boundary is a candidate
  * as long as it does not strand closing punctuation at the start of a line or
  * an opening bracket at the end of one. English only breaks on word
- * boundaries, plus a few separators (`/`, `-`, `·`) that read as such.
+ * boundaries, plus a few separators (`/`, `-`, `·`) that read as such, and
+ * the `.` / `_` joints of a long identifier.
  */
 function canBreakBetween(prev: string, next: string): boolean {
   if (NO_BREAK_BEFORE.has(next)) return false
@@ -108,6 +109,8 @@ function canBreakBetween(prev: string, next: string): boolean {
   if (isWideChar(prev) || isWideChar(next)) return true
   if (BREAK_AFTER.has(prev)) return true
   if (BREAK_BEFORE.has(next)) return true
+  // Inside an identifier (`Module.Workbook.loadBytes`, `formulon_open_workbook`).
+  if ((prev === '.' || prev === '_') && /[A-Za-z]/.test(next)) return true
   return false
 }
 

@@ -2,27 +2,29 @@
  * Shared design-space constants and box maths for the SVG diagram components.
  *
  * Everything is expressed in "design units". The frame renders a diagram at
- * `RENDER_SCALE` times its viewBox width, so the fixed `.fx-*` type sizes land
- * on screen at roughly the size the surrounding prose uses — a 10.5-unit label
- * renders at about 14.7px, a 8.5-unit note at about 11.9px — while still
- * scaling down with the column on narrow viewports.
+ * `RENDER_SCALE` times its viewBox width, so the fixed type sizes land on
+ * screen a step below the surrounding prose — a 9.5-unit box name renders at
+ * about 13.3px, an 8.5-unit note at about 11.9px — while still scaling down
+ * with the column on narrow viewports.
  */
 import { maxLineWidth, wrapText } from '../diagramText'
 
-/** `.fx-note--strong` — box labels, in the reading face. */
-export const LABEL_SIZE = 10.5
-/** `.fx-tick` — secondary captions, in the mono face. */
+/** `.fx-hb` — box names, in the reading face. */
+export const LABEL_SIZE = 9.5
+/** `.fx-s` — the one or two lines of what a box holds, in the reading face. */
 export const NOTE_SIZE = 8.5
-export const LABEL_LEADING = 13
-export const NOTE_LEADING = 10.5
+export const LABEL_LEADING = 12.5
+export const NOTE_LEADING = 11
 /** Space between the label block and the note block inside a box. */
-export const NOTE_GAP = 3
+export const NOTE_GAP = 2.5
 export const PAD_X = 10
 export const PAD_Y = 9
-/** `.fx-axis-label` — row captions. */
-export const CAPTION_SIZE = 9
+/** `.fx-lbl` — row captions and sequence numbers, in the mono face. */
+export const CAPTION_SIZE = 7.5
 /** Space under a row caption; wider than LANE_PAD so a lane never covers it. */
 export const CAPTION_GAP = 10
+/** Extra top padding a numbered box reserves for its `.fx-lbl` index. */
+export const INDEX_BAND = 9
 
 export const RENDER_SCALE = 1.4
 /** Widest a diagram may be drawn before it has to wrap or split into rows. */
@@ -30,9 +32,14 @@ export const CANVAS_MAX = 500
 /** Widest a diagram may be and still read at phone-column width. */
 export const NARROW_MAX = 212
 
+/** `card` takes the primary accent stroke; `alt` the secondary one. */
+export type DiagramTone = 'card' | 'alt'
+
 export interface DiagramItem {
   label: string
   note?: string
+  /** Secondary accent, for the nodes a figure sets apart (hosts, consumers). */
+  tone?: DiagramTone
 }
 
 /** Wrapped text plus the intrinsic size the wrapped text needs. */
@@ -50,6 +57,9 @@ export interface DiagramBox extends BoxContent {
   y: number
   w: number
   h: number
+  tone: DiagramTone
+  /** Sequence number drawn at the top-left, e.g. "01". */
+  index?: string
 }
 
 export interface DiagramLane {
@@ -76,13 +86,22 @@ export interface DiagramScene {
   captions: DiagramCaption[]
 }
 
+export const EMPTY_SCENE: DiagramScene = {
+  width: 1,
+  height: 1,
+  boxes: [],
+  lanes: [],
+  arrows: [],
+  captions: []
+}
+
 /** Wrap one item's text to `maxContent` and report the size it then needs. */
 export function measureContent(item: DiagramItem, maxContent: number): BoxContent {
   const labelLines = wrapText(item.label, LABEL_SIZE, maxContent)
-  const noteLines = item.note ? wrapText(item.note, NOTE_SIZE, maxContent, true) : []
+  const noteLines = item.note ? wrapText(item.note, NOTE_SIZE, maxContent) : []
   const contentW = Math.max(
     maxLineWidth(labelLines, LABEL_SIZE),
-    maxLineWidth(noteLines, NOTE_SIZE, true)
+    maxLineWidth(noteLines, NOTE_SIZE)
   )
   const contentH =
     labelLines.length * LABEL_LEADING +
@@ -91,8 +110,17 @@ export function measureContent(item: DiagramItem, maxContent: number): BoxConten
 }
 
 /** Outer box height for a measured content block. */
-export function boxHeight(content: BoxContent): number {
-  return content.contentH + PAD_Y * 2
+export function boxHeight(content: BoxContent, numbered = false): number {
+  return content.contentH + PAD_Y * 2 + (numbered ? INDEX_BAND : 0)
+}
+
+/** Two-digit sequence label for the box at `i`. */
+export function indexLabel(i: number): string {
+  return String(i + 1).padStart(2, '0')
+}
+
+export function clamp(value: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, value))
 }
 
 /** Round to 2 decimals so path strings stay short and diff-stable. */
