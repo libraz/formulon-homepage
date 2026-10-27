@@ -47,7 +47,16 @@ Cross-Origin-Embedder-Policy: require-corp
 ヘッダーがない場合、`@libraz/formulon/threads` は pthread プール用の `SharedArrayBuffer` を作成できず、ファクトリの Promise が失敗します。既定の `@libraz/formulon` ファクトリにこのヘッダーは必要ありません。生の WASM ローダー自体にフォールバックはないため、pthread 入口を直接呼ぶコードは失敗を処理してください。`formulon-cell` の `preferStub: true` はテストやデモで簡易エンジンを選ぶためのオプションです。この挙動は `formulon-cell` 側のものです。設定は [formulon-cell](/ja/cell/) を参照してください。
 :::
 
-<DiagramFlow steps="ページ読み込み → @libraz/formulon または /threads を選択 → 通常メモリ、または COOP/COEP + ワーカープール → Workbook.loadBytes()" />
+<DiagramFlow
+  :steps="[
+    { label: 'ページ読み込み', note: 'COOP / COEP はこの応答で決まる' },
+    { label: '入口を選ぶ', note: '@libraz/formulon か /threads' },
+    { label: 'モジュールを作成', note: '既定は逐次、/threads はワーカープール' },
+    { label: 'Workbook.loadBytes()', note: 'バイト列を渡す。終了時に delete()' }
+  ]"
+  label="ブラウザでの起動順。ページの応答がヘッダーを決め、既定の入口か threads の入口を選び、モジュールが逐次またはワーカープールで起動し、Workbook.loadBytes() がバイト列を受け取る"
+  caption="クロスオリジン分離が必要なのは /threads の入口だけで、既定の入口は COOP / COEP なしで動作します。"
+/>
 
 ## 並列再計算
 

@@ -8,7 +8,19 @@ Native Node avoids copying workbook bytes into the WASM heap, but it needs a `.n
 
 ## Flow
 
-<DiagramFlow steps="HTTP upload / internal job → Validate file size and type → Load workbook bytes → Set inputs / profile → recalc → Read checks and values → Return JSON or saved workbook" />
+<DiagramFlow
+  :steps="[
+    { label: 'HTTP upload / internal job', note: 'Uploaded or generated workbook' },
+    { label: 'Validate', note: 'Byte-size policy before loading' },
+    { label: 'Load bytes', note: 'Cell-count policy after loading' },
+    { label: 'Set inputs and profile', note: 'Profile such as win-365-en_US' },
+    { label: 'recalc()', note: 'Check the status before reading' },
+    { label: 'Read checks and values', note: 'Values and diagnostics' },
+    { label: 'Respond', note: 'JSON, or a saved workbook' }
+  ]"
+  label="Node service flow: accept an upload or internal job, validate the file, load the bytes, set inputs and profile, recalculate, read checks and values, then return JSON or a saved workbook"
+  caption="The service boundary enforces size and cell-count limits and pins the profile, so a recalculation is reproducible."
+/>
 
 ## Runtime choice
 
@@ -21,13 +33,16 @@ Native Node avoids copying workbook bytes into the WASM heap, but it needs a `.n
 
 <DiagramLayers
   :layers="[
-    { nodes: ['Can you build or stage a platform-specific .node binary in this deployment today?'] },
-    { nodes: [
-      { label: 'Yes → Native Node', note: 'native threads, no WASM heap copies' },
-      { label: 'No → WASM', note: 'portable across Node environments, no native build step' }
-    ] }
+    {
+      title: 'Can this deployment build or stage a .node binary today?',
+      nodes: [
+        { label: '@libraz/formulon-native', note: 'Yes. Built from source per platform' },
+        { label: '@libraz/formulon', note: 'No. Same on every Node environment' }
+      ]
+    }
   ]"
   label="Decision: if the deployment can build or stage a platform-specific native binary today, choose Native Node for operational throughput; otherwise choose WASM for portability"
+  caption="Choose Native Node only when the deployment can supply the binary; formula results should match either way."
 />
 
 Native Node and WASM share the core calculation flow, but their Workbook method sets differ. Check the [Surface matrix](/api/surfaces) before choosing a binding for table authoring, AutoFilter XML, or `addCellStyleXf`; typed AutoFilters and `setCellStyle` are available on both. The [Native Node integration](/runtimes/node-native) page shows status checks and explicit disposal for the service path.

@@ -12,18 +12,21 @@
 
 All surfaces use the same calculation core. They differ in packaging, host language, memory ownership, and the method differences listed [below](#method-differences).
 
-<DiagramLayers label="C++17 calculation core -> C ABI -> WASM / Native Node / Python / CLI; WASM -> formulon-cell and formulon-mcp" :layers="[
-  { title: 'Core', nodes: ['C++17 calculation core'] },
-  { title: 'C ABI', nodes: ['formulon_c.h + core library'] },
+<DiagramLayers label="C++17 calculation core, then the C ABI, then the WASM, Native Node, Python and CLI surfaces; formulon-cell and formulon-mcp are built on the WASM package" :layers="[
+  { title: 'Core', nodes: [{ label: 'C++17 calculation core', note: 'shared by every surface' }] },
+  { title: 'C ABI', nodes: [{ label: 'formulon_c.h + core library', note: 'reached directly or transitively' }] },
   { title: 'Surfaces', nodes: [
-      'WASM (@libraz/formulon)',
-      'Native Node (packages/npm-native)',
-      'Python (formulon)',
-      'CLI (formulon)'
+      { label: '@libraz/formulon', note: 'WASM · browser, worker, Node' },
+      { label: '@libraz/formulon-native', note: 'Native Node, built from source' },
+      { label: 'formulon (Python)', note: 'py3-none-any wheel on wasmtime' },
+      { label: 'formulon (CLI)', note: 'standalone binary' }
     ]
   },
-  { title: 'Built on WASM', nodes: ['formulon-cell (UI kit)', 'formulon-mcp (stdio agent server)'] }
-]" />
+  { title: 'Built on WASM', nodes: [
+      { label: 'formulon-cell', note: 'browser spreadsheet UI kit', tone: 'alt' },
+      { label: 'formulon-mcp', note: 'stdio MCP server for agents', tone: 'alt' }
+    ] }
+]" caption="Every surface shares one calculation core; formulon-cell and formulon-mcp build on the WASM package instead of binding the C ABI themselves." />
 
 `formulon-cell` and `formulon-mcp` are built specifically on the WASM package, not directly on the C ABI — they reach the calculation core the same way any browser or Node consumer of `@libraz/formulon` does.
 

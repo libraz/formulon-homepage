@@ -6,11 +6,14 @@ The test surface is broader than a single `make test` because Formulon ships mul
 CTest groups tests with text labels: `SLOW`, `BENCH`, `TSAN`, `PARITY`, and `VARIANT`. Unlabeled tests form the fast tier. Targets include or exclude labels, so a fast pre-commit run can skip slow or diagnostic tests while CI still runs them.
 :::
 
-<DiagramLayers :layers="[
-  { title: 'Core', nodes: [{ label: 'make test', note: 'excludes SLOW / BENCH / TSAN' }, { label: 'make test-all', note: 'all enabled tests' }] },
-  { title: 'Oracle', nodes: [{ label: 'make oracle-verify', note: 'vs committed goldens' }, { label: 'VARIANT tests', note: 'FORMULON_ORACLE_VARIANTS=ON' }] },
+<DiagramLayers
+  label="Four groups of test targets: core tests, Oracle tests against Excel goldens, packaging tests per binding, and cross-surface parity."
+  caption="Parity compares Formulon surfaces with each other; only Oracle tests compare it with Excel."
+  :layers="[
+  { title: 'Core', nodes: [{ label: 'make test', note: 'Excludes SLOW / BENCH / TSAN' }, { label: 'make test-all', note: 'All enabled tests' }] },
+  { title: 'Oracle', nodes: [{ label: 'make oracle-verify', note: 'Vs committed goldens', tone: 'alt' }, { label: 'VARIANT tests', note: 'FORMULON_ORACLE_VARIANTS=ON', tone: 'alt' }] },
   { title: 'Packaging', nodes: [{ label: 'WASM', note: 'wasm / test-wasm / npm-test' }, { label: 'Python', note: 'python-test' }, { label: 'Native Node', note: 'node-test' }, { label: 'CLI', note: 'tests/cli CTest target' }] },
-  { title: 'Parity', nodes: [{ label: 'make parity-test', note: 'cross-surface agreement' }] }
+  { title: 'Cross-surface parity', nodes: [{ label: 'make parity-test', note: 'Compares CLI, WASM, Python' }] }
 ]" />
 
 ## Core tests

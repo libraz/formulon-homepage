@@ -6,7 +6,16 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 
 `formulon_table_operation` はネイティブの Excel テーブル（Table）を作成します。`formulon_create_pivot` はワークシートを元にしたピボットキャッシュ（PivotCache）とネイティブのピボットテーブル（PivotTable）を作成します。これらは Excel がフィルター、更新、検査に使えるワークブックのメタデータとして保存されます。
 
-[`formulon_build_document`](/ja/mcp/authoring) の `table` ブロックは、見出し、罫線、数式、帯状の塗りつぶしを持つ表示用の表を作ります。ネイティブの Excel テーブルは作りません。Excel のテーブルメタデータやピボットテーブルが必要ならネイティブのツールを使い、印刷用のレイアウトが目的なら文書ブロックを使います。
+ワークブックに必要な機能からオブジェクトを選びます。
+
+| オブジェクト | 含まれるもの | 適した用途 |
+| --- | --- | --- |
+| `formulon_set_range` で書き込むワークシート範囲 | 値と数式を含む通常のセル。テーブルのメタデータはありません。 | データの保存や計算だけが必要な場合。 |
+| [`formulon_build_document`](/ja/mcp/authoring) の `table` ブロック | 見出し、数式、幅、任意の帯状塗りつぶしを持つ書式付きセルグリッド。ネイティブの Excel テーブルではありません。 | 印刷用フォームやレポートのレイアウトを作る場合。 |
+| `formulon_table_operation` のネイティブテーブル（Table） | フィルターメタデータ、TableStyle、任意の合計行を持つ名前付きテーブル。 | Excel のテーブル機能をデータに使う場合。 |
+| `formulon_create_pivot` のピボットテーブル（PivotTable） | PivotCache を通じて入力範囲をグループ化・集計するレポートオブジェクト。 | 複数の項目でグループ化した集計が必要な場合。 |
+
+4 種類ともワークシート上ではグリッドに見えますが、ワークブック内での扱いは異なります。ピボットテーブルが作る値は `layout.cells` に返され、通常の保存セルではないため `formulon_get_range` では読み取れません。
 
 ## ネイティブのワークシートテーブル
 
@@ -285,6 +294,42 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 
 返された `layout.cells` と `pivotIndex` を使い、固定のレポート幅を仮定しません。ワークシートの画像が必要な場合は、返されたセルを解釈した後に `formulon_set_range` または `formulon_set_cells` で明示的なスナップショットを書き込みます。このスナップショットは通常のワークシートデータであり、ネイティブのピボットテーブルとは別です。
 
+## 合計行とスタイルのトグル {#totals-and-toggles}
+
+合計行が有効なとき、`totals` は手書きの数式の代わりに各列の合計セルを書き込みます。各要素は `column`（テーブル内の列名または 0 始まりの列番号）と、`function`、文字列の `label`、`custom` 関数用の `formula` のいずれかを指定します。関数は `none`、`sum`、`min`、`max`、`average`、`count`、`countNums`、`stdDev`、`var`、`custom` で、Excel は列に対する `SUBTOTAL` を書き込みます。テーブルに合計行がないと `totals` はエラーになるため、同じ呼び出しで `totalsRow: true` を指定するか、先に有効にしてください。
+
+#### `formulon_table_operation`
+
+```json
+{
+  "sessionId": "sales-report",
+  "operation": "update",
+  "index": 0,
+  "ref": "Data!A1:C7",
+  "totalsRow": true,
+  "totals": [
+    { "column": "Region", "label": "Total" },
+    { "column": "Amount", "function": "sum" }
+  ],
+  "showRowStripes": true,
+  "showFirstColumn": true
+}
+```
+
+範囲には、上の例と同じく合計行を含めます。トグルはテーブルの TableStyle に作用し、先頭列・最終列の強調と、行・列の縞模様を切り替えます。
+
+## プレビュー・保存・終了
+
+描画や保存の前に合計行の数式を再計算します。`formulon_table_operation` は自動で再計算しません。
+
+#### `formulon_recalc_session`
+
+```json
+{
+  "sessionId": "sales-report"
+}
+```
+
 元の売上一覧を明示的な範囲でプレビューし、PNG を書き出します。
 
 #### `formulon_preview_range`
@@ -324,30 +369,4 @@ description: ネイティブの Excel テーブルとピボットテーブルを
 }
 ```
 
-## 合計行とスタイルのトグル {#totals-and-toggles}
-
-合計行が有効なとき、`totals` は手書きの数式の代わりに各列の合計セルを書き込みます。各要素は `column`（テーブル内の列名または 0 始まりの列番号）と、`function`、文字列の `label`、`custom` 関数用の `formula` のいずれかを指定します。関数は `none`、`sum`、`min`、`max`、`average`、`count`、`countNums`、`stdDev`、`var`、`custom` で、Excel は列に対する `SUBTOTAL` を書き込みます。テーブルに合計行がないと `totals` はエラーになるため、同じ呼び出しで `totalsRow: true` を指定するか、先に有効にしてください。
-
-#### `formulon_table_operation`
-
-```json
-{
-  "sessionId": "sales-report",
-  "operation": "update",
-  "index": 0,
-  "ref": "Data!A1:C7",
-  "totalsRow": true,
-  "totals": [
-    { "column": "Region", "label": "Total" },
-    { "column": "Amount", "function": "sum" }
-  ],
-  "showRowStripes": true,
-  "showFirstColumn": true
-}
-```
-
-範囲には、上の例と同じく合計行を含めます。トグルはテーブルの TableStyle に作用し、先頭列・最終列の強調と、行・列の縞模様を切り替えます。
-
-## 2 つの表の使い分け
-
-行、数式、列幅、印刷範囲を 1 つのレイアウトとして作る領収書や請求書には文書の `table` ブロックを使います。名前、フィルター情報、TableStyle、見出しフラグ、合計行が必要なネイティブテーブルには `formulon_table_operation` を使います。入力範囲を元にしたレポートオブジェクトと軸・集計が必要なら `formulon_create_pivot` を使います。どちらのネイティブ機能も XLSX へ保存し、ファイルを完成品として扱う前に書き込み時の `losses` を確認します。
+ネイティブテーブルとピボットテーブルは XLSX に保存し、完成した成果物として扱う前に保存時の損失情報を確認してください。

@@ -5,18 +5,29 @@
 <DiagramLayers
   :layers="[
     {
-      title: '症状 → 対処法',
+      title: 'ブラウザとバンドラ',
       nodes: [
-        { label: 'SharedArrayBuffer が使えない', note: '明示的な /threads 入口にヘッダーを設定' },
-        { label: 'バンドラが node:* を警告する', note: 'node: を external にし、optimizeDeps から除外' },
-        { label: 'loadBytes が無効なハンドルを返す', note: 'wb.isValid() と lastErrorMessage() を確認' },
-        { label: 'セルが #DIV/0! / #VALUE!', note: 'Excel エラーは値。値の種類を確認する' },
-        { label: 'Python から WASM が見つからない', note: 'wheel をインストール、または make python-package' },
-        { label: 'CLI の結果が Excel と違う', note: 'ロケール、揮発性関数、保持されるだけの構造を確認' }
+        { label: 'SharedArrayBuffer が使えない', note: '/threads に COOP / COEP ヘッダーを設定' },
+        { label: 'バンドラが node:* を警告する', note: 'node: を external にし optimizeDeps を除外' }
+      ]
+    },
+    {
+      title: 'ワークブックの結果',
+      nodes: [
+        { label: 'loadBytes が無効なハンドルを返す', note: 'isValid() と lastErrorMessage() を確認' },
+        { label: 'セルに #DIV/0! や #VALUE! が出る', note: 'Excel エラーは値。種類を確認する' }
+      ]
+    },
+    {
+      title: 'Python と CLI',
+      nodes: [
+        { label: 'Python から WASM が見つからない', note: 'wheel を入れるか make python-package' },
+        { label: 'CLI の結果が Excel と違う', note: 'プロファイル、揮発性関数、スタブを確認' }
       ]
     }
   ]"
-  label="トラブルシューティング早見表"
+  label="トラブルシューティング早見表。ブラウザとバンドラ、ワークブックの結果、Python と CLI の症状ごとに、最初に試す対処を示す"
+  caption="セルに #DIV/0! が出ていても、それは結果であってホストの失敗ではありません。ホストの失敗はステータス、例外、0 以外の終了コードで表れます。"
 />
 
 ## SharedArrayBuffer が使えない

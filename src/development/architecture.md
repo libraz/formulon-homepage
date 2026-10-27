@@ -10,12 +10,18 @@ A flat C function interface that exposes the workbook model, evaluator, and IO t
 The in-memory representation of an opened workbook — sheets, cells, styles, defined names, tables, dependency graph, dirty set, profile binding, and the workbook-level engine state needed to recalculate. Bindings hold a handle to the model, never the underlying bytes after parsing.
 :::
 
-<DiagramLayers :layers="[
-  { title: 'Host', nodes: ['Host API (JS / Python / CLI / MCP / cell UI)'] },
-  { title: 'Boundary', nodes: ['C ABI / binding layer'] },
-  { title: 'Core', nodes: ['C++17 workbook model'] },
-  { title: 'Evaluation & IO', nodes: ['Formula parser and tree-walker evaluator', 'OOXML / XLSB readers and writers'] },
-  { title: 'Verification', nodes: ['Oracle tests / cross-surface agreement'] }
+<DiagramLayers
+  label="Layers from the host API down through the C ABI and binding layer to the C++17 workbook model, with the formula evaluator and file readers and writers beside it, and Oracle and parity tests verifying the whole."
+  caption="Every host surface reaches the same C++17 core through the C ABI; bindings translate values and lifetimes, never calculation."
+  :layers="[
+  { title: 'Host', nodes: [{ label: 'Host API', note: 'JS · Python · CLI · MCP · cell UI', tone: 'alt' }] },
+  { title: 'Boundary', nodes: [{ label: 'C ABI / binding layer', note: 'Lifetimes and value translation' }] },
+  { title: 'Core', nodes: [{ label: 'C++17 workbook model', note: 'Sheets, cells, dependency graph' }] },
+  { title: 'Evaluation & IO', nodes: [
+    { label: 'Parser and evaluator', note: 'Function catalog, tree walker' },
+    { label: 'File readers and writers', note: 'OOXML, XLSB, passthrough' }
+  ] },
+  { title: 'Verification', nodes: [{ label: 'Oracle and parity tests', note: 'Excel values, cross-surface agreement' }] }
 ]" />
 
 ## What lives where

@@ -12,7 +12,18 @@
 
 ## 流れ
 
-<DiagramFlow steps="ユーザーが .xlsx を選択 → ArrayBuffer を読み込む → Module.Workbook.loadBytes → 入力値を変更 → recalc → 値を読む / バイト列を保存" />
+<DiagramFlow
+  :steps="[
+    { label: 'ユーザーが .xlsx を選択', note: 'ファイルはブラウザの外へ出ない' },
+    { label: 'ArrayBuffer を読み込む', note: 'Uint8Array に包んで渡す' },
+    { label: 'Module.Workbook.loadBytes', note: '使う前に wb.isValid() を確認' },
+    { label: '入力値を変更', note: '入力セルへ書き込む' },
+    { label: 'recalc()', note: '読む前に status.ok を確認' },
+    { label: '値を読む / 保存', note: 'セルの値、または save() のバイト列' }
+  ]"
+  label="ブラウザでのアップロード処理の流れ。ユーザーが .xlsx を選び、ページが ArrayBuffer を読み込み、読み込んだワークブックの入力値を変更して再計算し、値を読むかバイト列を保存する"
+  caption="ファイルはブラウザ内で再計算されるため、サーバーへアップロードされません。"
+/>
 
 ## 最小実装
 
@@ -101,7 +112,17 @@ worker.postMessage(buffer, [buffer])
 
 転送リストに載せたバッファは、コピーされずに受信側へ移ります。送信側のバッファは切り離され、以後は使えません。バッファは 1 回だけ読み込み、同じ参照を送信データと転送リストの両方に渡してください。`file.arrayBuffer()` をもう一度呼ぶと別のバッファができ、転送リストに載っていない方はコピーされます。
 
-<DiagramFlow steps="メインスレッド: ArrayBuffer を読み込む → postMessage(buffer, [buffer]) で所有権をワーカーへ転送 → ワーカーがバッファを所有し再計算 → postMessage(bytes, [bytes.buffer]) で結果を転送し返す → メインスレッドが結果を所有" label="メインスレッドが ArrayBuffer を読み込み、転送リスト付きの postMessage でワーカーに所有権を渡す。ワーカーが再計算してから結果のバッファをメインスレッドへ転送し返し、メインスレッドが出力バイト列の所有権を取り戻す図" />
+<DiagramFlow
+  :steps="[
+    { label: 'ArrayBuffer を読み込む', note: 'メインスレッドで 1 回だけ' },
+    { label: 'ワーカーへ転送', note: 'postMessage(buffer, [buffer])' },
+    { label: '再計算', note: 'ワーカーがバッファを所有', tone: 'alt' },
+    { label: '結果を転送し返す', note: 'postMessage(bytes, [bytes.buffer])', tone: 'alt' },
+    { label: '結果を受け取る', note: 'メインスレッドが出力を所有' }
+  ]"
+  label="メインスレッドが ArrayBuffer を読み込み、転送リスト付きの postMessage でワーカーに所有権を渡す。ワーカーが再計算してから結果のバッファをメインスレッドへ転送し返し、メインスレッドが出力バイト列の所有権を取り戻す図"
+  caption="転送したバッファはコピーされず移動するため、送り側では以降使えません。"
+/>
 
 ## エラーの分岐 {#error-surfaces}
 

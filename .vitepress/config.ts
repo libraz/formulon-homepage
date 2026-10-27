@@ -112,6 +112,8 @@ const startSidebar = [
     text: 'Start',
     items: [
       { text: 'Overview', link: '/start/' },
+      { text: 'Basic concepts', link: '/start/concepts' },
+      { text: 'Choose a surface', link: '/start/choose-runtime' },
       { text: 'Install', link: '/start/install' },
       { text: 'Evaluate a formula', link: '/start/evaluate' },
       { text: 'Recalculate a workbook', link: '/start/recalculate' },
@@ -123,7 +125,7 @@ const startSidebar = [
     items: [
       { text: 'Why Formulon', link: '/why' },
       { text: 'Demos', link: '/demos' },
-      { text: 'Choose a surface', link: '/start/choose-runtime' },
+      { text: 'Glossary', link: '/glossary' },
       { text: 'FAQ', link: '/faq' }
     ]
   }
@@ -150,8 +152,7 @@ const runtimesSidebar = [
       { text: 'WASM / browser', link: '/runtimes/wasm' },
       { text: 'Python', link: '/runtimes/python' },
       { text: 'Native Node', link: '/runtimes/node-native' },
-      { text: 'CLI', link: '/runtimes/cli' },
-      { text: 'CI regression', link: '/runtimes/ci-regression' }
+      { text: 'CLI', link: '/runtimes/cli' }
     ]
   },
   {
@@ -173,12 +174,17 @@ const compatibilitySidebar = [
     items: [
       { text: 'Overview', link: '/compatibility/' },
       { text: 'How far compatibility goes', link: '/compatibility/edge-cases' },
-      { text: 'Compatibility model', link: '/compatibility/model' },
-      { text: 'Locale profiles', link: '/compatibility/locale-profiles' },
-      { text: 'Text comparison and sorting', link: '/compatibility/text-collation' },
       { text: 'Formula coverage', link: '/compatibility/formula-coverage' },
       { text: 'File format support', link: '/compatibility/file-format-support' },
-      { text: 'Error model', link: '/compatibility/errors' },
+      { text: 'Locale profiles', link: '/compatibility/locale-profiles' },
+      { text: 'Text comparison and sorting', link: '/compatibility/text-collation' },
+      { text: 'Error model', link: '/compatibility/errors' }
+    ]
+  },
+  {
+    text: 'How it is verified',
+    items: [
+      { text: 'Compatibility model', link: '/compatibility/model' },
       { text: 'Oracle testing', link: '/compatibility/oracle-testing' },
       { text: 'Non-goals', link: '/compatibility/non-goals' }
     ]
@@ -190,19 +196,29 @@ const workbookSidebar = [
     text: 'Workbook',
     items: [
       { text: 'Overview', link: '/workbook/' },
+      { text: 'Lifecycle', link: '/workbook/lifecycle' },
+      { text: 'Operations', link: '/workbook/operations' },
+      { text: 'File formats', link: '/workbook/file-formats' }
+    ]
+  },
+  {
+    text: 'Formulas',
+    items: [
       { text: 'Formula engine', link: '/workbook/formula-engine' },
       { text: 'Formula language', link: '/workbook/language' },
       { text: 'Recalculation', link: '/workbook/recalculation' },
-      { text: 'Operations', link: '/workbook/operations' },
+      { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' }
+    ]
+  },
+  {
+    text: 'Workbook features',
+    items: [
       { text: 'Presentation and geometry', link: '/workbook/presentation' },
       { text: 'Filters and validation', link: '/workbook/filters-validation' },
       { text: 'Conditional formats', link: '/workbook/conditional-formats' },
       { text: 'Comments and images', link: '/workbook/comments-images' },
       { text: 'Charts', link: '/workbook/charts' },
-      { text: 'Dynamic arrays', link: '/workbook/dynamic-arrays' },
-      { text: 'File formats', link: '/workbook/file-formats' },
-      { text: 'PivotTables', link: '/workbook/pivots' },
-      { text: 'Lifecycle', link: '/workbook/lifecycle' }
+      { text: 'PivotTables', link: '/workbook/pivots' }
     ]
   }
 ]
@@ -215,21 +231,40 @@ const cellSidebar = [
       { text: 'Full demo', link: '/cell/demo' },
       { text: 'Install', link: '/cell/install' },
       { text: 'Bundler setup', link: '/cell/bundler' },
-      { text: 'Options', link: '/cell/options' },
-      { text: 'Platform and Mac UI', link: '/cell/platform' },
-      { text: 'Language switching', link: '/cell/language-switching' },
       { text: 'Embedding guide', link: '/cell/embedding' },
-      { text: 'Modals and fullscreen', link: '/cell/modals' },
+      { text: 'Framework adapters', link: '/cell/frameworks' }
+    ]
+  },
+  {
+    text: 'Configure',
+    items: [
+      { text: 'Options', link: '/cell/options' },
       { text: 'Ribbon toolbar', link: '/cell/toolbar' },
+      { text: 'Modals and fullscreen', link: '/cell/modals' },
+      { text: 'Theming', link: '/cell/theming' },
+      { text: 'Platform and Mac UI', link: '/cell/platform' }
+    ]
+  },
+  {
+    text: 'Language',
+    items: [
+      { text: 'Language switching', link: '/cell/language-switching' },
+      { text: 'i18n', link: '/cell/i18n' }
+    ]
+  },
+  {
+    text: 'Extend',
+    items: [
+      { text: 'Charts', link: '/cell/charts' },
       { text: 'Custom cells and host functions', link: '/cell/custom-cells' },
       { text: 'Extensions', link: '/cell/extensions' },
-      { text: 'Theming', link: '/cell/theming' },
-      { text: 'Framework adapters', link: '/cell/frameworks' },
       { text: 'Hooks and composables', link: '/cell/hooks' },
-      { text: 'Host integration', link: '/cell/host-integration' },
-      { text: 'i18n', link: '/cell/i18n' },
-      { text: 'API surface', link: '/cell/api' }
+      { text: 'Host integration', link: '/cell/host-integration' }
     ]
+  },
+  {
+    text: 'Reference',
+    items: [{ text: 'API surface', link: '/cell/api' }]
   }
 ]
 
@@ -239,12 +274,22 @@ const mcpSidebar = [
     items: [
       { text: 'Overview', link: '/mcp/' },
       { text: 'Install', link: '/mcp/install' },
-      { text: 'Workflow', link: '/mcp/workflow' },
+      { text: 'Workflow', link: '/mcp/workflow' }
+    ]
+  },
+  {
+    text: 'Guides',
+    items: [
       { text: 'Author documents', link: '/mcp/authoring' },
       { text: 'Layout and previews', link: '/mcp/layout-preview' },
       { text: 'Formula audit', link: '/mcp/formula-audit' },
       { text: 'Tables and pivots', link: '/mcp/tables-pivots' },
-      { text: 'Conditional formats and validation', link: '/mcp/conditional-formats-validation' },
+      { text: 'Conditional formats and validation', link: '/mcp/conditional-formats-validation' }
+    ]
+  },
+  {
+    text: 'Reference',
+    items: [
       { text: 'Tools', link: '/mcp/tools' },
       { text: 'Advanced API', link: '/mcp/advanced' },
       { text: 'Security model', link: '/mcp/security' }
@@ -274,6 +319,8 @@ const jaStartSidebar = [
     text: 'はじめる',
     items: [
       { text: '概要', link: '/ja/start/' },
+      { text: '基本概念', link: '/ja/start/concepts' },
+      { text: '実行入口を選ぶ', link: '/ja/start/choose-runtime' },
       { text: 'インストール', link: '/ja/start/install' },
       { text: '数式を評価する', link: '/ja/start/evaluate' },
       { text: 'ワークブックを再計算する', link: '/ja/start/recalculate' },
@@ -285,7 +332,7 @@ const jaStartSidebar = [
     items: [
       { text: 'Formulon が必要な理由', link: '/ja/why' },
       { text: 'デモ', link: '/ja/demos' },
-      { text: '実行環境を選ぶ', link: '/ja/start/choose-runtime' },
+      { text: '用語集', link: '/ja/glossary' },
       { text: 'FAQ', link: '/ja/faq' }
     ]
   }
@@ -312,8 +359,7 @@ const jaRuntimesSidebar = [
       { text: 'WASM / ブラウザ', link: '/ja/runtimes/wasm' },
       { text: 'Python', link: '/ja/runtimes/python' },
       { text: 'Native Node', link: '/ja/runtimes/node-native' },
-      { text: 'CLI', link: '/ja/runtimes/cli' },
-      { text: 'CI 回帰検査', link: '/ja/runtimes/ci-regression' }
+      { text: 'CLI', link: '/ja/runtimes/cli' }
     ]
   },
   {
@@ -335,12 +381,17 @@ const jaCompatibilitySidebar = [
     items: [
       { text: '概要', link: '/ja/compatibility/' },
       { text: '互換性をどこまで詰めているか', link: '/ja/compatibility/edge-cases' },
-      { text: '互換性モデル', link: '/ja/compatibility/model' },
-      { text: 'ロケールプロファイル', link: '/ja/compatibility/locale-profiles' },
-      { text: '文字列の比較と並べ替え', link: '/ja/compatibility/text-collation' },
       { text: '数式カバレッジ', link: '/ja/compatibility/formula-coverage' },
       { text: 'ファイル形式サポート', link: '/ja/compatibility/file-format-support' },
-      { text: 'エラーモデル', link: '/ja/compatibility/errors' },
+      { text: 'ロケールプロファイル', link: '/ja/compatibility/locale-profiles' },
+      { text: '文字列の比較と並べ替え', link: '/ja/compatibility/text-collation' },
+      { text: 'エラーモデル', link: '/ja/compatibility/errors' }
+    ]
+  },
+  {
+    text: '検証のしくみ',
+    items: [
+      { text: '互換性モデル', link: '/ja/compatibility/model' },
       { text: 'Oracle テスト', link: '/ja/compatibility/oracle-testing' },
       { text: '対象外の機能', link: '/ja/compatibility/non-goals' }
     ]
@@ -352,19 +403,29 @@ const jaWorkbookSidebar = [
     text: 'ワークブック',
     items: [
       { text: '概要', link: '/ja/workbook/' },
+      { text: 'ライフサイクル', link: '/ja/workbook/lifecycle' },
+      { text: '操作', link: '/ja/workbook/operations' },
+      { text: 'ファイル形式', link: '/ja/workbook/file-formats' }
+    ]
+  },
+  {
+    text: '数式',
+    items: [
       { text: '数式エンジン', link: '/ja/workbook/formula-engine' },
       { text: '数式の言語', link: '/ja/workbook/language' },
       { text: '再計算', link: '/ja/workbook/recalculation' },
-      { text: '操作', link: '/ja/workbook/operations' },
+      { text: '動的配列', link: '/ja/workbook/dynamic-arrays' }
+    ]
+  },
+  {
+    text: 'ワークブックの機能',
+    items: [
       { text: '表示とレイアウト', link: '/ja/workbook/presentation' },
       { text: 'フィルターと入力規則', link: '/ja/workbook/filters-validation' },
       { text: '条件付き書式', link: '/ja/workbook/conditional-formats' },
       { text: 'コメントと画像', link: '/ja/workbook/comments-images' },
       { text: 'グラフ', link: '/ja/workbook/charts' },
-      { text: '動的配列', link: '/ja/workbook/dynamic-arrays' },
-      { text: 'ファイル形式', link: '/ja/workbook/file-formats' },
-      { text: 'ピボットテーブル', link: '/ja/workbook/pivots' },
-      { text: 'ライフサイクル', link: '/ja/workbook/lifecycle' }
+      { text: 'ピボットテーブル', link: '/ja/workbook/pivots' }
     ]
   }
 ]
@@ -377,21 +438,40 @@ const jaCellSidebar = [
       { text: 'フルデモ', link: '/ja/cell/demo' },
       { text: 'インストール', link: '/ja/cell/install' },
       { text: 'バンドラ設定', link: '/ja/cell/bundler' },
-      { text: '設定オプション', link: '/ja/cell/options' },
-      { text: 'プラットフォームと Mac UI', link: '/ja/cell/platform' },
-      { text: '言語切り替え', link: '/ja/cell/language-switching' },
       { text: '埋め込みガイド', link: '/ja/cell/embedding' },
-      { text: 'モーダルと全画面表示', link: '/ja/cell/modals' },
+      { text: 'フレームワーク連携', link: '/ja/cell/frameworks' }
+    ]
+  },
+  {
+    text: '設定',
+    items: [
+      { text: '設定オプション', link: '/ja/cell/options' },
       { text: 'リボンツールバー', link: '/ja/cell/toolbar' },
+      { text: 'モーダルと全画面表示', link: '/ja/cell/modals' },
+      { text: 'テーマ設定', link: '/ja/cell/theming' },
+      { text: 'プラットフォームと Mac UI', link: '/ja/cell/platform' }
+    ]
+  },
+  {
+    text: '言語',
+    items: [
+      { text: '言語切り替え', link: '/ja/cell/language-switching' },
+      { text: '国際化（i18n）', link: '/ja/cell/i18n' }
+    ]
+  },
+  {
+    text: '拡張',
+    items: [
+      { text: 'グラフ', link: '/ja/cell/charts' },
       { text: 'セルの独自表示とホスト関数', link: '/ja/cell/custom-cells' },
       { text: '拡張機能', link: '/ja/cell/extensions' },
-      { text: 'テーマ設定', link: '/ja/cell/theming' },
-      { text: 'フレームワーク連携', link: '/ja/cell/frameworks' },
       { text: 'フックとコンポーザブル', link: '/ja/cell/hooks' },
-      { text: 'ホスト連携', link: '/ja/cell/host-integration' },
-      { text: '国際化（i18n）', link: '/ja/cell/i18n' },
-      { text: 'API 一覧', link: '/ja/cell/api' }
+      { text: 'ホスト連携', link: '/ja/cell/host-integration' }
     ]
+  },
+  {
+    text: 'リファレンス',
+    items: [{ text: 'API 一覧', link: '/ja/cell/api' }]
   }
 ]
 
@@ -401,12 +481,22 @@ const jaMcpSidebar = [
     items: [
       { text: '概要', link: '/ja/mcp/' },
       { text: 'インストール', link: '/ja/mcp/install' },
-      { text: 'ワークフロー', link: '/ja/mcp/workflow' },
+      { text: 'ワークフロー', link: '/ja/mcp/workflow' }
+    ]
+  },
+  {
+    text: 'ガイド',
+    items: [
       { text: '帳票の作成', link: '/ja/mcp/authoring' },
       { text: 'レイアウトとプレビュー', link: '/ja/mcp/layout-preview' },
       { text: '数式の監査', link: '/ja/mcp/formula-audit' },
       { text: 'テーブルとピボット', link: '/ja/mcp/tables-pivots' },
-      { text: '条件付き書式と入力規則', link: '/ja/mcp/conditional-formats-validation' },
+      { text: '条件付き書式と入力規則', link: '/ja/mcp/conditional-formats-validation' }
+    ]
+  },
+  {
+    text: 'リファレンス',
+    items: [
       { text: 'ツール一覧', link: '/ja/mcp/tools' },
       { text: '高度な API 操作', link: '/ja/mcp/advanced' },
       { text: 'セキュリティモデル', link: '/ja/mcp/security' }
@@ -652,6 +742,7 @@ export default defineConfig({
         },
         nav: [
           { text: 'Start', link: '/start/' },
+          { text: 'Why Formulon', link: '/why' },
           { text: 'Demos', link: '/demos' },
           {
             text: 'Guide',
@@ -659,6 +750,7 @@ export default defineConfig({
               { text: 'Use cases', link: '/scenarios/' },
               { text: 'Workbook', link: '/workbook/' },
               { text: 'Runtimes', link: '/runtimes/' },
+              { text: 'API reference', link: '/api/' },
               { text: 'Compatibility', link: '/compatibility/' }
             ]
           },
@@ -685,7 +777,8 @@ export default defineConfig({
           '/compatibility/': compatibilitySidebar,
           '/development/': developmentSidebar,
           '/why': startSidebar,
-          '/faq': startSidebar
+          '/faq': startSidebar,
+          '/glossary': startSidebar
         },
         socialLinks: [{ icon: 'github', link: githubUrl }],
         footer: {
@@ -723,6 +816,7 @@ export default defineConfig({
         },
         nav: [
           { text: 'はじめる', link: '/ja/start/' },
+          { text: '選ぶ理由', link: '/ja/why' },
           { text: 'デモ', link: '/ja/demos' },
           {
             text: 'ガイド',
@@ -730,6 +824,7 @@ export default defineConfig({
               { text: '利用例', link: '/ja/scenarios/' },
               { text: 'ワークブック', link: '/ja/workbook/' },
               { text: '実行環境', link: '/ja/runtimes/' },
+              { text: 'API リファレンス', link: '/ja/api/' },
               { text: '互換性', link: '/ja/compatibility/' }
             ]
           },
@@ -756,7 +851,8 @@ export default defineConfig({
           '/ja/compatibility/': jaCompatibilitySidebar,
           '/ja/development/': jaDevelopmentSidebar,
           '/ja/why': jaStartSidebar,
-          '/ja/faq': jaStartSidebar
+          '/ja/faq': jaStartSidebar,
+          '/ja/glossary': jaStartSidebar
         },
         socialLinks: [{ icon: 'github', link: githubUrl }],
         footer: {

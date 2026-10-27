@@ -14,7 +14,7 @@ description: ローカライズされた数式を保存用の英語表記へ変�
   { label: 'canonicalizeFormula', note: 'プロファイル: mac-365-de_DE' },
   { label: '保存用の数式', note: '=SUM(1,2.5)' },
   { label: 'localizeFormula', note: '選んだ言語で表示' }
-]" />
+]" label="各言語での入力を保存用の英語形式に変換し、表示するときに選んだ言語へ戻す" caption="ファイルとアプリケーションの状態には保存用の英語形式を保ち、変換は入力と表示の境界でだけ行います。" />
 
 ## 数式全体を変換する
 

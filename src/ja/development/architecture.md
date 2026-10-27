@@ -10,12 +10,18 @@ C++ 以外のホストにワークブックモデル・評価器・入出力を�
 開いたワークブックを表すメモリ上のデータです。シート、セル、スタイル、定義名、テーブル、依存関係グラフ、再計算が必要なセルの集合（dirty set）、プロファイル、再計算に必要なエンジン状態を持ちます。バインディングはパース後のバイト列ではなく、このモデルへのハンドルを保持します。
 :::
 
-<DiagramLayers :layers="[
-  { title: 'ホスト', nodes: ['ホスト API（JS / Python / CLI / MCP / セル UI）'] },
-  { title: '境界', nodes: ['C ABI / バインディング層'] },
-  { title: 'コア', nodes: ['C++17 ワークブックモデル'] },
-  { title: '評価と入出力', nodes: ['数式パーサと構文木をたどる評価器（tree walker）', 'OOXML / XLSB の読み込み・書き出し'] },
-  { title: '検証', nodes: ['Oracle テスト / 実行環境間の一致'] }
+<DiagramLayers
+  label="ホスト API から C ABI とバインディング層を通って C++17 のワークブックモデルに至る層構造です。横に数式評価器とファイルの読み書きがあり、全体を Oracle テストと実行環境間の一致テストが検証します。"
+  caption="どのホスト環境も C ABI を通じて同じ C++17 コアに届き、バインディングが担うのは値と寿命の変換だけで、計算には関わりません。"
+  :layers="[
+  { title: 'ホスト', nodes: [{ label: 'ホスト API', note: 'JS・Python・CLI・MCP・セル UI', tone: 'alt' }] },
+  { title: '境界', nodes: [{ label: 'C ABI / バインディング層', note: '寿命管理と値の変換' }] },
+  { title: 'コア', nodes: [{ label: 'C++17 ワークブックモデル', note: 'シート・セル・依存グラフ' }] },
+  { title: '評価と入出力', nodes: [
+    { label: 'パーサと評価器', note: '関数カタログ・tree walker' },
+    { label: 'ファイルの読み書き', note: 'OOXML・XLSB・パススルー' }
+  ] },
+  { title: '検証', nodes: [{ label: 'Oracle と一致テスト', note: 'Excel の値・環境間の一致' }] }
 ]" />
 
 ## どこに何があるか

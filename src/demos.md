@@ -16,6 +16,7 @@ Each demo runs the real engine in your browser; nothing is sent to a server. Eac
 
 ## Workbook features
 
+- [Data-validation checks](/workbook/filters-validation): test a proposed number without writing it, then see that a direct engine write can store a value outside the rule.
 - [Dynamic arrays](/workbook/dynamic-arrays): preview the spill shape of an array formula, commit it to a sheet, and trigger a `#SPILL!` case.
 - [PivotTables](/workbook/pivots): configure a pivot table and inspect the cells the engine projects.
 - [Inserting and deleting rows and columns](/workbook/operations): edit the structure and compare formulas before and after, including references that collapse to `#REF!`.
@@ -29,6 +30,7 @@ Each demo runs the real engine in your browser; nothing is sent to a server. Eac
 
 ## formulon-cell UI
 
+- [Charts](/cell/charts): select the sample data, insert a chart, and explore its series and settings in the full spreadsheet demo.
 - [Dynamic language switching](/cell/language-switching): try seven UI languages on the same workbook, comparing the calculation profile, localized formula, stored formula and results.
 - [Full spreadsheet demo](/cell/demo): edit a seeded workbook, open menus and dialogs, switch themes and platform UI, and change which controls are visible.
 - [Read-only report viewer](/cell/embedding): a fixed viewport that allows only selection and copy.

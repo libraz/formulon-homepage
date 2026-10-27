@@ -9,7 +9,7 @@ The surface decides packaging, memory lifetime, deployment, and how host errors 
 | Surface | Best for | Package |
 | --- | --- | --- |
 | WebAssembly | Browser apps, workers, Node services | `@libraz/formulon` |
-| Native Node | Node services that can build or stage a `.node` addon | `packages/npm-native` (source checkout) |
+| Native Node | Node services that can build or stage a `.node` addon | `@libraz/formulon-native` (built from a source checkout, not on npm) |
 | Python | Notebooks, batch jobs, data pipelines | `formulon` |
 | CLI | Shell scripts, CI checks, workbook inspection | GitHub Releases |
 | MCP | AI agents that open, edit and save workbooks | `@libraz/formulon-mcp` |
@@ -24,29 +24,30 @@ Pick the highest-level surface that fits your deployment. Drop to the C ABI only
     {
       title: 'Where does it run?',
       nodes: [
-        { label: 'Browser', note: '→ WASM (@libraz/formulon)' },
-        { label: 'Server / job', note: '→ next: which language?' },
-        { label: 'Shell / CI', note: '→ CLI (GitHub Releases)' },
-        { label: 'Agent / LLM', note: '→ MCP server (formulon-mcp)' }
+        { label: 'Browser', note: 'WASM, @libraz/formulon' },
+        { label: 'Server / job', note: 'Choose by language, below' },
+        { label: 'Shell / CI', note: 'CLI, from GitHub Releases' },
+        { label: 'Agent / LLM', note: 'MCP, @libraz/formulon-mcp' }
       ]
     },
     {
       title: 'Server / job: which language?',
       nodes: [
-        { label: 'Python', note: '→ Python (formulon)' },
-        { label: 'Node', note: '→ next: native install OK?' },
-        { label: 'Other', note: '→ C ABI (repository build)' }
+        { label: 'Python', note: 'Python package: formulon' },
+        { label: 'Node', note: 'Native Node or WASM, below' },
+        { label: 'Other', note: 'C ABI, built from the repository' }
       ]
     },
     {
-      title: 'Node: native install OK?',
+      title: 'Node: can you build or stage a .node addon?',
       nodes: [
-        { label: 'Yes', note: '→ Native Node (packages/npm-native)' },
-        { label: 'No', note: '→ WASM (@libraz/formulon)' }
+        { label: '@libraz/formulon-native', note: 'Yes. Not on npm; built from source' },
+        { label: '@libraz/formulon', note: 'No. WASM, no native build step' }
       ]
     }
   ]"
-  label="Decision guide: which surface to use"
+  label="Decision guide: browsers use WASM, shells and CI use the CLI, agents use MCP; server jobs choose by language, and Node chooses Native Node or WASM depending on whether a native addon can be built"
+  caption="A Node service uses Native Node only when a .node addon can be built or staged; otherwise WASM covers it."
 />
 
 | Requirement | Recommended surface |

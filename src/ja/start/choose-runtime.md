@@ -9,7 +9,7 @@ Formulon は同じ C++ コアを、ホストごとのパッケージとして提
 | 実行入口 | 向いている用途 | パッケージ |
 | --- | --- | --- |
 | WebAssembly | ブラウザ、ワーカー、Node サービス | `@libraz/formulon` |
-| Native Node | `.node` アドオンをビルドして配置できる Node サービス | `packages/npm-native`（ソースから） |
+| Native Node | `.node` アドオンをビルドして配置できる Node サービス | `@libraz/formulon-native`（ソースからビルド、npm 未公開） |
 | Python | ノートブック、バッチ、データ処理 | `formulon` |
 | CLI | シェル、CI、ワークブック検査 | GitHub Releases |
 | MCP | ワークブックを開いて編集・保存する AI エージェント | `@libraz/formulon-mcp` |
@@ -24,29 +24,30 @@ Formulon は同じ C++ コアを、ホストごとのパッケージとして提
     {
       title: 'どこで動かすか',
       nodes: [
-        { label: 'ブラウザ', note: '→ WASM（@libraz/formulon）' },
-        { label: 'サーバー / バッチ', note: '→ 次の質問: 言語は?' },
-        { label: 'シェル / CI', note: '→ CLI（GitHub Releases）' },
-        { label: 'エージェント / LLM', note: '→ MCP サーバー（formulon-mcp）' }
+        { label: 'ブラウザ', note: 'WASM（@libraz/formulon）' },
+        { label: 'サーバー / バッチ', note: '下の言語で分岐する' },
+        { label: 'シェル / CI', note: 'CLI（GitHub Releases）' },
+        { label: 'エージェント / LLM', note: 'MCP（@libraz/formulon-mcp）' }
       ]
     },
     {
       title: 'サーバー / バッチ: 言語は?',
       nodes: [
-        { label: 'Python', note: '→ Python（formulon）' },
-        { label: 'Node', note: '→ 次の質問: Native Node をインストール可能か?' },
-        { label: 'その他', note: '→ C ABI（ソースからビルド）' }
+        { label: 'Python', note: 'Python パッケージ（formulon）' },
+        { label: 'Node', note: '下で Native Node か WASM を選ぶ' },
+        { label: 'その他', note: 'C ABI（リポジトリからビルド）' }
       ]
     },
     {
-      title: 'Node: Native Node をインストール可能か?',
+      title: 'Node: .node アドオンをビルド・配置できるか',
       nodes: [
-        { label: '可能', note: '→ Native Node（packages/npm-native）' },
-        { label: '不可', note: '→ WASM（@libraz/formulon）' }
+        { label: '@libraz/formulon-native', note: 'できる。npm 未公開、ソースからビルド' },
+        { label: '@libraz/formulon', note: 'できない。WASM、ネイティブビルド不要' }
       ]
     }
   ]"
-  label="実行入口の選び方"
+  label="選択ガイド。ブラウザは WASM、シェルと CI は CLI、エージェントは MCP を使う。サーバー / バッチは言語で選び、Node はネイティブアドオンをビルドできるかで Native Node か WASM を選ぶ"
+  caption="Node サービスで Native Node を選ぶのは .node アドオンをビルドまたは配置できる場合だけで、それ以外は WASM で対応します。"
 />
 
 | 要件 | 推奨する実行入口 |

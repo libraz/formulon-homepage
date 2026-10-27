@@ -95,6 +95,7 @@ Use `presets.minimal()` or the `embedded` profile when the surrounding applicati
 - [Embedding](/cell/embedding) — viewer, form, host-owned controls, and host-owned updates.
 - [Modals and dialogs](/cell/modals) — overlay placement and direct dialog entry points.
 - [Ribbon toolbar](/cell/toolbar) — the inline or separate ribbon, tab sets, dropdown handlers, and commands.
+- [Charts](/cell/charts) — create charts, map workbook cells to series, and configure supported settings.
 - [Custom cells and host functions](/cell/custom-cells) — display formatters and host functions for autocomplete.
 - [Framework adapters](/cell/frameworks) — React and Vue component usage.
 - [Hooks and composables](/cell/hooks) — host controls that follow selection, edits, and locale.

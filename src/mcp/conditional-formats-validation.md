@@ -6,13 +6,38 @@ description: Add conditional formatting and data validation to a workbook throug
 
 Ask the agent for rules in plain terms: "highlight amounts over 1,000 in red", "shade the whole row when the status is Draft", "put a Draft/Approved/Paid dropdown on column C", "allow only 0 to 2,000 in the amount column". The agent writes them with `formulon_conditional_format_operation` and `formulon_validation_operation`, checks the result in the session, and saves an `.xlsx` that Excel opens with the rules in place.
 
-A prompt that names the range, the condition, the look, and the output file is enough:
+A prompt that names the source or asks for a new workbook, the range, the condition, the look, and the output file is enough:
 
-> Open `sales.xlsx`. In `Sheet1!B2:B5`, give amounts over 1000 a light red fill with dark red text. Add a dropdown with Draft, Approved, and Paid to `C2:C21`. Check which cells match, then save as `out/sales-rules.xlsx`.
+> Create a workbook. In `Sheet1!B2:B5`, give amounts over 1000 a light red fill with dark red text. Add a dropdown with Draft, Approved, and Paid to `C2:C21`. Check which cells match, then save as `out/sales-rules.xlsx`.
 
 ## Worked example
 
-The sheet has a header row, amounts in `B2:B5`, and a status column `C`. Both tools address cells with zero-based numbers, so `B2:B5` is rows 1 to 4 of column 1.
+This example creates a new workbook with `Sheet1`, then adds amounts in `B2:B5` and statuses in `C2:C5`. Choosing `win-365-en_US` makes the first sheet name predictable. Both object tools use zero-based numbers, so `B2:B5` is rows 1 to 4 of column 1.
+
+Call `formulon_open_workbook` to create a session, then call `formulon_set_range` to write the header and four records:
+
+```json
+{
+  "sessionId": "sales",
+  "profile": "win-365-en_US"
+}
+```
+
+```json
+{
+  "sessionId": "sales",
+  "start": "Sheet1!B1",
+  "values": [
+    ["Amount", "Status"],
+    [1200, "Draft"],
+    [850, "Approved"],
+    [2050, "Paid"],
+    [500, "Draft"]
+  ]
+}
+```
+
+The first call omits `path`, so it creates a new workbook. `formulon_set_range` writes the rectangle; its default recalculates the workbook.
 
 ### 1. Register the style
 
@@ -31,7 +56,7 @@ A rule such as "greater than 1000" applies a differential format (a *dxf*): only
 }
 ```
 
-Colors are ARGB integers in decimal: `4294952910` is `0xFFFFC7CE` (light red) and `4288413702` is `0xFF9C0006` (dark red). `pattern: 1` is a solid fill. The response carries the style's position in `result.index`; the next step passes it as `dxfId`. Adding an identical record again returns the existing index instead of a new one.
+Colors are ARGB integers in decimal: `4294952910` is `0xFFFFC7CE` (light red) and `4288413702` is `0xFF9C0006` (dark red). `pattern: 1` is a solid fill. The response carries the style's position in `result.index`; pass that value as `dxfId` in the next call. It is `0` for this new workbook, which has no differential formats yet. In an existing workbook, use the returned index instead of assuming `0`. Adding an identical record again returns the existing index instead of a new one.
 
 ### 2. Add the rule
 
@@ -190,7 +215,7 @@ Positions shift after each add or remove, so list again before a second `removeA
 
 `result.cells` lists only cells with at least one match. Each match has `kind` (0 dxf style, 1 color scale, 2 data bar, 3 icon set) and `priority`. A dxf match carries `dxfId`, with `dxfIdEngaged: 1` when the rule names a style; a color-scale match carries the resolved `color`; a data bar carries its bar length and colors; an icon set carries `iconSetName` and `iconIndex`.
 
-Date-period rules depend on today's date, and the evaluation uses the date given in `todaySerial`, an Excel date serial. Without `todaySerial`, no date-period rule matches. `0` is not "off": it is the serial for 1899-12-30, and date-period rules are evaluated against that day. To check a "last 7 days" rule as of 2026-10-13, pass that date's serial:
+Date-period rules depend on today's date, and the evaluation uses the date given in `todaySerial`, an Excel date serial in the workbook's date system. Without `todaySerial`, no date-period rule matches. `0` is a valid serial, not a way to disable date-period rules. Its calendar date depends on whether the workbook uses the 1900 or 1904 date system. For a workbook using the 1900 system, 2026-10-13 is serial `46308`:
 
 ```json
 {
@@ -288,6 +313,27 @@ Adding a rule does not change cells that already hold values. To find values tha
 ```
 
 The result lists each failing cell with its row, column, and value, a page at a time; pass `result.nextCursor` as the second argument while it is not `null`. The call is read-only and leaves the session clean.
+
+Data validation rules are workbook metadata. Excel applies them when a user edits the file, but `formulon_set_cells` and `formulon_set_range` do not reject values that violate a rule. After adding the list rule to column C, for example, this write succeeds even though `Archived` is not one of its choices:
+
+```json
+{
+  "sessionId": "sales",
+  "mutations": [{ "type": "text", "a1": "Sheet1!C3", "value": "Archived" }]
+}
+```
+
+Run `listInvalidCells` after the write to find the violation. To reject a proposed value before writing it, call the allowlisted `validateValue` method through `formulon_workbook_call`. For the proposed `Archived` at `C3` (sheet 0, row 2, column 2), pass a text `Value`:
+
+```json
+{
+  "sessionId": "sales",
+  "method": "validateValue",
+  "args": [0, 2, 2, { "kind": 3, "number": 0, "boolean": 0, "text": "Archived", "errorCode": 0 }]
+}
+```
+
+The result's `valid` field is `false`; the check does not write the value. `formulon_set_cells` and `formulon_set_range` do not perform this check themselves.
 
 ## Saving {#saving}
 

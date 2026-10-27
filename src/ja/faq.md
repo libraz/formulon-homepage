@@ -32,7 +32,17 @@ Formulon はこれらの関数名を認識し、未対応サービスのエラ�
 
 Formulon は `win-365-ja_JP` などのプロファイルごとに、実 Excel から取得した Oracle データと突合します。ただし、すべてのワークブックについて無条件に同一結果を保証するものではありません。ロケール依存、揮発性関数、外部サービス依存、ファイル構造、Excel 側の未文書挙動は差分要因になります。
 
-<DiagramFlow steps="Excel（参照実装） → 取得した Oracle データ → プロファイル（win-365-ja_JP） → divergence.yaml → Formulon の出力" label="互換性プロファイルの構築と検証の流れ" />
+<DiagramFlow
+  :steps="[
+    { label: 'Excel', note: '参照実装', tone: 'alt' },
+    { label: 'Oracle データ', note: 'Excel の観測結果を取得', tone: 'alt' },
+    { label: 'プロファイル', note: 'win-365-ja_JP などの名前付き設定' },
+    { label: 'divergence.yaml', note: '許容した差異と理由を記録' },
+    { label: 'Formulon の出力', note: 'Oracle データと照合' }
+  ]"
+  label="互換性プロファイルの構築と検証の流れ。Excel の挙動を Oracle データとして取得し、プロファイルごとに整理し、許容する差異は divergence.yaml に記録して、Formulon の出力を照合する"
+  caption="Excel との差異は理由つきで記録され、原因不明の不一致として放置されません。"
+/>
 
 実 Excel を参照実装とし、その実測挙動を Oracle データとして取得します。それを `win-365-ja_JP` のような名前付きプロファイルにまとめ、参照実装との差分のうち許容するものは理由と最終確認済みの Excel ビルドとともに `divergence.yaml` に記録します。説明のつかない不一致として Formulon の出力に残すのではなく、明示的に管理する仕組みです。パイプライン全体は [Oracle テスト](/ja/compatibility/oracle-testing) を参照してください。
 
@@ -66,7 +76,7 @@ Excel の全機能に対する互換性は保証していません。Formulon �
 
 WASM、Python、Native Node、CLI、MCP は `.xlsx` と `.xlsb` を読み込めます。入力形式はファイルの内容から判定します。出力形式を明示するには `saveAs` / `save_as` を使います。CLI は出力拡張子が `.xlsb` なら XLSB、それ以外は XLSX を選びます。MCP の出力先は `.xlsx` または `.xlsb` に限られ、それぞれの拡張子に対応する形式を選びます。
 
-`.xlsb`（MS-XLSB）では、スタイル、行・列のレイアウト、セル結合、`date1904`（1904 年基準の日付）、表示設定、ズーム、ウィンドウ枠の固定、動的配列のメタデータ、対応するバイナリ形式の数式、条件付き書式ルール、入力規則ルール、ハイパーリンクを読み書きできます。条件付き書式ルールは共有モデルで扱い、対応するルールを評価できます。`validateValue` / `validate_value` と `listInvalidCells` / `list_invalid_cells` は、モデル化した入力規則に対する明示的な検査を行います。印刷設定・改ページ、図形やテーブルへの参照、関連付け情報など、その他のシート末尾のデータは文書化されたパススルー動作に従います。XLSB への保存では、型付き AutoFilter の変更、従来型ノート、スレッドコメント、読み込み・挿入した OOXML の描画、ページ設定、余白、印刷オプション、ヘッダー / フッター、手動改ページ、テーブル、既定以外の計算設定は保存されず、`saveWithDiagnostics` / `save_with_diagnostics` の `deferredFeatureCount` などのカウンターから省略・破棄された情報を確認できます。非対応数式は保存済みの計算結果に置き換わる場合があります。詳しくは [ファイル形式サポート](/ja/compatibility/file-format-support)。
+`.xlsb`（MS-XLSB）の対応範囲は機能によって異なります。モデル化して書き出す要素、内容を解釈せず保持する要素、保存を保留または省略する要素があります。非対応数式は保存済みの計算結果に置き換わる場合があります。最新の詳細は [ファイル形式の比較表](/ja/compatibility/file-format-support) を参照してください。`saveWithDiagnostics` / `save_with_diagnostics` では `deferredFeatureCount` などのカウンターから、保存を保留または省略したデータを確認できます。
 
 XLSB のピボットキャッシュ定義、キャッシュレコード、ピボットテーブルは、対応するレコード形式なら評価できます。未対応の形式はスキップします。外部参照は `[Book1.xlsx]Sheet1!A1` のようなブック名やパスを受け付け、XLSX・XLSB にリンク情報と一緒に保存できます。評価には取得済みの外部キャッシュ値を使い、リンク先のファイルは取得しません。ふりがなは、各注釈が対応する元の文字範囲も保持します。
 
@@ -110,7 +120,7 @@ Formulon 本体はヘッドレスエンジンです。セルグリッドの表�
 
 ### チャート、図形、画像、書式は再計算されますか？
 
-書式や多くのワークブック構造は読み込み・保存で保持できます。ただし、データを保持できても画面に描画できるとは限りません。Formulon はグラフや図形の描画、印刷結果を再現する PDF の生成、`IMAGE` による画像取得は行いません。
+Formulon の計算エンジンは多くのワークブック構造を読み取り、書き込み、保持できますが、保持することは描画や意味の解釈とは異なります。エンジン自体はグラフや図形を描画せず、印刷品質の PDF も生成しません。また、`IMAGE` 関数による画像取得も行いません。ブラウザーでグラフを表示するスプレッドシート UI には [formulon-cell](/ja/cell/) を使えます。
 
 見た目の最終確認には Excel または別のレンダリング層を使ってください。Formulon は計算とワークブック変更のためのものです。
 
@@ -136,7 +146,7 @@ Rust のメモリ安全性には利点があります。Formulon では、OOXML 
 | --- | --- |
 | ブラウザ上で計算したい | `@libraz/formulon`（WASM） |
 | ネイティブアドオンを使わず Node.js で計算したい | `@libraz/formulon`（WASM） |
-| ソースからビルドして Node.js でネイティブ実行したい | `packages/npm-native` |
+| ソースからビルドして Node.js でネイティブ実行したい | `@libraz/formulon-native`（`packages/npm-native` からビルド） |
 | Python バッチやノートブックで使いたい | `formulon`（PyPI） |
 | CI やシェルから使いたい | GitHub Releases の CLI |
 | AI エージェントにワークブック操作を渡したい | `@libraz/formulon-mcp` |

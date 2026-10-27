@@ -15,16 +15,19 @@ Read means Formulon can parse the structure. Write means it can emit it. Preserv
 | `.xlsm` macro bytes | Preserve, never execute |
 | Legacy `.xls` | Out of scope |
 | Password-protected packages | Not decrypted. An encrypted workbook and a legacy `.xls` are both OLE compound files, and loading either fails with `kIoZipEncrypted`; decrypt or convert to `.xlsx` first |
-| Chart structure and data | XLSX: typed reading, creation, editing, and series-data resolution. Charts loaded from XLSB are read-only. Save refreshes caches; references follow row, column, and sheet edits. |
-| Charts/drawings rendering | Out of scope. XLSX picture bytes and anchors can be probed, read, inserted, and removed; drawing objects and shapes can be listed, and shapes can be inserted, updated, and removed, but charts, shapes, and groups are not rendered. |
+| Chart structure and data | XLSX: typed reading, creation, editing, and series-data resolution. Charts loaded from XLSB are read-only. Saving refreshes chart series caches from the values currently held by the workbook; references follow row, column, and sheet edits. |
+| Engine chart/drawing rendering | Out of scope. XLSX picture bytes and anchors can be probed, read, inserted, and removed; drawing objects and shapes can be listed, and shapes can be inserted, updated, and removed, but the calculation engine does not render charts, shapes, or groups. The browser UI in [formulon-cell](/cell/) renders supported charts. |
 | Pivot cache refresh from worksheet or external source data | Out of scope; supported cached structures can be preserved and projected |
 
-<DiagramLayers :layers="[
-  { title: 'Support spectrum', nodes: [
-    { label: '.xlsx', note: 'modeled filters/validation/comments/pictures + preserved package parts' },
-    { label: '.xlsb', note: 'modeled CF/validation/protection + opaque filter tails; OOXML drawings and comments omitted on save' },
-    { label: '.xlsm', note: 'macro bytes pass through, never executed' },
-    { label: '.xls', note: 'out of scope' }
+<DiagramLayers
+  label="Support by file format: .xlsx and .xlsb are modeled, .xlsm macro bytes are preserved but never executed, and legacy .xls is out of scope."
+  caption="Formulon preserves .xlsm macro bytes but never runs them, and legacy .xls is out of scope."
+  :layers="[
+  { title: 'Support by format', nodes: [
+    { label: '.xlsx', note: 'Modeled + preserved parts' },
+    { label: '.xlsb', note: 'Drawings and notes omitted' },
+    { label: '.xlsm', note: 'Macro bytes kept, not run' },
+    { label: '.xls', note: 'Out of scope' }
   ] }
 ]" />
 

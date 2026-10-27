@@ -11,6 +11,8 @@ description: formulon-cell を React / Vue から利用し、コアと同じ UI 
 
 アプリケーションでコアのスタイルシートを 1 回読み込みます。コンポーネントの親に高さを与えると、グリッドがその領域を使います。
 
+`locale` を明示すると、UI の辞書とワークブックの計算プロファイルがホストアプリケーションの言語に合います。これは UI の配置を選ぶ `ui.profile` とは別の設定です。
+
 ```tsx
 import '@libraz/formulon-cell/styles.css'
 import {
@@ -41,6 +43,7 @@ export function OrderForm() {
     <div className="cell-frame">
       <Spreadsheet
         ui={ui}
+        locale="ja"
         policy={policy}
         viewport={viewport}
         contextMenu={contextMenu}
@@ -105,6 +108,7 @@ function saveDraft(event: CellChangeEvent) {
   <div class="cell-frame">
     <Spreadsheet
       :ui="ui"
+      locale="ja"
       :policy="policy"
       :viewport="viewport"
       :context-menu="contextMenu"

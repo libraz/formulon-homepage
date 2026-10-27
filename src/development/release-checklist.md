@@ -49,12 +49,39 @@ Run the parity check and binding smoke tests before release. They cover agreemen
 - [ ] Update the homepage's `docsVersion` to the documented source version. Verify unreleased features with the ignored local snapshots (`yarn test:local` and `yarn build:local`). After the core, `formulon-cell`, and `formulon-cell-vue` packages are published, update the registry dependency pins, regenerate the lockfile, and rerun tests and the build without local aliases. Confirm the displayed runtime versions and the language-switching demo against the published packages before deploying.
 - [ ] Watch for incoming compatibility issues and route them to the right oracle / profile.
 
-<DiagramFlow steps="Work on develop → Develop CI passes → Fast-forward main → Main CI passes → Push annotated tag → release.yml + prebuild.yml → Verify artifacts" />
+<DiagramFlow
+  label="Release order: work on develop, pass develop CI, fast-forward main, pass main CI, push an annotated tag, let release.yml and prebuild.yml run, then verify the artifacts."
+  caption="The tag is pushed last, after develop and main CI have both passed."
+  :steps="[
+  { label: 'Work on develop', note: 'Run the pre-release checklist' },
+  { label: 'Develop CI passes', note: 'Required before main moves' },
+  { label: 'Fast-forward main', note: 'Promote develop to main' },
+  { label: 'Main CI passes', note: 'Gate before tagging' },
+  { label: 'Push annotated tag', note: 'git tag -a vX.Y.Z' },
+  { label: 'release.yml + prebuild.yml', note: 'Both start from the same tag' },
+  { label: 'Verify artifacts', note: 'Packages, Release, CLI, addons' }
+]" />
 
-<DiagramLayers :layers="[
-  { title: 'release.yml (tag-triggered)', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },
-  { title: 'prebuild.yml (same tag)', nodes: ['Native Node matrix', 'release-bundle'] },
-  { title: 'Result', nodes: ['npm + PyPI + CLI binaries + GitHub Release + Native Node artifacts — verified'] }
+<DiagramLayers
+  label="The tag triggers release.yml, which publishes npm and PyPI and builds and attaches the CLI, and prebuild.yml, which bundles the Native Node prebuilds. The Native Node bundle is published to npm by hand."
+  caption="One tag starts both workflows, but publishing the Native Node package to npm remains a manual step."
+  :layers="[
+  { title: 'release.yml (tag-triggered)', nodes: [
+    { label: 'publish-npm', note: 'Trusted publishing' },
+    { label: 'build-cli', note: 'Builds CLI binaries' },
+    { label: 'python-wheel', note: 'Builds Python wheels' },
+    { label: 'publish-pypi', note: 'Trusted publishing' },
+    { label: 'attach-cli', note: 'Adds CLI to the Release' }
+  ] },
+  { title: 'prebuild.yml (same tag)', nodes: [
+    { label: 'Native Node matrix', note: 'Prebuilt addons per platform' },
+    { label: 'release-bundle', note: 'formulon-native-bundle artifact' }
+  ] },
+  { title: 'Result', nodes: [
+    { label: 'npm and PyPI packages', note: 'Published by release.yml' },
+    { label: 'GitHub Release', note: 'CLI binaries attached' },
+    { label: 'Native Node bundle', note: 'npm publish is manual', tone: 'alt' }
+  ] }
 ]" />
 
 ## Read next

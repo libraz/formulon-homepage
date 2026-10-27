@@ -69,7 +69,7 @@ try {
 ```
 
 ::: tip 2 か所の locale 指定
-`createDefault()` に渡す `locale` は、ワークブックの既定フォントを決めるだけです。UI の言語と計算プロファイル（数値書式、区切り文字、ローカライズされた関数名）は `mount()` に渡す `locale` で決まります。`mount()` に `locale` を渡さないと UI は日本語で始まるため、アプリケーションの言語を指定してください。
+`createDefault()` に渡す `locale` は、新しいワークブックのフォントや既定の行高などを設定します。`platform: 'mac'` を指定すると、対応する Mac の実測プロファイルからワークブックを作成し、最初のシート名なども設定します。`mount()` に渡す `locale` は UI の言語と計算プロファイル（数値書式、区切り文字、ローカライズされた関数名）を選びます。`mount()` に `locale` を渡さないと UI は日本語で始まるため、アプリケーションの言語を指定してください。
 :::
 
 `WorkbookHandle.createDefault()` は Formulon の標準 WASM パッケージを読み込みます。現在の標準ローダーは `SharedArrayBuffer` や COOP/COEP ヘッダーを必要としません。WASM または WebAssembly の初期化に失敗すると Promise が拒否されるため、ホスト側でエラーを処理してください。

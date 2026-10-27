@@ -12,21 +12,10 @@ WASM、Python、Native Node、CLI は共通の計算処理を使います。変�
 | [Python](/ja/runtimes/python) | スクリプト、ノートブック、データパイプライン、一括再計算 |
 | [Native Node](/ja/runtimes/node-native) | プラットフォーム別の `.node` アドオンを配置できる Node サービス |
 | [CLI](/ja/runtimes/cli) | シェル処理、CI スナップショット、問題の再現 |
-| [CI 回帰検査](/ja/runtimes/ci-regression) | 自動チェックでワークブック差分を取りたい場合 |
 
-## 判断ルール
+## 選び方
 
-<DiagramLayers :layers="[
-  { title: '共通コア', nodes: ['C++17 計算コア'] },
-  { title: 'ABI', nodes: ['C ABI'] },
-  { title: '実行入口', nodes: ['WASM', 'Native Node', 'Python', 'CLI'] },
-  { title: '実行環境', nodes: [
-    { label: 'ブラウザ / ワーカー', note: 'ネイティブ不要の Node' },
-    { label: 'Node サービス', note: 'ネイティブ配置可' },
-    { label: 'バッチ / ノートブック', note: 'データパイプライン' },
-    { label: 'シェル / CI', note: '再現レポート' }
-  ] }
-]" />
+MCP と C ABI も含めた判断の手順は [実行入口を選ぶ](/ja/start/choose-runtime) にまとめています。
 
 - ワークブックデータがブラウザにあり、アップロード時のプライバシーを守りたい場合や、サーバーに元ファイルを渡したくない場合は WASM を使います。
 - 帳票生成、定期ジョブ、入力規則の検証、ノートブックには Python を使います。

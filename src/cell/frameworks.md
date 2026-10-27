@@ -11,6 +11,8 @@ description: Use formulon-cell from React or Vue with the same UI options, host 
 
 Import the core stylesheet once in the application. Give the component a height through its parent; the grid fills the available space.
 
+Set `locale` explicitly so the UI dictionary and workbook calculation profile match the host application's language. This setting is separate from `ui.profile`, which chooses the control layout.
+
 ```tsx
 import '@libraz/formulon-cell/styles.css'
 import {
@@ -41,6 +43,7 @@ export function OrderForm() {
     <div className="cell-frame">
       <Spreadsheet
         ui={ui}
+        locale="en"
         policy={policy}
         viewport={viewport}
         contextMenu={contextMenu}
@@ -105,6 +108,7 @@ function saveDraft(event: CellChangeEvent) {
   <div class="cell-frame">
     <Spreadsheet
       :ui="ui"
+      locale="en"
       :policy="policy"
       :viewport="viewport"
       :context-menu="contextMenu"

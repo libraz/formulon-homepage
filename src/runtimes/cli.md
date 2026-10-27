@@ -80,10 +80,10 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 
 ## CI usage
 
-`dump --values` and `dump --formulas` write stable text that a checked-in golden file can be diffed against. [CI regression workflows](/runtimes/ci-regression) covers the snapshot setup and how to handle volatile and external-service functions.
+`dump --values` and `dump --formulas` write stable text that a checked-in golden file can be diffed against. [CI workbook regression](/scenarios/ci-regression) covers the snapshot setup and how to handle volatile and external-service functions.
 
 ## Read next
 
 - [CLI reference](/api/cli) — full command syntax.
-- [CI regression scenarios](/runtimes/ci-regression) — patterns for CI gating.
+- [CI workbook regression](/scenarios/ci-regression) — snapshots, a GitHub Actions job, and the review policy.
 - [CI workbook regression scenario](/scenarios/ci-regression) — example pipeline.

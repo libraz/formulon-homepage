@@ -9,42 +9,61 @@ Evaluate a formula on its own when you need a spreadsheet result without loading
 <DiagramLayers
   :layers="[
     {
-      title: 'Need to evaluate a formula?',
+      title: 'Which evaluation do you need?',
       nodes: [
-        { label: 'Fresh, disposable formula', note: 'evalFormula / eval_formula — fresh Sheet1!A1 context' },
-        { label: 'Ad-hoc, against a loaded workbook', note: 'evaluateFormulaText — read-only, JS/WASM + Native Node only' },
-        { label: 'Persist into the workbook', note: 'setFormula + recalc() — joins the dependency graph' }
+        { label: 'evalFormula / eval_formula', note: 'One-shot, at A1 of a blank workbook' },
+        { label: 'evaluateFormulaText', note: 'Read-only; JS/WASM and Native Node' },
+        { label: 'setFormula + recalc()', note: 'Persists; joins the dependency graph' }
       ]
     }
   ]"
-  label="Three ways to evaluate a formula"
+  label="Three ways to evaluate a formula: a one-shot call in a blank workbook, a read-only call against a loaded workbook, and writing the formula into the workbook"
+  caption="Only setFormula writes into the workbook; the other two leave it unchanged."
 />
 
-## JavaScript / WASM
+## Run the same formula on each surface
 
-```ts
+The one-shot API evaluates the formula in a fresh workbook. This example uses the same input on WASM, Native Node, Python, and the CLI:
+
+::: code-group
+
+```ts [WASM]
 import createFormulon, { ValueKind } from '@libraz/formulon'
 
 const Module = await createFormulon()
-
 const result = Module.evalFormula('=SUM(1,2,3)')
-if (!result.status.ok) {
-  throw new Error(result.status.message)
-}
-
-if (result.value.kind === ValueKind.Number) {
-  console.log(result.value.number)
-}
+if (!result.status.ok) throw new Error(result.status.message)
+if (result.value.kind === ValueKind.Number) console.log(result.value.number)
 ```
 
-## Python
+```ts [Native Node]
+import { evalFormula, ValueKind } from '@libraz/formulon-native'
 
-```python
+const result = evalFormula('=SUM(1,2,3)')
+if (!result.status.ok) throw new Error(result.status.message)
+if (result.value.kind === ValueKind.Number) console.log(result.value.number)
+```
+
+```python [Python]
 import formulon
 
 value = formulon.eval_formula("=SUM(1,2,3)")
 print(value.to_python())
 ```
+
+```sh [CLI]
+formulon eval '=SUM(1,2,3)'
+```
+
+:::
+
+## Try it in the browser
+
+`formulon eval --json '=1/0'` prints `{"kind":"error","value":"#DIV/0!"}` and exits `0`. A non-zero exit is reserved for host-side failures such as a usage error or an unreadable file.
+
+Try it in the panel below: the `=1/0` preset comes back with value kind `Error` and the text `#DIV/0!`, a value you inspect rather than an exception you catch. The second tab evaluates against a small sample workbook through [`evaluateFormulaText`](#evaluating-against-a-loaded-workbook).
+
+<FormulaEvalDemo />
 
 ## Show a formula in a user's Excel locale
 
@@ -67,19 +86,6 @@ try {
 ```
 
 `localizeFormula()` is a text transform. It changes function names, separators, decimal points, Boolean names, and error names while leaving strings, quoted sheet names, external qualifiers, and structured-reference brackets alone. `localeFacts(profile)` supplies the separators, names, date order, currency, and localized error names needed by a custom editor. The engine profile catalog has 28 ids; `mac-*` profiles and `win-365-ja_JP` are measured against Excel, and the other Windows profiles use estimated locale data.
-
-## CLI
-
-```sh
-formulon eval '=SUM(1,2,3)'
-formulon eval --json '=1/0'
-```
-
-`formulon eval --json '=1/0'` prints `{"kind":"error","value":"#DIV/0!"}` and exits `0`. A non-zero exit is reserved for host-side failures such as a usage error or an unreadable file.
-
-Try it in the panel below: the `=1/0` preset comes back with value kind `Error` and the text `#DIV/0!`, a value you inspect rather than an exception you catch. The second tab evaluates against a small seeded workbook through `evaluateFormulaText`, described in the next section.
-
-<FormulaEvalDemo />
 
 ## Evaluating against a loaded workbook
 
@@ -121,7 +127,7 @@ try {
 }
 ```
 
-The Native Node package (`packages/npm-native`) exposes the identical `evaluateFormulaText` / `evaluateConditionalFormula` methods on the same `Workbook` shape; see [Native Node integration](/runtimes/node-native).
+The Native Node package (`@libraz/formulon-native`, built from source) exposes the identical `evaluateFormulaText` / `evaluateConditionalFormula` methods on the same `Workbook` shape; see [Native Node integration](/runtimes/node-native).
 
 ::: warning Python boundary
 Python does not expose the general scalar `evaluate_formula_text` equivalent. It does expose `evaluate_cf_formula` for conditional-format predicates and `evaluate_formula_array` for full array results. For a general scalar evaluated in workbook context, write the formula into a cell with `set_formula` and call `recalc()`.

@@ -131,7 +131,13 @@ The inventory limit applies only when `range` is omitted and no print area suppl
 
 The preview is a worksheet-range render, not a print renderer. It uses installed system fonts and engine display geometry. The engine resolves effective styles, theme/indexed colors, and number-format display text. Missing or unreadable themes use the default Office theme with a warning; Excel can substitute a different font on another machine.
 
-The renderer does not apply conditional formatting or render headers, footers, or page margins. It renders cell display text, merges, fills, borders, alignment, and paginator page-break lines. PNG, JPEG, and GIF pictures are embedded within the payload budget; charts, shapes, BMP pictures, and unsupported or oversized pictures appear as dashed placeholders. Pattern fills, rotated text, shrink-to-fit, and diagonal borders remain approximations. Read `warnings` and each object's `rendered` flag before judging the result. To check conditional formatting, [evaluate the rules](/mcp/conditional-formats-validation#evaluate) instead.
+| Result | What it can confirm | What still needs another check |
+| --- | --- | --- |
+| PNG preview | Cell display text, merges, fills, borders, alignment, and page-break lines. PNG, JPEG, and GIF pictures render within the payload limit. | Conditional formatting, headers, footers, page margins, print output, and exact font substitution in Excel. Charts, shapes, BMP pictures, and unsupported or oversized pictures appear as dashed placeholders. |
+| Preview metadata | Cell geometry, chosen fonts, pagination, warning messages, and whether an object rendered. | Pattern fills, rotated text, shrink-to-fit, and diagonal borders are approximations. Check `warnings` and each object's `rendered` flag. |
+| Saved workbook | The artifact written by Formulon, with serialization losses reported by the save tool. | Excel's final appearance. Open the saved file in its target application when exact rendering matters. |
+
+To check conditional formatting, [evaluate the rules](/mcp/conditional-formats-validation#evaluate) instead. The preview does not apply those rules.
 
 `recalc: true` obtains current formula values before rendering. Recalculation changes cached values and marks the session dirty, even though the preview itself is read-only afterward. Use `recalc: false` when the cached values are the intended comparison target.
 

@@ -174,10 +174,12 @@ namesButton.addEventListener('click', () => {
 | `openFunctionArguments(name?, { category? })` | `fxDialog` |
 | `openQuickAnalysis()` | `quickAnalysis` |
 | `openChartSettings(tab?)` | `charts`. Returns `false` when no chart is selected. |
-| `openWorkbookObjects()`, `openPivotFieldList()`, `openActivePivotFieldList()` | `workbookObjects` |
+| `openWorkbookObjects()`, `openPivotFieldList(sheetIndex, pivotIndex)`, `openActivePivotFieldList()` | `workbookObjects` |
 | `openPivotTableDialog({ placement? })` | `pivotTableDialog` (`ui.features.pivotTable`) |
 | `openInsertCopiedCells()` | None. |
 | `openEvaluateFormulaDialog()`, `openExternalLinksDialog()`, `openCfRulesDialog()`, `openCellStylesGallery()`, `openFilterDropdown()` | None. |
+
+`openPivotFieldList(sheetIndex, pivotIndex)` opens the field list for the specified PivotTable. `openActivePivotFieldList()` looks for a PivotTable under the active cell and returns `false` when there is none.
 
 While an interaction policy is active, most openers stay inert because their features are off; see [Options](/cell/options#interaction-policy). The Mac ribbon also opens Goal Seek, Consolidate, Subtotal, Sparkline, Slicer, and Workbook Statistics; [Platform and Mac UI](/cell/platform#mac-ribbon-dialogs) lists their command IDs for a host-owned toolbar.
 

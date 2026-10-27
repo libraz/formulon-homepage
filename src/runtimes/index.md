@@ -12,21 +12,10 @@ WASM, Python, Native Node, and CLI should share calculation behavior. What chang
 | [Python](/runtimes/python) | Scripts, notebooks, data pipelines, and batch recalculation |
 | [Native Node](/runtimes/node-native) | Node services that can deploy a platform-specific `.node` addon |
 | [CLI](/runtimes/cli) | Shell workflows, CI snapshots, and issue reproduction |
-| [CI regression](/runtimes/ci-regression) | Stable workbook diffs in automated checks |
 
-## Decision rules
+## Choosing between them
 
-<DiagramLayers :layers="[
-  { title: 'Core', nodes: ['C++17 calculation core'] },
-  { title: 'ABI', nodes: ['C ABI'] },
-  { title: 'Surfaces', nodes: ['WASM', 'Native Node', 'Python', 'CLI'] },
-  { title: 'Host context', nodes: [
-    { label: 'Browser / worker', note: 'Node without native' },
-    { label: 'Node service', note: 'with native deploy' },
-    { label: 'Batch / notebook', note: 'data pipeline' },
-    { label: 'Shell / CI', note: 'repro reports' }
-  ] }
-]" />
+The step-by-step decision, including MCP and the C ABI, is in [Choose a surface](/start/choose-runtime).
 
 - Use WASM when workbook data starts in the browser, when upload privacy matters, or when a server should not receive the raw file.
 - Use Python when the workbook is part of report generation, scheduled jobs, data validation, or notebook workflows.

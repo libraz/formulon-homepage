@@ -32,7 +32,17 @@ Formulon recognizes the names so workbooks fail in a predictable, Excel-shaped w
 
 Formulon checks behavior against Excel oracle data per profile, such as `win-365-ja_JP`. That is not a blanket guarantee for every workbook. Locale behavior, volatile functions, external-service dependencies, file structures, and undocumented Excel details can still produce differences.
 
-<DiagramFlow steps="Excel (reference) → captured oracle data → profile (win-365-ja_JP) → divergence.yaml → Formulon output" label="How a compatibility profile is built and checked" />
+<DiagramFlow
+  :steps="[
+    { label: 'Excel', note: 'The reference implementation', tone: 'alt' },
+    { label: 'Oracle data', note: 'Observed Excel behavior, captured', tone: 'alt' },
+    { label: 'Profile', note: 'Named set, such as win-365-ja_JP' },
+    { label: 'divergence.yaml', note: 'Accepted differences, with reasons' },
+    { label: 'Formulon output', note: 'Checked against the oracle data' }
+  ]"
+  label="How a compatibility profile is built and checked: Excel behavior is captured as oracle data, organized under a profile, with accepted differences recorded in divergence.yaml, and Formulon output is checked against it"
+  caption="Every accepted difference from Excel is recorded with a reason, not left as an unexplained mismatch."
+/>
 
 Real Excel is the reference. Its observed behavior is captured as oracle data, organized under a named profile such as `win-365-ja_JP`, and any accepted difference from that reference is recorded in `divergence.yaml` with a reason and last-verified Excel build — rather than left as an unexplained mismatch in Formulon's output. See [Oracle testing](/compatibility/oracle-testing) for the full pipeline.
 
@@ -66,7 +76,7 @@ The formula oracle is captured on Mac Excel 365 in all 14 supported locales, eac
 
 WASM, Python, Native Node, CLI, and MCP can load `.xlsx` and `.xlsb`. Loaders detect the format from the file contents. Use `saveAs` / `save_as` to select the output format explicitly. CLI selects XLSB for a `.xlsb` output extension and XLSX otherwise. MCP accepts only `.xlsx` or `.xlsb` output paths and selects the corresponding format.
 
-For `.xlsb` (MS-XLSB), the parts Formulon models and writes include styles, row/column layout, merges, `date1904`, view/zoom/frozen panes, dynamic-array metadata, supported tokenized formulas, conditional-format rules, data-validation rules, and hyperlinks. Conditional-format rules use the shared model and supported rules can be evaluated; `validateValue` / `validate_value` and `listInvalidCells` / `list_invalid_cells` perform explicit checks against modeled validation rules. Other worksheet tails such as print setup/breaks, drawing/table references, and relationships use their documented passthrough behavior. Typed AutoFilter edits, classic notes, threaded comments, OOXML drawings (loaded or inserted), page setup, margins, print options, header/footer, manual breaks, tables, and nondefault calculation settings remain deferred for XLSB writes; `saveWithDiagnostics` / `save_with_diagnostics` report deferred or dropped losses through `deferredFeatureCount` and related counters. Unsupported formulas may downgrade to cached literals. See [File format support](/compatibility/file-format-support).
+For `.xlsb` (MS-XLSB), support varies by feature: some parts are modeled and written, some are preserved without interpretation, and some are deferred or omitted. Unsupported formulas may be downgraded to cached literals. Check the [file format matrix](/compatibility/file-format-support) for the current details; `saveWithDiagnostics` / `save_with_diagnostics` reports deferred or dropped data through `deferredFeatureCount` and related counters.
 
 XLSB pivot cache definitions, cache records, and PivotTable parts are evaluated when their record encoding is supported; unmeasured encodings are skipped rather than guessed. External references accept book names and paths, such as `[Book1.xlsx]Sheet1!A1`, and survive XLSX and XLSB saves with their link parts. Evaluation uses available cached external values; it does not fetch the linked file. Phonetic annotations preserve the span of each run.
 
@@ -110,9 +120,9 @@ For untrusted uploads, restrict process and filesystem permissions and set file-
 
 ### Are charts, shapes, images, and formatting recalculated?
 
-Formatting and many workbook structures can be read, written, or preserved, but preservation is not the same as rendering or semantic evaluation. Formulon does not render charts, draw shapes, produce print-perfect PDFs, or execute image-fetching behavior from `IMAGE`.
+The Formulon calculation engine reads, writes, or preserves many workbook structures, but preservation is not the same as rendering or semantic evaluation. The engine does not render charts, draw shapes, produce print-perfect PDFs, or execute image-fetching behavior from `IMAGE`. For an in-browser spreadsheet UI with chart rendering, see [formulon-cell](/cell/).
 
-Use Excel or a rendering layer for visual review. Use Formulon for calculation and workbook mutation.
+Use Excel or another rendering layer when you need Excel's own visual output. Use Formulon for calculation and workbook mutation.
 
 ## Runtimes and Packages
 
@@ -136,7 +146,7 @@ Pick by deployment target:
 | --- | --- |
 | Browser calculation | `@libraz/formulon` (WASM) |
 | Browser or no-native-addon Node.js | `@libraz/formulon` (WASM) |
-| Native Node execution from a source checkout | `packages/npm-native` |
+| Native Node execution from a source checkout | `@libraz/formulon-native` (built from `packages/npm-native`) |
 | Python batches or notebooks | `formulon` on PyPI |
 | Shell or CI jobs | CLI from GitHub Releases |
 | AI-agent workbook editing | `@libraz/formulon-mcp` |

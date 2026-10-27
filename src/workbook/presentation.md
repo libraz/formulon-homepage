@@ -2,6 +2,18 @@
 
 Formulon exposes the workbook state that a renderer needs. It does not draw cells or pages. Coordinates are zero-based; physical geometry is returned in points.
 
+The value stored in a cell, its number format, and its displayed text are separate layers. For example, a stored value of `0.25` with the number format `0%` remains the number `0.25`; `getDisplayText()` returns `25%` for a renderer to draw.
+
+| Layer | Example | Formulon API |
+| --- | --- | --- |
+| Stored value | `0.25` | `getValue()` |
+| Number format | `0%` | `getEffectiveStyle()` reports the format code |
+| Display text | `25%` | `getDisplayText()` or `formatValue()` |
+| Rendered cell | Text, fill, grid, and selection drawn in a UI | A host renderer such as [formulon-cell](/cell/) |
+| Conditional format | A rule that changes how a matching cell should look | Evaluate with the conditional-format API; it is separate from the base effective style |
+
+Geometry uses different units from stored values. The saved column width is expressed in character units with padding; a renderer uses point geometry for physical layout. `getColumnWidthPt()` and `getCellRectPt()` return points.
+
 ## Display state
 
 `getDisplayText(sheet, row, col)` renders one stored value with its effective number format. Its `displayStatus` is `DisplayStatus.Ok`, `Overflow`, or `InvalidFormat`; an overflow is reported as `########` by the renderer contract. `formatValue(value, formatCode)` applies a supplied format without reading a cell. Both calls return a status-bearing result.

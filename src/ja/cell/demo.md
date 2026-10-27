@@ -7,6 +7,8 @@ description: ブラウザで formulon-cell のスプレッドシート UI を確
 
 このデモは formulon-cell を使い、サンプルデータ入りのワークブックを表示します。編集、範囲選択、メニューとダイアログ、テーマ切り替え、表示する UI 部品を試せます。
 
+グラフを試すには `A1:C9` を選択し、挿入リボンからグラフを選びます。選択範囲が項目と系列に分かれる仕組みは[グラフガイド](/ja/cell/charts)を参照してください。
+
 <ClientOnly>
   <CellFullDemo />
 </ClientOnly>

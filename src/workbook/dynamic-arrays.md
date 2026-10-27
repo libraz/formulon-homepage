@@ -28,11 +28,11 @@ A legacy Ctrl+Shift+Enter (CSE) array formula is stored as one formula over a fi
 - The spill operator `#` can use an anchor computed by `OFFSET`, `INDIRECT`, `CHOOSE`, `IF`, a parenthesised reference, or a `LET`-bound name. An anchor that resolves to more than one cell returns `#REF!` instead of being silently narrowed to its top-left cell.
 
 <DiagramFlow :steps="[
-  { label: 'Anchor formula evaluates' },
+  { label: 'Anchor formula evaluates', note: 'the formula in the top-left cell' },
   { label: 'Compute result shape', note: 'scalar · row · column · 2-D' },
-  { label: 'Spill rectangle empty?', note: 'yes → write spill range, store shape on anchor; no → #SPILL! at anchor, no values written' },
-  { label: 'Shape changed vs last eval?', note: 'yes → mark dependents dirty in old ∪ new rectangle; no → spill stable' }
-]" label="Spill evaluation: anchor evaluates, shape computed, collision checked, dependents invalidated on shape change" />
+  { label: 'Check spill rectangle', note: 'empty → write; else #SPILL!' },
+  { label: 'Check shape change', note: 'changed → dependents marked dirty' }
+]" label="Spill evaluation: the anchor evaluates, the result shape is computed, the spill rectangle is checked for collisions, and dependents are marked dirty when the shape changed" caption="A collision writes no values at all: the anchor shows #SPILL! and the spill range stays empty." />
 
 ## Array size limit
 

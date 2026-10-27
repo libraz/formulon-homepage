@@ -2,6 +2,16 @@
 
 Recalculation is the step that turns workbook edits into updated calculated values. Every host surface — WASM, Python, Native Node, CLI, MCP — flows through the same recalculation core, so behavior should not drift between runtimes.
 
+Consider this three-cell chain:
+
+| Cell | Contents | Value after full recalculation |
+| --- | --- | --- |
+| `A1` | `10` | `10` |
+| `B1` | `=A1*2` | `20` |
+| `C1` | `=B1+1` | `21` |
+
+If `A1` changes to `12`, `B1` and `C1` become dirty, but their cached values stay `20` and `21` until recalculation. A successful full `recalc()` updates them to `24` and `25`. This is why hosts must recalculate before they rely on values across the workbook; a partial recalculation only updates the requested cells and the formulas they read.
+
 ::: info Glossary: dependency graph
 A directed graph the engine builds from formulas. Each formula cell points to the cells (or named ranges, or external links) it reads from, so the recalc engine can compute things in the right order and recompute only what changed.
 :::
@@ -30,14 +40,14 @@ The recalculation engine keeps state across edits:
 | Data tables | What-If `TABLE()` ranges, recomputed by `recalc()` after a pass that had work to do |
 
 <DiagramLayers :layers="[
-  { title: 'Edit', nodes: [{ label: 'Edit / set_cell' }, { label: 'Volatile functions', note: 'NOW · RAND · INDIRECT · …' }] },
-  { title: 'Dirty tracking', nodes: [{ label: 'Mark dirty', note: 'walk reverse edges in dependency graph' }] },
-  { title: 'Recalc', nodes: [{ label: 'recalc / partialRecalc', note: 'evaluate all dirty cells or the requested dependency closure' }] },
-  { title: 'Per cell', nodes: [{ label: 'Non-array result', note: 'write value' }, { label: 'Dynamic array', note: 'update spill shape, invalidate dependents' }] },
-  { title: 'Done', nodes: [{ label: 'Mark clean', note: 'the requested cells are current; full recalc clears the whole dirty set' }] }
-]" />
+  { title: 'Edit', nodes: [{ label: 'Edit / set_cell', note: 'changes a cell value or formula' }, { label: 'Volatile functions', note: 'NOW · RAND · INDIRECT · …' }] },
+  { title: 'Dirty tracking', nodes: [{ label: 'Mark dirty', note: 'walks reverse edges of the graph' }] },
+  { title: 'Recalc', nodes: [{ label: 'recalc / partialRecalc', note: 'all dirty cells, or a requested closure' }] },
+  { title: 'Per cell', nodes: [{ label: 'Non-array result', note: 'writes the value' }, { label: 'Dynamic array', note: 'updates spill shape and dependents' }] },
+  { title: 'Done', nodes: [{ label: 'Mark clean', note: 'a full recalc clears the whole dirty set' }] }
+]" label="Edits and volatile functions mark cells dirty; recalc evaluates them, writes values or updates spill shapes, then marks them clean" caption="partialRecalc makes only the requested cells current; only a full recalc() clears the whole dirty set." />
 
-That graph can also be read back. `precedents(sheet, row, col, depth)` (the same name in Python) returns the cells an address reads from and `dependents(...)` the cells that read it. Pick a cell in the seeded sheet below and the arrows are drawn from nothing but the addresses those two calls returned. Raise the depth and the chain behind `D1` unwinds a column at a time, back to the literals in column A.
+That graph can also be read back. For `C1 = B1+1`, `precedents(...)` returns `B1`, the cell that `C1` reads. For `B1 = A1*2`, `dependents(...)` returns `C1`, the formula cell that reads `B1`. The same names are used in Python. Pick a cell in the seeded sheet below and the arrows are drawn from the addresses those calls returned. Raise the depth and the chain behind `D1` unwinds a column at a time, back to the literals in column A.
 
 <TraceDemo />
 

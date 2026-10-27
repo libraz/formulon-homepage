@@ -6,11 +6,25 @@ Bindings expose workbook operations to host environments while keeping calculati
 A thin per-host layer that translates host types (`Uint8Array`, `bytes`, `bytearray`, byte pointer + length) into engine inputs and engine outputs back into host types. Bindings do not implement formula semantics — they shape data and manage lifetimes.
 :::
 
-<DiagramLayers :layers="[
-  { title: 'Host types', nodes: ['Uint8Array / Buffer', 'bytes / bytearray', 'byte pointer + length', 'JSON inputs'] },
-  { title: 'Bindings', nodes: ['WASM', 'Native Node', 'Python', 'CLI', 'MCP'] },
-  { title: 'Boundary', nodes: ['C ABI (compatibility boundary)'] },
-  { title: 'Core', nodes: ['C++17 core — parser / evaluator / calc graph / file IO'] }
+<DiagramLayers
+  label="Host types enter through the bindings (WASM, Native Node, Python, CLI, MCP), which all call the C ABI in front of the C++17 core."
+  caption="A binding only translates host types and lifetimes; calculation always happens in the core behind the C ABI."
+  :layers="[
+  { title: 'Host types', nodes: [
+    { label: 'Uint8Array / Buffer', note: 'WASM, Native Node' },
+    { label: 'bytes / bytearray', note: 'Python' },
+    { label: 'Byte pointer + length', note: 'C ABI input' },
+    { label: 'JSON inputs', note: 'MCP tools' }
+  ] },
+  { title: 'Bindings', nodes: [
+    { label: 'WASM', note: 'Serial and pthread entries' },
+    { label: '@libraz/formulon-native', note: 'Built from source, not on npm' },
+    { label: 'Python', note: 'Context manager, bytes' },
+    { label: 'CLI', note: 'argv, stdio, exit codes' },
+    { label: 'MCP', note: 'JSON in and out, sessions' }
+  ] },
+  { title: 'Boundary', nodes: [{ label: 'C ABI', note: 'The compatibility boundary' }] },
+  { title: 'Core', nodes: [{ label: 'C++17 core', note: 'Parser, evaluator, calc graph, file IO' }] }
 ]" />
 
 ## Responsibilities

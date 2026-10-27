@@ -5,6 +5,8 @@ description: Change how matching cells are displayed with instance.cells, and re
 
 # Custom cells and host functions
 
+The cell registry changes the text used to draw a cell while leaving its stored value intact for formulas, editing, and saving. The host-function registry provides callbacks for application code and formula autocomplete; the calculation engine does not call those callbacks during workbook recalculation.
+
 ```ts
 import { Spreadsheet } from '@libraz/formulon-cell'
 

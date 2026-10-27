@@ -1,5 +1,7 @@
 # Charts
 
+This page covers the engine's chart model. For a browser UI that draws and edits charts, use the [formulon-cell chart guide and demo](/cell/charts).
+
 A chart is a drawing object on a sheet. Formulon reads charts from Excel-saved workbooks, creates new ones from a cell range, edits their typed properties, and resolves their series against the current cell values. It does not render charts; the data and structure API is meant for a viewer, an editor UI, or a script that needs to know what a chart plots.
 
 Charts saved by Excel in `.xlsx` and `.xlsb` files load for typed reads. XLSX charts also support edits. Saving a workbook refreshes chart caches from the current stored cell values, even when the chart definition is untouched.

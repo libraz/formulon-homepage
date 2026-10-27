@@ -107,14 +107,19 @@ except FormulonError as exc:
 `insertShape(sheet, spec)` は図形を最前面に追加して ID を返します。描画のないシートには描画が作られ、既存の描画の内容は保持されます。`updateShape(sheet, objectId, spec)` は `spec` に指定したフィールドだけを適用し、図形の XML の残りはそのまま保ちます。`removeShape(sheet, objectId)` は図形、コネクタ、グループを子ごと削除します。`spec` で省略したキーと `null` は適用されません。挿入には `anchorKind` が必要で、`prst` の既定は `rect`、`name` の既定は `Shape <id>` です。線やコネクタのジオメトリを `prst` に指定するとコネクタになり、テキストは持てません。`anchorKind` を指定するとアンカー全体（`editAs`、`from*`、`to*`、`cx`、`cy`）が適用され、更新ではアンカー種別を変更できません。入力の `fillKind` と `lineKind` は `Solid` か `None` にする必要があります。レコードで表現できない図形は `ShapePaint.Other` または空のフィールドで列挙され、保存してもそのまま通過します。図形は画像と同様に行・列の編集に追随します。
 
 ```ts
-const { objectId } = wb.insertShape(0, {
+import { AnchorKind, ShapePaint } from '@libraz/formulon'
+
+// wb は初期化済みの有効な Workbook です。
+const inserted = wb.insertShape(0, {
   anchorKind: AnchorKind.TwoCell,
   fromRow: 1, fromCol: 1, toRow: 4, toCol: 4,
   prst: 'roundRect',
   text: 'Review',
   fillKind: ShapePaint.Solid, fillRgb: 0xfff2cc,
 })
-wb.updateShape(0, objectId, { text: 'Approved', rotation: 0 })
+if (!inserted.status.ok) throw new Error(inserted.status.message)
+const updated = wb.updateShape(0, inserted.objectId, { text: 'Approved', rotation: 0 })
+if (!updated.ok) throw new Error(updated.message)
 ```
 
 Python では `insert_shape()` と `update_shape()` に同じフィールドをキーワード引数（`anchor_kind`、`from_row`、`fill_kind` など）で渡し、`list_shapes()` は `Shape` のリストを返します。C の呼び出しは `fm_sheet_shape_count`、`fm_sheet_shape_at`、`fm_sheet_insert_shape`、`fm_sheet_update_shape`、`fm_sheet_remove_shape` で、レコードは `fm_shape` です。

@@ -6,11 +6,14 @@
 CTest はテストにテキストのラベル（`SLOW` / `BENCH` / `TSAN` / `PARITY` / `VARIANT`）を付けます。ラベルのないテストが高速な層です。ターゲットはラベルで対象を含めたり除外したりできるので、コミット前は遅いテストや診断用テストを省き、CI ではそれらも実行できます。
 :::
 
-<DiagramLayers :layers="[
+<DiagramLayers
+  label="テストターゲットは 4 グループです。コアテスト、Excel のゴールデンと比べる Oracle テスト、バインディングごとのパッケージングテスト、実行環境間の一致テストがあります。"
+  caption="一致テストが比べるのは Formulon の各実行環境どうしで、Excel と比べるのは Oracle テストだけです。"
+  :layers="[
   { title: 'コア', nodes: [{ label: 'make test', note: 'SLOW / BENCH / TSAN を除外' }, { label: 'make test-all', note: '有効なテストをすべて実行' }] },
-  { title: 'Oracle', nodes: [{ label: 'make oracle-verify', note: 'ゴールデンとの比較' }, { label: 'VARIANT テスト', note: 'FORMULON_ORACLE_VARIANTS=ON' }] },
-  { title: 'パッケージング', nodes: [{ label: 'WASM', note: 'wasm / test-wasm / npm-test' }, { label: 'Python', note: 'python-test' }, { label: 'Native Node', note: 'node-test' }, { label: 'CLI', note: 'tests/cli の CTest ターゲット' }] },
-  { title: '実行環境間の一致', nodes: [{ label: 'make parity-test', note: '利用可能な実行環境を比較' }] }
+  { title: 'Oracle', nodes: [{ label: 'make oracle-verify', note: 'ゴールデンとの比較', tone: 'alt' }, { label: 'VARIANT テスト', note: 'FORMULON_ORACLE_VARIANTS=ON', tone: 'alt' }] },
+  { title: 'パッケージング', nodes: [{ label: 'WASM', note: 'wasm / test-wasm / npm-test' }, { label: 'Python', note: 'python-test' }, { label: 'Native Node', note: 'node-test' }, { label: 'CLI', note: 'tests/cli の CTest' }] },
+  { title: '実行環境間の一致', nodes: [{ label: 'make parity-test', note: 'CLI・WASM・Python を比較' }] }
 ]" />
 
 ## コアテスト

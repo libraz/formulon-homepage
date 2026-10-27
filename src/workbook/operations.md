@@ -328,15 +328,15 @@ Python has no workbook-context scalar evaluator. Take the top-left element of `e
 The normal edit path and the ad-hoc path answer different questions — the first commits a value you can read again later, the second is a disposable "what if" query:
 
 <DiagramFlow :steps="[
-  { label: 'setFormula()' },
-  { label: 'recalc()' },
-  { label: 'getValue()', note: 'reads the cached result without mutating the model' }
-]" label="Normal edit path: setFormula, recalc, getValue" />
+  { label: 'setFormula()', note: 'writes the formula into the cell' },
+  { label: 'recalc()', note: 'recomputes the dirty cells' },
+  { label: 'getValue()', note: 'reads the cached result' }
+]" label="Normal edit path: setFormula, recalc, getValue" caption="The normal path commits a value you can read again later; the ad-hoc path does not." />
 
 <DiagramFlow :steps="[
   { label: 'evaluateFormulaText()', note: 'no mutation · no dependency-graph entry' },
-  { label: 'Scalar result', note: 'array/spill results reduced to the top-left element' }
-]" label="Ad-hoc path: evaluateFormulaText, read-only, scalar-only" />
+  { label: 'Scalar result', note: 'arrays reduced to the top-left element' }
+]" label="Ad-hoc path: evaluateFormulaText, read-only, scalar-only" caption="The ad-hoc path is a disposable what-if query: nothing it evaluates becomes dirty on a later edit." />
 
 ::: tip Discovering what is implemented
 `wb.functionNames()` (WASM / Native Node) and `formulon_function_lookup` (MCP) enumerate registered functions at runtime. Use them to verify a target Excel version's surface rather than reading the static docs. For a function picker, `mergeFunctionMetadata()` (exported by both npm packages) / `merge_function_metadata()` (Python) overlays host-supplied localized descriptions on the engine's metadata, in locale-override, entry-default, then engine-value precedence.

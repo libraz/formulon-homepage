@@ -8,19 +8,17 @@
 
 ## 流れ
 
-<DiagramLayers
-  :layers="[
-    { nodes: ['テンプレートのバイト列を読み込む（ファイルシステム）'] },
-    { nodes: ['Workbook.load(bytes)'] },
-    { nodes: ['set_number / set_formula（入力を設定）'] },
-    { nodes: ['recalc()'] },
-    { nodes: ['get_value（検証）'] },
-    { nodes: [
-      { label: '検証 OK → save()', note: '出力バイト列をファイルシステムへ書き込む' },
-      { label: '検証 NG', note: 'ログを記録して例外を送出' }
-    ] }
+<DiagramFlow
+  :steps="[
+    { label: 'テンプレートを読む', note: 'ファイルシステムのバイト列' },
+    { label: 'Workbook.load(bytes)', note: 'with ブロックで使う' },
+    { label: '入力を設定', note: 'set_number / set_formula' },
+    { label: 'recalc()', note: '依存する数式を評価' },
+    { label: '検証', note: '対象セルを get_value で確認' },
+    { label: 'save() か例外', note: '成功は書き込み、失敗はログと例外' }
   ]"
   label="バッチジョブの流れ。テンプレートのバイト列を読み込み、Workbook.load、set_number / set_formula で入力を設定し、recalc、get_value で検証する。検証に成功したら save して書き込み、失敗したらログを記録して例外を送出する"
+  caption="with ブロックにより、例外を送出する経路でもエンジンのハンドルが解放されます。"
 />
 
 `Workbook` を包む `with` ブロックは、失敗分岐で例外が送出された場合も含め、ブロックを抜けるときにエンジンのハンドルを解放します。

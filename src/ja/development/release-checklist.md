@@ -49,12 +49,39 @@ WASM、Native Node、Python wheel、CLI バイナリを、コアの同じ Git �
 - [ ] ホームページの `docsVersion` をドキュメントが対象とするソースのバージョンに合わせます。未公開の機能は Git 管理外のローカルスナップショットで確認します（`yarn test:local` と `yarn build:local`）。コア、`formulon-cell`、`formulon-cell-vue` の公開後にレジストリ依存を更新し、ロックファイルを再生成して、ローカルのエイリアスを使わずにテストとビルドを実行します。デプロイ前に、画面に表示される実行バージョンと言語切り替えデモを公開パッケージで確認してください。
 - [ ] 互換性報告を監視し、適切な Oracle データ / プロファイルに振り分けます
 
-<DiagramFlow steps="develop で作業 → develop の CI 成功 → main を fast-forward → main の CI 成功 → 注釈付きタグを push → release.yml + prebuild.yml → 成果物を確認" />
+<DiagramFlow
+  label="リリースの順序です。develop で作業し、develop の CI を通し、main を fast-forward し、main の CI を通し、注釈付きタグを push して release.yml と prebuild.yml を動かし、成果物を確認します。"
+  caption="タグは最後に push します。その前に develop と main の CI が通っている必要があります。"
+  :steps="[
+  { label: 'develop で作業', note: 'リリース前チェックを実行' },
+  { label: 'develop の CI 成功', note: 'main を動かす前の条件' },
+  { label: 'main を fast-forward', note: 'develop を main に反映' },
+  { label: 'main の CI 成功', note: 'タグ付けの前提' },
+  { label: '注釈付きタグを push', note: 'git tag -a vX.Y.Z' },
+  { label: 'release.yml + prebuild.yml', note: '同じタグから起動' },
+  { label: '成果物を確認', note: 'パッケージ・Release・CLI' }
+]" />
 
-<DiagramLayers :layers="[
-  { title: 'release.yml（タグ起点）', nodes: ['publish-npm', 'build-cli', 'python-wheel', 'publish-pypi', 'attach-cli'] },
-  { title: 'prebuild.yml（同じタグ）', nodes: ['Native Node マトリクス', 'release-bundle'] },
-  { title: '結果', nodes: ['npm + PyPI + CLI バイナリ + GitHub Release + Native Node 成果物 ─ 確認済み'] }
+<DiagramLayers
+  label="タグから release.yml と prebuild.yml が起動します。release.yml は npm と PyPI に公開し、CLI をビルドして添付します。prebuild.yml は Native Node のプレビルドをまとめます。Native Node のバンドルは手動で npm に公開します。"
+  caption="1 つのタグで両方のワークフローが動きますが、Native Node パッケージの npm 公開は手動のままです。"
+  :layers="[
+  { title: 'release.yml（タグ起点）', nodes: [
+    { label: 'publish-npm', note: 'Trusted publishing' },
+    { label: 'build-cli', note: 'CLI をビルド' },
+    { label: 'python-wheel', note: 'wheel をビルド' },
+    { label: 'publish-pypi', note: 'Trusted publishing' },
+    { label: 'attach-cli', note: 'Release に CLI を添付' }
+  ] },
+  { title: 'prebuild.yml（同じタグ）', nodes: [
+    { label: 'Native Node マトリクス', note: 'プラットフォーム別に事前ビルド' },
+    { label: 'release-bundle', note: 'formulon-native-bundle を作成' }
+  ] },
+  { title: '結果', nodes: [
+    { label: 'npm と PyPI のパッケージ', note: 'release.yml が公開' },
+    { label: 'GitHub Release', note: 'CLI バイナリを添付' },
+    { label: 'Native Node バンドル', note: 'npm 公開は手動', tone: 'alt' }
+  ] }
 ]" />
 
 ## 次に読むもの

@@ -12,18 +12,21 @@
 
 すべての実行入口は同じ計算コアを呼び出します。違いはパッケージ構成、ホスト言語、メモリ所有権と、[後述のメソッド差分](#method-differences)です。
 
-<DiagramLayers label="C++17 計算コア -> C ABI -> WASM / Native Node / Python / CLI、WASM -> formulon-cell と formulon-mcp" :layers="[
-  { title: 'コア', nodes: ['C++17 計算コア'] },
-  { title: 'C ABI', nodes: ['formulon_c.h + コアライブラリ'] },
+<DiagramLayers label="C++17 計算コアから C ABI を経て WASM / Native Node / Python / CLI の各実行入口に届き、formulon-cell と formulon-mcp は WASM パッケージの上に構築される" :layers="[
+  { title: 'コア', nodes: [{ label: 'C++17 計算コア', note: 'すべての実行入口が共有' }] },
+  { title: 'C ABI', nodes: [{ label: 'formulon_c.h + コアライブラリ', note: '直接または間接に到達' }] },
   { title: '実行入口', nodes: [
-      'WASM (@libraz/formulon)',
-      'Native Node (packages/npm-native)',
-      'Python (formulon)',
-      'CLI (formulon)'
+      { label: '@libraz/formulon', note: 'WASM・ブラウザ / Node' },
+      { label: '@libraz/formulon-native', note: 'Native Node・ソースビルド' },
+      { label: 'formulon (Python)', note: 'wasmtime 上の wheel' },
+      { label: 'formulon (CLI)', note: '単体バイナリ' }
     ]
   },
-  { title: 'WASM の上に構築', nodes: ['formulon-cell (UI キット)', 'formulon-mcp (stdio エージェントサーバー)'] }
-]" />
+  { title: 'WASM の上に構築', nodes: [
+      { label: 'formulon-cell', note: 'ブラウザ用の表計算 UI キット', tone: 'alt' },
+      { label: 'formulon-mcp', note: 'エージェント向け stdio サーバー', tone: 'alt' }
+    ] }
+]" caption="すべての実行入口が同じ計算コアを共有します。formulon-cell と formulon-mcp は C ABI を直接バインドせず、WASM パッケージの上に作られています。" />
 
 `formulon-cell` と `formulon-mcp` は C ABI に直接接続せず、WASM パッケージの上に構築されています。ブラウザや Node から `@libraz/formulon` を使う場合と同じ経路で計算コアに到達します。
 

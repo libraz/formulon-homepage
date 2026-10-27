@@ -5,18 +5,29 @@ This page covers common integration failures.
 <DiagramLayers
   :layers="[
     {
-      title: 'Symptom → fix',
+      title: 'Browser and bundler',
       nodes: [
-        { label: 'SharedArrayBuffer missing', note: 'Use headers for an explicit /threads entry' },
-        { label: 'Bundler warns about node:*', note: 'Mark node: external, exclude from optimizeDeps' },
-        { label: 'loadBytes returns invalid', note: 'Check wb.isValid(), read lastErrorMessage()' },
-        { label: 'Cell shows #DIV/0! / #VALUE!', note: 'Excel error is a value — inspect the value kind' },
-        { label: 'Python cannot find WASM', note: 'Install the wheel, or run make python-package' },
-        { label: 'CLI result differs from Excel', note: 'Check locale, volatile functions, preserved-but-not-evaluated' }
+        { label: 'SharedArrayBuffer missing', note: 'Add COOP / COEP headers for /threads' },
+        { label: 'Bundler warns about node:*', note: 'Mark node: external, skip optimizeDeps' }
+      ]
+    },
+    {
+      title: 'Workbook results',
+      nodes: [
+        { label: 'loadBytes returns invalid', note: 'Check isValid(), read lastErrorMessage()' },
+        { label: '#DIV/0! or #VALUE! in a cell', note: 'Excel errors are values; check the kind' }
+      ]
+    },
+    {
+      title: 'Python and CLI',
+      nodes: [
+        { label: 'Python cannot find WASM', note: 'Install wheel or run make python-package' },
+        { label: 'CLI result differs from Excel', note: 'Check profile, volatile functions, stubs' }
       ]
     }
   ]"
-  label="Troubleshooting quick reference"
+  label="Troubleshooting quick reference, grouped into browser and bundler symptoms, workbook result symptoms, and Python and CLI symptoms, each with its first fix"
+  caption="A cell showing #DIV/0! is a result, not a host failure; host failures arrive as statuses, exceptions or non-zero exits."
 />
 
 ## Browser says SharedArrayBuffer is unavailable

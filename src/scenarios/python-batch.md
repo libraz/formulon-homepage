@@ -8,19 +8,17 @@ Load bytes at the start, mutate and recalculate explicitly, and write bytes at t
 
 ## Flow
 
-<DiagramLayers
-  :layers="[
-    { nodes: ['Read template bytes (file system)'] },
-    { nodes: ['Workbook.load(bytes)'] },
-    { nodes: ['set_number / set_formula (inputs)'] },
-    { nodes: ['recalc()'] },
-    { nodes: ['get_value (validate)'] },
-    { nodes: [
-      { label: 'Validation passes → save()', note: 'write output bytes to file system' },
-      { label: 'Validation fails', note: 'log + raise' }
-    ] }
+<DiagramFlow
+  :steps="[
+    { label: 'Read template', note: 'Bytes from the file system' },
+    { label: 'Workbook.load(bytes)', note: 'Used in a with block' },
+    { label: 'Set inputs', note: 'set_number / set_formula' },
+    { label: 'recalc()', note: 'Evaluates dependent formulas' },
+    { label: 'Validate', note: 'get_value on the checked cells' },
+    { label: 'save() or raise', note: 'Pass: write bytes. Fail: log, raise' }
   ]"
   label="Batch job flow: read template bytes, Workbook.load, set_number/set_formula for inputs, recalc, get_value to validate, then either save and write output on success or log and raise on failure"
+  caption="The with block releases the engine handle on every path, including the one that raises."
 />
 
 The `with` block around the `Workbook` releases the engine handle on exit, including when the failure branch raises.

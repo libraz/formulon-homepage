@@ -369,19 +369,19 @@ AutoFilter criteria are stored separately from row visibility. Use `evaluateAuto
 The diagram below contrasts three paths through the same workbook:
 
 <DiagramFlow label="Mutate path: setFormula then recalc" :steps="[
-  { label: 'setFormula(sheet, row, col, formula)' },
-  { label: 'recalc()', note: 'joins the dependency graph; dependents recompute' }
-]" />
+  { label: 'setFormula()', note: 'writes the formula into the cell' },
+  { label: 'recalc()', note: 'joins the graph; dependents recompute' }
+]" caption="Only the mutate path writes to the workbook and joins the dependency graph." />
 
 <DiagramFlow label="Read-only path: evaluateFormulaText" :steps="[
-  { label: 'evaluateFormulaText(sheet, row, col, formula)', note: 'resolves refs, defined names, ROW()/COLUMN() anchoring' },
-  { label: 'Scalar EvalResult', note: 'array/spill -> top-left; self-ref -> cached value; no dep-graph join' }
-]" />
+  { label: 'evaluateFormulaText()', note: 'read-only; refs, names, ROW()/COLUMN()' },
+  { label: 'Scalar EvalResult', note: 'array → top-left · self-ref → cached' }
+]" caption="The scalar call reduces an array to its top-left element: =SEQUENCE(3) returns 1, not three rows." />
 
 <DiagramFlow label="Whole-array path: evaluateFormulaArray" :steps="[
-  { label: 'evaluateFormulaArray(sheet, row, col, formula)', note: 'same read-only resolution as evaluateFormulaText' },
-  { label: 'EvalArrayResult', note: 'full rows x cols cells[][]; no top-left reduction; no dep-graph join' }
-]" />
+  { label: 'evaluateFormulaArray()', note: 'same read-only resolution' },
+  { label: 'EvalArrayResult', note: 'rows × cols cells[][]; scalar is 1×1' }
+]" caption="The array call returns the whole result and never reduces it; a scalar comes back as a 1×1 array." />
 
 ## Read next
 

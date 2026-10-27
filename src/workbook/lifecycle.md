@@ -2,7 +2,14 @@
 
 Most Formulon integrations follow the same lifecycle: open bytes, mutate, recalculate, read or save. Knowing where each step happens helps separate calculation responsibilities from IO, UI, and persistence.
 
-<DiagramFlow steps="Open workbook bytes → Parse workbook model → Apply edits → Build/update dependency graph → Recalculate → Read values or save bytes" />
+<DiagramFlow :steps="[
+  { label: 'Open workbook bytes', note: 'XLSX or XLSB, sniffed from content' },
+  { label: 'Parse workbook model', note: 'sheets · cells · styles · names' },
+  { label: 'Apply edits', note: 'values, formulas, structure' },
+  { label: 'Update dependency graph', note: 'forward and reverse edges' },
+  { label: 'Recalculate', note: 'evaluates the dirty cells' },
+  { label: 'Read or save', note: 'cached values, or bytes' }
+]" label="Workbook lifecycle: open bytes, parse the model, apply edits, update the dependency graph, recalculate, then read values or save bytes" caption="Edits only mark cells dirty; values are current again only after the host recalculates." />
 
 ::: info Glossary: workbook model
 The in-memory representation of a workbook after parsing — sheets, cells, styles, defined names, tables, and the engine state that drives recalculation. Host APIs operate on this model rather than on raw file bytes.
@@ -88,7 +95,7 @@ When edits have been applied, calling `recalc()` brings all dirty cached values 
 
 ## Read or save
 
-After recalculation, the host can either read calculated values directly:
+When every formula cache must be current, run a successful full `recalc()` before reading or saving. `save()` writes the current workbook state; it does not recalculate on its own, and a partial recalculation can leave unrelated formula caches stale. After a successful full recalculation, the host can read calculated values directly:
 
 ::: code-group
 
@@ -116,7 +123,7 @@ if (!saved.status.ok || saved.bytes === null) {
 }
 ```
 
-Saved bytes contain coherent formula / cached-value pairs, so downstream consumers that do not run a calculation engine still see correct values.
+After a successful full recalculation, the saved bytes contain formula / cached-value pairs for downstream consumers that do not run a calculation engine.
 
 ## Threading and reuse
 
@@ -130,9 +137,17 @@ Saved bytes contain coherent formula / cached-value pairs, so downstream consume
 A `Workbook` handle is **not safe to share across threads or workers**. If a host needs concurrent recalculation, give each worker its own `Workbook` instance:
 
 <DiagramLayers :layers="[
-  { title: 'Workers', nodes: ['Worker 1', 'Worker 2', 'Worker N'] },
-  { title: 'Handles', nodes: ['Workbook A', 'Workbook B', 'Workbook N'] }
-]" label="Each worker owns an independent Workbook handle; no handle is shared across workers" />
+  { title: 'Workers', nodes: [
+      { label: 'Worker 1', note: 'owns one Workbook handle' },
+      { label: 'Worker 2', note: 'owns one Workbook handle' },
+      { label: 'Worker N', note: 'owns one Workbook handle' }
+    ] },
+  { title: 'Handles', nodes: [
+      { label: 'Workbook A', note: 'used by one worker only' },
+      { label: 'Workbook B', note: 'used by one worker only' },
+      { label: 'Workbook N', note: 'used by one worker only' }
+    ] }
+]" label="Each worker owns an independent Workbook handle; no handle is shared across workers" caption="A Workbook handle is not safe to share across threads or workers, so concurrent recalculation needs one instance per worker." />
 
 ## Read next
 

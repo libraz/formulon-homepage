@@ -6,15 +6,18 @@ Spreadsheet errors are **first-class values**. A formula returning `#DIV/0!` did
 A *cell error* is a value with `kind = Error`. It travels through the binding as data. A *host failure* means the host operation itself failed (bad bytes, missing handle, IO error, internal engine failure) and is reported through a separate channel — `Status` envelope, exception, non-zero exit, or `fm_status_t`.
 :::
 
-<DiagramLayers :layers="[
-  { title: 'Host call', nodes: ['getValue / recalc / save'] },
-  { title: 'Did the call itself succeed?', nodes: [
-    { label: 'No → host failure path', note: 'status envelope · exception · non-zero exit · fm_status_t' },
-    { label: 'Yes → check value.kind' }
+<DiagramLayers
+  label="A host call first either succeeds or fails. A failed call goes to the host failure path; a successful call returns a value whose kind is either Error, a cell error value shown inline, or an ordinary value used directly."
+  caption="A cell error is data returned by a successful call; only a failed call is a host failure."
+  :layers="[
+  { title: 'Host API call', nodes: [{ label: 'getValue / recalc / save', note: 'Returns a result or a host failure' }] },
+  { title: 'Did the call fail?', nodes: [
+    { label: 'Yes: host failure', note: 'Status · exception · exit code', tone: 'alt' },
+    { label: 'No: read value.kind', note: 'The call itself succeeded' }
   ] },
   { title: 'value.kind', nodes: [
-    { label: 'Error → cell error value', note: '#DIV/0! · #VALUE! · #REF! · … — surface inline, never throw' },
-    { label: 'Number / Text / Bool / …', note: 'use the value directly' }
+    { label: 'Error', note: '#DIV/0! · #VALUE! · #REF! · … Show inline' },
+    { label: 'Number / Text / Bool / …', note: 'Use the value directly' }
   ] }
 ]" />
 

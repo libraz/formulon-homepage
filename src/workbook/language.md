@@ -14,7 +14,7 @@ The engine stores formulas with English function names, decimal points and invar
   { label: 'canonicalizeFormula', note: 'profile: mac-365-de_DE' },
   { label: 'Stored formula', note: '=SUM(1,2.5)' },
   { label: 'localizeFormula', note: 'display in the chosen language' }
-]" />
+]" label="Localized input is canonicalized into the stored English form and localized again for display" caption="Files and application state keep the stored English form; translation happens only at the input and display boundaries." />
 
 ## Translate an entire formula
 

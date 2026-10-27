@@ -2,7 +2,19 @@
 
 `formulon-mcp` keeps an opened workbook in a named in-memory session. The usual workflow is:
 
-<DiagramFlow steps="formulon_open_workbook → inspect / read → mutate → recalculate → preview → formulon_save_session → formulon_close_workbook" />
+<DiagramFlow
+  :steps="[
+    { label: 'formulon_open_workbook', note: 'Returns session.id; recalculates once' },
+    { label: 'Inspect and read', note: 'formulon_inspect_workbook, get_range' },
+    { label: 'Mutate', note: 'set_cells recalculates by default' },
+    { label: 'formulon_recalc_session', note: 'Refreshes formula results explicitly' },
+    { label: 'Preview', note: 'formulon_preview_range renders an image' },
+    { label: 'formulon_save_session', note: 'Writes the file; does not recalculate' },
+    { label: 'formulon_close_workbook', note: 'Ends the session' }
+  ]"
+  label="Typical MCP session: open a workbook, inspect and read, mutate, recalculate, preview, save, then close the session"
+  caption="Saving does not recalculate; call formulon_recalc_session first when the output needs every formula result refreshed."
+/>
 
 Open once, use the returned `session.id` for subsequent calls, and save to a new path with an explicit `outputPath`. A session is isolated from every other session. Its workbook, formula cache, dirty state, and dependency graph are not shared.
 
@@ -27,6 +39,22 @@ Open an existing workbook with a stable id when the agent will make several call
 | `createdAt`, `updatedAt` | ISO timestamps maintained by the server |
 | `dirty` | The in-memory workbook may differ from its last successful lossless save |
 | `loadLosses` | Non-zero reader diagnostics, when part of the input could not be decoded |
+
+### When tools recalculate
+
+Some reads and writes recalculate automatically. A save serializes the current workbook state; it does not run recalculation.
+
+| Tool | Default `recalc` | Effect |
+| --- | --- | --- |
+| `formulon_set_cells`, `formulon_set_range` | `true` | Writes the values, then recalculates. Set `false` to defer calculation. |
+| `formulon_get_cell` | `true` | Recalculates before returning one cell. Set `false` to read the current cache. |
+| `formulon_get_range` | `false` | Reads the current cached values. Set `true` to recalculate first. |
+| `formulon_preview_range` | `false` | Renders current values. Set `true` to recalculate before rendering. |
+| `formulon_audit_formulas` | `false` | Audits the current formula and cached-value state. Set `true` to recalculate first. |
+| `formulon_recalc_session` | — | Recalculates the session explicitly. |
+| `formulon_save_session` | — | Saves current state without recalculating. |
+
+`dirty` means that the in-memory workbook may differ from the last successful lossless save. A write or recalculation can mark the session dirty. This flag does not say whether every formula cache is current: call `formulon_recalc_session` before saving when the output needs all formula results refreshed. A partial recalculation or a save alone can leave unrelated cached values stale.
 
 Opening a file recalculates it once. This makes the first formula read use calculated values rather than a stale cached blank. A newly created session has the first-sheet name selected by its Excel profile and no `sourcePath`. Workflows that refer to `Sheet1` should pass `profile: "win-365-en_US"` explicitly; otherwise use the name returned by inspection for the selected profile.
 

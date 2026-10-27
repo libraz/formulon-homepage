@@ -2,7 +2,19 @@
 
 `formulon-mcp` は、開いたワークブックを名前付きのインメモリセッションに保持します。通常は `formulon_open_workbook` で開き、構造と値を確認し、変更、再計算、プレビュー、保存、終了の順に進めます。
 
-<DiagramFlow steps="formulon_open_workbook → 開く・調べる → 変更する → 再計算する → プレビューする → formulon_save_session → formulon_close_workbook" />
+<DiagramFlow
+  :steps="[
+    { label: 'formulon_open_workbook', note: 'session.id を返し、一度再計算' },
+    { label: '調べて読む', note: 'formulon_inspect_workbook など' },
+    { label: '変更する', note: 'set_cells は既定で再計算' },
+    { label: 'formulon_recalc_session', note: '数式の結果を明示的に更新' },
+    { label: 'プレビュー', note: 'formulon_preview_range が画像を描画' },
+    { label: 'formulon_save_session', note: '書き出すが再計算はしない' },
+    { label: 'formulon_close_workbook', note: 'セッションを終了' }
+  ]"
+  label="MCP セッションの典型的な流れ。ワークブックを開き、調べて読み、変更し、再計算し、プレビューし、保存してからセッションを閉じる"
+  caption="保存では再計算されないため、出力のすべての数式結果を最新にしたいときは、先に formulon_recalc_session を呼びます。"
+/>
 
 最初に 1 度開き、返された `session.id` を後続の呼び出しで使います。保存先には `outputPath` を明示します。セッションは相互に分離され、ワークブック、数式キャッシュ、変更あり（dirty）の状態、依存関係グラフを共有しません。
 
@@ -18,6 +30,22 @@
 ```
 
 `formulon_open_workbook` は `{ "session": ... }` を返します。セッションには ID、入力と出力のパス、作成・更新時刻、`dirty`、任意の `loadLosses` が入ります。ファイルを開くと 1 度再計算します。新規セッションの最初のシート名は Excel プロファイルで決まり、`sourcePath` はありません。`Sheet1` を使う手順では `profile: "win-365-en_US"` を明示し、それ以外のプロファイルでは調査結果からシート名を取得してください。
+
+### ツールが再計算するタイミング
+
+読み取りや書き込みの一部では自動で再計算します。保存は現在のワークブック状態を書き出し、再計算は実行しません。
+
+| ツール | `recalc` の既定値 | 動作 |
+| --- | --- | --- |
+| `formulon_set_cells`、`formulon_set_range` | `true` | 値を書き込み、再計算します。`false` なら計算を後回しにします。 |
+| `formulon_get_cell` | `true` | 1 セルを返す前に再計算します。`false` なら現在のキャッシュを読みます。 |
+| `formulon_get_range` | `false` | 現在キャッシュされている値を読みます。`true` なら先に再計算します。 |
+| `formulon_preview_range` | `false` | 現在の値を描画します。`true` なら描画前に再計算します。 |
+| `formulon_audit_formulas` | `false` | 現在の数式と計算済み値を監査します。`true` なら先に再計算します。 |
+| `formulon_recalc_session` | — | セッションを明示的に再計算します。 |
+| `formulon_save_session` | — | 再計算せずに現在の状態を保存します。 |
+
+`dirty` は、メモリ上のワークブックが最後に損失なく保存できた状態と異なる可能性を示します。書き込みや再計算で `dirty` になる場合があります。このフラグだけでは、すべての数式キャッシュが最新かどうかは分かりません。すべての数式結果を更新してから保存するには、`formulon_recalc_session` を呼んでください。部分再計算や保存だけでは、対象外のキャッシュが古いまま残ることがあります。
 
 セルの位置を指定する前に構造を調べます。
 

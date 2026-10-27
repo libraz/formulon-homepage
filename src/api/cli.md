@@ -33,15 +33,14 @@ A cell-level Excel error is a successful result, not a failure: the command prin
 | `64` | Usage error: unknown flag, missing or extra positional argument, bad option value, missing `-o` |
 | `1` | Engine, file I/O, or stdout write failure |
 
-<DiagramLayers label="Two-tier exit-code convention" :layers="[
-  { nodes: ['Command runs (eval / recalc / dump / paginate)'] },
-  { nodes: [
-      { label: 'Cell-level Excel error', note: 'stdout + exit 0' },
-      { label: 'Usage error', note: 'stderr + exit 64' },
-      { label: 'Engine or I/O failure', note: 'stderr + exit 1' }
+<DiagramLayers label="Two-tier exit-code convention: a cell-level Excel error exits 0, while usage errors exit 64 and engine or I/O failures exit 1" :layers="[
+  { title: 'Outcome of eval · recalc · dump · paginate', nodes: [
+      { label: 'Cell-level Excel error', note: 'printed to stdout · exit 0' },
+      { label: 'Usage error', note: 'bad flag or value · stderr · exit 64', tone: 'alt' },
+      { label: 'Engine or I/O failure', note: 'stderr · exit 1', tone: 'alt' }
     ]
   }
-]" />
+]" caption="A cell-level Excel error is a result, not a failure: only usage and engine errors exit non-zero." />
 
 ## `eval`
 

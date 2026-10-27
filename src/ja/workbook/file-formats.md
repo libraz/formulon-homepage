@@ -107,19 +107,17 @@ print(out.deferred_feature_count, out.downgraded_formula_count)
 ## 保持と評価の対応
 
 <DiagramLayers :layers="[
-  { title: '入力', nodes: ['*.xlsx / *.xlsb バイト列'] },
-  { title: '読み込み', nodes: ['Reader'] },
-  { nodes: [
-      { label: 'モデル化したパーツ', note: 'セル・数式・定義名・テーブル・条件付き書式の対応範囲・入力規則・型付き AutoFilter・画像アンカー・保護情報' },
-      { label: 'そのまま保持するパーツ', note: '図形・グループ・フォームコントロール・VBA・XLSB の不透明な末尾' }
+  { title: '入力', nodes: [{ label: '*.xlsx / *.xlsb バイト列', note: '形式は内容から判別' }] },
+  { title: '読み込み', nodes: [
+      { label: 'モデル化したパーツ', note: 'セル・数式・名前・テーブル・入力規則' },
+      { label: 'そのまま保持するパーツ', note: '図形・VBA・コントロール・XLSB 末尾', tone: 'alt' }
     ] },
-  { nodes: [
-      { label: 'エンジンで再計算', note: '数式値と対応する条件付き書式の判定式' },
-      { label: 'バイト列のまま保持' }
+  { title: '処理', nodes: [
+      { label: 'エンジンで再計算', note: '数式値と条件付き書式の判定式' },
+      { label: 'バイト列のまま保持', note: '可能な範囲で書き出しまで保持', tone: 'alt' }
     ] },
-  { title: '書き出し', nodes: ['ライター'] },
-  { title: '出力', nodes: ['*.xlsx / *.xlsb バイト列'] }
-]" label="読み込みはモデル化したパーツ（対応範囲を再計算）と、そのまま保持するパーツ（バイト列のまま保持）に分かれ、どちらもライターで合流する" />
+  { title: '書き出し', nodes: [{ label: '*.xlsx / *.xlsb バイト列', note: 'saveAs(format) でコンテナを選ぶ' }] }
+]" label="読み込みでファイルはモデル化したパーツ（対応範囲をエンジンが再計算）と、そのまま保持するパーツ（バイト列のまま保持）に分かれ、どちらもライターで合流する" caption="再計算されるのはモデル化したパーツだけで、そのまま保持するパーツはバイト列のまま通過します。" />
 
 | 機能 | 読み込み | 再計算 | 書き出し |
 | --- | --- | --- | --- |

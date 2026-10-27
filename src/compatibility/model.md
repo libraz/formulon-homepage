@@ -8,22 +8,31 @@ A compatibility claim that points at a profile and a body of oracle data that pr
 
 Capturing a profile is a one-way pipeline from a real Excel build to a reusable dataset:
 
-<DiagramFlow :steps="[
-  { label: 'Excel build', note: 'e.g. Win 365 ja-JP' },
-  { label: 'Oracle dataset', note: 'captured' },
-  { label: 'Compatibility profile', note: 'win-365-ja_JP — verified' }
+<DiagramFlow
+  label="A compatibility profile is produced in one direction: capture an Excel build, store the values as an oracle dataset, and verify the result as a named profile."
+  caption="A profile claim is only as strong as the oracle data captured from a real Excel build."
+  :steps="[
+  { label: 'Excel build', note: 'e.g. Win 365 ja-JP', tone: 'alt' },
+  { label: 'Oracle dataset', note: 'Values captured from Excel' },
+  { label: 'Compatibility profile', note: 'e.g. win-365-ja_JP, verified' }
 ]" />
 
 Oracle tests recalculate fixture workbooks and compare their results with captured Excel values. Applications run the same engine, but do not compare against oracle data automatically:
 
-<DiagramLayers :layers="[
-  { title: 'Test inputs', nodes: ['Fixture workbook', 'Compatibility profile'] },
-  { nodes: ['Formulon engine'] },
-  { nodes: ['Calculated values'] },
+<DiagramLayers
+  label="Oracle tests feed a fixture workbook and a compatibility profile to the Formulon engine, then compare the calculated values with captured Excel values. The result is no divergence, a tracked divergence, or an untracked divergence that is a bug."
+  caption="Only an untracked divergence counts as a bug; a tracked one carries its reason and last-verified Excel build."
+  :layers="[
+  { title: 'Test inputs', nodes: [
+    { label: 'Fixture workbook', note: 'The workbook to recalculate' },
+    { label: 'Compatibility profile', note: 'The profile under test' }
+  ] },
+  { title: 'Engine', nodes: [{ label: 'Formulon engine', note: 'Recalculates the fixture workbook' }] },
+  { title: 'Output', nodes: [{ label: 'Calculated values', note: 'Compared with captured Excel values' }] },
   { title: 'Oracle test comparison', nodes: [
-    { label: 'No divergence', note: 'profile claim holds' },
-    { label: 'Tracked divergence', note: 'reason + last-verified build' },
-    { label: 'Untracked divergence', note: 'bug — fix or document' }
+    { label: 'No divergence', note: 'Profile claim holds' },
+    { label: 'Tracked divergence', note: 'Reason + last-verified build' },
+    { label: 'Untracked divergence', note: 'Bug: fix or document', tone: 'alt' }
   ] }
 ]" />
 

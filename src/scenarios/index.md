@@ -1,6 +1,6 @@
 # Scenarios
 
-These pages show how Formulon fits into concrete workflows. Each scenario chooses a different runtime — pick the one closest to your deployment, then read the matching [Runtime](/runtimes/) page for setup details.
+These pages show how Formulon fits into concrete workflows. Each scenario uses a different runtime or product — pick the one closest to your deployment, then read the matching [Runtime](/runtimes/) page for setup details.
 
 ::: info Start with a real workbook
 After the one-formula quick start, test one representative workbook as early as possible. Spreadsheet engines fail or succeed on workbook details, not only on isolated formulas.
@@ -8,16 +8,18 @@ After the one-formula quick start, test one representative workbook as early as 
 
 <DiagramLayers
   :layers="[
-    { nodes: ['What kind of work?'] },
-    { nodes: [
-      { label: 'User uploads .xlsx in browser', note: 'Browser workbook upload · WASM' },
-      { label: 'Upload API / internal service', note: 'Node service recalculation · Native Node / WASM' },
-      { label: 'Scheduled job / notebook', note: 'Python batch recalculation · Python' },
-      { label: 'Detect drift in PRs', note: 'CI workbook regression · CLI' },
-      { label: 'AI agent edits workbooks', note: 'Agent workbook editing · MCP' }
-    ] }
+    { title: 'Where the workbook arrives', nodes: [
+      { label: 'Browser upload', note: 'WASM, file stays on the device' },
+      { label: 'Upload API / service', note: 'Native Node or WASM' },
+      { label: 'Scheduled job / notebook', note: 'Python' },
+      { label: 'Pull request', note: 'CLI snapshots in CI' },
+      { label: 'AI agent', note: 'formulon-mcp tools', tone: 'alt' },
+      { label: 'Spreadsheet UI in a web app', note: 'formulon-cell (beta)', tone: 'alt' }
+    ] },
+    { title: 'Shared engine', nodes: [{ label: 'One C++17 core', note: 'load → mutate → recalc → save' }] }
   ]"
-  label="Choose a scenario by the kind of work: browser upload leads to Browser workbook upload on WASM; upload API or internal service leads to Node service recalculation on Native Node or WASM; scheduled job or notebook leads to Python batch recalculation on Python; detecting drift in PRs leads to CI workbook regression on the CLI; AI agent edits lead to Agent workbook editing on MCP"
+  label="Six ways a workbook reaches Formulon: browser upload on WASM, an upload API or service on Native Node or WASM, a scheduled job or notebook on Python, a pull request through CLI snapshots, an AI agent through formulon-mcp, and a spreadsheet UI through formulon-cell. All six run the same C++17 core."
+  caption="Each scenario differs in where the bytes come from and go; the calculation is the same core."
 />
 
 | Scenario | Runtime | Goal |
@@ -27,6 +29,7 @@ After the one-formula quick start, test one representative workbook as early as 
 | [Python batch recalculation](/scenarios/python-batch) | Python | Recalculate reports or models in jobs and notebooks |
 | [CI workbook regression](/scenarios/ci-regression) | CLI | Detect formula and value drift in automated checks |
 | [Agent workbook editing](/mcp/) | MCP | Let AI agents open, edit, recalculate, and save `.xlsx` or `.xlsb` through `formulon-mcp` |
+| [Spreadsheet UI in a web app](/cell/) | formulon-cell (WASM) | Show and edit a workbook inside your own page; beta, evaluate before shipping to end users |
 
 ## What the scenarios share
 

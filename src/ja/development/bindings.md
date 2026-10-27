@@ -6,11 +6,25 @@
 ホスト側の型（`Uint8Array` / `bytes` / `bytearray` / バイト列のポインタと長さなど）をエンジン入力に、エンジン出力をホスト側の型に変換する薄い層です。バインディングは数式の意味論を実装せず、データの形を整え、リソースの寿命を管理します。
 :::
 
-<DiagramLayers :layers="[
-  { title: 'ホスト側の型', nodes: ['Uint8Array / Buffer', 'bytes / bytearray', 'バイト列のポインタ + 長さ', 'JSON 入力'] },
-  { title: 'バインディング', nodes: ['WASM', 'Native Node', 'Python', 'CLI', 'MCP'] },
-  { title: '境界', nodes: ['C ABI（互換性を保つインターフェース）'] },
-  { title: 'コア', nodes: ['C++17 コア ─ パーサ / 評価器 / 計算グラフ / ファイル入出力'] }
+<DiagramLayers
+  label="ホスト側の型はバインディング（WASM、Native Node、Python、CLI、MCP）を通って入り、いずれも C++17 コアの手前にある C ABI を呼び出します。"
+  caption="バインディングが行うのはホスト側の型と寿命の変換だけで、計算は常に C ABI の先にあるコアで行われます。"
+  :layers="[
+  { title: 'ホスト側の型', nodes: [
+    { label: 'Uint8Array / Buffer', note: 'WASM・Native Node' },
+    { label: 'bytes / bytearray', note: 'Python' },
+    { label: 'バイト列のポインタ + 長さ', note: 'C ABI への入力' },
+    { label: 'JSON 入力', note: 'MCP ツール' }
+  ] },
+  { title: 'バインディング', nodes: [
+    { label: 'WASM', note: 'シングルと pthread の入口' },
+    { label: '@libraz/formulon-native', note: 'ソースからビルド、npm 未公開' },
+    { label: 'Python', note: 'コンテキストマネージャー' },
+    { label: 'CLI', note: 'argv・stdio・終了コード' },
+    { label: 'MCP', note: 'JSON 入出力・セッション' }
+  ] },
+  { title: '境界', nodes: [{ label: 'C ABI', note: '互換性を保つインターフェース' }] },
+  { title: 'コア', nodes: [{ label: 'C++17 コア', note: 'パーサ・評価器・計算グラフ・ファイル入出力' }] }
 ]" />
 
 ## 担当すること

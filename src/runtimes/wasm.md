@@ -47,7 +47,16 @@ Cross-Origin-Embedder-Policy: require-corp
 Without them, the `@libraz/formulon/threads` factory fails to instantiate because its pthread pool cannot create the required `SharedArrayBuffer`. The default `@libraz/formulon` factory does not need these headers. The raw WASM loader has no fallback; code calling a pthread-backed factory directly must handle the rejected promise. `formulon-cell` can opt into a stub engine with `preferStub: true` for tests and demos; that behavior belongs to `formulon-cell`. See [formulon-cell](/cell/) for its setup.
 :::
 
-<DiagramFlow steps="Page load → choose @libraz/formulon or /threads → default memory, or COOP/COEP + worker pool → Workbook.loadBytes()" />
+<DiagramFlow
+  :steps="[
+    { label: 'Page load', note: 'COOP / COEP come from this response' },
+    { label: 'Choose an entry', note: '@libraz/formulon or its /threads entry' },
+    { label: 'Create the module', note: 'Default: serial. /threads: worker pool' },
+    { label: 'Workbook.loadBytes()', note: 'Bytes in; call delete() when done' }
+  ]"
+  label="Browser startup: the page load supplies the headers, you choose the default or threads entry, the module starts serially or with a worker pool, and Workbook.loadBytes() takes the workbook bytes"
+  caption="Only the /threads entry needs cross-origin isolation; the default entry runs without COOP / COEP."
+/>
 
 ## Parallel recalculation
 

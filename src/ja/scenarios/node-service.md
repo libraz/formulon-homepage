@@ -8,7 +8,19 @@ Native Node はワークブックのバイト列を WASM ヒープへコピー�
 
 ## 流れ
 
-<DiagramFlow steps="HTTP アップロード / 社内ジョブ → サイズと形式を検証 → ワークブックのバイト列を読み込む → 入力値 / プロファイルを設定 → 再計算 → 検査値と結果を読む → JSON または保存済みワークブックを返す" />
+<DiagramFlow
+  :steps="[
+    { label: 'HTTP アップロード / 社内ジョブ', note: 'アップロードか社内生成の入力' },
+    { label: '検証', note: '読み込み前にバイト数の上限を確認' },
+    { label: 'バイト列を読み込む', note: '読み込み後にセル数の上限を確認' },
+    { label: '入力値とプロファイルを設定', note: 'win-365-en_US などを指定' },
+    { label: 'recalc()', note: '読む前にステータスを確認' },
+    { label: '検査値と結果を読む', note: '値と診断情報' },
+    { label: '応答を返す', note: 'JSON、または保存したワークブック' }
+  ]"
+  label="Node サービスの処理の流れ。アップロードまたは社内ジョブを受け付け、ファイルを検証し、バイト列を読み込み、入力値とプロファイルを設定して再計算し、検査値と結果を読んで、JSON または保存したワークブックを返す"
+  caption="サービスの入口でサイズとセル数の上限を確認し、プロファイルを固定するので、再計算を再現できます。"
+/>
 
 ## 実行入口の選択
 
@@ -21,13 +33,16 @@ Native Node はワークブックのバイト列を WASM ヒープへコピー�
 
 <DiagramLayers
   :layers="[
-    { nodes: ['このデプロイでは、今すぐプラットフォーム別の .node バイナリをビルドして配置できるか？'] },
-    { nodes: [
-      { label: 'できる → Native Node', note: 'ネイティブスレッド、WASM ヒープへのコピーなし' },
-      { label: 'できない → WASM', note: 'Node 環境間で移植しやすい、ネイティブビルド不要' }
-    ] }
+    {
+      title: 'このデプロイで、.node バイナリを今ビルド・配置できるか',
+      nodes: [
+        { label: '@libraz/formulon-native', note: 'できる。環境ごとにソースからビルド' },
+        { label: '@libraz/formulon', note: 'できない。どの Node 環境でも同じ' }
+      ]
+    }
   ]"
   label="判断図。配布環境に合うネイティブバイナリをビルドして配置できるなら、処理性能を優先して Native Node を選ぶ。できないなら、移植性を優先して WASM を選ぶ"
+  caption="Native Node を選ぶのはバイナリを用意できる環境だけで、数式の結果はどちらでも同じになるはずです。"
 />
 
 Native Node と WASM は計算処理の流れを共有しますが、Workbook のメソッド構成は同一ではありません。テーブル作成、AutoFilter XML、`addCellStyleXf` が必要な場合は、選択前に [パッケージと実行入口](/ja/api/surfaces) を確認してください。型付き AutoFilter と `setCellStyle` は両方で使えます。状態確認と明示的な解放を含むサービス向けの例は [Native Node 連携](/ja/runtimes/node-native) にあります。

@@ -107,19 +107,17 @@ All ZIP entries in saved XLSX and XLSB files use the fixed timestamp `1980-01-01
 ## What is preserved vs. evaluated
 
 <DiagramLayers :layers="[
-  { title: 'Input', nodes: ['*.xlsx / *.xlsb bytes in'] },
-  { title: 'Read', nodes: ['Reader'] },
-  { nodes: [
-      { label: 'Modeled parts', note: 'cells · formulas · names · tables · CF subset · validations · typed AutoFilters · picture anchors · protection metadata' },
-      { label: 'Passthrough parts', note: 'shapes · groups · form controls · VBA · opaque XLSB tails' }
+  { title: 'Input', nodes: [{ label: '*.xlsx / *.xlsb bytes', note: 'format sniffed from content' }] },
+  { title: 'Read', nodes: [
+      { label: 'Modeled parts', note: 'cells · formulas · names · tables · validations' },
+      { label: 'Passthrough parts', note: 'shapes · VBA · controls · XLSB tails', tone: 'alt' }
     ] },
-  { nodes: [
-      { label: 'Engine recalc', note: 'formula values and supported CF predicates' },
-      { label: 'Preserved as bytes' }
+  { title: 'Handling', nodes: [
+      { label: 'Engine recalc', note: 'formula values and CF predicates' },
+      { label: 'Preserved as bytes', note: 'carried to the writer where practical', tone: 'alt' }
     ] },
-  { title: 'Write', nodes: ['Writer'] },
-  { title: 'Output', nodes: ['*.xlsx / *.xlsb bytes out'] }
-]" label="Read splits into modeled parts (recalculated where supported) and passthrough parts (preserved as bytes), both converging at the writer" />
+  { title: 'Write', nodes: [{ label: '*.xlsx / *.xlsb bytes', note: 'saveAs(format) picks the container' }] }
+]" label="The reader splits a file into modeled parts, which the engine recalculates where supported, and passthrough parts, which are preserved as bytes; both converge at the writer" caption="Only modeled parts are recalculated; passthrough parts are carried through as bytes." />
 
 | Feature | Read | Recalculate | Write |
 | --- | --- | --- | --- |

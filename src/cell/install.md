@@ -69,7 +69,7 @@ try {
 ```
 
 ::: tip Two locale arguments
-The `locale` passed to `createDefault()` only picks the workbook's default font. The `locale` passed to `mount()` selects the UI language and the calculation profile (number formats, separators, localized function names). When `mount()` receives no `locale`, the UI starts in Japanese, so pass the language your application uses.
+The `locale` passed to `createDefault()` sets locale-dependent defaults for the new workbook, including its font and default row height. With `platform: 'mac'`, it creates the workbook from the matching measured Mac profile, which also sets the first sheet name and other workbook defaults. The `locale` passed to `mount()` selects the UI language and calculation profile (number formats, separators, and localized function names). When `mount()` receives no `locale`, the UI starts in Japanese, so pass the language your application uses.
 :::
 
 `WorkbookHandle.createDefault()` loads the default Formulon WASM package. The current default loader does not require `SharedArrayBuffer` or COOP/COEP headers. A failed WASM or WebAssembly initialization rejects the promise; handle that failure at the host boundary instead of leaving an empty surface.

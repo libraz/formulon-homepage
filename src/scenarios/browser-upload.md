@@ -12,7 +12,18 @@ The browser represents file bytes with an `ArrayBuffer`, which a `Uint8Array` ca
 
 ## Flow
 
-<DiagramFlow steps="User selects .xlsx → Read ArrayBuffer → Module.Workbook.loadBytes → Mutate inputs → recalc → Read values or save bytes" />
+<DiagramFlow
+  :steps="[
+    { label: 'User selects .xlsx', note: 'The file stays in the browser' },
+    { label: 'Read ArrayBuffer', note: 'file.arrayBuffer() into a Uint8Array' },
+    { label: 'Module.Workbook.loadBytes', note: 'Check wb.isValid() before use' },
+    { label: 'Mutate inputs', note: 'Write the input cells' },
+    { label: 'recalc()', note: 'Check status.ok before reading' },
+    { label: 'Read or save', note: 'Cell values, or bytes from save()' }
+  ]"
+  label="Browser upload flow: the user selects an .xlsx, the page reads its ArrayBuffer, loads it, mutates inputs, recalculates, then reads values or saves bytes"
+  caption="The file is recalculated in the browser, so nothing is uploaded to a server."
+/>
 
 ## Minimal implementation
 
@@ -101,7 +112,17 @@ worker.postMessage(buffer, [buffer])
 
 Listing a buffer in the transfer list moves it to the receiver instead of copying it; the sender's buffer is detached and cannot be used afterward. Read the buffer once and pass the same reference as both the payload and the transfer list. A second `file.arrayBuffer()` call creates a different buffer, and whichever one is not in the transfer list is copied.
 
-<DiagramFlow steps="Main thread: read ArrayBuffer → postMessage(buffer, [buffer]) transfers ownership → Worker owns buffer, recalculates → postMessage(bytes, [bytes.buffer]) transfers back → Main thread owns result" label="Main thread reads the ArrayBuffer, transfers ownership to the worker via postMessage with a transfer list, the worker recalculates and transfers the result buffer back, and the main thread regains ownership of the output bytes" />
+<DiagramFlow
+  :steps="[
+    { label: 'Read ArrayBuffer', note: 'Main thread, read once' },
+    { label: 'Transfer to worker', note: 'postMessage(buffer, [buffer])' },
+    { label: 'Recalculate', note: 'The worker owns the buffer now', tone: 'alt' },
+    { label: 'Transfer back', note: 'postMessage(bytes, [bytes.buffer])', tone: 'alt' },
+    { label: 'Result ready', note: 'Main thread owns the output bytes' }
+  ]"
+  label="Main thread reads the ArrayBuffer, transfers ownership to the worker via postMessage with a transfer list, the worker recalculates and transfers the result buffer back, and the main thread regains ownership of the output bytes"
+  caption="A transferred buffer is moved, not copied, so the sender cannot use it afterward."
+/>
 
 ## Error surfaces
 

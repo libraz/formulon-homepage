@@ -6,7 +6,16 @@ description: Create and inspect native Excel Tables and PivotTables, with source
 
 `formulon_table_operation` creates native worksheet Tables. `formulon_create_pivot` creates a worksheet-backed PivotCache and native PivotTable. These objects remain workbook metadata that Excel can filter, refresh, and inspect.
 
-The `table` block in [`formulon_build_document`](/mcp/authoring) creates a visual grid with headers, borders, formulas, and optional banding. It does not create a native Excel Table. Choose the native tools when the workbook needs Table metadata or a PivotTable; choose the document block when the goal is a printable layout.
+Choose the object that matches what the workbook needs:
+
+| Object | What it contains | Use it when |
+| --- | --- | --- |
+| Worksheet range, written with `formulon_set_range` | Ordinary cells with values and formulas; no table metadata. | The data only needs to be stored or calculated. |
+| Document `table` block in [`formulon_build_document`](/mcp/authoring) | A formatted cell grid with headers, formulas, widths, and optional banding; it is still not a native Excel Table. | You are building a printable form or report layout. |
+| Native worksheet Table from `formulon_table_operation` | A named table object with filter metadata, a TableStyle, and an optional totals row. | Excel should expose Table behavior for the data. |
+| PivotTable from `formulon_create_pivot` | A report object that groups and aggregates a source range through a PivotCache. | The workbook needs a grouped summary by one or more fields. |
+
+All four can appear as a grid on a worksheet, but their workbook behavior differs. A PivotTable's projected values are returned in `layout.cells`; they are not ordinary stored cells that `formulon_get_range` can read.
 
 ## Native worksheet Tables
 
@@ -285,6 +294,42 @@ Read the source before saving. The native PivotTable report is returned in `layo
 
 Use the returned `layout.cells` and `pivotIndex` rather than assuming a fixed report width. If a worksheet snapshot is required for preview, write a deliberate snapshot with `formulon_set_range` or `formulon_set_cells` after interpreting those returned cells. That snapshot is ordinary worksheet data and is separate from the native PivotTable.
 
+## Totals row and style toggles {#totals-and-toggles}
+
+With the totals row enabled, `totals` writes each column's totals cell instead of a hand-written formula. Each entry names a `column` (a name or a zero-based index within the table) and gives one of a `function`, a text `label`, or a `formula` for the `custom` function. The functions are `none`, `sum`, `min`, `max`, `average`, `count`, `countNums`, `stdDev`, `var`, and `custom`; Excel writes `SUBTOTAL` over the column. `totals` fails when the table has no totals row, so pass `totalsRow: true` in the same call or enable it first.
+
+#### `formulon_table_operation`
+
+```json
+{
+  "sessionId": "sales-report",
+  "operation": "update",
+  "index": 0,
+  "ref": "Data!A1:C7",
+  "totalsRow": true,
+  "totals": [
+    { "column": "Region", "label": "Total" },
+    { "column": "Amount", "function": "sum" }
+  ],
+  "showRowStripes": true,
+  "showFirstColumn": true
+}
+```
+
+The range already includes the totals row, as in the example above. The toggles apply to the table's TableStyle: first or last column emphasis, and row or column banding.
+
+## Preview, save, and close
+
+Refresh the totals formulas before rendering or saving. `formulon_table_operation` does not recalculate them automatically.
+
+#### `formulon_recalc_session`
+
+```json
+{
+  "sessionId": "sales-report"
+}
+```
+
 Preview the source list with an explicit range and PNG artifact:
 
 #### `formulon_preview_range`
@@ -324,30 +369,4 @@ Inspect `format`, `bytes`, and optional `losses` before distributing the workboo
 }
 ```
 
-## Totals row and style toggles {#totals-and-toggles}
-
-With the totals row enabled, `totals` writes each column's totals cell instead of a hand-written formula. Each entry names a `column` (a name or a zero-based index within the table) and gives one of a `function`, a text `label`, or a `formula` for the `custom` function. The functions are `none`, `sum`, `min`, `max`, `average`, `count`, `countNums`, `stdDev`, `var`, and `custom`; Excel writes `SUBTOTAL` over the column. `totals` fails when the table has no totals row, so pass `totalsRow: true` in the same call or enable it first.
-
-#### `formulon_table_operation`
-
-```json
-{
-  "sessionId": "sales-report",
-  "operation": "update",
-  "index": 0,
-  "ref": "Data!A1:C7",
-  "totalsRow": true,
-  "totals": [
-    { "column": "Region", "label": "Total" },
-    { "column": "Amount", "function": "sum" }
-  ],
-  "showRowStripes": true,
-  "showFirstColumn": true
-}
-```
-
-The range already includes the totals row, as in the example above. The toggles apply to the table's TableStyle: first or last column emphasis, and row or column banding.
-
-## Choosing between the two table surfaces
-
-Use the document `table` block for a receipt or invoice whose visual rows, formulas, widths, and print area are part of one layout operation. Use `formulon_table_operation` for a native Table that should carry a name, filter metadata, a TableStyle, a header flag, or a totals row. Use `formulon_create_pivot` when the workbook needs a report object backed by the source range, with named axes and aggregations. Save both native features as XLSX and check the writer losses before treating the file as complete.
+Save native Tables and PivotTables as XLSX and check the writer losses before treating the file as complete.

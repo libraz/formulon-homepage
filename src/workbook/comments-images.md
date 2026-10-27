@@ -107,14 +107,19 @@ Classic notes, threaded comments, and OOXML drawings, including loaded and inser
 `insertShape(sheet, spec)` appends a shape on top and returns its id; a sheet without a drawing gets one, and existing drawing content is kept. `updateShape(sheet, objectId, spec)` applies only the fields `spec` names and keeps the rest of the shape's XML. `removeShape(sheet, objectId)` removes a shape, connector, or group with its children. A key left out of the spec, or `null`, is not applied. An insert needs `anchorKind` and defaults `prst` to `rect` and `name` to `Shape <id>`; a `prst` that names a line or connector geometry makes a connector, which holds no text. Giving `anchorKind` applies the whole anchor (`editAs`, `from*`, `to*`, `cx`, `cy`), and an update cannot change the anchor kind. `fillKind` and `lineKind` must be `Solid` or `None` on input. Shapes the record cannot express are listed with `ShapePaint.Other` or empty fields and pass through a save unchanged. Shapes follow row and column edits as pictures do.
 
 ```ts
-const { objectId } = wb.insertShape(0, {
+import { AnchorKind, ShapePaint } from '@libraz/formulon'
+
+// wb is an initialized, valid Workbook.
+const inserted = wb.insertShape(0, {
   anchorKind: AnchorKind.TwoCell,
   fromRow: 1, fromCol: 1, toRow: 4, toCol: 4,
   prst: 'roundRect',
   text: 'Review',
   fillKind: ShapePaint.Solid, fillRgb: 0xfff2cc,
 })
-wb.updateShape(0, objectId, { text: 'Approved', rotation: 0 })
+if (!inserted.status.ok) throw new Error(inserted.status.message)
+const updated = wb.updateShape(0, inserted.objectId, { text: 'Approved', rotation: 0 })
+if (!updated.ok) throw new Error(updated.message)
 ```
 
 Python takes the same fields as keyword arguments to `insert_shape()` and `update_shape()` (`anchor_kind`, `from_row`, `fill_kind`, and so on) and returns `list_shapes()` as a list of `Shape`. The C calls are `fm_sheet_shape_count`, `fm_sheet_shape_at`, `fm_sheet_insert_shape`, `fm_sheet_update_shape`, and `fm_sheet_remove_shape`, with the `fm_shape` record.

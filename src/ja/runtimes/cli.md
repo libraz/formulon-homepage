@@ -80,10 +80,10 @@ formulon recalc circular.xlsx -o circular.xlsx --iterative
 
 ## CI での使い方
 
-`dump --values` と `dump --formulas` は安定したテキストを出力するため、コミット済みの期待値ファイルと差分を取れます。スナップショットの準備と、揮発性関数や外部サービス依存の関数の扱いは [CI 回帰検査](/ja/runtimes/ci-regression) を参照してください。
+`dump --values` と `dump --formulas` は安定したテキストを出力するため、コミット済みの期待値ファイルと差分を取れます。スナップショットの準備と、揮発性関数や外部サービス依存の関数の扱いは [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) を参照してください。
 
 ## 次に読むもの
 
 - [CLI リファレンス](/ja/api/cli) ─ コマンド構文
-- [CI 回帰検査の例](/ja/runtimes/ci-regression) ─ CI の判定パターン
+- [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ スナップショット、GitHub Actions の例、レビュー方針
 - [CI でワークブックの回帰を検出](/ja/scenarios/ci-regression) ─ パイプライン例

@@ -6,7 +6,18 @@ Load workbook bytes, change inputs, recalculate, and save new bytes. No desktop 
 Single-formula tests prove the package loads. A representative workbook proves whether file structures, formulas, and locale assumptions fit your use case.
 :::
 
-<DiagramFlow steps="Bytes in → Workbook.loadBytes / Workbook.load → Mutate cells → recalc() → save() → Bytes out" />
+<DiagramFlow
+  :steps="[
+    { label: 'Input bytes', note: 'An .xlsx read by the host', tone: 'alt' },
+    { label: 'Workbook.loadBytes', note: 'Python: Workbook.load' },
+    { label: 'Change inputs', note: 'setNumber, setFormula' },
+    { label: 'recalc()', note: 'Evaluates dependent formulas' },
+    { label: 'save()', note: 'Writes current state, no recalculation' },
+    { label: 'Output bytes', note: 'The host stores the file', tone: 'alt' }
+  ]"
+  label="Load workbook bytes, change inputs, recalculate, then save new bytes for the host to store"
+  caption="Bytes in, bytes out: the host owns the files, and save() does not recalculate."
+/>
 
 ## JavaScript / WASM
 
@@ -68,7 +79,7 @@ formulon dump --profile win-365-en_US --now 2026-10-09T09:30:00 --values output.
 
 The profile and the pinned clock are runtime state: neither is saved in the output file, so set both again after every load. `setPinnedNow` fixes what `NOW()`, `TODAY()` and relative date filters read, which keeps date-dependent results reproducible.
 
-Saving updates calculated values, keeps the workbook structures Formulon models, and passes through parts it does not model. What survives depends on the container and the feature; check [File format support](/compatibility/file-format-support) and the save diagnostics. An unchanged workbook saves to identical bytes, because every entry in the saved archive carries a fixed timestamp.
+Call `recalc()` successfully before saving when every formula cache in the workbook must be current. Saving writes the values currently held by the workbook; it does not run a recalculation itself. A partial recalculation may leave formula caches outside its requested dependency closure unchanged. Saving keeps the workbook structures Formulon models and passes through parts it does not model. What survives depends on the container and the feature; check [File format support](/compatibility/file-format-support) and the save diagnostics. Saving the same unchanged in-memory workbook twice produces identical bytes because each saved archive entry uses a fixed timestamp; this does not mean the output bytes match the original input file.
 
 ## Run the round trip here
 

@@ -2,6 +2,8 @@
 
 The evaluator is designed to match Excel semantics for scalar values, ranges, arrays, errors, references, and locale-sensitive behavior. The function catalog is registered at startup; bindings expose enough of it to evaluate any registered function.
 
+For example, if `A1` contains the number `10` and `B1` contains `=A1*2`, evaluating `B1` produces the number `20`. The formula text, its result kind, and its cached value are distinct: a formula can return a number, text, a Boolean, an error, or an array. The engine supplies these values to the host; a UI such as [formulon-cell](/cell/) decides how to display the grid.
+
 ::: info Glossary: tree-walker
 The evaluator walks the parsed formula's syntax tree (AST) directly instead of compiling it to bytecode. Every build uses this one evaluator; there is no second fast path that results could drift from.
 :::
@@ -12,12 +14,11 @@ The discriminator on every cell or formula result. The kinds are `Blank`, `Numbe
 
 <DiagramFlow :steps="[
   { label: 'Formula text', note: '=SUM(A1:A10)' },
-  { label: 'Lexer / parser' },
-  { label: 'AST' },
+  { label: 'Lexer / parser', note: 'produces the syntax tree (AST)' },
   { label: 'Reference resolver', note: 'names · tables · ranges' },
-  { label: 'Evaluator', note: 'tree-walker' },
-  { label: 'Value', note: 'Number · Text · Bool · Error · Array · Ref · Lambda · Blank' }
-]" />
+  { label: 'Evaluator', note: 'walks the AST directly' },
+  { label: 'Value', note: 'one of eight value kinds' }
+]" label="Formula text is parsed into an AST, references are resolved, and the tree-walking evaluator produces a Value" caption="One tree-walking evaluator serves every build, so there is no second fast path for results to drift from." />
 
 ## Function catalog
 

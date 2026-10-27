@@ -374,19 +374,19 @@ AutoFilter の条件と行の表示状態は別に管理します。`evaluateAut
 以下の図は、同じワークブックに対する 3 つの経路を対比したものです。
 
 <DiagramFlow label="変更する経路: setFormula から recalc" :steps="[
-  { label: 'setFormula(sheet, row, col, formula)' },
-  { label: 'recalc()', note: '依存グラフに参加し、依存先も再計算される' }
-]" />
+  { label: 'setFormula()', note: '数式をセルに書き込む' },
+  { label: 'recalc()', note: '依存グラフに参加し依存先も再計算' }
+]" caption="ワークブックに書き込み、依存グラフに参加するのは変更する経路だけです。" />
 
 <DiagramFlow label="読み取り専用の経路: evaluateFormulaText" :steps="[
-  { label: 'evaluateFormulaText(sheet, row, col, formula)', note: '参照・定義名・ROW()/COLUMN() のアンカーを解決' },
-  { label: 'スカラーの EvalResult', note: '配列/スピルは左上の要素のみ、自己参照はキャッシュ値、依存グラフには参加しない' }
-]" />
+  { label: 'evaluateFormulaText()', note: '読み取り専用で参照・定義名を解決' },
+  { label: 'スカラーの EvalResult', note: '配列は左上のみ・自己参照はキャッシュ値' }
+]" caption="スカラー呼び出しは配列を左上の要素に縮約するため、=SEQUENCE(3) は 3 行ではなく 1 を返します。" />
 
 <DiagramFlow label="配列全体の経路: evaluateFormulaArray" :steps="[
-  { label: 'evaluateFormulaArray(sheet, row, col, formula)', note: '同じ読み取り専用の解決規則' },
-  { label: 'EvalArrayResult', note: 'rows × cols の cells、依存グラフには参加しない' }
-]" />
+  { label: 'evaluateFormulaArray()', note: '同じ読み取り専用の解決規則' },
+  { label: 'EvalArrayResult', note: 'rows × cols の cells。スカラーは 1×1' }
+]" caption="配列呼び出しは結果全体を返し、縮約しません。スカラーは 1×1 の配列になります。" />
 
 ## 次に読むもの
 

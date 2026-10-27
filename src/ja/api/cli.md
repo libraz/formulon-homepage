@@ -33,15 +33,14 @@ formulon --help
 | `64` | 使い方エラー。不明なフラグ、位置引数の不足や過剰、不正なオプション値、`-o` の指定漏れ |
 | `1` | エンジン、ファイル入出力、stdout への書き込みの失敗 |
 
-<DiagramLayers label="2 層の終了コード規約" :layers="[
-  { nodes: ['コマンドを実行 (eval / recalc / dump / paginate)'] },
-  { nodes: [
-      { label: 'セル単位の Excel エラー', note: 'stdout + exit 0' },
-      { label: '使い方エラー', note: 'stderr + exit 64' },
-      { label: 'エンジン / I/O 失敗', note: 'stderr + exit 1' }
+<DiagramLayers label="2 層の終了コード規約: セル単位の Excel エラーは exit 0、使い方エラーは exit 64、エンジンまたは I/O の失敗は exit 1" :layers="[
+  { title: 'eval・recalc・dump・paginate の結果', nodes: [
+      { label: 'セル単位の Excel エラー', note: 'stdout に出力・exit 0' },
+      { label: '使い方エラー', note: '不正なフラグや値・stderr・exit 64', tone: 'alt' },
+      { label: 'エンジン / I/O 失敗', note: 'stderr・exit 1', tone: 'alt' }
     ]
   }
-]" />
+]" caption="セル内の Excel エラーは失敗ではなく結果なので、exit 0 以外になるのは使い方エラーとエンジン側の失敗だけです。" />
 
 ## `eval`
 

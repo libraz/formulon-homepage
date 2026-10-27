@@ -174,10 +174,12 @@ namesButton.addEventListener('click', () => {
 | `openFunctionArguments(name?, { category? })` | `fxDialog` |
 | `openQuickAnalysis()` | `quickAnalysis` |
 | `openChartSettings(tab?)` | `charts`。グラフが選択されていなければ `false` を返します。 |
-| `openWorkbookObjects()`、`openPivotFieldList()`、`openActivePivotFieldList()` | `workbookObjects` |
+| `openWorkbookObjects()`、`openPivotFieldList(sheetIndex, pivotIndex)`、`openActivePivotFieldList()` | `workbookObjects` |
 | `openPivotTableDialog({ placement? })` | `pivotTableDialog`（`ui.features.pivotTable`） |
 | `openInsertCopiedCells()` | なし |
 | `openEvaluateFormulaDialog()`、`openExternalLinksDialog()`、`openCfRulesDialog()`、`openCellStylesGallery()`、`openFilterDropdown()` | なし |
+
+`openPivotFieldList(sheetIndex, pivotIndex)` は指定したピボットテーブルのフィールド一覧を開きます。`openActivePivotFieldList()` はアクティブセルの位置にあるピボットテーブルを探し、見つからない場合は `false` を返します。
 
 操作ポリシーが有効な間は、対応する機能が無効になるため、ほとんどの起動メソッドは動作しません。詳しくは [オプション](/ja/cell/options#operation-policy) を参照してください。Mac リボンからは、ゴール シーク、統合、小計、スパークライン、スライサー、ブック統計も開けます。ホスト側のツールバーから呼ぶためのコマンド ID は [プラットフォームと Mac UI](/ja/cell/platform#mac-ribbon-dialogs) にあります。
 

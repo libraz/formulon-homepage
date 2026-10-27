@@ -7,6 +7,8 @@ description: Explore the formulon-cell spreadsheet surface in the browser.
 
 This demo embeds formulon-cell with a seeded workbook and built-in spreadsheet controls. Use it to try editing, selecting ranges, opening menus and dialogs, switching themes, and changing the visible UI controls.
 
+For the chart walkthrough, select `A1:C9` and choose a chart from the Insert ribbon. See the [Charts guide](/cell/charts) for how the selection becomes categories and series.
+
 <ClientOnly>
   <CellFullDemo />
 </ClientOnly>

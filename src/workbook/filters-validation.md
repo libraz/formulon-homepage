@@ -2,6 +2,18 @@
 
 Typed AutoFilters and data-validation checks expose spreadsheet decisions without requiring a UI. They operate on the in-memory workbook and use zero-based sheet, row, and column indices.
 
+An AutoFilter definition, its match results, and row visibility are separate states:
+
+| Operation | Changes filter definition? | Changes row visibility? | Calculation state |
+| --- | --- | --- | --- |
+| `setAutoFilter` | Replaces the criteria | No | Marks visibility-dependent formulas dirty |
+| `evaluateAutoFilter` | No | No; returns matches for body rows | Unchanged |
+| `applyAutoFilter` | No | Hides non-matching rows and shows matches | Marks dependent formulas such as `SUBTOTAL` dirty; call `recalc()` before reading them |
+| `clearAutoFilter` | Clears criteria | Shows all body rows | Marks visibility-dependent formulas dirty |
+| `removeAutoFilter` | Removes the definition | Leaves current visibility unchanged | Marks visibility-dependent formulas dirty |
+
+These operations do not run recalculation. After a state-changing operation, call `recalc()` before reading formulas that depend on filtering or row visibility.
+
 ## Typed AutoFilters
 
 `getAutoFilter(sheet)` and `getTableAutoFilter(tableIndex)` return a result whose `autoFilter` field is `null` when no filter exists. An `AutoFilter` contains an inclusive `range` (including its header), ordered `columns`, and optional `sort`. Each `AutoFilterColumn.colId` is an offset from the first column of the range. `FilterKind` selects `Values`, `Custom`, `Top10`, `Dynamic`, `Color`, or `Icon`; the corresponding fields carry values, date groups, operators, thresholds, colours, or icons. `SortBy`, `SortMethod`, and `DateTimeGrouping` describe sort and date-group state.
@@ -20,9 +32,13 @@ Value-list matching trims only leading and trailing U+0020 ASCII spaces from bot
 
 ## Data-validation checks
 
+Try a proposed number against a rule that allows 0 through 100. Validation leaves A1 unchanged; the direct-write button shows that an engine write can still store a value that fails the rule. Applications that require rejection must check the validation result before writing.
+
+<ValidationDemo />
+
 `getValidations` reads stored rules and `addValidation` appends one. The rule payload uses OOXML ordinals: `type` 1–7 means whole, decimal, list, date, time, text length, or custom; `op` 0–7 means between, not-between, equal, not-equal, greater-than, less-than, greater-than-or-equal, or less-than-or-equal. `ValidationErrorStyle` is `Stop`, `Warning`, or `Information`. Rule formulas are stored without a leading `=` and read back in that form; a formula that starts with `==` is rejected with `kParserUnexpectedToken`.
 
-`validateValue(sheet, row, col, value)` checks a proposed value without storing it. The result reports `hasRule`, `valid`, `ruleIndex`, and `errorStyle`; when rules overlap, the first stored rule wins. `listInvalidCells` returns populated cells that currently fail a rule in row-major order and supplies a resumable `nextCursor`. Setting a value does not automatically reject it. Formula rules — custom formulas, list sources, and rule bounds — evaluate with the proposed value substituted wherever they read the checked cell, including through ranges and indirect references; other cells retain their stored values, and validation does not mutate the workbook. For example, `COUNTIF($A:$A,5)>0` sees a proposed `5` in column A.
+`validateValue(sheet, row, col, value)` checks a proposed value without storing it. The result reports `hasRule`, `valid`, `ruleIndex`, and `errorStyle`; when rules overlap, the first stored rule wins. `listInvalidCells` returns populated cells that currently fail a rule in row-major order and supplies a resumable `nextCursor`. Setting a value does not automatically reject it: the host must call `validateValue()`, decide what to do with the result, and then apply an accepted edit separately. To audit an existing workbook, call `listInvalidCells()`. Formula rules — custom formulas, list sources, and rule bounds — evaluate with the proposed value substituted wherever they read the checked cell, including through ranges and indirect references; other cells retain their stored values, and validation does not mutate the workbook. For example, `COUNTIF($A:$A,5)>0` sees a proposed `5` in column A.
 
 For an inline list such as `"Open,Closed"`, validation compares the text Excel shows after trimming leading and trailing U+0020 spaces; a U+0020 after each comma is dropped while parsing the list. Text matches are exact, including case and width. Text that reads as a number is also compared numerically under the active profile, so `01`, full-width `１`, and `1e0` can match `1`, and a percentage can match `50%`. Lists backed by a range keep their existing `MATCH(..., 0)` behavior.
 

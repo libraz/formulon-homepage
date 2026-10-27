@@ -327,15 +327,15 @@ Python には、ワークブックの文脈でスカラーを返す評価メソ�
 通常の編集経路とアドホック経路は異なる問いに答えます。前者はあとで読み返せる値を確定させ、後者は使い捨ての「もし」問い合わせです。
 
 <DiagramFlow :steps="[
-  { label: 'setFormula()' },
-  { label: 'recalc()' },
-  { label: 'getValue()', note: 'モデルを変更せず、キャッシュ済みの結果を読む' }
-]" label="通常の編集経路: setFormula、recalc、getValue" />
+  { label: 'setFormula()', note: '数式をセルに書き込む' },
+  { label: 'recalc()', note: '再計算待ちのセルを再計算' },
+  { label: 'getValue()', note: 'キャッシュ済みの結果を読む' }
+]" label="通常の編集経路: setFormula、recalc、getValue" caption="通常の経路はあとで読み直せる値を確定させますが、アドホックな経路は確定させません。" />
 
 <DiagramFlow :steps="[
   { label: 'evaluateFormulaText()', note: '変更なし・依存関係グラフへの登録なし' },
-  { label: 'スカラー結果', note: '配列の結果は左上の要素に縮約される' }
-]" label="アドホック経路: evaluateFormulaText、読み取り専用、スカラーのみ" />
+  { label: 'スカラー結果', note: '配列は左上の要素に縮約' }
+]" label="アドホック経路: evaluateFormulaText、読み取り専用、スカラーのみ" caption="アドホックな経路は使い捨ての仮計算で、評価した内容が後の編集で再計算待ちになることはありません。" />
 
 ::: tip 実装済み関数を実行時に確認する
 WASM / Native Node の `wb.functionNames()` や MCP の `formulon_function_lookup` は、実行時に登録されている関数を列挙できます。静的なドキュメントを読むより、対象 Excel バージョンに合わせて毎回確認するほうが確実です。関数選択 UI を作る場合は、`mergeFunctionMetadata()`（両方の npm パッケージが公開）/ `merge_function_metadata()`（Python）で、ホストが用意したローカライズ済みの説明をエンジンのメタデータに重ねられます。優先順位は、ロケール別の上書き、エントリの既定値、エンジンの値の順です。

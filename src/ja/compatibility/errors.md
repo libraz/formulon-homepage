@@ -6,14 +6,17 @@
 *セルエラー* は `kind = Error` の値であり、バインディングを通じてデータとして流れます。*ホスト失敗* はホスト操作自体の失敗（バイト列の不正・ハンドル失効・入出力エラー・エンジン内部失敗）であり、別の経路（`Status` エンベロープ、例外、非ゼロの終了コード、`fm_status_t`）で報告されます。
 :::
 
-<DiagramLayers :layers="[
-  { title: 'ホスト呼び出し', nodes: ['getValue / recalc / save'] },
-  { title: '呼び出し自体は成功したか', nodes: [
-    { label: 'いいえ → ホスト失敗経路', note: 'Status エンベロープ · 例外 · 非ゼロ終了 · fm_status_t' },
-    { label: 'はい → value.kind を確認' }
+<DiagramLayers
+  label="ホスト呼び出しはまず成功か失敗かに分かれます。失敗した呼び出しはホスト失敗の経路で扱い、成功した呼び出しは値を返します。値の種類が Error ならセルエラー値としてインラインに表示し、それ以外はそのまま使います。"
+  caption="セルエラーは成功した呼び出しが返すデータであり、ホスト失敗になるのは呼び出し自体が失敗したときだけです。"
+  :layers="[
+  { title: 'ホスト API の呼び出し', nodes: [{ label: 'getValue / recalc / save', note: '結果かホスト失敗を返す' }] },
+  { title: '呼び出しは失敗したか', nodes: [
+    { label: 'はい: ホスト失敗', note: 'Status・例外・終了コード', tone: 'alt' },
+    { label: 'いいえ: value.kind を確認', note: '呼び出し自体は成功' }
   ] },
   { title: 'value.kind', nodes: [
-    { label: 'Error → セルエラー値', note: '#DIV/0! · #VALUE! · #REF! · … — インラインに表示し、throw しない' },
+    { label: 'Error', note: '#DIV/0! · #VALUE! · #REF! · … をそのまま表示' },
     { label: 'Number / Text / Bool / …', note: '値をそのまま使う' }
   ] }
 ]" />

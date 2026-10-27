@@ -95,6 +95,7 @@ const instance = await Spreadsheet.mount(host, {
 - [埋め込み](/ja/cell/embedding) — ビューアー、フォーム、カスタム UI、ホスト更新。
 - [モーダルとダイアログ](/ja/cell/modals) — オーバーレイの配置とダイアログ起動メソッド。
 - [リボンツールバー](/ja/cell/toolbar) — インラインまたは独立したリボン、タブ構成、ドロップダウンの処理、コマンド。
+- [グラフ](/ja/cell/charts) — グラフの作成、セルと系列の対応、設定できる項目。
 - [セルの独自表示とホスト関数](/ja/cell/custom-cells) — 表示フォーマッターと、入力候補に出すホスト関数。
 - [フレームワークアダプター](/ja/cell/frameworks) — React と Vue の利用方法。
 - [フックとコンポーザブル](/ja/cell/hooks) — 選択、編集、言語設定に連動するホスト UI の例です。

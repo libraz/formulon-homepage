@@ -16,10 +16,13 @@ Formulon recognizes **526** Excel function names: **511 real implementations, in
 | Unavailable service stub | 15 | Recognized by name and arity, but returns a deterministic Excel error because the required external service is outside Formulon |
 | **Total recognized** | **526** | |
 
-<DiagramLayers :layers="[
+<DiagramLayers
+  label="Of the 526 recognized function names, 511 are implemented locally and 15 are stubs for external services that return a deterministic Excel error."
+  caption="Recognizing a function name does not mean Formulon runs it locally: 15 names need an external service."
+  :layers="[
   { title: '526 recognized function names', nodes: [
-    { label: '511 real implementations', note: 'includes CELL, INFO' },
-    { label: '15 unavailable service stubs', note: 'service/connection dependent' }
+    { label: '511 local implementations', note: 'Includes CELL, INFO (host state)' },
+    { label: '15 unavailable stubs', note: 'Return a deterministic Excel error', tone: 'alt' }
   ] }
 ]" />
 

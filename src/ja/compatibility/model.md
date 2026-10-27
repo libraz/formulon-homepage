@@ -8,22 +8,31 @@ Formulon は互換性を *測定できる性質* として扱います。漠然�
 
 プロファイルの取得は、実機の Excel から再利用可能なデータセットへの一方向パイプラインです。
 
-<DiagramFlow :steps="[
-  { label: 'Excel build', note: '例: Win 365 ja-JP' },
-  { label: 'Oracle データ', note: '取得' },
-  { label: '互換性プロファイル', note: 'win-365-ja_JP ─ 検証済み' }
+<DiagramFlow
+  label="互換性プロファイルは一方向の流れで作ります。Excel のビルドから値を取得して Oracle データとして保存し、名前付きのプロファイルとして検証します。"
+  caption="プロファイルの互換性は、実際の Excel のビルドから取得した Oracle データの裏付けがある範囲でしか主張できません。"
+  :steps="[
+  { label: 'Excel build', note: '例: Win 365 ja-JP', tone: 'alt' },
+  { label: 'Oracle データ', note: 'Excel から値を取得' },
+  { label: '互換性プロファイル', note: '例: win-365-ja_JP（検証済み）' }
 ]" />
 
 Oracle テストでは、検証用ワークブックを再計算し、Excel から取得した期待値と比較します。通常の API 呼び出しが期待値との比較を自動で行うわけではありません。
 
-<DiagramLayers :layers="[
-  { title: 'テスト入力', nodes: ['検証用ワークブック', '互換性プロファイル'] },
-  { nodes: ['Formulon エンジン'] },
-  { nodes: ['計算値'] },
+<DiagramLayers
+  label="Oracle テストでは、検証用ワークブックと互換性プロファイルを Formulon エンジンに渡し、計算値を取得済みの Excel の値と比較します。結果は、差分なし、追跡済みの差分、バグである未追跡の差分のいずれかです。"
+  caption="バグとして扱うのは未追跡の差分だけで、追跡済みの差分には理由と最後に検証した Excel のビルドが付きます。"
+  :layers="[
+  { title: 'テスト入力', nodes: [
+    { label: '検証用ワークブック', note: '再計算する対象' },
+    { label: '互換性プロファイル', note: '検証するプロファイル' }
+  ] },
+  { title: 'エンジン', nodes: [{ label: 'Formulon エンジン', note: '検証用ワークブックを再計算' }] },
+  { title: '出力', nodes: [{ label: '計算値', note: 'Excel の取得済みの値と比較' }] },
   { title: 'Oracle テストで比較', nodes: [
     { label: '差分なし', note: 'プロファイル互換が成立' },
     { label: '追跡済みの差分', note: '理由 + last-verified build' },
-    { label: '未追跡の差分', note: 'バグ ─ 修正または文書化' }
+    { label: '未追跡の差分', note: 'バグ: 修正または文書化', tone: 'alt' }
   ] }
 ]" />
 
