@@ -1,5 +1,91 @@
 /* --- VitePress chrome overrides --- */
 
+/* formulon-cell ships most rules inside @layer fc.*, and VitePress's base.css
+   element reset is unlayered, so the reset beats them at any specificity.
+   Each rule below mirrors a base.css selector at the same specificity, so it
+   wins on source order but still loses to the package's unlayered class rules. */
+:where(.fc-host, .fc-overlay-portal) *,
+:where(.fc-host, .fc-overlay-portal) *::before,
+:where(.fc-host, .fc-overlay-portal) *::after {
+  box-sizing: revert-layer;
+}
+
+:where(.fc-host, .fc-overlay-portal)
+  :is(
+    a,
+    b,
+    blockquote,
+    button,
+    canvas,
+    code,
+    fieldset,
+    figure,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    img,
+    input,
+    kbd,
+    li,
+    ol,
+    optgroup,
+    p,
+    pre,
+    samp,
+    select,
+    strong,
+    svg,
+    table,
+    textarea,
+    ul
+  ) {
+  all: revert-layer;
+}
+
+:where(.fc-host, .fc-overlay-portal) button:enabled,
+:where(.fc-host, .fc-overlay-portal) [role="button"]:enabled,
+:where(.fc-host, .fc-overlay-portal) :is(input, textarea, select):focus,
+:where(.fc-host, .fc-overlay-portal) button:focus,
+:where(.fc-host, .fc-overlay-portal) button:focus-visible {
+  cursor: revert-layer;
+  outline: revert-layer;
+}
+
+:where(.fc-host, .fc-overlay-portal) input[type="number"] {
+  -moz-appearance: revert-layer;
+}
+
+:where(.fc-host, .fc-overlay-portal) :is(input, textarea)::placeholder {
+  color: revert-layer;
+}
+
+:where(.fc-host, .fc-overlay-portal) input::-webkit-outer-spin-button,
+:where(.fc-host, .fc-overlay-portal) input::-webkit-inner-spin-button {
+  -webkit-appearance: revert-layer;
+  margin: revert-layer;
+}
+
+/* An in-page embed sits inside .vp-doc, whose table rules reach the find
+   dialog's results table the same way. */
+.vp-doc :where(.fc-host, .fc-overlay-portal) :is(table, tr, th, td),
+.vp-doc :where(.fc-host, .fc-overlay-portal) tr:nth-child(2n) {
+  display: revert-layer;
+  margin: revert-layer;
+  padding: revert-layer;
+  border: revert-layer;
+  border-collapse: revert-layer;
+  overflow-x: revert-layer;
+  font-size: revert-layer;
+  font-weight: revert-layer;
+  text-align: revert-layer;
+  color: revert-layer;
+  background-color: revert-layer;
+  transition: revert-layer;
+}
+
 /* Replace VitePress's default "Aあ" language icon with a globe so the
    locale switcher reads as i18n at a glance instead of a typography hint. */
 .vpi-languages {

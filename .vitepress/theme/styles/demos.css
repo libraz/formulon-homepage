@@ -150,7 +150,7 @@
 
 /* --- Controls -------------------------------------------------------- */
 
-.demo-frame button,
+.demo-frame button:where(:not(.fc-host *, .fc-overlay-portal *)),
 .demo-frame .demo-button {
   font-family: var(--font-reading);
   cursor: pointer;
@@ -158,7 +158,10 @@
 
 /* One focus treatment for every control in the frame. Keyboard users get the
    same ring on a chip, a tab and a link-shaped download button. */
-.demo-frame :is(button, a, input, select, [tabindex]):focus-visible {
+.demo-frame
+  :is(button, a, input, select, [tabindex]):where(
+    :not(.fc-host *, .fc-overlay-portal *)
+  ):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--vp-c-brand-1) 55%, transparent);
   outline-offset: 2px;
 }
@@ -467,7 +470,7 @@
 
 .cell-embed-demo__dialog .cell-embed-demo__host {
   flex: 0 0 auto;
-  height: min(190px, 42vh);
+  height: min(var(--cell-embed-height, 190px), 42vh);
   min-height: 0;
   max-height: none;
 }
