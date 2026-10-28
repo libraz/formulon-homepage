@@ -31,6 +31,10 @@ type ChromeToggle = 'formulaBar' | 'sheetTabs' | 'statusBar'
 const FORM_INPUT_ADDR = { sheet: 0, row: 1, col: 1 } as const
 const FORM_TOTAL_ADDR = { sheet: 0, row: 1, col: 3 } as const
 const LOCALE_FORMULA_ADDR = { sheet: 0, row: 1, col: 3 } as const
+// Compact hosts show seven rows below the formula bar and column header; a
+// ja mount uses 25px rows instead of 20px, so the height follows the sheet.
+const COMPACT_VISIBLE_ROWS = 7
+const COMPACT_CHROME_PX = 50
 
 const PROFILE_NAMES: SpreadsheetUiProfile[] = ['embedded', 'minimal', 'standard', 'excel365']
 const THEMES: DemoTheme[] = ['paper', 'ink', 'contrast']
@@ -45,6 +49,7 @@ const overlayHost = ref<HTMLDivElement | null>(null)
 const overlayRoot = ref<HTMLDialogElement | null>(null)
 const overlayOpen = ref(false)
 const mountedReady = ref(false)
+const rowHeight = ref(20)
 
 const activeProfile = ref<SpreadsheetUiProfile>('embedded')
 const selectedTheme = ref<DemoTheme>(isDark.value ? 'ink' : 'paper')
@@ -241,6 +246,11 @@ const copy = computed(() => {
 })
 
 const activeScenario = computed(() => props.scenario)
+const embedHeight = computed(() =>
+  activeScenario.value === 'profiles'
+    ? '400px'
+    : `${COMPACT_CHROME_PX + COMPACT_VISIBLE_ROWS * rowHeight.value}px`
+)
 const controlReady = computed(() => mountedReady.value && instance !== null)
 
 const selectionLabel = (event: {
@@ -490,6 +500,7 @@ const mountInstance = async (mine: number, target: HTMLDivElement): Promise<void
     }
     instance = mounted
     mountedReady.value = true
+    rowHeight.value = mounted.store.getState().layout.defaultRowHeight
     version.value = mounted.workbook.version
     attachEvents(mounted)
     if (activeScenario.value === 'form') {
@@ -661,7 +672,7 @@ onBeforeUnmount(() => {
     :error="failure"
     :version="version"
     :reserve="activeScenario === 'overlay' ? 0 : activeScenario === 'profiles' ? 500 : 300"
-    :style="{ '--cell-embed-height': activeScenario === 'profiles' ? '400px' : '190px' }"
+    :style="{ '--cell-embed-height': embedHeight }"
     :resettable="activeScenario !== 'overlay'"
     @run="start"
     @reset="reset"
