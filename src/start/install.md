@@ -6,7 +6,7 @@ Use the surface that matches where the workbook will run.
 Formulon is pre-1.0, and APIs and packaging can still change between releases. Install exact versions, including for experiments and internal tooling, rather than floating on `latest`.
 :::
 
-The package commands below pin Formulon 0.18.0 and formulon-cell 0.11.0, which include the APIs described here. To build the same releases yourself, follow [Build from source](/development/build-from-source). The cell packages have their own release cycle; [Language switching](/cell/language-switching) covers their runtime locale and calculation-profile controls.
+The package commands below pin Formulon 0.18.0 and formulon-cell 0.12.0, which include the APIs described here. To build the same releases yourself, follow [Build from source](/development/build-from-source). The cell packages have their own release cycle; [Language switching](/cell/language-switching) covers their runtime locale and calculation-profile controls.
 
 ## JavaScript / WebAssembly
 
@@ -50,7 +50,7 @@ Every subcommand accepts `--profile` to select calculation behavior and `--now` 
 ## formulon-cell
 
 ```sh
-yarn add @libraz/formulon-cell@0.11.0 @libraz/formulon-cell-vue@0.11.0
+yarn add @libraz/formulon-cell@0.12.0 @libraz/formulon-cell-vue@0.12.0
 ```
 
 `@libraz/formulon-cell` is the framework-independent core. Add `@libraz/formulon-cell-vue` or `@libraz/formulon-cell-react` for the matching adapter; see [formulon-cell install](/cell/install).
