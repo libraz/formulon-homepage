@@ -37,6 +37,21 @@ webpack、esbuild などを使う場合も、パッケージをブラウザ向�
 
 デプロイしたアプリケーションの初期化に失敗した場合は、まずブラウザのネットワークパネルを確認します。パッケージの JavaScript と `.wasm` アセットが出力先に存在し、ページから到達できる必要があります。
 
+## WASM を別の URL から配信する {#locate-file}
+
+`.wasm` ファイルを CDN やサブパスから配信する場合は、ワークブックを自分で作り、`WorkbookHandle.createDefault()` または `WorkbookHandle.loadBytes()` に URL の解決関数を渡します。
+
+```ts
+import { Spreadsheet, WorkbookHandle } from '@libraz/formulon-cell'
+
+const workbook = await WorkbookHandle.createDefault({
+  locateFile: (path) => `https://cdn.example.com/formulon/${path}`,
+})
+await Spreadsheet.mount(host, { workbook })
+```
+
+エンジンはページごとに一度だけ読み込まれます。URL は最初の読み込みで渡した解決関数で決まり、以降の読み込みは同じモジュールを使います。
+
 ## 確認項目
 
 - `@libraz/formulon-cell/styles.css` を 1 回読み込みます。

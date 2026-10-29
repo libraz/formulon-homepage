@@ -37,6 +37,21 @@ For webpack, esbuild, and equivalent tools, keep the package in the browser ESM 
 
 When initialization fails in the deployed application, inspect the browser network panel first. The package JavaScript and its `.wasm` asset must both be present in the deployed output and reachable from the page.
 
+## Serve the WASM from another URL {#locate-file}
+
+To serve the `.wasm` file from a CDN or a sub-path, create the workbook yourself and pass a resolver to `WorkbookHandle.createDefault()` or `WorkbookHandle.loadBytes()`:
+
+```ts
+import { Spreadsheet, WorkbookHandle } from '@libraz/formulon-cell'
+
+const workbook = await WorkbookHandle.createDefault({
+  locateFile: (path) => `https://cdn.example.com/formulon/${path}`,
+})
+await Spreadsheet.mount(host, { workbook })
+```
+
+The engine loads once per page, so the first load's resolver decides the URL and later loads reuse that module.
+
 ## Checklist
 
 - Import `@libraz/formulon-cell/styles.css` once.

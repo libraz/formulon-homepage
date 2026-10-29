@@ -1,9 +1,9 @@
 /* --- VitePress chrome overrides --- */
 
-/* formulon-cell ships most rules inside @layer fc.*, and VitePress's base.css
+/* formulon-cell ships every rule inside @layer fc.*, and VitePress's base.css
    element reset is unlayered, so the reset beats them at any specificity.
    Each rule below mirrors a base.css selector at the same specificity, so it
-   wins on source order but still loses to the package's unlayered class rules. */
+   wins on source order but still loses to this site's class-level rules. */
 :where(.fc-host, .fc-overlay-portal) *,
 :where(.fc-host, .fc-overlay-portal) *::before,
 :where(.fc-host, .fc-overlay-portal) *::after {

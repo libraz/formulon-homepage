@@ -173,6 +173,8 @@ The other options are:
 - `tabBoundary`: `stop` keeps focus in the configured area, while `leave` lets Tab leave it.
 - `autoExpand`: lets the navigation area grow with the sheet. Combining it with a fixed `range` throws.
 
+Arrow keys, Tab, the move after Enter, and movement inside a selection skip hidden rows and columns and step over merged cells. On the `mac` [platform](/cell/platform), Tab moves along a row and Return goes back to the column where the Tab run started.
+
 Use `instance.setViewportOptions()` to switch a report area or form page after mount. A fixed range targets one sheet at a time; include the sheet index in the range when changing sheets.
 
 ## Context menu

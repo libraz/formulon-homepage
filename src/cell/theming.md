@@ -89,6 +89,18 @@ The page view tokens (`--fc-page-*`), menu icon tokens, motion tokens, and full 
 
 The ribbon reads its own `--fc-tb-*` tokens; [Ribbon toolbar](/cell/toolbar#styling) explains which follow the grid accent and how to theme a separate toolbar.
 
+## Host pages with an element reset {#element-reset}
+
+Every package rule, the ribbon included, sits in a cascade layer (`fc.reset` through `fc.chrome`), so unlayered host CSS wins without `!important`. The same holds for an unlayered element reset such as `button { padding: 0 }` from a docs theme, Tailwind preflight, or a normalize-style sheet. Hand those elements back with a rule at the reset's own specificity, loaded after it, listing the elements the reset touches:
+
+```css
+:where(.fc-host, .fc-overlay-portal) :is(button, input, select, textarea) {
+  all: revert-layer;
+}
+```
+
+`:where()` keeps the specificity equal to the reset's, so the host's own class-level overrides still win.
+
 ## Overlay and modal colors
 
 Dialogs and menus receive the theme name through their overlay root. The portal does not automatically inherit host-scoped CSS variable overrides. If the spreadsheet is inside a native `<dialog>`, a fullscreen element, or an application modal, set `overlays.root` to that element so the floating UI stays inside the same visual boundary. The [Modal and overlay guide](/cell/modals) covers placement; the token names remain the same.
