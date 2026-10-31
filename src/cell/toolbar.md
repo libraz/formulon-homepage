@@ -338,7 +338,7 @@ The Mac Draw tab keeps its ink in the mounted session; the `drawing` hook and th
 
 `@libraz/formulon-cell/styles.css` imports the ribbon stylesheet along with the grid and themes, so most applications need nothing else. `@libraz/formulon-cell/styles/toolbar.css` is the ribbon stylesheet alone. The adapters' `@libraz/formulon-cell-react/toolbar.css` and `@libraz/formulon-cell-vue/toolbar.css` re-export that file for applications that list their stylesheets per package.
 
-The ribbon reads its own `--fc-tb-*` tokens. Under `.fc-host`, which covers the inline ribbon, `--fc-tb-accent` and `--fc-tb-accent-strong` follow the grid's `--fc-accent` and `--fc-accent-strong`, so one brand override themes both. A separate toolbar keeps the toolbar defaults; set the tokens on its wrapper:
+The ribbon reads its own `--fc-tb-*` tokens. Under `.fc-host`, which covers the inline ribbon, `--fc-tb-accent` and `--fc-tb-accent-strong` follow the grid's `--fc-accent` and `--fc-accent-strong`, so one brand override themes both. `--fc-tb-on-accent`, the color of text and icons on accent fills, follows `--fc-accent-fg` in the same way. A separate toolbar keeps the toolbar defaults; set the tokens on its wrapper:
 
 ```css
 .app-toolbar {

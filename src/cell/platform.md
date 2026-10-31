@@ -45,6 +45,8 @@ The platform also decides how the grid is sized. The grid is laid out at a scree
 
 A workbook created by the mount follows the platform. A Mac workbook comes from the engine's Mac profile (font, default row height, base column width); a `default` workbook states the locale font and the Windows default row height. Create the same workbook yourself with `WorkbookHandle.createDefault({ locale, platform })`, where `platform` is `default` or `mac`. A workbook you pass in or load keeps the sizes stored in the file, and the mount applies the platform's column-width model to it: Mac column widths follow the Mac digit-width rule, so the same stored width can differ in pixels between the two platforms.
 
+A row without an explicit height grows to fit the largest font size in it, so a larger font does not clip and a smaller one leaves no extra space. The height follows font changes, including those made in the workbook, and is used for layout, painting, and hit-testing. A height stored in the file or set by the user is kept as is.
+
 `setUi()` re-reads row heights and column widths when the platform changes and clears the undo history, because recorded sizes were computed under the previous platform. A theme-only change keeps sizes and history.
 
 ## Mac ribbon

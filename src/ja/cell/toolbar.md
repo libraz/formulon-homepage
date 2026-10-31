@@ -338,7 +338,7 @@ Mac の描画タブは、インクをマウント中のセッションに保持�
 
 `@libraz/formulon-cell/styles.css` はグリッドやテーマと一緒にリボンのスタイルシートも読み込むため、ほとんどのアプリケーションでは追加の読み込みは不要です。`@libraz/formulon-cell/styles/toolbar.css` はリボンのスタイルシートだけを含みます。アダプターの `@libraz/formulon-cell-react/toolbar.css` と `@libraz/formulon-cell-vue/toolbar.css` は、このファイルを再エクスポートしたもので、パッケージごとにスタイルシートを並べるアプリケーション向けです。
 
-リボンは専用の `--fc-tb-*` トークンを使います。インラインのリボンを含め、`.fc-host` の中では `--fc-tb-accent` と `--fc-tb-accent-strong` がグリッドの `--fc-accent` と `--fc-accent-strong` に追従します。ブランドカラーを 1 か所で上書きすれば両方に反映されます。独立したツールバーはツールバーの既定値を使うため、ラッパーにトークンを設定します。
+リボンは専用の `--fc-tb-*` トークンを使います。インラインのリボンを含め、`.fc-host` の中では `--fc-tb-accent` と `--fc-tb-accent-strong` がグリッドの `--fc-accent` と `--fc-accent-strong` に追従します。ブランドカラーを 1 か所で上書きすれば両方に反映されます。アクセント色で塗られた面の文字とアイコンの色 `--fc-tb-on-accent` も、同じように `--fc-accent-fg` に追従します。独立したツールバーはツールバーの既定値を使うため、ラッパーにトークンを設定します。
 
 ```css
 .app-toolbar {

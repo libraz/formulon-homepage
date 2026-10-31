@@ -23,7 +23,7 @@ Most applications use three pieces from `@libraz/formulon-cell`: `WorkbookHandle
 | Vue component and composables | `@libraz/formulon-cell-vue` |
 | Styles | `@libraz/formulon-cell/styles.css` (grid, dialogs, ribbon, all themes) |
 
-The root entry point also exports command helpers and public types. Keep the generated type declarations beside the version you install for the complete symbol list; this page explains how the main pieces fit together.
+The root entry point also exports the command helpers and public types these pages document, along with the types their signatures refer to. It does not export internal modules or re-export the engine's types; import those from `@libraz/formulon`, listed as a direct dependency at the engine version the cell release uses. Keep the generated type declarations beside the version you install for the complete symbol list; this page explains how the main pieces fit together.
 
 ## WorkbookHandle
 

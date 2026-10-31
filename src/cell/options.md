@@ -175,6 +175,8 @@ The other options are:
 
 Arrow keys, Tab, the move after Enter, and movement inside a selection skip hidden rows and columns and step over merged cells. On the `mac` [platform](/cell/platform), Tab moves along a row and Return goes back to the column where the Tab run started.
 
+While a formula is being edited in the cell or the formula bar, an arrow key at an operand position (after `=`, an operator, a comma, or an open parenthesis) inserts a reference to the neighboring cell, and further arrow keys move or extend it. Typing into a cell starts in this pointing mode, F2 switches between pointing and editing the text, and Ctrl+Arrow jumps to the edge of the data. Ctrl+Z undoes within the formula being edited and Ctrl+Y or Ctrl+Shift+Z redoes, separately from the sheet's undo history; Cmd works in place of Ctrl. A URL typed into a cell becomes a hyperlink when the entry is committed.
+
 Use `instance.setViewportOptions()` to switch a report area or form page after mount. A fixed range targets one sheet at a time; include the sheet index in the range when changing sheets.
 
 ## Context menu
