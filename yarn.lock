@@ -608,25 +608,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell-vue@npm:0.12.0":
-  version: 0.12.0
-  resolution: "@libraz/formulon-cell-vue@npm:0.12.0"
+"@libraz/formulon-cell-vue@npm:0.13.0":
+  version: 0.13.0
+  resolution: "@libraz/formulon-cell-vue@npm:0.13.0"
   dependencies:
-    "@libraz/formulon-cell": "npm:^0.12.0"
+    "@libraz/formulon-cell": "npm:^0.13.0"
   peerDependencies:
     vue: ^3.3
-  checksum: 10c0/422b1c775ba23cde079080f726892b0a6a65c47c769d73932248cdcf05663c241095a0027deec7aa2703721dcb2198b1eb790d7e511884375150999de1c260ac
+  checksum: 10c0/96318e77067616486ee0acc88d72ac21a55de3ce0d29cff5ec8f695d093ffdcc666ea797b406cee5ad0be067532f99c2e71bbdeaa4c4dca51e2e7e6b567ecf70
   languageName: node
   linkType: hard
 
-"@libraz/formulon-cell@npm:0.12.0":
-  version: 0.12.0
-  resolution: "@libraz/formulon-cell@npm:0.12.0"
+"@libraz/formulon-cell@npm:0.13.0":
+  version: 0.13.0
+  resolution: "@libraz/formulon-cell@npm:0.13.0"
   dependencies:
     "@libraz/formulon": "npm:0.18.0"
   peerDependencies:
     zustand: ^5
-  checksum: 10c0/8d2d856f9820d85378de552d71ec07d8d23d3558c659e7a12e1749466cdd7ee0b8631b1c644c44ca0a59cb97e547b4852d990052899bee617ae4929fd8e99f2d
+  checksum: 10c0/134c067aea6c93c951c18b5e143fe5bf8277c1e4aacb7243a1c3dc641a2162e856fb2da122330a97d9d41211c106feef04f92fb0f2e54a27b970266e93fb4266
   languageName: node
   linkType: hard
 
@@ -1970,8 +1970,8 @@ __metadata:
   dependencies:
     "@biomejs/biome": "npm:^2.6.3"
     "@libraz/formulon": "npm:0.18.0"
-    "@libraz/formulon-cell": "npm:0.12.0"
-    "@libraz/formulon-cell-vue": "npm:0.12.0"
+    "@libraz/formulon-cell": "npm:0.13.0"
+    "@libraz/formulon-cell-vue": "npm:0.13.0"
     "@vitejs/plugin-vue": "npm:6.0.10"
     "@vitest/browser-playwright": "npm:5.0.5"
     "@vue/compiler-dom": "npm:^3.5.44"

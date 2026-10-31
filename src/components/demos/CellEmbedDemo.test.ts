@@ -228,7 +228,7 @@ describe('CellEmbedDemo', () => {
     await expect.poll(() => dialog.querySelector('.fc-fmtdlg')).not.toBeNull()
     expect(dialog.contains(dialog.querySelector('.fc-fmtdlg'))).toBe(true)
 
-    const closeFormat = wrapper.find('.fc-fmtdlg__close')
+    const closeFormat = wrapper.find('.fc-fmtdlg .fc-fmtdlg__close')
     expect(closeFormat.exists()).toBe(true)
     await userEvent.click(closeFormat.element)
     await expect
