@@ -426,8 +426,9 @@
   padding: 0.12rem 0;
 }
 
+/* Keeps the UA's fixed positioning for a modal dialog, which also contains
+   the absolutely positioned overlay portal below. */
 .cell-embed-demo__dialog {
-  position: relative;
   width: min(54rem, calc(100vw - 2rem));
   max-width: calc(100vw - 2rem);
   height: fit-content;
@@ -468,11 +469,19 @@
   padding: 1rem;
 }
 
+/* Find and Replace is a modeless panel inside the host, so the host is tall
+   enough for it with Options expanded. */
 .cell-embed-demo__dialog .cell-embed-demo__host {
   flex: 0 0 auto;
-  height: min(var(--cell-embed-height, 190px), 42vh);
+  height: min(max(var(--cell-embed-height, 190px), 23rem), calc(100vh - 12rem));
   min-height: 0;
   max-height: none;
+}
+
+/* The panel is not bounded by the host; scroll it instead of the clipped host. */
+.cell-embed-demo__host .fc-find {
+  max-height: calc(100% - 4rem);
+  overflow-y: auto;
 }
 
 .cell-embed-demo__dialog-head {
